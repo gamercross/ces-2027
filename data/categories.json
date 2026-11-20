@@ -1,0 +1,25 @@
+{
+  "about": "CES 공식 분야 49개의 한글 이름과 묶음이다. 영어 이름은 공식 전시사 검색이 주는 그대로이고, 한글 이름과 묶음은 우리가 붙였다 (reference/미리보기판에서 옮김). 공식 분야가 바뀌면 자료 도구가 '한글 이름이 없는 분야'라고 알린다.",
+  "ko": {
+    "Accessibility": "접근성", "Accessories": "액세서리", "Additive Manufacturing & 3D Printing": "3D 프린팅", "AgTech": "농업 기술",
+    "Artificial Intelligence": "인공지능", "Audio": "오디오", "Beauty Tech": "뷰티 테크", "Biotech": "바이오", "Blockchain & Digital Assets": "블록체인·디지털 자산",
+    "Cloud Computing": "클라우드", "Computing": "컴퓨팅", "Construction & Industrial Tech": "건설·산업 기술", "Content & Entertainment": "콘텐츠·엔터",
+    "Cybersecurity": "사이버 보안", "Drones": "드론", "EdTech": "에듀테크", "Energy Future": "에너지", "Enterprise": "기업용 기술", "Fashion Tech": "패션 테크",
+    "Fintech": "핀테크", "Fitness": "피트니스", "Food Tech": "푸드 테크", "Gaming & Esports": "게임·e스포츠", "Health": "헬스케어",
+    "Home Entertainment & Office Hardware": "홈 엔터·사무 기기", "Imaging": "이미징", "Investment & Venture Capital": "투자·벤처캐피털", "IoT/Sensors": "IoT·센서",
+    "Lifestyle": "라이프스타일", "Longevity": "장수·노화", "Marketing & Advertising": "마케팅·광고", "Next G & Wireless": "차세대 통신", "Pet & Animal Tech": "펫 테크",
+    "Quantum": "양자", "Retail/E-Commerce": "리테일·이커머스", "Robotics": "로봇", "Smart Communities": "스마트 도시", "Smart Home & Appliances": "스마트홈·가전",
+    "Sourcing & Manufacturing": "소싱·제조", "Space Tech": "우주 기술", "Sports": "스포츠", "Startups": "스타트업", "Streaming": "스트리밍",
+    "Supply & Logistics": "공급망·물류", "Sustainability": "지속가능성", "Travel & Tourism": "여행·관광", "Vehicle Tech & Advanced Mobility": "모빌리티·자동차",
+    "Video & Display": "영상·디스플레이", "XR & Spatial Computing": "XR·공간 컴퓨팅"
+  },
+  "groups": [
+    { "k": "ai", "ko": "AI·컴퓨팅", "cats": ["Artificial Intelligence", "Computing", "Cloud Computing", "Quantum", "Cybersecurity", "Enterprise", "Blockchain & Digital Assets", "Next G & Wireless", "IoT/Sensors"] },
+    { "k": "mob", "ko": "모빌리티", "cats": ["Vehicle Tech & Advanced Mobility", "Drones", "Space Tech", "Supply & Logistics"] },
+    { "k": "rob", "ko": "로봇·제조", "cats": ["Robotics", "Sourcing & Manufacturing", "Additive Manufacturing & 3D Printing", "Construction & Industrial Tech", "AgTech"] },
+    { "k": "hea", "ko": "건강", "cats": ["Health", "Longevity", "Biotech", "Fitness", "Accessibility", "Beauty Tech"] },
+    { "k": "hom", "ko": "집·생활", "cats": ["Smart Home & Appliances", "Lifestyle", "Pet & Animal Tech", "Food Tech", "Fashion Tech", "Accessories", "Sustainability", "Energy Future", "Smart Communities", "Travel & Tourism"] },
+    { "k": "ent", "ko": "엔터·콘텐츠", "cats": ["Gaming & Esports", "XR & Spatial Computing", "Audio", "Video & Display", "Streaming", "Content & Entertainment", "Home Entertainment & Office Hardware", "Imaging", "Sports"] },
+    { "k": "biz", "ko": "비즈니스·교육", "cats": ["Fintech", "Investment & Venture Capital", "Marketing & Advertising", "Retail/E-Commerce", "EdTech", "Startups"] }
+  ]
+}

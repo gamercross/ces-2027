@@ -1,0 +1,13 @@
+[package]
+name = "ces-core"
+description = "폰에 보내는 작은 WASM 코어: 찾기 색인을 읽고 찾는다"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# cdylib: 폰용 core.wasm. rlib: 자료 도구가 같은 낱말 나누기와 색인 꼴을 쓴다.
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+# 의존 없음. 폰에 보내는 크기를 작게 둔다.
+[dependencies]

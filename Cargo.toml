@@ -1,0 +1,21 @@
+# Rust는 두 자리다.
+#   crates/ces-data : 빌드 때 도는 자료 도구 (GitHub Actions에서 돈다)
+#   crates/ces-core : 폰에 보내는 작은 WASM 코어 (찾기. 동선 · 위치 맞추기는 뒤 세션에서)
+[workspace]
+resolver = "2"
+members = ["crates/ces-core", "crates/ces-data"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+# 폰에 보내는 쪽은 크기를 먼저 줄인다.
+[profile.release.package.ces-core]
+opt-level = "z"

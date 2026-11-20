@@ -1,0 +1,20 @@
+{
+  "about": "찾기에만 쓰는 별칭이다 (reference/미리보기판에서 옮김). words는 한글 낱말 → 영어 낱말, names는 공식 전시사 이름 → 한글로 부르는 이름. 전시사 자료를 바꾸지 않고 찾기 색인에 낱말만 더한다.",
+  "words": {
+    "삼성": "samsung", "엘지": "lg", "lg전자": "lg electronics", "현대": "hyundai", "기아": "kia", "하이닉스": "hynix", "sk하이닉스": "sk hynix", "소니": "sony",
+    "구글": "google", "아마존": "amazon", "엔비디아": "nvidia", "퀄컴": "qualcomm", "인텔": "intel", "마이크로소프트": "microsoft", "메타": "meta", "파나소닉": "panasonic",
+    "레노버": "lenovo", "보쉬": "bosch", "웨이모": "waymo", "지멘스": "siemens", "히타치": "hitachi", "가민": "garmin", "로보락": "roborock", "드리미": "dreame",
+    "대전": "daejeon", "서울": "seoul", "부산": "busan", "경기": "gyeonggi", "인천": "incheon", "카이스트": "kaist", "코트라": "kotra",
+    "드론": "drone", "자율주행": "autonomous", "배터리": "battery", "반도체": "semiconductor"
+  },
+  "names": {
+    "LG Electronics": "LG전자", "Samsung Electronics, Inc.": "삼성전자", "Samsung Electronics Co., Ltd. (C-Lab)": "삼성 C랩", "SK hynix": "SK하이닉스",
+    "Hyundai Mobis": "현대모비스", "Hyundai Motor and Kia ZER01NE-CRADLE": "현대차 기아 제로원", "Kia Corporation": "기아", "Waymo": "웨이모", "Stellantis": "스텔란티스",
+    "John Deere": "존 디어", "Caterpillar Inc.": "캐터필러", "Bosch": "보쉬", "Hisense Visual Technology Co., Ltd.": "하이센스",
+    "Panasonic Holdings Corporation": "파나소닉", "Lenovo": "레노버", "Qualcomm": "퀄컴",
+    "Amazon Web Services, Inc. (AWS)": "아마존 웹 서비스", "Google LLC": "구글", "Microsoft": "마이크로소프트", "NVIDIA Corporation": "엔비디아", "Meta": "메타",
+    "Sony Group Corporation": "소니", "Siemens": "지멘스", "Abbott": "애보트", "Hitachi": "히타치", "GARMIN International Inc.": "가민",
+    "Roborock (HK) Limited": "로보락", "Withings": "위딩스", "Daejeon Metropolitan City": "대전시관", "KAIST": "카이스트",
+    "Korea Pavilion (KOTRA)": "한국관 코트라", "Seoul Metropolitan Government": "서울시관", "Busan Metropolitan City": "부산시관", "Accenture": "액센츄어"
+  }
+}
