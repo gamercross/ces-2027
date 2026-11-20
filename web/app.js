@@ -28,6 +28,12 @@ function route() {
 
 async function show() {
   const mine = ++turn;
+  // 나눈 링크(#plan=<코드>)로 들어왔으면 동선 화면에서 받은 목록을 보인다.
+  if (location.hash.startsWith('#plan=')) {
+    sessionStorage.setItem('ces2027.incoming', location.hash.slice(1));
+    location.replace('#/plan');
+    return;
+  }
   let { name, rest } = route();
   // 처음 들어오면 명함부터 만든다. "나중에"를 누르면 이번에는 묻지 않는다.
   if (name === '' && !getProfile() && !sessionStorage.getItem('ces2027.introLater')) {

@@ -109,6 +109,27 @@ check(diary.fileName(who, new Date(2027, 0, 7)) === 'ces2027-일기-물개-20270
   }
 }
 
+// 나누기와 내보내기: 목록 코드 · 링크 · 글 · 마크다운 · CSV.
+{
+  const Sh = await import('../web/share.js');
+  const ids = ['0013000001MeUUaAAN', '0013A00001a1LD1QAM', 'MYS_Bellagio', 'short'];
+  const mine = [{ id: ids[0], day: 2 }, { id: ids[2], day: 0 }];
+  const code = Sh.planCode(mine);
+  const link = Sh.shareLink('https://example.test/ces-2027/#/plan', mine);
+  const back = Sh.readCode(link, ids);
+  const odd = Sh.readCode(' 1LD1QAM.9 , zzzzzzz.1,short.-3,1LD1QAM.1,, ', ids);
+  const merged = Sh.mergeItems(mine, [{ id: ids[1], day: 1 }, { id: ids[0], day: 4 }]);
+  check(code === 'eUUaAAN.2,ellagio' && link === 'https://example.test/ces-2027/#plan=eUUaAAN.2,ellagio' && JSON.stringify(back) === JSON.stringify(mine) && JSON.stringify(odd) === JSON.stringify([{ id: ids[1], day: 4 }, { id: 'short', day: 0 }]) && merged.added === 1 && merged.items.length === 3 && merged.items[0].day === 2, '목록 코드 · 링크: 만들고 다시 읽으면 같다. 없는 회사 · 겹친 것은 빼고, 받은 것은 내게 없는 것만 더한다');
+  const byId = new Map([[ids[0], [ids[0], 'Alpha | Mobility', '', 0, '0', 2, 0, ['W317@LVCC_W_MTG', '5131@LVCC_W']]], [ids[2], [ids[2], 'Bellagio "Suites"', '', -1, '', 0, 0, []]]]);
+  const days = [{ key: 1, ko: '1/6 (수)', short: '1/6' }, { key: 2, ko: '1/7 (목)', short: '1/7' }, { key: 0, ko: '날짜 미정', short: '미정' }];
+  const pk = new Map([['LVCC_W_MTG', '웨스트 홀 회의실'], ['LVCC_W', '웨스트 홀']]);
+  const fakeData = { cats: ['Robotics'], catsKo: ['로봇'], countries: ['South Korea'], link: 'https://exhibitors.ces.tech/x?exhid={id}' };
+  const text = Sh.planText(mine, days, byId, pk);
+  const md = Sh.planMd(mine, days, byId, pk, '2026-11-20', '2026-12-20');
+  const csv = Sh.planCsv(mine, days, byId, pk, fakeData);
+  check(text.includes('■ 1/7 (목)\n1. Alpha | Mobility · 웨스트 홀 회의실 W317') && text.includes('목록 코드: eUUaAAN.2,ellagio') && md.includes('| 1 | Alpha / Mobility | W317, 5131 | 웨스트 홀 회의실, 웨스트 홀 |') && md.includes('## 날짜 미정') && csv.startsWith('\ufeff날짜,순서,회사') && csv.includes('"1/7","1","Alpha | Mobility","W317 / 5131","웨스트 홀 회의실 / 웨스트 홀","South Korea","로봇","https://exhibitors.ces.tech/x?exhid=0013000001MeUUaAAN"') && csv.includes('"Bellagio ""Suites"""'), '동선 내보내기: 단톡방 글 · 마크다운 표 · CSV');
+}
+
 // 주제 판: 후보 세우기 · 볼 회사 후보 · 출발 전 판 한 장.
 {
   const T = await import('../web/topics.js');
@@ -148,7 +169,7 @@ const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 const version = await json('version.json').catch(() => null);
 const swFiles = JSON.parse(`[${(sw.match(/const FILES = \[(.*)\];/) || [])[1] || ''}]`);
 check(!!version && sw.includes(JSON.stringify(version.v)) && !sw.includes('__VERSION__'), `판 이름이 찍혔다 (${version?.v})`);
-const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'views/map.js', 'views/diary.js', 'views/topics.js', 'topics.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/topics.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
+const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'views/map.js', 'views/diary.js', 'views/topics.js', 'topics.js', 'share.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/topics.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
 const missing = mustCache.filter((f) => !swFiles.includes(f));
 const gone = [];
 for (const f of swFiles) if (f !== './' && !(await exists(f))) gone.push(f);

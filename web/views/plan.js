@@ -5,6 +5,16 @@ import { getExhibitors, getInfo, getMeta, getPlaces } from '../data.js';
 import { getInterests, setInterests } from '../store.js';
 import { fillDays, nextStop, placeTable, sortRoute, splitBooth } from '../route.js';
 import { mapsLink } from '../maps.js';
+import { mergeItems, planCode, planCsv, planMd, planText, readCode, shareLink } from '../share.js';
+
+function download(name, text, type) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = el('a', { href: url, download: name });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 export async function render() {
   const meta = await getMeta();
@@ -133,14 +143,59 @@ export async function render() {
     draw();
   } });
 
+  // 나누기와 내보내기 (미리 보기 판의 "목록 코드 · 링크 · 글 · 마크다운 · CSV"에서 옮겼다).
+  const shareDays = days.map((d) => ({ key: d.key, ko: d.key ? `${d.ko} ${d.hours}` : d.ko, short: d.key ? d.ko.split(' ')[0] : '미정' }));
+  const placeKo = new Map(places.places.map((p) => [p.k, p.ko]));
+  const todayText = () => { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
+  const copy = async (text, ok) => { try { await navigator.clipboard.writeText(text); status.textContent = ok; } catch { status.textContent = '복사하지 못했다. 파일로 받는다.'; } };
+  const need = (fn) => () => { const list = getInterests(); if (!list.length) { status.textContent = '아직 관심 회사가 없다.'; return; } fn(list); };
+  const incoming = el('div');
+  // 받은 코드나 링크: 내게 없는 것이 몇 곳인지 보이고, 더할지 묻는다.
+  function offer(text) {
+    const got = readCode(text, [...byId.keys()]);
+    if (!got.length) { incoming.replaceChildren(); status.textContent = '코드에서 회사를 찾지 못했다. 코드를 다시 본다.'; return; }
+    const { added } = mergeItems(getInterests(), got);
+    incoming.replaceChildren(el('section', { class: 'panel notice' },
+      el('h2', { text: '받은 목록' }),
+      el('p', { text: `받은 목록에 ${got.length}곳이 있고, 그 가운데 내게 없는 것이 ${added}곳이다.` }),
+      el('p', { class: 'note', text: got.slice(0, 5).map((it) => byId.get(it.id)[1]).join(' · ') + (got.length > 5 ? ' …' : '') }),
+      el('div', { class: 'actions' },
+        el('button', { class: 'btn', type: 'button', text: `${added}곳 더하기`, disabled: added === 0, onclick: () => {
+          setInterests(mergeItems(getInterests(), got).items);
+          incoming.replaceChildren();
+          status.textContent = `받은 목록에서 ${added}곳을 더했다. 날짜는 보낸 사람이 정한 대로다.`;
+          draw();
+        } }),
+        el('button', { class: 'btn ghost', type: 'button', text: '버리기', onclick: () => { incoming.replaceChildren(); status.textContent = '받은 목록을 버렸다.'; } }))));
+  }
+  const codeInput = el('input', { autocapitalize: 'off', autocomplete: 'off', spellcheck: 'false', placeholder: '받은 코드나 링크', 'aria-label': '받은 목록 코드나 링크' });
+  const codeForm = el('form', { class: 'inline' }, el('label', { class: 'field' }, codeInput), el('button', { class: 'btn ghost', type: 'submit', text: '코드 넣기' }));
+  codeForm.addEventListener('submit', (ev) => { ev.preventDefault(); if (codeInput.value.trim()) offer(codeInput.value); });
+  const sharePanel = el('section', { class: 'panel' },
+    el('h2', { text: '나누기와 내보내기' }),
+    el('p', { class: 'note', text: '링크나 코드에는 회사와 날짜만 들어간다. 명함 · 일기 · 봤다는 표시는 들어가지 않는다.' }),
+    el('div', { class: 'actions' },
+      el('button', { class: 'btn', type: 'button', text: '링크 복사', onclick: need((list) => copy(shareLink(location.href, list), '링크를 복사했다. 받은 사람이 열면 자기 목록에 더할지 묻는다.')) }),
+      el('button', { class: 'btn ghost', type: 'button', text: '코드 복사', onclick: need((list) => copy(planCode(list), '목록 코드를 복사했다.')) }),
+      el('button', { class: 'btn ghost', type: 'button', text: '글로 복사', onclick: need((list) => copy(planText(list, shareDays, byId, placeKo), '단톡방에 붙여 넣을 글을 복사했다.')) })),
+    codeForm,
+    el('div', { class: 'actions' },
+      el('button', { class: 'btn ghost', type: 'button', text: '마크다운 파일', onclick: need((list) => { download(`ces2027-동선-${todayText()}.md`, planMd(list, shareDays, byId, placeKo, data.v, todayText()), 'text/markdown;charset=utf-8'); status.textContent = '마크다운 파일로 내려받았다. 내 노트에 둘 수 있다.'; }) }),
+      el('button', { class: 'btn ghost', type: 'button', text: 'CSV 파일', onclick: need((list) => { download(`ces2027-동선-${todayText()}.csv`, planCsv(list, shareDays, byId, placeKo, data), 'text/csv;charset=utf-8'); status.textContent = 'CSV 파일로 내려받았다. 표 프로그램에서 열 수 있다.'; }) })));
+  // 링크로 들어왔으면(#plan=…) 받은 목록부터 보인다.
+  const arrived = sessionStorage.getItem('ces2027.incoming');
+  if (arrived) { sessionStorage.removeItem('ces2027.incoming'); offer(arrived); }
+
   draw();
   return el('div', { class: 'page' },
+    incoming,
     el('section', { class: 'panel' },
       el('h1', { text: '동선' }),
       el('p', { class: 'lead', text: '관심 회사를 날짜와 캠퍼스로 묶고 걷는 차례로 세운다.' }),
       status,
       el('p', { class: 'note', text: '걷는 차례는 부스 번호로 짐작한 것이다 (정식 배치도 전). 이 목록은 이 폰에만 남는다.' })),
     holder,
+    sharePanel,
     // 한 손으로 닿게 아래에 붙여 둔다.
     el('div', { class: 'dock' }, fill, sort));
 }
