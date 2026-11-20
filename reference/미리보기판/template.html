@@ -1,0 +1,941 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>CES 2027 부스 3D 지도</title>
+<style>
+:root{--ink:#1d2433;--muted:#667085;--line:#e4e7ec;--soft:#f5f7fa;--accent:#3b5bdb;--warn:#c92a2a}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;color:var(--ink);background:#e9edf3;overflow:hidden;-webkit-text-size-adjust:100%}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+#app{position:fixed;inset:0;display:flex;flex-direction:column}
+header{display:flex;align-items:center;gap:12px;padding:8px 14px;background:#121a2c;color:#fff;flex-wrap:wrap}
+header .ttl b{font-size:16px;letter-spacing:-.2px}
+header .ttl span{display:block;font-size:11.5px;color:#aab4c8;margin-top:1px}
+header .hbtns{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+header button{background:#25304a;border:1px solid #34405e;color:#e8ecf5;border-radius:8px;padding:5px 10px;font-size:13px}
+header button.on{background:#3b5bdb;border-color:#3b5bdb}
+#notice{background:#fff4e6;color:#7a3e00;font-size:12px;padding:5px 14px;border-bottom:1px solid #ffd8a8}
+#notice b{font-weight:700}
+#main{flex:1;display:flex;min-height:0}
+#side{width:390px;max-width:44vw;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tab{flex:1;background:none;border:0;padding:10px 0;font-weight:600;color:var(--muted);border-bottom:2px solid transparent}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.tab span{display:inline-block;min-width:20px;padding:0 6px;border-radius:10px;background:#e7ebff;color:var(--accent);font-size:12px;margin-left:4px}
+section.pane{flex:1;min-height:0;display:flex;flex-direction:column}
+section.pane[hidden]{display:none}
+.ctl{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+#q{width:100%;padding:9px 11px;border:1px solid #cfd5df;border-radius:9px;font-size:14px}
+.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.row select{flex:1;min-width:0;padding:6px 8px;border:1px solid #cfd5df;border-radius:8px;background:#fff;font-size:13px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip{border:1px solid #cfd5df;background:#fff;border-radius:16px;padding:4px 10px;font-size:12.5px}
+.chip.on{background:var(--c,#3b5bdb);border-color:var(--c,#3b5bdb);color:#fff}
+.chip small{opacity:.75}
+.lbl{font-size:12px;color:var(--muted)}
+#count{font-size:12px;color:var(--muted);padding:6px 12px}
+#results{flex:1;overflow:auto;padding:0 6px 10px}
+.res{display:flex;gap:8px;align-items:flex-start;padding:8px 8px;border-radius:8px;cursor:pointer}
+.res:hover{background:var(--soft)}
+.res .dot{width:10px;height:10px;border-radius:3px;margin-top:5px;flex:none}
+.res .nm{font-size:13.5px;font-weight:600;line-height:1.3}
+.res .meta{font-size:12px;color:var(--muted);margin-top:2px}
+.badge{display:inline-block;font-size:10.5px;padding:1px 6px;border-radius:9px;margin-left:4px;vertical-align:1px;font-weight:600}
+.b-kr{background:#ffe3e3;color:#c92a2a}.b-aw{background:#fff3bf;color:#8a6100}.b-boi{background:#ffd43b;color:#5c4400}
+.more{display:block;margin:8px auto;padding:6px 14px;border:1px solid #cfd5df;border-radius:8px;background:#fff;font-size:13px}
+.quick{padding:4px 12px 8px}
+.quick .chip{margin:0 4px 6px 0}
+#view{flex:1;position:relative;min-width:0;background:#e9edf3}
+#view canvas{display:block;width:100%;height:100%;touch-action:none}
+#tip{position:absolute;pointer-events:none;background:rgba(18,26,44,.92);color:#fff;font-size:12px;padding:5px 8px;border-radius:6px;white-space:nowrap;transform:translate(12px,12px);display:none;z-index:5;max-width:320px;overflow:hidden;text-overflow:ellipsis}
+#card{position:absolute;top:12px;right:12px;width:340px;max-height:calc(100% - 24px);overflow:auto;background:#fff;border-radius:12px;box-shadow:0 8px 28px rgba(16,24,40,.18);padding:14px 14px 12px;z-index:6;font-size:13px}
+#card[hidden]{display:none}
+#card h3{margin:0 26px 4px 0;font-size:16px;line-height:1.3}
+#card .x{position:absolute;top:8px;right:8px;border:0;background:#f1f3f5;border-radius:50%;width:26px;height:26px;font-size:14px;line-height:26px;padding:0}
+#card .sec{margin-top:9px}
+#card .sec b{display:block;font-size:11.5px;color:var(--muted);font-weight:600;margin-bottom:3px}
+#card .desc{color:#344054;line-height:1.45;font-size:12.5px}
+#card .acts{display:flex;gap:6px;margin-top:11px;flex-wrap:wrap}
+#card .acts button,#card .acts a{flex:1;text-align:center;border:1px solid #cfd5df;background:#fff;border-radius:8px;padding:7px 6px;font-size:12.5px;text-decoration:none;color:var(--ink);white-space:nowrap}
+#card .acts .pri{background:var(--accent);border-color:var(--accent);color:#fff}
+#card .bl{cursor:pointer;color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+#card .ml{max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+#card .ml div{padding:6px 8px;border-bottom:1px solid var(--line);cursor:pointer}
+#card .ml div:last-child{border-bottom:0}
+#card .ml div:hover{background:var(--soft)}
+#legend{position:absolute;left:12px;bottom:34px;background:rgba(255,255,255,.94);border-radius:10px;padding:8px 10px;font-size:11.5px;box-shadow:0 2px 10px rgba(16,24,40,.12);z-index:4;max-width:300px}
+#legend .it{display:inline-flex;align-items:center;gap:4px;margin:2px 8px 2px 0;white-space:nowrap}
+#legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+#hint{position:absolute;left:12px;bottom:8px;font-size:11px;color:#55607a;z-index:4}
+#modal{position:fixed;inset:0;background:rgba(16,24,40,.45);display:flex;align-items:center;justify-content:center;z-index:20;padding:16px}
+#modal[hidden]{display:none}
+#modal .box{background:#fff;border-radius:14px;max-width:720px;width:100%;max-height:88vh;overflow:auto;padding:18px 20px;font-size:13.5px;line-height:1.55}
+#modal h2{margin:0 0 8px;font-size:18px}
+#modal h4{margin:14px 0 4px;font-size:14px}
+#modal table{border-collapse:collapse;width:100%;font-size:12.5px}
+#modal td,#modal th{border:1px solid var(--line);padding:5px 7px;text-align:left;vertical-align:top}
+#modal th{background:var(--soft)}
+#modal .close{float:right;border:1px solid #cfd5df;background:#fff;border-radius:8px;padding:4px 10px}
+#planTop{padding:10px 12px;border-bottom:1px solid var(--line);font-size:12.5px;color:#344054;display:flex;flex-direction:column;gap:8px}
+#planTop .row button{border:1px solid #cfd5df;background:#fff;border-radius:8px;padding:6px 8px;font-size:12.5px}
+#planTop .row button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+#planList{flex:1;overflow:auto;padding:4px 8px 12px}
+.day{margin-top:10px}
+.day h5{margin:6px 4px;font-size:13px;display:flex;align-items:center;gap:6px}
+.day h5 i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.pi{border:1px solid var(--line);border-radius:9px;padding:7px 8px;margin:6px 0;background:#fff}
+.pi .top{display:flex;gap:6px;align-items:center}
+.pi .no{flex:none;width:20px;height:20px;border-radius:50%;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.pi .nm{font-weight:600;font-size:13px;flex:1;min-width:0;cursor:pointer}
+.pi .nm small{display:block;font-weight:400;color:var(--muted);font-size:11.5px}
+.pi select{border:1px solid #cfd5df;border-radius:6px;font-size:12px;padding:2px 4px;background:#fff}
+.pi .rm{border:0;background:none;color:#98a2b3;font-size:16px;padding:0 2px}
+.pi .bot{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;align-items:center}
+.pi .bot .chip{padding:2px 8px;font-size:11.5px}
+.pi .bot input{flex:1;min-width:120px;border:1px solid #e1e5ec;border-radius:6px;padding:4px 7px;font-size:12px}
+.empty{color:var(--muted);font-size:13px;padding:18px 10px;line-height:1.6}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#121a2c;color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;z-index:30;display:none}
+@media (max-width:820px){
+  header{padding:6px 10px;gap:6px}
+  header .ttl span{display:none}
+  header button{padding:4px 8px;font-size:12px}
+  #notice{font-size:11px;padding:4px 10px}
+  #main{flex-direction:column-reverse}
+  #side{width:100%;max-width:none;height:48%;border-right:0;border-top:1px solid var(--line)}
+  #card{left:8px;right:8px;width:auto;top:8px;max-height:60%}
+  #legend{display:none}
+  #hint{font-size:10px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="ttl"><b>CES 2027 부스 3D 지도</b><span id="sub"></span></div>
+    <div class="hbtns">
+      <button data-cam="all" class="on">전체</button>
+      <button data-cam="lvcc">LVCC</button>
+      <button data-cam="ven">베네시안</button>
+      <button data-cam="cs">C Space</button>
+      <button id="btnInfo">알아둘 것</button>
+    </div>
+  </header>
+  <div id="notice"><b>미리 보기 판</b> · 홀 위치는 CES 공식 캠퍼스 지도(2026-09-29), 홀 안 자리는 부스 번호로 짐작했어요. 정식 배치도가 열리면 바꿉니다. 가기 전에 공식 지도로 한 번 더 확인하세요.</div>
+  <div id="main">
+    <aside id="side">
+      <div class="tabs">
+        <button class="tab on" data-tab="find">찾기</button>
+        <button class="tab" data-tab="plan">내 목록<span id="planCount">0</span></button>
+      </div>
+      <section class="pane" id="pane-find">
+        <div class="ctl">
+          <input id="q" type="search" placeholder="회사 · 부스 번호 · 키워드 (예: 삼성, 21108, robot)" autocomplete="off">
+          <div class="row"><select id="fPlace"></select><select id="fCat"></select></div>
+          <div class="chips" id="fAud"><span class="lbl">누구에게</span></div>
+          <div class="chips">
+            <button class="chip" id="fKor" style="--c:#c92a2a">한국 기업</button>
+            <button class="chip" id="fAward" style="--c:#e8a200">혁신상</button>
+            <span class="lbl" style="margin-left:auto">색</span>
+            <select id="colorMode" style="padding:4px 6px;border:1px solid #cfd5df;border-radius:8px;font-size:12.5px;background:#fff">
+              <option value="group">분야</option><option value="place">장소</option><option value="kor">한국 기업</option><option value="award">혁신상</option>
+            </select>
+            <button class="chip" id="reset">초기화</button>
+          </div>
+        </div>
+        <div id="count"></div>
+        <div id="results"></div>
+      </section>
+      <section class="pane" id="pane-plan" hidden>
+        <div id="planTop">
+          <div>볼 곳을 고르고 날짜를 정한 뒤, <b>링크</b>나 <b>목록 코드</b>를 단톡방에 나누면 같이 준비할 수 있어요. 현장에서는 메모와 네 태그를 적어 두고, 다녀와서 마크다운으로 내보내세요.</div>
+          <div class="row">
+            <button id="pSort" class="pri">동선 순서로</button>
+            <button id="pAuto">캠퍼스별 날짜 채우기</button>
+            <button id="pRoute">지도에 동선</button>
+          </div>
+          <div class="row">
+            <button id="pLink">링크 복사</button>
+            <button id="pText">단톡방 글 복사</button>
+            <button id="pCode">목록 코드 복사</button>
+            <button id="pImport">코드 넣기</button>
+          </div>
+          <div class="row">
+            <button id="pMd">마크다운 받기</button>
+            <button id="pCsv">CSV 받기</button>
+            <button id="pClear" style="color:#c92a2a">비우기</button>
+          </div>
+        </div>
+        <div id="planList"></div>
+      </section>
+    </aside>
+    <div id="view">
+      <div id="tip"></div>
+      <div id="card" hidden></div>
+      <div id="legend"></div>
+      <div id="hint">끌기: 옮기기 · 오른쪽 끌기 또는 두 손가락: 돌리기 · 휠 또는 벌리기: 확대 · 부스 누르기: 자세히</div>
+    </div>
+  </div>
+</div>
+<div id="modal" hidden><div class="box" id="modalBox"></div></div>
+<div id="toast"></div>
+<script>/*__THREE__*/</script>
+<script>/*__ORBIT__*/</script>
+<script>const DATA = /*__DATA__*/;</script>
+<script>
+(function () {
+'use strict';
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* ---------- 1. 기준표 ---------- */
+const CAT_KO = {
+  'Accessibility': '접근성', 'Accessories': '액세서리', 'Additive Manufacturing & 3D Printing': '3D 프린팅', 'AgTech': '농업 기술',
+  'Artificial Intelligence': '인공지능', 'Audio': '오디오', 'Beauty Tech': '뷰티 테크', 'Biotech': '바이오', 'Blockchain & Digital Assets': '블록체인·디지털 자산',
+  'Cloud Computing': '클라우드', 'Computing': '컴퓨팅', 'Construction & Industrial Tech': '건설·산업 기술', 'Content & Entertainment': '콘텐츠·엔터',
+  'Cybersecurity': '사이버 보안', 'Drones': '드론', 'EdTech': '에듀테크', 'Energy Future': '에너지', 'Enterprise': '기업용 기술', 'Fashion Tech': '패션 테크',
+  'Fintech': '핀테크', 'Fitness': '피트니스', 'Food Tech': '푸드 테크', 'Gaming & Esports': '게임·e스포츠', 'Health': '헬스케어',
+  'Home Entertainment & Office Hardware': '홈 엔터·사무 기기', 'Imaging': '이미징', 'Investment & Venture Capital': '투자·벤처캐피털', 'IoT/Sensors': 'IoT·센서',
+  'Lifestyle': '라이프스타일', 'Longevity': '장수·노화', 'Marketing & Advertising': '마케팅·광고', 'Next G & Wireless': '차세대 통신', 'Pet & Animal Tech': '펫 테크',
+  'Quantum': '양자', 'Retail/E-Commerce': '리테일·이커머스', 'Robotics': '로봇', 'Smart Communities': '스마트 도시', 'Smart Home & Appliances': '스마트홈·가전',
+  'Sourcing & Manufacturing': '소싱·제조', 'Space Tech': '우주 기술', 'Sports': '스포츠', 'Startups': '스타트업', 'Streaming': '스트리밍',
+  'Supply & Logistics': '공급망·물류', 'Sustainability': '지속가능성', 'Travel & Tourism': '여행·관광', 'Vehicle Tech & Advanced Mobility': '모빌리티·자동차',
+  'Video & Display': '영상·디스플레이', 'XR & Spatial Computing': 'XR·공간 컴퓨팅'
+};
+const GROUPS = [
+  { key: 'ai', ko: 'AI·컴퓨팅', color: '#4263eb', cats: ['Artificial Intelligence', 'Computing', 'Cloud Computing', 'Quantum', 'Cybersecurity', 'Enterprise', 'Blockchain & Digital Assets', 'Next G & Wireless', 'IoT/Sensors'] },
+  { key: 'mob', ko: '모빌리티', color: '#f76707', cats: ['Vehicle Tech & Advanced Mobility', 'Drones', 'Space Tech', 'Supply & Logistics'] },
+  { key: 'rob', ko: '로봇·제조', color: '#e03131', cats: ['Robotics', 'Sourcing & Manufacturing', 'Additive Manufacturing & 3D Printing', 'Construction & Industrial Tech', 'AgTech'] },
+  { key: 'hea', ko: '건강', color: '#2f9e44', cats: ['Health', 'Longevity', 'Biotech', 'Fitness', 'Accessibility', 'Beauty Tech'] },
+  { key: 'hom', ko: '집·생활', color: '#f0b400', cats: ['Smart Home & Appliances', 'Lifestyle', 'Pet & Animal Tech', 'Food Tech', 'Fashion Tech', 'Accessories', 'Sustainability', 'Energy Future', 'Smart Communities', 'Travel & Tourism'] },
+  { key: 'ent', ko: '엔터·콘텐츠', color: '#9c36b5', cats: ['Gaming & Esports', 'XR & Spatial Computing', 'Audio', 'Video & Display', 'Streaming', 'Content & Entertainment', 'Home Entertainment & Office Hardware', 'Imaging', 'Sports'] },
+  { key: 'biz', ko: '비즈니스·교육', color: '#0c8599', cats: ['Fintech', 'Investment & Venture Capital', 'Marketing & Advertising', 'Retail/E-Commerce', 'EdTech', 'Startups'] }
+];
+const NOCAT = { ko: '분야 정보 없음', color: '#adb5bd' };
+/* 네 태그: 초안 (분야로 붙임, 사람이 고칠 것) */
+const AUD = [
+  { key: 'stu', ko: '학생', color: '#1c7ed6', cats: ['EdTech', 'Gaming & Esports', 'XR & Spatial Computing', 'Artificial Intelligence', 'Robotics', 'Content & Entertainment', 'Audio', 'Accessories', 'Startups', 'Drones', 'Space Tech', 'Sports'] },
+  { key: 'job', ko: '취준생', color: '#e8590c', cats: ['Artificial Intelligence', 'Enterprise', 'Cloud Computing', 'Cybersecurity', 'Computing', 'Robotics', 'Vehicle Tech & Advanced Mobility', 'Next G & Wireless', 'Quantum', 'IoT/Sensors', 'Startups', 'Supply & Logistics', 'Marketing & Advertising', 'Fintech', 'Construction & Industrial Tech', 'Sourcing & Manufacturing', 'Additive Manufacturing & 3D Printing'] },
+  { key: 'ret', ko: '정년', color: '#862e9c', cats: ['Health', 'Longevity', 'Accessibility', 'Smart Home & Appliances', 'Biotech', 'Fitness', 'Travel & Tourism', 'Smart Communities', 'Food Tech', 'Lifestyle', 'Pet & Animal Tech'] },
+  { key: 'mid', ko: '장년', color: '#2b8a3e', cats: ['Smart Home & Appliances', 'Vehicle Tech & Advanced Mobility', 'Energy Future', 'Fintech', 'Investment & Venture Capital', 'Health', 'Fitness', 'Home Entertainment & Office Hardware', 'Sustainability', 'Smart Communities', 'Travel & Tourism', 'Video & Display', 'Food Tech'] }
+];
+const DAYS = [
+  { key: 0, ko: '날짜 미정', short: '미정', color: '#868e96' },
+  { key: 1, ko: '1/6 (수) 10~18시', short: '1/6', color: '#d6336c' },
+  { key: 2, ko: '1/7 (목) 9~18시', short: '1/7', color: '#1971c2' },
+  { key: 3, ko: '1/8 (금) 9~18시', short: '1/8', color: '#2b8a3e' },
+  { key: 4, ko: '1/9 (토) 9~16시', short: '1/9', color: '#e67700' }
+];
+const ALIAS = {
+  '삼성': 'samsung', '엘지': 'lg', 'lg전자': 'lg electronics', '현대': 'hyundai', '기아': 'kia', '하이닉스': 'hynix', 'sk하이닉스': 'sk hynix', '소니': 'sony',
+  '구글': 'google', '아마존': 'amazon', '엔비디아': 'nvidia', '퀄컴': 'qualcomm', '인텔': 'intel', '마이크로소프트': 'microsoft', '메타': 'meta', '파나소닉': 'panasonic',
+  '레노버': 'lenovo', '보쉬': 'bosch', '웨이모': 'waymo', '지멘스': 'siemens', '히타치': 'hitachi', '가민': 'garmin', '로보락': 'roborock', '드리미': 'dreame',
+  '대전': 'daejeon', '서울': 'seoul', '부산': 'busan', '경기': 'gyeonggi', '인천': 'incheon', '카이스트': 'kaist', '코트라': 'kotra', '한국': 'korea',
+  '로봇': 'robot', '드론': 'drone', '자율주행': 'autonomous', '배터리': 'battery', '반도체': 'semiconductor', '헬스': 'health', '게임': 'gaming', '스마트홈': 'smart home'
+};
+const HIGHLIGHTS = [
+  ['LG Electronics', 'LG전자'], ['Samsung Electronics, Inc.', '삼성전자 (윈)'], ['Samsung Electronics Co., Ltd. (C-Lab)', '삼성 C랩'], ['SK hynix', 'SK하이닉스'],
+  ['Hyundai Mobis', '현대모비스'], ['Hyundai Motor and Kia ZER01NE-CRADLE', '현대차·기아 제로원'], ['Kia Corporation', '기아'], ['Waymo', '웨이모'], ['Stellantis', '스텔란티스'],
+  ['John Deere', '존 디어'], ['Caterpillar Inc.', '캐터필러'], ['Bosch', '보쉬'], ['TCL Corporation', 'TCL'], ['Hisense Visual Technology Co., Ltd.', '하이센스'],
+  ['Panasonic Holdings Corporation', '파나소닉'], ['Lenovo', '레노버'], ['Qualcomm', '퀄컴'], ['Advanced Micro Devices, Inc.', 'AMD'],
+  ['Amazon Web Services, Inc. (AWS)', 'AWS'], ['Google LLC', '구글'], ['Microsoft', '마이크로소프트'], ['NVIDIA Corporation', '엔비디아'], ['Meta', '메타'],
+  ['Sony Group Corporation', '소니'], ['Siemens', '지멘스'], ['Abbott', '애보트'], ['Hitachi', '히타치'], ['GARMIN International Inc.', '가민'],
+  ['Roborock (HK) Limited', '로보락'], ['Withings', '위딩스'], ['Daejeon Metropolitan City', '대전시관'], ['KAIST', 'KAIST'],
+  ['Korea Pavilion (KOTRA)', '한국관 (KOTRA)'], ['Seoul Metropolitan Government', '서울시관'], ['Busan Metropolitan City', '부산시관'], ['Accenture', '액센츄어']
+];
+const QUICK = ['LG전자', '삼성전자 (윈)', '삼성 C랩', 'SK하이닉스', '현대모비스', '엔비디아', '구글', '대전시관', 'KAIST', '한국관 (KOTRA)'];
+
+/* ---------- 2. 장소 (캠퍼스 지도 좌표) ---------- */
+const CAMPUS = {
+  lvcc: { ko: 'LVCC 캠퍼스', sub: 'Tech East · 컨벤션 센터', s: 1, T: (x, z) => [x - 780, z - 1000] },
+  ven: { ko: '베네시안 캠퍼스', sub: 'Tech West · 베네시안 엑스포', s: 0.85, T: (x, z) => [(x - 700) * 0.85 - 1650, (z - 1300) * 0.85 + 1450] },
+  cs: { ko: 'C Space 캠퍼스', sub: 'Tech South · 아리아 일대 (실제로는 약 3km 남쪽)', s: 1, T: (x, z) => [x, z] }
+};
+const R = (x0, z0, x1, z1) => [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
+const PLACES = [
+  { k: 'LVCC_W', c: 'lvcc', ko: 'LVCC 웨스트 홀', en: 'West Hall', kind: 'hall', th: '모빌리티·자동차', poly: [[250, 560], [398, 560], [487, 826], [250, 826]], reg: [262, 574, 478, 814], trap: true, y: 0, col: '#2b4c9b' },
+  { k: 'LVCC_DIAMOND', c: 'lvcc', ko: 'LVCC 다이아몬드 랏 (야외)', en: 'Diamond Lot', kind: 'out', th: '야외 전시', poly: [[248, 600], [248, 826], [122, 795]], reg: [200, 740, 242, 805], y: 0, col: '#c3c9d3' },
+  { k: 'LVCC_W_MTG', c: 'lvcc', ko: 'LVCC 웨스트 홀 회의실', en: 'West Hall Meeting Rooms', kind: 'room', th: '회의실 (2·3층)', poly: R(272, 600, 372, 690), y: 26, col: '#8ea2d8' },
+  { k: 'FONT', c: 'lvcc', ko: '퐁텐블로 · CES Foundry', en: 'Fontainebleau', kind: 'hotel', th: 'AI·양자 (CES Foundry)', poly: [[120, 330], [305, 330], [305, 480], [60, 480]], reg: [132, 345, 295, 468], H: 46, col: '#3d5a9e' },
+  { k: 'WESTGATE', c: 'lvcc', ko: '웨스트게이트', en: 'Westgate', kind: 'hotel', th: '호텔 스위트', poly: R(590, 482, 1015, 676), H: 30, col: '#8a9099' },
+  { k: 'RW', c: 'lvcc', ko: '리조트 월드', en: 'Resorts World', kind: 'hotel', th: '호텔 스위트', poly: R(-150, 520, -10, 700), H: 50, col: '#8a9099' },
+  { k: 'LVCC_N', c: 'lvcc', ko: 'LVCC 노스 홀', en: 'North Hall', kind: 'hall', th: 'AI·에너지·IoT·기업', poly: R(535, 690, 1105, 840), reg: [545, 698, 1097, 834], y: 0, col: '#6a46a3' },
+  { k: 'LVCC_N_MTG', c: 'lvcc', ko: 'LVCC 노스 홀 회의실', en: 'North Hall Meeting Rooms', kind: 'room', th: '회의실', poly: R(958, 742, 1078, 800), y: 26, col: '#a58fd0' },
+  { k: 'LVCC_GL', c: 'lvcc', ko: 'LVCC 그랜드 로비', en: 'Grand Lobby', kind: 'out', th: 'CTA 무대·먹거리', poly: R(785, 842, 905, 888), y: 0, col: '#b9a6dc' },
+  { k: 'LVCC_C', c: 'lvcc', ko: 'LVCC 센트럴 홀', en: 'Central Hall', kind: 'hall', th: '큰 브랜드·게임·XR·AV', poly: R(765, 890, 1220, 1022), reg: [775, 897, 1212, 1015], y: 0, col: '#4c63c4' },
+  { k: 'LVCC_C_MTG', c: 'lvcc', ko: 'LVCC 센트럴 홀 회의실', en: 'Central Hall Meeting Rooms', kind: 'room', th: '회의실', poly: R(790, 1030, 880, 1092), y: 12, col: '#93a3e0' },
+  { k: 'LVCC_CP', c: 'lvcc', ko: 'LVCC 센트럴 플라자 (야외)', en: 'Central Plaza', kind: 'out', th: '야외 전시·라운지', poly: R(540, 875, 695, 1160), reg: [560, 905, 675, 985], y: 0, col: '#c3c9d3' },
+  { k: 'LVCC_SILVER3', c: 'lvcc', ko: 'LVCC 실버 3 (야외)', en: 'Silver 3', kind: 'out', th: '야외 전시', poly: [[540, 1190], [655, 1190], [540, 1320]], reg: [548, 1198, 590, 1235], y: 0, col: '#c3c9d3' },
+  { k: 'LVCC_S_MTG', c: 'lvcc', ko: 'LVCC 사우스 회의실', en: 'South Meeting Rooms', kind: 'room', th: '회의실', poly: R(770, 1100, 880, 1195), y: 12, col: '#93cde0' },
+  { k: 'LVCC_S3', c: 'lvcc', ko: 'LVCC 사우스 홀 3', en: 'South Hall 3', kind: 'hall', th: '로봇·부품', poly: R(715, 1200, 1355, 1312), reg: [725, 1206, 1345, 1306], y: 0, col: '#4fb3d9' },
+  { k: 'LVCC_S1', c: 'lvcc', ko: 'LVCC 사우스 홀 1', en: 'South Hall 1', kind: 'hall', th: '액세서리·디자인&소싱·국가관', poly: R(690, 1316, 1010, 1416), reg: [698, 1322, 1004, 1410], y: 0, col: '#8fd0e6' },
+  { k: 'LVCC_S2', c: 'lvcc', ko: 'LVCC 사우스 홀 2', en: 'South Hall 2', kind: 'hall', th: '액세서리·디자인&소싱·국가관', poly: R(1014, 1316, 1335, 1416), reg: [1020, 1322, 1329, 1410], y: 0, col: '#8fd0e6' },
+  { k: 'VEN_AD', c: 'ven', ko: '베네시안 엑스포 홀 A-D (2층)', en: 'Venetian Expo Halls A-D', kind: 'hall', th: '국가관·스마트홈·라이프스타일·디지털 헬스·푸드테크', poly: [[90, 1020], [428, 1020], [428, 1230], [590, 1280], [450, 1530], [450, 1700], [90, 1700]], reg: [102, 1034, 420, 1690], y: 26, col: '#2b4c9b' },
+  { k: 'VEN_G', c: 'ven', ko: '베네시안 엑스포 홀 G · 유레카 파크 (1층)', en: 'Hall G · Eureka Park', kind: 'hall', th: '스타트업 (유레카 파크)', poly: R(185, 1712, 745, 1905), reg: [195, 1720, 735, 1897], y: 0, col: '#6a46a3' },
+  { k: 'VEN_BALL', c: 'ven', ko: '베네시안 볼룸 (2층)', en: 'Venetian Ballroom', kind: 'room', th: '전시·라운지', poly: R(432, 965, 555, 1225), y: 26, col: '#74b9e8' },
+  { k: 'VEN_L1', c: 'ven', ko: '베네시안 1층 회의실', en: 'Venetian Level 1', kind: 'room', th: '회의실 (갈릴레오·마르코 폴로·카사노바)', poly: R(685, 1350, 828, 1570), y: 2, col: '#8ea2d8' },
+  { k: 'VEN_L2', c: 'ven', ko: '베네시안 2층 회의실', en: 'Venetian Level 2', kind: 'room', th: '회의실 (벨리니·티치아노·베로네세·바사노)', poly: R(630, 990, 750, 1240), y: 26, col: '#8ea2d8' },
+  { k: 'VEN_L3', c: 'ven', ko: '베네시안 3층 회의실', en: 'Venetian Level 3', kind: 'room', th: '회의실 (리도·무라노·산 폴로)', poly: R(808, 910, 952, 1210), y: 48, col: '#8ea2d8' },
+  { k: 'VEN_L4', c: 'ven', ko: '베네시안 4층 회의실', en: 'Venetian Level 4', kind: 'room', th: '회의실 (델피노·란도·마르첼로·제노)', poly: R(1005, 910, 1148, 1210), y: 70, col: '#8ea2d8' },
+  { k: 'VEN_TOWER', c: 'ven', ko: '베네시안·팔라초 타워 스위트', en: 'Venetian / Palazzo Tower', kind: 'hotel', th: '호텔 스위트', poly: R(130, 650, 300, 800), H: 120, col: '#3d5a9e' },
+  { k: 'WYNN', c: 'ven', ko: '윈 · 앙코르', en: 'Wynn / Encore', kind: 'hotel', th: '호텔 스위트·회의실', poly: R(1450, 420, 1700, 700), H: 70, col: '#a07c3b' },
+  { k: 'ARIA', c: 'cs', ko: '아리아 · C Space', en: 'ARIA', kind: 'hotel', th: '광고·미디어·엔터 (C Space)', poly: R(-2450, 2160, -2200, 2380), H: 55, col: '#7a5aa6' },
+  { k: 'VDARA', c: 'cs', ko: '브다라', en: 'Vdara', kind: 'hotel', th: '호텔 스위트', poly: R(-2590, 2020, -2485, 2130), H: 45, col: '#8a9099' },
+  { k: 'COSMO', c: 'cs', ko: '코스모폴리탄', en: 'Cosmopolitan', kind: 'hotel', th: '호텔 스위트·회의실', poly: R(-2670, 2200, -2510, 2340), H: 50, col: '#8a9099' },
+  { k: 'BEACH', c: 'cs', ko: '비치 랏', en: 'Beach Lot', kind: 'out', th: '야외', poly: R(-2490, 2490, -2430, 2550), y: 0, col: '#c3c9d3' }
+];
+const PLACE = {}; PLACES.forEach((p, i) => { p.order = i; PLACE[p.k] = p; });
+const DECOR = [
+  { c: 'lvcc', poly: R(905, 842, 1220, 888), y: 0, col: '#cfc3e6', label: '센트럴 콘코스' },
+  { c: 'ven', poly: R(90, 330, 750, 940), H: 14, col: '#b8bec8', label: '베네시안 호텔·카지노' },
+  { c: 'ven', poly: R(1200, 910, 1360, 1210), y: 92, col: '#5c7cfa', label: '기조연설장 (팔라초 볼룸 5층)' }
+];
+const ROADS = [
+  { c: 'lvcc', w: 20, pts: [[28, 190], [28, 1900]], name: 'Las Vegas Blvd' },
+  { c: 'lvcc', w: 18, pts: [[510, 190], [510, 1700]], name: 'Paradise Rd' },
+  { c: 'lvcc', w: 14, pts: [[40, 852], [700, 852]] },
+  { c: 'lvcc', w: 16, pts: [[0, 1170], [700, 1170], [1250, 1150], [1546, 1118]], name: 'Desert Inn Rd' },
+  { c: 'lvcc', w: 14, pts: [[520, 1542], [1546, 1542]] },
+  { c: 'lvcc', w: 12, pts: [[40, 512], [500, 512]] },
+  { c: 'lvcc', w: 12, pts: [[520, 672], [1050, 672]] },
+  { c: 'lvcc', w: 14, pts: [[935, 195], [1115, 470], [1230, 690], [1280, 880], [1420, 1120], [1400, 1700]] },
+  { c: 'ven', w: 30, pts: [[440, 190], [760, 370]], name: 'Las Vegas Blvd' },
+  { c: 'ven', w: 24, pts: [[760, 1905], [840, 1760], [910, 1640], [960, 1450], [965, 1340]], name: 'Sands Ave' }
+];
+const LANDMARKS = [
+  { c: 'lvcc', at: [596, 1103], t: 'Tech Express (베네시안행 무료 셔틀)', col: '#0b7285' },
+  { c: 'lvcc', at: [607, 1397], t: 'C Space 셔틀', col: '#7a5aa6' },
+  { c: 'lvcc', at: [664, 1133], t: '배지 받는 곳', col: '#495057' },
+  { c: 'lvcc', at: [523, 1060], t: '모노레일 LVCC역', col: '#495057' },
+  { c: 'lvcc', at: [168, 447], t: '배지 받는 곳', col: '#495057' },
+  { c: 'ven', at: [765, 1790], t: 'Tech Express (LVCC행 무료 셔틀)', col: '#0b7285' },
+  { c: 'ven', at: [973, 1385], t: 'C Space 셔틀', col: '#7a5aa6' },
+  { c: 'ven', at: [475, 948], t: '배지 받는 곳', col: '#495057' },
+  { c: 'ven', at: [322, 1545], t: '홀 G ↔ 홀 A-D 에스컬레이터', col: '#495057' },
+  { c: 'ven', booth: '50243', place: 'VEN_AD', t: '혁신상 쇼케이스 (부스 50243)', col: '#b08800' }
+];
+const LINKS = [
+  { from: ['lvcc', 596, 1103], to: ['ven', 765, 1790], t: 'Tech Express', col: '#0b7285' },
+  { from: ['lvcc', 607, 1397], to: ['cs', -2325, 2270], t: 'C Space 셔틀 (7번)', col: '#7a5aa6' },
+  { from: ['ven', 973, 1385], to: ['cs', -2325, 2270], t: 'C Space 셔틀 (7번)', col: '#7a5aa6' }
+];
+const CAMS = {
+  all: { t: [-1120, 0, 1040], p: [1100, 3250, 3260] },
+  lvcc: { t: [0, 0, 30], p: [0, 1050, 1000] },
+  ven: { t: [-1730, 20, 1380], p: [-1730, 1050, 2350] },
+  cs: { t: [-2430, 0, 2260], p: [-2430, 620, 2860] }
+};
+
+/* ---------- 3. 자료 풀기 ---------- */
+const CATS = DATA.cats;
+const catGroup = CATS.map((c) => GROUPS.findIndex((g) => g.cats.includes(c)));
+const audCatSets = AUD.map((a) => new Set(a.cats.map((c) => CATS.indexOf(c)).filter((i) => i >= 0)));
+const KOREA = DATA.countries.indexOf('South Korea');
+const EX = DATA.ex.map((r, i) => {
+  const cats = r[4] ? r[4].split('.').map(Number) : [];
+  const gc = new Array(GROUPS.length).fill(0);
+  cats.forEach((c) => { if (catGroup[c] >= 0) gc[catGroup[c]]++; });
+  let g = -1, best = 0; gc.forEach((n, j) => { if (n > best) { best = n; g = j; } });
+  const aud = AUD.map((a, j) => cats.some((c) => audCatSets[j].has(c)));
+  return { i, id: r[0], id7: r[0].slice(-7), name: r[1], desc: r[2], country: r[3], cats, award: r[5], group: g, aud, booths: [], hay: '' };
+});
+const BOOTHS = []; const BOOTH_BY_KEY = new Map();
+DATA.ex.forEach((r, i) => {
+  r[7].forEach((s) => {
+    const at = s.lastIndexOf('@'); const code = s.slice(0, at); const pk = s.slice(at + 1);
+    const key = pk + '|' + code;
+    let b = BOOTH_BY_KEY.get(key);
+    if (!b) { b = { idx: BOOTHS.length, key, code, place: pk, ex: [] }; BOOTHS.push(b); BOOTH_BY_KEY.set(key, b); }
+    b.ex.push(i); EX[i].booths.push(b);
+  });
+});
+EX.forEach((e) => {
+  const catKo = e.cats.map((c) => CAT_KO[CATS[c]] || CATS[c]).join(' ');
+  e.hay = (e.name + ' | ' + e.booths.map((b) => b.code + ' ' + (PLACE[b.place] ? PLACE[b.place].ko : '')).join(' ') + ' | ' + catKo + ' | ' + e.cats.map((c) => CATS[c]).join(' ') + ' | ' + (DATA.countries[e.country] || '') + ' | ' + e.desc).toLowerCase();
+});
+const HL = {}; const HL_BY_EX = new Map();
+HIGHLIGHTS.forEach(([en, ko]) => { const e = EX.find((x) => x.name === en); if (e) { HL[ko] = e; HL_BY_EX.set(e.i, ko); } });
+EX.forEach((e) => {
+  if (e.country === KOREA) e.hay += ' 한국 korea';
+  const ko = HL_BY_EX.get(e.i); if (ko) e.hay += ' ' + ko.toLowerCase();
+  e.nameL = e.name.toLowerCase(); e.hlL = ko ? ko.toLowerCase() : '';
+  e.codesL = e.booths.map((b) => b.code.toLowerCase());
+  e.catL = e.cats.map((c) => (CATS[c] + ' ' + (CAT_KO[CATS[c]] || '')).toLowerCase()).join(' ');
+});
+
+/* ---------- 4. 부스 자리 계산 ---------- */
+function W(c, x, z) { return CAMPUS[c].T(x, z); }
+function polyBox(poly) { const xs = poly.map((p) => p[0]), zs = poly.map((p) => p[1]); return [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)]; }
+function inset(b, m) { return [b[0] + m, b[1] + m, b[2] - m, b[3] - m]; }
+const placeBooths = {}; BOOTHS.forEach((b) => { (placeBooths[b.place] = placeBooths[b.place] || []).push(b); });
+const natural = (a, b) => a.code.localeCompare(b.code, 'en', { numeric: true });
+PLACES.forEach((p) => {
+  const list = (placeBooths[p.k] || []).sort(natural);
+  p.booths = list; p.count = new Set(list.flatMap((b) => b.ex)).size;
+  const s = CAMPUS[p.c].s;
+  const baseY = p.kind === 'hotel' ? p.H : (p.kind === 'room' ? p.y + 3 : (p.y || 0) + 1.5);
+  if (!list.length) return;
+  const numeric = p.kind === 'hall' ? list.filter((b) => /^\d+[a-zA-Z]?$/.test(b.code)) : [];
+  if (numeric.length) {
+    const nums = numeric.map((b) => parseInt(b.code, 10));
+    const aisles = nums.map((n) => Math.floor(n / 100));
+    const aMin = Math.min(...aisles), aMax = Math.max(...aisles); const nA = aMax - aMin + 1;
+    const pMax = Math.max(...nums.map((n) => n % 100)); const nS = Math.floor(pMax / 2) + 1;
+    const [x0, z0, x1, z1] = p.reg; const Wd = x1 - x0, Dd = z1 - z0;
+    const ratio = (a, b) => Math.max(a, b) / Math.max(0.001, Math.min(a, b));
+    const rA = ratio(Wd / nA / 2, Dd / nS), rB = ratio(Dd / nA / 2, Wd / nS);
+    const orient = rA <= rB ? 'x' : 'z';
+    p.grid = { aMin, nA, nS, orient };
+    numeric.forEach((b) => {
+      const n = parseInt(b.code, 10); const a = Math.floor(n / 100) - aMin; const pos = n % 100; const slot = pos >> 1; const side = (pos & 1) ? -1 : 1;
+      const sfx = /[a-zA-Z]$/.test(b.code) ? 0.18 : 0;
+      let cx, cz, sx, sz;
+      if (orient === 'x') {
+        const ca = Wd / nA, cs = Dd / nS;
+        cx = x0 + (a + 0.5) * ca + side * ca * 0.24; cz = z0 + (slot + 0.5 + sfx) * cs; sx = ca * 0.44; sz = cs * 0.86;
+      } else {
+        const ca = Dd / nA, cs = Wd / nS;
+        cz = z0 + (a + 0.5) * ca + side * ca * 0.24; cx = x0 + (slot + 0.5 + sfx) * cs; sz = ca * 0.44; sx = cs * 0.86;
+      }
+      if (p.trap) {
+        const t = (cz - 560) / 266; const right = 398 + t * 89 - 10; const frac = (cx - x0) / Wd; cx = x0 + frac * (right - x0); sx *= (right - x0) / Wd;
+      }
+      b.aisle = a; b.slot = slot; b.side = side;
+      b.lx = cx; b.lz = cz; b.sx = Math.max(1.4, sx) * s; b.sz = Math.max(1.4, sz) * s; b.y = baseY;
+    });
+  }
+  const rest = list.filter((b) => b.lx === undefined);
+  if (rest.length) {
+    const bb = p.reg || inset(polyBox(p.poly), 8);
+    const [x0, z0, x1, z1] = bb; const Wd = x1 - x0, Dd = z1 - z0;
+    const cols = Math.max(1, Math.round(Math.sqrt(rest.length * Wd / Dd)));
+    const rows = Math.ceil(rest.length / cols);
+    const cw = Wd / cols, ch = Dd / rows; const sz = Math.max(1.6, Math.min(cw, ch) * 0.72, 0);
+    rest.forEach((b, i) => {
+      const col = i % cols, row = Math.floor(i / cols);
+      b.lx = x0 + (col + 0.5) * cw; b.lz = z0 + (row + 0.5) * ch; b.sx = Math.min(sz, 16) * s; b.sz = Math.min(sz, 16) * s; b.y = baseY; b.ord = i;
+    });
+  }
+  list.forEach((b) => { const [wx, wz] = W(p.c, b.lx, b.lz); b.x = wx; b.z = wz; });
+});
+
+/* ---------- 5. 장면 ---------- */
+const view = $('#view');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+view.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#e9edf3');
+const camera = new THREE.PerspectiveCamera(42, 1, 5, 40000);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.12; controls.screenSpacePanning = false;
+controls.maxPolarAngle = 1.32; controls.minDistance = 30; controls.maxDistance = 9000;
+controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE };
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8792a8, 0.95));
+const sun = new THREE.DirectionalLight(0xffffff, 0.55); sun.position.set(-800, 1600, 900); scene.add(sun);
+
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(14000, 12000), new THREE.MeshLambertMaterial({ color: '#eef1f5' }));
+ground.rotation.x = -Math.PI / 2; ground.position.set(-1200, -1.2, 1100); scene.add(ground);
+
+function shapeFrom(worldPts) { const sh = new THREE.Shape(); worldPts.forEach(([x, z], i) => (i ? sh.lineTo(x, z) : sh.moveTo(x, z))); sh.closePath(); return sh; }
+function slab(worldPts, top, thick, color, opacity) {
+  const g = new THREE.ExtrudeGeometry(shapeFrom(worldPts), { depth: thick, bevelEnabled: false }); g.rotateX(Math.PI / 2);
+  const m = new THREE.MeshLambertMaterial({ color, transparent: opacity < 1, opacity: opacity == null ? 1 : opacity });
+  const mesh = new THREE.Mesh(g, m); mesh.position.y = top; scene.add(mesh);
+  const edges = new THREE.LineSegments(new THREE.EdgesGeometry(g, 30), new THREE.LineBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.55 }));
+  edges.position.y = top; scene.add(edges);
+  return mesh;
+}
+const toWorld = (c, poly) => poly.map(([x, z]) => W(c, x, z));
+// 캠퍼스 바닥판
+const pads = { lvcc: [[-40, 300], [1560, 300], [1560, 1600], [-180, 1600], [-180, 460], [-40, 460]], ven: [[60, 160], [1720, 160], [1720, 1930], [60, 1930]] };
+Object.entries(pads).forEach(([c, poly]) => slab(toWorld(c, poly), -0.4, 0.6, '#e2e7ef', 1));
+slab(toWorld('cs', R(-2720, 1980, -2150, 2600)), -0.4, 0.6, '#e2e7ef', 1);
+// 길
+ROADS.forEach((r) => {
+  const s = CAMPUS[r.c].s;
+  for (let i = 0; i < r.pts.length - 1; i++) {
+    const [ax, az] = W(r.c, ...r.pts[i]), [bx, bz] = W(r.c, ...r.pts[i + 1]);
+    const len = Math.hypot(bx - ax, bz - az); const g = new THREE.PlaneGeometry(len, r.w * s);
+    const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: '#c5ccd6' }));
+    m.rotation.x = -Math.PI / 2; m.rotation.z = -Math.atan2(bz - az, bx - ax);
+    m.position.set((ax + bx) / 2, -0.05, (az + bz) / 2); scene.add(m);
+  }
+});
+// 장소 바닥·건물
+PLACES.forEach((p) => {
+  const wp = toWorld(p.c, p.poly);
+  if (p.kind === 'hotel') { p.mesh = slab(wp, p.H, p.H, p.col, 0.92); }
+  else if (p.kind === 'room') { p.mesh = slab(wp, p.y + 3, 3, p.col, 0.78); if (p.y > 4) { const [cx, cz] = centroid(wp); const pole = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, p.y, 6), new THREE.MeshLambertMaterial({ color: '#98a2b3' })); pole.position.set(cx, p.y / 2, cz); scene.add(pole); } }
+  else { p.mesh = slab(wp, (p.y || 0) + 1.5, 1.5, p.col, p.c === 'ven' && p.k === 'VEN_AD' ? 0.9 : 1); }
+});
+DECOR.forEach((d) => { const wp = toWorld(d.c, d.poly); if (d.H) slab(wp, d.H, d.H, d.col, 0.85); else slab(wp, (d.y || 0) + 1.2, 1.2, d.col, 0.85); });
+function centroid(pts) { let x = 0, z = 0; pts.forEach((p) => { x += p[0]; z += p[1]; }); return [x / pts.length, z / pts.length]; }
+
+/* 부스 상자 (한 번에 그리기) */
+const boxGeo = new THREE.BoxGeometry(1, 1, 1); boxGeo.translate(0, 0.5, 0);
+const boothMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+const inst = new THREE.InstancedMesh(boxGeo, boothMat, BOOTHS.length);
+inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+inst.frustumCulled = false;
+scene.add(inst);
+const tmpM = new THREE.Matrix4(), tmpC = new THREE.Color(), tmpQ = new THREE.Quaternion(), tmpV = new THREE.Vector3(), tmpS = new THREE.Vector3();
+BOOTHS.forEach((b) => { b.h0 = 3 + Math.min(11, 2.4 * Math.log2(1 + b.ex.length)); });
+
+/* 글자판 */
+function makeLabel(text, o) {
+  o = o || {};
+  const px = o.px || 44; const font = (o.bold === false ? '500 ' : '700 ') + px + 'px -apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif';
+  const cv = document.createElement('canvas'); const cx = cv.getContext('2d'); cx.font = font;
+  const lines = String(text).split('\n'); const subPx = Math.round(px * 0.62);
+  let w = 0; lines.forEach((l, i) => { cx.font = i ? ('500 ' + subPx + 'px sans-serif') : font; w = Math.max(w, cx.measureText(l).width); });
+  const pad = px * 0.42; const lh = [px * 1.18].concat(lines.slice(1).map(() => subPx * 1.3));
+  const H = lh.reduce((a, b) => a + b, 0) + pad * 1.2; const Wc = w + pad * 2;
+  cv.width = Math.ceil(Wc); cv.height = Math.ceil(H);
+  const c2 = cv.getContext('2d');
+  c2.fillStyle = o.bg || 'rgba(255,255,255,0.93)'; const r = Math.min(18, H / 3);
+  c2.beginPath(); c2.moveTo(r, 0); c2.arcTo(Wc, 0, Wc, H, r); c2.arcTo(Wc, H, 0, H, r); c2.arcTo(0, H, 0, 0, r); c2.arcTo(0, 0, Wc, 0, r); c2.closePath(); c2.fill();
+  if (o.border) { c2.strokeStyle = o.border; c2.lineWidth = 4; c2.stroke(); }
+  let y = pad * 0.6;
+  lines.forEach((l, i) => { c2.font = i ? ('500 ' + subPx + 'px sans-serif') : font; c2.fillStyle = i ? (o.subColor || '#5b6475') : (o.color || '#1d2433'); c2.textBaseline = 'top'; c2.fillText(l, pad, y + (i ? 2 : 0)); y += lh[i]; });
+  const tex = new THREE.CanvasTexture(cv); tex.minFilter = THREE.LinearFilter; tex.generateMipmaps = false;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true, sizeAttenuation: false }));
+  sp.renderOrder = o.order || 10;
+  sp.userData = { minD: o.minD || 0, maxD: o.maxD || 1e9, hpx: o.hpx || 22, ar: cv.width / cv.height };
+  scene.add(sp); labels.push(sp); return sp;
+}
+function sizeLabels() {
+  const k = 2 * Math.tan((camera.fov * Math.PI) / 360) / Math.max(1, view.clientHeight) * (view.clientWidth < 600 ? 0.72 : 1);
+  labels.forEach((l) => { const u = l.userData; const h = u.hpx * k; l.scale.set(h * u.ar, h, 1); });
+}
+const labels = [];
+Object.entries(CAMPUS).forEach(([c, cp]) => {
+  const at = { lvcc: [780, 260], ven: [880, 140], cs: [-2430, 1940] }[c];
+  const [x, z] = W(c, ...at); const l = makeLabel(cp.ko + '\n' + cp.sub, { px: 64, hpx: 52, minD: 1900, bg: 'rgba(18,26,44,0.88)', color: '#ffffff', subColor: '#c3cbe0' }); l.position.set(x, 180, z);
+});
+PLACES.forEach((p) => {
+  const wp = toWorld(p.c, p.poly); const [x, z] = centroid(wp);
+  const top = p.kind === 'hotel' ? p.H : (p.y || 0);
+  const big = p.kind === 'hall' || p.kind === 'hotel';
+  const txt = p.ko + (p.count ? '  ' + p.count + '곳' : '') + (big ? '\n' + p.th : '');
+  const l = makeLabel(txt, { px: big ? 44 : 32, hpx: big ? 48 : 21, maxD: big ? 2700 : 1150, minD: 0, border: big ? p.col : null });
+  l.position.set(x, top + (big ? 46 : 22), z); p.label = l;
+});
+DECOR.forEach((d) => { const [x, z] = centroid(toWorld(d.c, d.poly)); const l = makeLabel(d.label, { px: 30, hpx: 19, maxD: 1500 }); l.position.set(x, (d.H || d.y || 0) + 16, z); });
+LANDMARKS.forEach((m) => {
+  let x, z, y = 0;
+  if (m.booth) { const b = BOOTH_BY_KEY.get(m.place + '|' + m.booth); if (!b) return; x = b.x; z = b.z; y = b.y + 14; }
+  else { [x, z] = W(m.c, ...m.at); }
+  const l = makeLabel(m.t, { px: 30, hpx: 20, maxD: 1500, bg: m.col, color: '#ffffff' }); l.position.set(x, y + 26, z);
+  const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, y + 18, 6), new THREE.MeshLambertMaterial({ color: m.col })); stick.position.set(x, (y + 18) / 2, z); scene.add(stick);
+});
+LINKS.forEach((k) => {
+  const a = W(k.from[0], k.from[1], k.from[2]), b = W(k.to[0], k.to[1], k.to[2]);
+  const mid = new THREE.Vector3((a[0] + b[0]) / 2, 140, (a[1] + b[1]) / 2);
+  const curve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(a[0], 4, a[1]), mid, new THREE.Vector3(b[0], 4, b[1]));
+  const g = new THREE.BufferGeometry().setFromPoints(curve.getPoints(60));
+  const line = new THREE.Line(g, new THREE.LineDashedMaterial({ color: k.col, dashSize: 26, gapSize: 16 })); line.computeLineDistances(); scene.add(line);
+  const l = makeLabel(k.t, { px: 34, hpx: 24, minD: 1700, maxD: 9000, bg: k.col, color: '#fff' }); l.position.copy(curve.getPoint(0.5)).add(new THREE.Vector3(0, 24, 0));
+});
+const hlLabels = [];
+HIGHLIGHTS.forEach(([en, ko]) => {
+  const e = HL[ko]; if (!e || !e.booths.length) return;
+  const b = e.booths.slice().sort((p, q) => (p.ex.length - q.ex.length))[0];
+  const l = makeLabel(ko, { px: 30, hpx: 20, maxD: 950, bg: 'rgba(255,255,255,0.95)', border: '#1d2433', order: 11 });
+  l.position.set(b.x, b.y + b.h0 + 12, b.z); l.userData.ex = e.i; hlLabels.push(l);
+});
+
+/* 고른 부스 표시 */
+const pin = new THREE.Group();
+const pinCone = new THREE.Mesh(new THREE.ConeGeometry(5, 14, 16), new THREE.MeshLambertMaterial({ color: '#e03131' })); pinCone.rotation.x = Math.PI; pinCone.position.y = 7;
+const pinBall = new THREE.Mesh(new THREE.SphereGeometry(5.4, 16, 12), new THREE.MeshLambertMaterial({ color: '#e03131' })); pinBall.position.y = 15;
+pin.add(pinCone); pin.add(pinBall); pin.visible = false; scene.add(pin);
+const routeGroup = new THREE.Group(); scene.add(routeGroup);
+
+/* ---------- 6. 상태 ---------- */
+const st = { q: '', place: '', cat: -1, aud: new Set(), kor: false, award: false, color: 'group', sel: null, selBooth: null, showRoute: true, limit: 150 };
+let matchEx = null; // Set or null(=all)
+let boothMatch = new Array(BOOTHS.length).fill(true);
+const PLAN_KEY = 'ces2027-plan-v1';
+const EX_BY_ID7 = new Map(EX.map((e) => [e.id7, e]));
+function loadPlan() { try { const s = localStorage.getItem(PLAN_KEY); if (s) return JSON.parse(s).filter((it) => it && EX_BY_ID7.has(it.id)).map((it) => ({ id: it.id, day: +it.day || 0, tags: Array.isArray(it.tags) ? it.tags : [], memo: it.memo || '' })); } catch (e) {} return []; }
+function savePlan() { try { localStorage.setItem(PLAN_KEY, JSON.stringify(plan)); } catch (e) {} }
+let plan = loadPlan();
+
+/* ---------- 7. 거르기 ---------- */
+function computeMatch() {
+  const toks = st.q.trim().toLowerCase().split(/\s+/).filter(Boolean).map((t) => [t, ALIAS[t] || null]);
+  const any = toks.length || st.place || st.cat >= 0 || st.aud.size || st.kor || st.award;
+  if (!any) { matchEx = null; boothMatch.fill(true); return; }
+  matchEx = new Set();
+  EX.forEach((e) => {
+    if (st.kor && e.country !== KOREA) return;
+    if (st.award && !e.award) return;
+    if (st.cat >= 0 && !e.cats.includes(st.cat)) return;
+    if (st.aud.size && !AUD.some((a, j) => st.aud.has(a.key) && e.aud[j])) return;
+    if (st.place && !e.booths.some((b) => b.place === st.place)) return;
+    let score = 0;
+    for (const [t, al] of toks) {
+      const hit = (s) => s && e.hay.includes(s);
+      if (!hit(t) && !hit(al)) return;
+      const nm = e.nameL;
+      if (e.codesL.includes(t)) score += 40;
+      if (e.hlL && e.hlL.includes(t)) score += 30;
+      if (nm.startsWith(t) || (al && nm.startsWith(al))) score += 20;
+      else if (nm.includes(t) || (al && nm.includes(al))) score += 12;
+      else if (e.catL.includes(t) || (al && e.catL.includes(al))) score += 4;
+    }
+    e._score = score;
+    matchEx.add(e.i);
+  });
+  BOOTHS.forEach((b, i) => { boothMatch[i] = b.ex.some((x) => matchEx.has(x)) && (!st.place || b.place === st.place); });
+}
+function exColor(e) {
+  switch (st.color) {
+    case 'kor': return e.country === KOREA ? '#e03131' : '#93a0b4';
+    case 'award': return e.award & 2 ? '#f59f00' : (e.award & 1 ? '#ffd43b' : '#b6bfcc');
+    case 'place': return PLACE[e.booths[0] ? e.booths[0].place : ''] ? PLACE[e.booths[0].place].col : '#adb5bd';
+    default: return e.group >= 0 ? GROUPS[e.group].color : NOCAT.color;
+  }
+}
+function boothColor(b) {
+  if (st.color === 'place') return PLACE[b.place].col;
+  const pick = matchEx ? b.ex.filter((x) => matchEx.has(x)) : b.ex;
+  const list = pick.length ? pick : b.ex;
+  if (st.color === 'kor') return list.some((x) => EX[x].country === KOREA) ? '#e03131' : '#93a0b4';
+  if (st.color === 'award') { if (list.some((x) => EX[x].award & 2)) return '#f59f00'; if (list.some((x) => EX[x].award & 1)) return '#ffd43b'; return '#b6bfcc'; }
+  const cnt = new Array(GROUPS.length).fill(0); let none = 0;
+  list.forEach((x) => { const g = EX[x].group; if (g >= 0) cnt[g]++; else none++; });
+  let g = -1, best = 0; cnt.forEach((n, j) => { if (n > best) { best = n; g = j; } });
+  return g >= 0 ? GROUPS[g].color : NOCAT.color;
+}
+const planSet = () => new Set(plan.map((it) => it.id));
+function paintBooths() {
+  const inPlan = new Set(); plan.forEach((it) => { const e = EX_BY_ID7.get(it.id); if (e) e.booths.forEach((b) => inPlan.add(b.idx)); });
+  BOOTHS.forEach((b, i) => {
+    const on = boothMatch[i]; const hot = inPlan.has(i);
+    const h = on ? b.h0 * (hot ? 1.8 : 1) : 0.8;
+    tmpV.set(b.x, b.y, b.z); tmpS.set(b.sx, h, b.sz); tmpM.compose(tmpV, tmpQ, tmpS); inst.setMatrixAt(i, tmpM);
+    tmpC.set(on ? boothColor(b) : '#d9dee6'); if (hot && on) tmpC.offsetHSL(0, 0.05, -0.08); inst.setColorAt(i, tmpC);
+  });
+  inst.instanceMatrix.needsUpdate = true; if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
+  hlLabels.forEach((l) => { l.userData.dim = matchEx ? !matchEx.has(l.userData.ex) : false; });
+}
+function renderLegend() {
+  let h = '';
+  if (st.color === 'group') h = GROUPS.map((g) => `<span class="it"><i style="background:${g.color}"></i>${g.ko}</span>`).join('') + `<span class="it"><i style="background:${NOCAT.color}"></i>${NOCAT.ko}</span>`;
+  else if (st.color === 'kor') h = '<span class="it"><i style="background:#e03131"></i>한국 기업 있음</span><span class="it"><i style="background:#93a0b4"></i>그 밖</span>';
+  else if (st.color === 'award') h = '<span class="it"><i style="background:#f59f00"></i>최고 혁신상</span><span class="it"><i style="background:#ffd43b"></i>혁신상</span><span class="it"><i style="background:#b6bfcc"></i>그 밖</span>';
+  else h = PLACES.filter((p) => p.kind === 'hall').map((p) => `<span class="it"><i style="background:${p.col}"></i>${p.ko.replace('LVCC ', '').replace('베네시안 엑스포 ', '')}</span>`).join('');
+  h += '<div style="margin-top:4px;color:#667085">상자 높이 = 그 부스에 있는 회사 수 · 내 목록은 더 높게</div>';
+  $('#legend').innerHTML = h;
+}
+
+/* ---------- 8. 왼쪽 목록 ---------- */
+function placeShort(k) { const p = PLACE[k]; return p ? p.ko : k; }
+function boothText(e, max) {
+  max = max || 3;
+  if (!e.booths.length) return '자리 미정';
+  const by = new Map(); e.booths.forEach((b) => { if (!by.has(b.place)) by.set(b.place, []); by.get(b.place).push(b.code); });
+  return [...by.entries()].map(([pk, codes]) => {
+    const p = PLACE[pk];
+    if (p && p.kind === 'hotel' && codes.length > 1) return `스위트·회의실 ${codes.length}곳 · ${p.ko}`;
+    const shown = codes.slice(0, max).join(', ');
+    return (codes.length > max ? `${shown} 외 ${codes.length - max}곳` : shown) + ' · ' + placeShort(pk);
+  }).join(' / ');
+}
+function badges(e) {
+  let s = '';
+  if (e.country === KOREA) s += '<span class="badge b-kr">한국</span>';
+  if (e.award & 2) s += '<span class="badge b-boi">최고 혁신상</span>'; else if (e.award & 1) s += '<span class="badge b-aw">혁신상</span>';
+  return s;
+}
+function renderResults() {
+  const box = $('#results');
+  let list = matchEx ? EX.filter((e) => matchEx.has(e.i)) : EX;
+  if (matchEx && st.q.trim()) list = list.slice().sort((a, b) => (b._score - a._score) || a.name.localeCompare(b.name));
+  const total = list.length;
+  $('#count').textContent = matchEx ? `맞는 곳 ${total.toLocaleString()}곳 (전체 ${EX.length.toLocaleString()}곳)` : `전시사 ${EX.length.toLocaleString()}곳 · 검색하거나 걸러 보세요`;
+  let html = '';
+  if (!matchEx) html += '<div class="quick"><div class="lbl" style="margin-bottom:6px">자주 찾는 곳</div>' + QUICK.filter((k) => HL[k]).map((k) => `<button class="chip" data-ex="${HL[k].i}">${esc(k)}</button>`).join('') + '</div>';
+  const inP = planSet();
+  html += list.slice(0, st.limit).map((e) => `<div class="res" data-ex="${e.i}"><span class="dot" style="background:${exColor(e)}"></span><div><div class="nm">${esc(e.name)}${badges(e)}${inP.has(e.id7) ? '<span class="badge" style="background:#e7ebff;color:#3b5bdb">내 목록</span>' : ''}</div><div class="meta">${esc(boothText(e))}</div></div></div>`).join('');
+  if (total > st.limit) html += `<button class="more" id="more">더 보기 (${(total - st.limit).toLocaleString()}곳 남음)</button>`;
+  if (!total) html += '<div class="empty">맞는 곳이 없어요. 거르기를 줄이거나 영어 이름으로 찾아 보세요.</div>';
+  box.innerHTML = html;
+}
+function refresh(keepLimit) { if (!keepLimit) st.limit = 150; computeMatch(); paintBooths(); renderResults(); }
+
+/* ---------- 9. 자세히 ---------- */
+function selectEx(i, fly, atBooth) {
+  const e = EX[i]; st.sel = i;
+  const b = atBooth || e.booths[0]; st.selBooth = b ? b.idx : null;
+  showPin(b);
+  if (fly && b) flyTo(b.x, b.y, b.z, b.y > 30 ? 380 : 300);
+  const inP = planSet().has(e.id7);
+  const cats = e.cats.map((c) => CAT_KO[CATS[c]] || CATS[c]).join(', ') || '분야 정보 없음';
+  const aud = AUD.filter((a, j) => e.aud[j]).map((a) => a.ko).join(', ') || '없음 (분야 정보 없음)';
+  const booths = e.booths.map((bb) => `<div><span class="bl" data-booth="${bb.idx}">${esc(bb.code)}</span> · ${esc(placeShort(bb.place))}${bb.ex.length > 1 ? ` <span class="lbl">(같은 부스 ${bb.ex.length}곳)</span>` : ''}</div>`).join('');
+  $('#card').innerHTML = `<button class="x" id="cx">×</button><h3>${esc(e.name)}</h3><div>${badges(e)}</div>
+    <div class="sec"><b>부스</b>${booths || '자리 미정'}</div>
+    <div class="sec"><b>나라 · 분야</b>${esc(DATA.countries[e.country] || '확인 못 함')} · ${esc(cats)}</div>
+    <div class="sec"><b>누구에게 (초안)</b>${esc(aud)}</div>
+    ${e.desc ? `<div class="sec"><b>소개 (전시사 원문)</b><div class="desc">${esc(e.desc)}</div></div>` : ''}
+    <div class="acts"><button class="pri" id="cAdd">${inP ? '내 목록에서 빼기' : '내 목록에 넣기'}</button><button id="cFly">지도에서 보기</button><a href="https://exhibitors.ces.tech/8_0/exhibitor/exhibitor-details.cfm?exhid=${encodeURIComponent(e.id)}" target="_blank" rel="noopener">공식 페이지</a></div>`;
+  $('#card').hidden = false;
+  $('#cx').onclick = closeCard;
+  $('#cAdd').onclick = () => { togglePlan(e); selectEx(i, false, b); };
+  $('#cFly').onclick = () => { if (b) flyTo(b.x, b.y, b.z, 260); };
+  $('#card').querySelectorAll('[data-booth]').forEach((n) => (n.onclick = () => selectBooth(+n.dataset.booth, true)));
+}
+function selectBooth(bi, fly) {
+  const b = BOOTHS[bi]; st.selBooth = bi; showPin(b);
+  if (fly) flyTo(b.x, b.y, b.z, 260);
+  if (b.ex.length === 1) { selectEx(b.ex[0], false, b); return; }
+  const rows = b.ex.slice().sort((x, y) => EX[x].name.localeCompare(EX[y].name)).map((x) => `<div data-ex="${x}">${esc(EX[x].name)}${badges(EX[x])}</div>`).join('');
+  $('#card').innerHTML = `<button class="x" id="cx">×</button><h3>부스 ${esc(b.code)}</h3><div class="lbl">${esc(placeShort(b.place))} · 회사 ${b.ex.length}곳 (국가관·공동관일 수 있어요)</div><div class="sec ml">${rows}</div>`;
+  $('#card').hidden = false; $('#cx').onclick = closeCard;
+  $('#card').querySelectorAll('[data-ex]').forEach((n) => (n.onclick = () => selectEx(+n.dataset.ex, false, b)));
+}
+function closeCard() { $('#card').hidden = true; pin.visible = false; st.sel = null; st.selBooth = null; }
+function showPin(b) { if (!b) { pin.visible = false; return; } pin.position.set(b.x, b.y + b.h0 * 1.8 + 2, b.z); pin.visible = true; }
+
+/* ---------- 10. 카메라 ---------- */
+let fly = null;
+function flyTo(x, y, z, dist) {
+  const t = new THREE.Vector3(x, y, z); const dir = camera.position.clone().sub(controls.target).normalize();
+  if (dir.y < 0.45) { dir.y = 0.6; dir.normalize(); }
+  const p = t.clone().add(dir.multiplyScalar(dist || 300));
+  fly = { t0: performance.now(), dur: 750, fromT: controls.target.clone(), toT: t, fromP: camera.position.clone(), toP: p };
+}
+function camFor(key) {
+  const c = CAMS[key]; const t = new THREE.Vector3(...c.t); const off = new THREE.Vector3(...c.p).sub(t);
+  const a = camera.aspect || 1.5; const f = Math.min(2.6, Math.max(1, (key === 'all' ? 1.35 : 1.15) / a));
+  return { t, p: t.clone().add(off.multiplyScalar(f)) };
+}
+function flyCam(key) { const c = camFor(key); fly = { t0: performance.now(), dur: 900, fromT: controls.target.clone(), toT: c.t, fromP: camera.position.clone(), toP: c.p }; document.querySelectorAll('[data-cam]').forEach((b) => b.classList.toggle('on', b.dataset.cam === key)); }
+
+/* ---------- 11. 내 목록 ---------- */
+function togglePlan(e) {
+  const k = plan.findIndex((it) => it.id === e.id7);
+  if (k >= 0) plan.splice(k, 1); else plan.push({ id: e.id7, day: 0, tags: [], memo: '' });
+  savePlan(); afterPlan();
+}
+function afterPlan() { $('#planCount').textContent = plan.length; paintBooths(); renderPlan(); renderRoute(); if (!$('#pane-find').hidden) renderResults(); }
+function sortKey(it) {
+  const e = EX_BY_ID7.get(it.id); const b = e && e.booths[0];
+  if (!b) return [9, 99, 0, 0, ''];
+  const p = PLACE[b.place]; const camp = { lvcc: 0, ven: 1, cs: 2 }[p.c];
+  const a = b.aisle == null ? 0 : b.aisle; const s = b.slot == null ? (b.ord || 0) : b.slot;
+  return [camp, p.order, a, (a % 2 ? -s : s), b.code];
+}
+function cmpKey(x, y) { for (let i = 0; i < x.length; i++) { if (x[i] < y[i]) return -1; if (x[i] > y[i]) return 1; } return 0; }
+function sortPlan() { const keyed = plan.map((it, n) => ({ it, k: sortKey(it), n })); keyed.sort((a, b) => (a.it.day - b.it.day) || cmpKey(a.k, b.k)); plan = keyed.map((x) => x.it); savePlan(); afterPlan(); }
+function autoDays() {
+  let n = 0; plan.forEach((it) => { if (it.day) return; const e = EX_BY_ID7.get(it.id); const b = e && e.booths[0]; const c = b ? PLACE[b.place].c : 'cs'; it.day = c === 'lvcc' ? 1 : (c === 'ven' ? 2 : 3); n++; });
+  sortPlan(); toast(n ? `날짜 미정 ${n}곳을 캠퍼스별로 채웠어요 (LVCC 1/6, 베네시안 1/7, C Space·그 밖 1/8). 바꿔도 돼요.` : '날짜 미정인 곳이 없어요');
+}
+function renderPlan() {
+  const box = $('#planList');
+  if (!plan.length) { box.innerHTML = '<div class="empty">아직 비어 있어요.<br>찾기에서 회사를 누르고 <b>내 목록에 넣기</b>를 누르세요. 부스를 눌러도 돼요.<br><br>링크나 목록 코드를 받았다면 위의 <b>코드 넣기</b>를 쓰세요.</div>'; return; }
+  let html = '';
+  DAYS.forEach((d) => {
+    const items = plan.map((it, n) => ({ it, n })).filter((x) => x.it.day === d.key);
+    if (!items.length) return;
+    html += `<div class="day"><h5><i style="background:${d.color}"></i>${d.ko} · ${items.length}곳</h5>`;
+    items.forEach(({ it, n }, j) => {
+      const e = EX_BY_ID7.get(it.id); if (!e) return;
+      html += `<div class="pi" data-n="${n}"><div class="top"><span class="no" style="background:${d.color}">${j + 1}</span><div class="nm" data-ex="${e.i}">${esc(e.name)}<small>${esc(boothText(e))}</small></div>
+        <select data-day="${n}">${DAYS.map((x) => `<option value="${x.key}"${x.key === it.day ? ' selected' : ''}>${x.short}</option>`).join('')}</select><button class="rm" data-rm="${n}" title="빼기">×</button></div>
+        <div class="bot">${AUD.map((a) => `<button class="chip${it.tags.includes(a.key) ? ' on' : ''}" style="--c:${a.color}" data-tag="${n}|${a.key}">${a.ko}</button>`).join('')}<input data-memo="${n}" placeholder="본 것 · 느낀 점 한 줄" value="${esc(it.memo)}"></div></div>`;
+    });
+    html += '</div>';
+  });
+  box.innerHTML = html;
+}
+function renderRoute() {
+  while (routeGroup.children.length) { const c = routeGroup.children.pop(); if (c.geometry) c.geometry.dispose(); if (c.material) { if (c.material.map) c.material.map.dispose(); c.material.dispose(); } }
+  if (!st.showRoute) return;
+  DAYS.forEach((d) => {
+    const items = plan.filter((it) => it.day === d.key); if (!items.length) return;
+    const pts = [];
+    items.forEach((it, j) => {
+      const e = EX_BY_ID7.get(it.id); const b = e && e.booths[0]; if (!b) return;
+      const v = new THREE.Vector3(b.x, b.y + b.h0 * 1.8 + 3, b.z); pts.push(v);
+      const cv = document.createElement('canvas'); cv.width = cv.height = 64; const c = cv.getContext('2d');
+      c.fillStyle = d.color; c.beginPath(); c.arc(32, 32, 30, 0, Math.PI * 2); c.fill(); c.fillStyle = '#fff'; c.font = '700 32px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(String(j + 1), 32, 34);
+      const kk = 2 * Math.tan((camera.fov * Math.PI) / 360) / Math.max(1, view.clientHeight);
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false, transparent: true, sizeAttenuation: false })); sp.scale.set(24 * kk, 24 * kk, 1); sp.position.copy(v).add(new THREE.Vector3(0, 6, 0)); sp.renderOrder = 12; routeGroup.add(sp);
+    });
+    if (pts.length > 1 && d.key) {
+      const g = new THREE.BufferGeometry().setFromPoints(pts);
+      routeGroup.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color: d.color, transparent: true, opacity: 0.9, depthTest: false })));
+    }
+  });
+}
+function planCode() { return plan.map((it) => it.id + (it.day ? '.' + it.day : '')).join(','); }
+function readCode(s) {
+  s = String(s || '').trim(); const m = s.match(/plan=([^&\s]+)/); if (m) s = decodeURIComponent(m[1]);
+  return s.split(',').map((x) => x.trim()).filter(Boolean).map((x) => { const [id, day] = x.split('.'); return { id, day: Math.max(0, Math.min(4, parseInt(day || '0', 10) || 0)), tags: [], memo: '' }; }).filter((it) => EX_BY_ID7.has(it.id));
+}
+function mergeItems(items) { const have = planSet(); let n = 0; items.forEach((it) => { if (!have.has(it.id)) { plan.push(it); n++; } }); savePlan(); afterPlan(); return n; }
+function shareLink() { const base = location.href.split('#')[0]; return base + '#plan=' + planCode(); }
+function planText() {
+  let t = '[CES 2027 내 동선]\n';
+  DAYS.forEach((d) => { const items = plan.filter((it) => it.day === d.key); if (!items.length) return; t += `\n■ ${d.ko}\n`; items.forEach((it, j) => { const e = EX_BY_ID7.get(it.id); t += `${j + 1}. ${e.name} · ${boothText(e)}${it.memo ? ' : ' + it.memo : ''}\n`; }); });
+  t += `\n목록 코드: ${planCode()}\n(지도에서 '코드 넣기'에 붙여 넣으면 같은 목록이 열려요)`;
+  return t;
+}
+function planMd() {
+  const today = new Date().toISOString().slice(0, 10);
+  let t = `---\n제목: "CES 2027 내 동선"\n종류: 연수기록\n날짜: ${today}\n출처: CES 2027 부스 3D 지도 (전시사 목록 ${DATA.v} 기준)\n대상: [학생, 취준생, 정년, 장년]\n---\n\n# CES 2027 내 동선\n\n자리는 부스 번호로 짐작한 것. 공식 배치도로 다시 확인.\n`;
+  DAYS.forEach((d) => {
+    const items = plan.filter((it) => it.day === d.key); if (!items.length) return;
+    t += `\n## ${d.ko}\n\n| # | 회사 | 부스 | 장소 | 대상 | 메모 |\n|---|---|---|---|---|---|\n`;
+    items.forEach((it, j) => { const e = EX_BY_ID7.get(it.id); const tags = AUD.filter((a) => it.tags.includes(a.key)).map((a) => a.ko).join(', '); t += `| ${j + 1} | ${e.name.replace(/\|/g, '/')} | ${e.booths.map((b) => b.code).join(', ')} | ${[...new Set(e.booths.map((b) => placeShort(b.place)))].join(', ')} | ${tags} | ${(it.memo || '').replace(/\|/g, '/')} |\n`; });
+  });
+  return t;
+}
+function planCsv() {
+  const q = (s) => '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"';
+  let t = '\ufeff날짜,순서,회사,부스,장소,나라,분야,대상,메모,공식 페이지\n';
+  DAYS.forEach((d) => plan.filter((it) => it.day === d.key).forEach((it, j) => { const e = EX_BY_ID7.get(it.id); t += [d.short, j + 1, e.name, e.booths.map((b) => b.code).join(' / '), [...new Set(e.booths.map((b) => placeShort(b.place)))].join(' / '), DATA.countries[e.country] || '', e.cats.map((c) => CAT_KO[CATS[c]]).join(' / '), AUD.filter((a) => it.tags.includes(a.key)).map((a) => a.ko).join(' / '), it.memo, 'https://exhibitors.ces.tech/8_0/exhibitor/exhibitor-details.cfm?exhid=' + e.id].map(q).join(',') + '\n'; }));
+  return t;
+}
+function download(name, text, type) { const blob = new Blob([text], { type: type || 'text/plain;charset=utf-8' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+async function copy(text, okMsg) {
+  try { await navigator.clipboard.writeText(text); toast(okMsg || '복사했어요'); }
+  catch (e) { window.prompt('아래 글을 길게 눌러 복사하세요', text); }
+}
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toast._t); toast._t = setTimeout(() => (t.style.display = 'none'), 2600); }
+
+/* ---------- 12. 알아둘 것 ---------- */
+function infoHtml() {
+  const halls = PLACES.filter((p) => p.kind === 'hall').map((p) => `<tr><td>${esc(p.ko)}</td><td>${esc(p.th)}</td><td>${p.count}곳</td></tr>`).join('');
+  return `<button class="close" id="mclose">닫기</button><h2>알아둘 것</h2>
+  <h4>언제</h4>
+  <table><tr><th>날</th><th>전시장</th><th>C Space (아리아)</th><th>CES Foundry (퐁텐블로)</th></tr>
+  <tr><td>1/5 (화)</td><td>닫힘</td><td>9~18시 (강연만)</td><td>닫힘</td></tr>
+  <tr><td>1/6 (수)</td><td>10~18시</td><td>9~18시</td><td>10~18시</td></tr>
+  <tr><td>1/7 (목)</td><td>9~18시</td><td>9~18시</td><td>9~18시</td></tr>
+  <tr><td>1/8 (금)</td><td>9~18시</td><td>9~18시</td><td>9~18시</td></tr>
+  <tr><td>1/9 (토)</td><td>9~16시</td><td>닫힘</td><td>닫힘</td></tr></table>
+  <div class="lbl">라스베이거스 시간 기준. 출처: ces.tech Dates and Hours (2026-11-19에 확인).</div>
+  <h4>어디 (홀마다 주제)</h4><table><tr><th>홀</th><th>주제 (공식 지도)</th><th>전시사</th></tr>${halls}</table>
+  <h4>오가는 법</h4>
+  <div>LVCC 센트럴 플라자 ↔ 베네시안 엑스포(샌즈 애비뉴)는 <b>Tech Express</b> 무료 셔틀. 아리아(C Space)는 <b>C Space 셔틀(7번)</b>. LVCC 안은 걷거나 Vegas Loop, 모노레일. LVCC 하루, 베네시안 하루처럼 캠퍼스로 날을 나누면 오가는 시간이 줄어요.</div>
+  <h4>이 지도에 대해</h4>
+  <div>전시사 ${EX.length.toLocaleString()}곳은 CES 공식 전시사 검색(exhibitors.ces.tech)에서 ${esc(DATA.v)}에 받았어요. 홀 위치는 CES 공식 캠퍼스 지도(2026-09-29) 배치를 따랐고 실제 축척은 아니에요. <b>홀 안 자리는 부스 번호(앞자리 = 통로, 뒷자리 = 순서)로 짐작</b>했어요. 같은 통로 번호끼리는 가까이 있을 가능성이 크지만, 정확한 자리는 공식 배치도가 열린 뒤 다시 맞춰요. 호텔 스위트와 회의실은 약속한 사람만 들어가는 곳이 많아요(가기 전 확인).</div>
+  <div style="margin-top:6px"><b>누구에게(학생 · 취준생 · 정년 · 장년)</b>는 전시사가 고른 분야로 붙인 초안이에요. 현장에서 본 것은 내 목록의 네 태그로 직접 고쳐 적어 주세요.</div>
+  <h4>공식 자료</h4>
+  <div><a href="https://exhibitors.ces.tech/8_0/" target="_blank" rel="noopener">전시사 검색</a> · <a href="https://www.ces.tech/explore-ces/maps-and-locations" target="_blank" rel="noopener">지도와 장소</a> · <a href="https://www.ces.tech/plan-your-visit/dates-and-hours" target="_blank" rel="noopener">날짜와 시간</a></div>`;
+}
+
+/* ---------- 13. 이벤트 ---------- */
+function setupControls() {
+  const fp = $('#fPlace');
+  fp.innerHTML = '<option value="">장소 전체</option>' + ['lvcc', 'ven', 'cs'].map((c) => `<optgroup label="${CAMPUS[c].ko}">` + PLACES.filter((p) => p.c === c && p.count).map((p) => `<option value="${p.k}">${esc(p.ko)} (${p.count})</option>`).join('') + '</optgroup>').join('');
+  const catCount = CATS.map(() => 0); EX.forEach((e) => e.cats.forEach((c) => catCount[c]++));
+  const fc = $('#fCat');
+  fc.innerHTML = '<option value="-1">분야 전체</option>' + GROUPS.map((g) => `<optgroup label="${g.ko}">` + g.cats.map((c) => CATS.indexOf(c)).filter((i) => i >= 0).sort((a, b) => catCount[b] - catCount[a]).map((i) => `<option value="${i}">${esc(CAT_KO[CATS[i]] || CATS[i])} (${catCount[i]})</option>`).join('') + '</optgroup>').join('');
+  const fa = $('#fAud');
+  AUD.forEach((a) => { const b = document.createElement('button'); b.className = 'chip'; b.style.setProperty('--c', a.color); b.textContent = a.ko; b.onclick = () => { st.aud.has(a.key) ? st.aud.delete(a.key) : st.aud.add(a.key); b.classList.toggle('on'); refresh(); }; fa.appendChild(b); });
+  const draft = document.createElement('span'); draft.className = 'lbl'; draft.textContent = '(초안)'; fa.appendChild(draft);
+  let qt; $('#q').addEventListener('input', (ev) => { clearTimeout(qt); qt = setTimeout(() => { st.q = ev.target.value; refresh(); }, 160); });
+  fp.onchange = () => { st.place = fp.value; refresh(); if (st.place) { const p = PLACE[st.place]; const [x, z] = centroid(toWorld(p.c, p.poly)); flyTo(x, p.kind === 'hotel' ? p.H : p.y || 0, z, p.kind === 'hall' ? 700 : 380); } };
+  fc.onchange = () => { st.cat = +fc.value; refresh(); };
+  $('#fKor').onclick = (ev) => { st.kor = !st.kor; ev.target.classList.toggle('on', st.kor); refresh(); };
+  $('#fAward').onclick = (ev) => { st.award = !st.award; ev.target.classList.toggle('on', st.award); refresh(); };
+  $('#colorMode').onchange = (ev) => { st.color = ev.target.value; paintBooths(); renderLegend(); renderResults(); };
+  $('#reset').onclick = () => { st.q = ''; $('#q').value = ''; st.place = ''; fp.value = ''; st.cat = -1; fc.value = '-1'; st.aud.clear(); fa.querySelectorAll('.chip').forEach((c) => c.classList.remove('on')); st.kor = st.award = false; $('#fKor').classList.remove('on'); $('#fAward').classList.remove('on'); refresh(); };
+  $('#results').addEventListener('click', (ev) => { const m = ev.target.closest('#more'); if (m) { st.limit += 300; renderResults(); return; } const r = ev.target.closest('[data-ex]'); if (r) selectEx(+r.dataset.ex, true); });
+  document.querySelectorAll('.tab').forEach((t) => (t.onclick = () => { document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('on', x === t)); $('#pane-find').hidden = t.dataset.tab !== 'find'; $('#pane-plan').hidden = t.dataset.tab !== 'plan'; if (t.dataset.tab === 'plan') renderPlan(); else renderResults(); }));
+  document.querySelectorAll('[data-cam]').forEach((b) => (b.onclick = () => flyCam(b.dataset.cam)));
+  $('#btnInfo').onclick = () => { $('#modalBox').innerHTML = infoHtml(); $('#modal').hidden = false; $('#mclose').onclick = () => ($('#modal').hidden = true); };
+  $('#modal').onclick = (ev) => { if (ev.target.id === 'modal') $('#modal').hidden = true; };
+  const pl = $('#planList');
+  pl.addEventListener('click', (ev) => {
+    const rm = ev.target.closest('[data-rm]'); if (rm) { plan.splice(+rm.dataset.rm, 1); savePlan(); afterPlan(); return; }
+    const tg = ev.target.closest('[data-tag]'); if (tg) { const [n, k] = tg.dataset.tag.split('|'); const it = plan[+n]; const i = it.tags.indexOf(k); i >= 0 ? it.tags.splice(i, 1) : it.tags.push(k); savePlan(); tg.classList.toggle('on'); return; }
+    const nm = ev.target.closest('.nm[data-ex]'); if (nm) selectEx(+nm.dataset.ex, true);
+  });
+  pl.addEventListener('change', (ev) => { const d = ev.target.closest('[data-day]'); if (d) { plan[+d.dataset.day].day = +d.value; savePlan(); afterPlan(); } });
+  pl.addEventListener('input', (ev) => { const m = ev.target.closest('[data-memo]'); if (m) { plan[+m.dataset.memo].memo = m.value; savePlan(); } });
+  $('#pSort').onclick = sortPlan; $('#pAuto').onclick = autoDays;
+  $('#pRoute').onclick = (ev) => { st.showRoute = !st.showRoute; ev.target.textContent = st.showRoute ? '지도에 동선' : '동선 숨김'; renderRoute(); };
+  $('#pLink').onclick = () => (plan.length ? copy(shareLink(), '링크를 복사했어요. 같은 지도 주소에서 열려요.') : toast('목록이 비어 있어요'));
+  $('#pText').onclick = () => (plan.length ? copy(planText(), '단톡방에 붙여 넣을 글을 복사했어요') : toast('목록이 비어 있어요'));
+  $('#pCode').onclick = () => (plan.length ? copy(planCode(), '목록 코드를 복사했어요') : toast('목록이 비어 있어요'));
+  $('#pImport').onclick = () => { const s = window.prompt('받은 목록 코드나 링크를 붙여 넣으세요'); if (!s) return; const items = readCode(s); if (!items.length) { toast('읽을 수 있는 곳이 없어요'); return; } const n = mergeItems(items); toast(`${n}곳을 더했어요 (이미 있던 곳은 그대로)`); };
+  $('#pMd').onclick = () => (plan.length ? download('CES2027_내동선.md', planMd(), 'text/markdown;charset=utf-8') : toast('목록이 비어 있어요'));
+  $('#pCsv').onclick = () => (plan.length ? download('CES2027_내동선.csv', planCsv(), 'text/csv;charset=utf-8') : toast('목록이 비어 있어요'));
+  $('#pClear').onclick = () => { if (plan.length && window.confirm('내 목록을 모두 비울까요?')) { plan = []; savePlan(); afterPlan(); } };
+}
+/* 누르기 · 올려 두기 */
+const ray = new THREE.Raycaster(); const ndc = new THREE.Vector2(); let down = null; let hoverQ = null;
+function pickAt(cx, cy) {
+  const r = renderer.domElement.getBoundingClientRect(); ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const hits = ray.intersectObject(inst, false);
+  for (const h of hits) { if (h.instanceId != null && boothMatch[h.instanceId]) return h.instanceId; }
+  return hits.length ? hits[0].instanceId : null;
+}
+renderer.domElement.addEventListener('pointerdown', (ev) => { down = { x: ev.clientX, y: ev.clientY }; });
+renderer.domElement.addEventListener('pointerup', (ev) => {
+  if (!down) return; const moved = Math.hypot(ev.clientX - down.x, ev.clientY - down.y); down = null;
+  if (moved > 6) return; const id = pickAt(ev.clientX, ev.clientY); if (id != null) selectBooth(id, false);
+});
+renderer.domElement.addEventListener('pointermove', (ev) => {
+  if (ev.pointerType !== 'mouse') return; hoverQ = { x: ev.clientX, y: ev.clientY };
+});
+renderer.domElement.addEventListener('pointerleave', () => { $('#tip').style.display = 'none'; hoverQ = null; });
+function doHover() {
+  if (!hoverQ || down) return; const q = hoverQ; hoverQ = null;
+  const id = pickAt(q.x, q.y); const tip = $('#tip');
+  if (id == null) { tip.style.display = 'none'; renderer.domElement.style.cursor = ''; return; }
+  const b = BOOTHS[id]; const r = view.getBoundingClientRect();
+  const names = (matchEx ? b.ex.filter((x) => matchEx.has(x)) : b.ex); const first = EX[(names[0] != null ? names[0] : b.ex[0])].name;
+  tip.textContent = `${b.code} · ${first}${b.ex.length > 1 ? ` 외 ${b.ex.length - 1}곳` : ''}`;
+  tip.style.left = (q.x - r.left) + 'px'; tip.style.top = (q.y - r.top) + 'px'; tip.style.display = 'block'; renderer.domElement.style.cursor = 'pointer';
+}
+function resize() { const w = view.clientWidth, h = view.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / Math.max(1, h); camera.updateProjectionMatrix(); sizeLabels(); if (typeof renderRoute === 'function' && plan) renderRoute(); }
+window.addEventListener('resize', resize);
+
+/* ---------- 14. 돌리기 ---------- */
+function tick(now) {
+  if (fly) {
+    const k = Math.min(1, (now - fly.t0) / fly.dur); const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    controls.target.lerpVectors(fly.fromT, fly.toT, e); camera.position.lerpVectors(fly.fromP, fly.toP, e); if (k >= 1) fly = null;
+  }
+  controls.update();
+  const d = camera.position.distanceTo(controls.target);
+  labels.forEach((l) => { const u = l.userData; l.visible = d >= u.minD && d <= u.maxD && !u.dim; });
+  if (pin.visible) { const s = 1 + 0.12 * Math.sin(now / 220); pin.scale.set(s, s, s); }
+  doHover();
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+
+/* ---------- 15. 시작 ---------- */
+$('#sub').textContent = `전시사 ${EX.length.toLocaleString()}곳 · CES 공식 전시사 목록 ${DATA.v} 기준 · 라스베이거스 1/6~1/9`;
+setupControls(); resize();
+const c0 = camFor('all'); camera.position.copy(c0.p); controls.target.copy(c0.t); controls.update();
+computeMatch(); paintBooths(); renderLegend(); renderResults(); renderPlan(); renderRoute(); $('#planCount').textContent = plan.length;
+if (location.hash.indexOf('plan=') >= 0) {
+  const items = readCode(location.hash);
+  if (items.length) {
+    setTimeout(() => {
+      const ok = !plan.length || window.confirm(`받은 목록 ${items.length}곳을 내 목록에 더할까요?`);
+      if (ok) { const n = mergeItems(items); toast(`받은 목록에서 ${n}곳을 더했어요`); document.querySelector('[data-tab="plan"]').click(); }
+    }, 300);
+  }
+}
+window.__ces = { EX, BOOTHS, PLACES, plan: () => plan, selectEx, flyCam, st, refresh };
+requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
