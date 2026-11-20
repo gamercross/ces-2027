@@ -1,16 +1,16 @@
-// 글로벌 어학연수 · CES 2027 준비 지도 — 계획 보드 (2026-11-20, 코드 전)
-// 아직 만들기 전이라 상자는 모두 계획(todo)이다. 정할 것은 이름에 [제안].
-// 근거: 요구사항.md · ROADMAP.md. 코드가 생기면 뒷면(만드는 사람 쪽)을 코드로 다시 읽어 고친다.
+// 글로벌 어학연수 · CES 2027 준비 지도 — 보드 (세션마다 코드에 맞춰 고친다)
+// 코드에 있는 것은 done, 일부만 된 것은 part, 아직 없는 것은 todo. 정할 것은 이름에 [제안].
+// 근거: 요구사항.md · ROADMAP.md · 작업.md와 코드(crates · web · data · .github/workflows).
 window.BOARD = {
   format: 1,
   title: '글로벌 어학연수 · CES 2027 준비 지도',
-  sub: '우리 팀이 CES에서 정보와 위치를 헷갈리지 않게 · 계획 판 2026-11-20',
+  sub: '우리 팀이 CES에서 정보와 위치를 헷갈리지 않게 · 만드는 중 · 세션 1 (자료 도구 · 장소 자료 · 배포 뼈대)',
   start: 'v_big',
   frames: [
     {id: 'v_big', kicker: '처음 보는 사람에게', title: '준비 지도는 이렇게 돈다', layout: 'view', w: 1700, cols: 4, weight: 5,
      rows: {3: '쓰는 차례'},
      sub: '이게 뭐고, 누구를 돕나',
-     desc: '위에서 아래로 읽는다: 누가 쓰나 → 받는 도움 → 쓰는 차례 → 앱이 하는 일 → 앱 → 남는 것 → 바탕. 만들기 전이라 상자는 모두 계획이다.'},
+     desc: '위에서 아래로 읽는다: 누가 쓰나 → 받는 도움 → 쓰는 차례 → 앱이 하는 일 → 앱 → 남는 것 → 바탕. 실선은 코드에 있는 것, 점선은 아직이다.'},
     {id: 'v_flow', kicker: '처음 보는 사람에게', title: '한 번 쓰는 길', layout: 'view', w: 1700, cols: 4, weight: 4,
      sub: '어떤 차례로 쓰나',
      desc: '연수에 가기로 한 날부터: 온라인 명함(깃허브 · 디스코드 QR)을 만들고, 분야와 회사를 고르고, 동선을 짜고, 현장에서 내 위치와 다음 곳을 보고, 회사마다 일기를 쓴다.'},
@@ -39,18 +39,18 @@ window.BOARD = {
     {f: 'v_big', id: 'v_p3', t: 'bprocess', n: '관심을 등록한다', s: 'todo'},
     {f: 'v_big', id: 'v_p4', t: 'bprocess', n: '동선을 짠다', s: 'todo'},
     {f: 'v_big', id: 'v_p5', t: 'bprocess', n: '일기를 쓴다', sub: '현장에서', s: 'todo'},
-    {f: 'v_big', id: 'v_a_find', t: 'aservice', n: '분야로 회사 찾기', s: 'todo', col: 0},
+    {f: 'v_big', id: 'v_a_find', t: 'aservice', n: '분야로 회사 찾기', sub: '찾기는 됨 · 분야 화면은 아직', s: 'part', col: 0},
     {f: 'v_big', id: 'v_a_route', t: 'aservice', n: '동선 짜기', s: 'todo', col: 1},
     {f: 'v_big', id: 'v_a_locate', t: 'aservice', n: '내 위치 맞추기', sub: 'GPS · 부스 번호', s: 'todo', col: 2},
     {f: 'v_big', id: 'v_a_collect', t: 'aservice', n: '일기 모으기', sub: '네 태그로', s: 'todo', col: 3},
-    {f: 'v_big', id: 'v_app', t: 'acomp', n: '폰 앱 (웹)', sub: '오프라인으로도', s: 'todo', col: 0, span: 2, see: 'data'},
-    {f: 'v_big', id: 'v_build', t: 'acomp', n: '자료 짓는 도구', sub: 'Rust', s: 'todo', col: 2},
+    {f: 'v_big', id: 'v_app', t: 'acomp', n: '폰 앱 (웹)', sub: '오프라인으로도', s: 'part', col: 0, span: 2, see: 'data'},
+    {f: 'v_big', id: 'v_build', t: 'acomp', n: '자료 짓는 도구', sub: 'Rust · Actions에서 돈다', s: 'done', col: 2},
     {f: 'v_big', id: 'v_hub', t: 'acomp', n: '[제안] 모으는 곳', sub: '구글 시트 한 장', s: 'cand', col: 3},
     {f: 'v_big', id: 'v_d_me', t: 'dobject', n: '나 · 관심 · 동선', sub: '내 폰에', s: 'todo', col: 0},
     {f: 'v_big', id: 'v_d_diary', t: 'dobject', n: '회사 일기', sub: '내 폰에', s: 'todo', col: 1},
-    {f: 'v_big', id: 'v_d_ces', t: 'dobject', n: 'CES 전시사 자료', sub: '공식 검색에서', s: 'todo', col: 2},
+    {f: 'v_big', id: 'v_d_ces', t: 'dobject', n: 'CES 전시사 자료', sub: '공식 검색에서 · 받은 날짜', s: 'done', col: 2},
     {f: 'v_big', id: 'v_d_four', t: 'dobject', n: '네 태그 정리 한 장', sub: '모인 뒤', s: 'todo', col: 3},
-    {f: 'v_big', id: 'v_t_pages', t: 'tservice', n: '웹 주소와 오프라인 저장', sub: 'GitHub Pages · 서비스 워커', s: 'todo', col: 0.5, span: 2},
+    {f: 'v_big', id: 'v_t_pages', t: 'tservice', n: '웹 주소와 오프라인 저장', sub: 'GitHub Pages · 서비스 워커', s: 'part', col: 0.5, span: 2},
     {f: 'v_big', id: 'v_t_maps', t: 'tservice', n: '구글맵 길찾기', sub: '키 없는 링크', s: 'todo', col: 2.5, span: 1.5},
 
     // ── 한 번 쓰는 길 ──
@@ -62,7 +62,7 @@ window.BOARD = {
     {f: 'v_flow', id: 'f_4', t: 'bprocess', n: '동선 짜기', sub: '날짜 · 캠퍼스', s: 'todo'},
     {f: 'v_flow', id: 'f_5', t: 'bprocess', n: '현장: 내 위치 · 다음 곳', s: 'todo'},
     {f: 'v_flow', id: 'f_6', t: 'bprocess', n: '회사 일기 · 보내기', s: 'todo'},
-    {f: 'v_flow', id: 'f_a1', t: 'aservice', n: '분야로 회사 찾기', s: 'todo', col: 1},
+    {f: 'v_flow', id: 'f_a1', t: 'aservice', n: '분야로 회사 찾기', s: 'part', col: 1},
     {f: 'v_flow', id: 'f_a2', t: 'aservice', n: '동선 짜기', s: 'todo', col: 2},
     {f: 'v_flow', id: 'f_a3', t: 'aservice', n: '위치 맞추기 · 길찾기', s: 'todo', col: 3},
 
@@ -78,18 +78,19 @@ window.BOARD = {
 
     // ── 만드는 순서 (time): 칸마다 단계 하나, 그 아래 작업 묶음 ──
     {f: 'plan', id: 'pl_now', t: 'plateau', n: '지금 · 11/20', d: '3D 미리 보기 판과 자료 스크립트 (reference/미리보기판)', s: 'done', col: 0},
-    {f: 'plan', id: 'pl_m1', t: 'plateau', n: '프리 프로토타입', d: '기능을 만드는 단계. 12/6에 닫는다', s: 'todo', col: 1},
+    {f: 'plan', id: 'pl_m1', t: 'plateau', n: '프리 프로토타입', d: '기능을 만드는 단계. 12/6에 닫는다', s: 'part', col: 1},
     {f: 'plan', id: 'pl_m2', t: 'plateau', n: '프로토타입', d: '팀이 실제로 써 보는 단계. 12/16까지', s: 'todo', col: 2},
     {f: 'plan', id: 'pl_m3', t: 'plateau', n: '공개 판', d: '정식 배치도와 다듬기. 12/31까지', s: 'todo', col: 3},
     {f: 'plan', id: 'pl_m4', t: 'plateau', n: '현장', d: 'CES 1/6 ~ 1/9', s: 'todo', col: 4},
     {f: 'plan', id: 'pl_m5', t: 'plateau', n: '정리 · 비공개', d: '1/15부터. 비공개 날짜는 정할 것', s: 'todo', col: 5},
     {f: 'plan', id: 'wp_preview', t: 'wp', n: '3D 미리 보기 판', s: 'done', col: 0, when: '11/19', who: 'Aside'},
     {f: 'plan', id: 'wp_data', t: 'wp', n: '전시사 자료 받기', s: 'done', col: 0, when: '11/19', who: 'Aside'},
-    {f: 'plan', id: 'wp_rust', t: 'wp', n: 'Rust 자료 도구', s: 'todo', col: 1, when: '~11/29', who: 'Orca'},
+    {f: 'plan', id: 'wp_rust', t: 'wp', n: 'Rust 자료 도구', s: 'done', col: 1, when: '11/20', who: 'Orca'},
+    {f: 'plan', id: 'wp_places', t: 'wp', n: '장소 자료 · 구글맵 이름', s: 'done', col: 1, when: '11/20', who: 'Orca'},
     {f: 'plan', id: 'wp_home', t: 'wp', n: '첫 화면 · 알아둘 것', s: 'todo', col: 1, when: '~11/29', who: 'Orca'},
     {f: 'plan', id: 'wp_onboard', t: 'wp', n: '명함 · 분야 · 관심', s: 'todo', col: 1, when: '~12/3', who: 'Orca'},
     {f: 'plan', id: 'wp_route', t: 'wp', n: '동선 · 2D · 3D', s: 'todo', col: 1, when: '~12/6', who: 'Orca'},
-    {f: 'plan', id: 'wp_offline', t: 'wp', n: '오프라인 · 배포', s: 'todo', col: 1, when: '~12/6', who: 'Orca'},
+    {f: 'plan', id: 'wp_offline', t: 'wp', n: '오프라인 · 배포', s: 'part', col: 1, when: '~12/6', who: 'Orca'},
     {f: 'plan', id: 'wp_locate', t: 'wp', n: '내 위치 · 다음 곳', s: 'todo', col: 2, when: '~12/11', who: 'Orca'},
     {f: 'plan', id: 'wp_maps', t: 'wp', n: '구글맵 길찾기', s: 'todo', col: 2, when: '~12/11', who: 'Orca'},
     {f: 'plan', id: 'wp_diary', t: 'wp', n: '회사 일기 · 보내기', s: 'todo', col: 2, when: '~12/13', who: 'Orca'},
@@ -148,7 +149,7 @@ window.BOARD = {
   dataMap: {
     stores: [
       {id: 'phone', n: '내 폰', l: 'app', life: '앱을 지우거나 브라우저 기록을 지울 때까지', d: '나 · 관심 · 동선 · 일기 — 다른 사람에게 가지 않는다'},
-      {id: 'site', n: '웹 주소 (GitHub Pages)', l: 'tec', life: '공개 판 동안', d: '앱 화면 · CES 전시사 자료 · 장소 자료'},
+      {id: 'site', n: '웹 주소 (GitHub Pages)', l: 'tec', life: '공개 판 동안', d: '앱 화면 · 폰용 코어(WASM) · CES 전시사 자료 · 찾기 색인 · 장소 자료'},
       {id: 'hub', n: '[제안] 모으는 곳', l: 'app', life: '정리가 끝날 때까지', d: '보내기를 누른 일기만. 방식은 정할 것(구글 시트 한 장 안)'}
     ],
     data: [
@@ -156,15 +157,17 @@ window.BOARD = {
       {id: 'd_interest', st: 'phone', n: '관심 회사', one: '등록한 회사와 날짜', shape: ['회사', '날짜', '메모'], w: [[null, '회사 목록에서 관심 등록']], r: [[null, '동선 짜기']]},
       {id: 'd_route', st: 'phone', n: '동선', one: '날짜별 걷는 차례', shape: ['날짜', '차례', '캠퍼스'], w: [[null, '앱이 관심 회사로 묶고 내가 고친다']], r: [[null, '현장에서 다음 갈 곳']]},
       {id: 'd_diary', st: 'phone', n: '회사 일기', one: '본 것 · 느낀 점 · 네 태그', shape: ['날짜', '회사', '본 것', '느낀 점', '누구에게(네 태그)'], w: [[null, '본 회사마다 쓴다']], r: [[null, '보내기 · 내보내기']]},
-      {id: 'd_ces', st: 'site', n: 'CES 전시사 자료', one: '공식 검색에서 받아 줄인 것', shape: ['이름', '부스', '홀', '분야', '나라', '혁신상'], w: [[null, 'Rust 도구가 지을 때 받는다']], r: [[null, '찾기 · 동선 · 지도']], life: '자료를 새로 받을 때 판 이름이 바뀐다'},
+      {id: 'd_ces', st: 'site', n: 'CES 전시사 자료', one: '공식 검색에서 받아 줄인 것', shape: ['이름', '부스@장소', '분야', '나라', '혁신상', '공식 링크', '받은 날짜'], w: [[null, 'Rust 자료 도구(ces-data)가 지을 때 공식 전시사 검색에서 받는다']], r: [[null, '찾기 · 동선 · 지도']], life: '자료를 새로 받을 때 판 이름(받은 날짜)이 바뀐다', never: '회사 소개 글은 설정(companyIntro)이 링크만이면 싣지 않는다'},
+      {id: 'd_index', st: 'site', n: '찾기 색인', one: '낱말 → 전시사 줄 번호', shape: ['이름 낱말', '부스 · 장소 · 분야 · 나라 낱말', '한글 별칭'], w: [[null, '자료 도구가 줄이면서 만든다']], r: [[null, '폰의 코어(ces-core, WASM)가 읽고 찾는다']]},
+      {id: 'd_places', st: 'site', n: '장소 자료', one: '홀 · 캠퍼스 모양과 구글맵 이름 · 주소', shape: ['캠퍼스 셋', '장소 30곳의 모양', '부스 → 장소 규칙', '구글맵 이름 · 주소', '부스 자리 짐작 표시'], w: [[null, 'data/places.json을 손으로 고친다 (공식 캠퍼스 지도 2026-09-29판)']], r: [[null, '자료 도구(부스에 장소 붙이기) · 지도 · 길찾기']], life: '정식 배치도가 열리면 홀마다 짐작 표시를 고친다'},
       {id: 'd_pool', st: 'hub', n: '모인 일기', one: '보내기를 누른 일기만', never: '보내지 않은 일기', w: [[null, '보내기를 누를 때']], r: [[null, '정리하는 사람이 네 태그로 나눈다']]}
     ],
     flow: [
-      {o: null, t: '받기', d: 'Rust 도구가 공식 자료를 받아 줄인다', dm: ['d_ces']},
+      {o: null, t: '받기', d: 'Rust 도구가 공식 자료를 받아 줄인다', dm: ['d_ces', 'd_index', 'd_places']},
       {o: null, t: '고르기', d: '나 · 분야 · 관심 · 동선이 폰에 쌓인다', dm: ['d_profile', 'd_interest', 'd_route']},
       {o: null, t: '쓰기', d: '현장에서 회사 일기', dm: ['d_diary']},
       {o: null, t: '모으기', d: '보내기를 누른 일기만 한곳에', dm: ['d_pool']}
     ]
   },
-  legend: ['**계획 판이다.** 만들기 전이라 상자는 모두 점선(아직)이다. 코드가 생기면 만드는 사람 쪽을 코드로 다시 읽어 고친다.', '**[제안]** 붙은 것은 아직 정하지 않은 것이다.']
+  legend: ['**만드는 중이다.** 실선은 코드에 있는 것, 점선은 아직 없는 것이다. 세션이 끝날 때마다 코드에 맞춰 고친다.', '**[제안]** 붙은 것은 아직 정하지 않은 것이다.']
 };

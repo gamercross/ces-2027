@@ -1,4 +1,4 @@
-# 글로벌 어학연수 · CES 2027 준비 지도
+| 프리 프로토타입: 기능을 만든다 | ~12/6 | 하는 중 ([작업.md](작업.md)) |# 글로벌 어학연수 · CES 2027 준비 지도
 
 화면에는 코디세이 아이콘과 "글로벌 어학연수"가 나란히 들어간다. 이 안내는 연수에 가는 참가자가 만든 **비공식** 안내다. CES(CTA)나 코디세이 운영 측의 공식 자료가 아니다.
 
@@ -32,19 +32,47 @@
 
 [`docs/board/`](docs/board/)는 archi-board 보드다. 처음 보는 사람 쪽에는 한 장 그림 · 한 번 쓰는 길 · 내 것은 어디로 가나, 만드는 사람 쪽에는 만드는 순서 · 순서도 · 데이터 지도가 있다. `docs/board/board.single.html`은 인터넷 없이 열리는 묶음이다.
 
-## 만드는 법 (계획)
+## 만드는 법
 
-- **Rust:** 빌드 도구가 CES 공식 자료를 받아 줄이고 찾기 색인을 미리 만든다. 폰에는 작은 WASM 코어(찾기 · 동선 · 위치 맞추기)만 보낸다.
-- **화면:** 폰 먼저. 첫 화면은 가볍게, 2D 지도가 기본이고 3D는 지도 탭에서 불러온다.
-- **오프라인:** 서비스 워커와 홈 화면에 추가. 명함 QR도 폰에서 만든다.
-- **구글맵:** Maps URLs (API 키 없음).
-- **배포:** GitHub Actions → GitHub Pages.
+Rust는 두 자리에만 쓴다. 화면은 폰 먼저이고 묶는 도구 없이 그대로 올린다.
+
+| 자리 | 무엇 |
+|---|---|
+| `crates/ces-data` | 빌드 때 도는 자료 도구. CES 공식 전시사 검색에서 받아(`X-Requested-With` 머리글) 부스마다 장소를 붙이고 줄여, 전시사 자료 · 찾기 색인 · 받은 날짜를 쓴다. GitHub Actions에서 돈다 |
+| `crates/ces-core` | 폰에 보내는 작은 WASM 코어(의존 없음). 찾기 색인을 읽고 찾는다. 동선 · 위치 맞추기는 뒤 세션에서 더한다 |
+| `data/places.json` | 장소 자료 한 장: 홀 · 캠퍼스 모양, 부스 → 장소 규칙, 구글맵에서 쓸 이름 · 주소(Maps URLs, API 키 없음), 부스 자리가 짐작인지 |
+| `data/categories.json` · `data/aliases.json` | 분야 한글 이름과 묶음, 찾기 별칭 |
+| `config/settings.json` | 아직 정하지 않은 것을 바꾸는 자리 (아래 표) |
+| `web/` | 화면. 첫 화면은 가볍게, 찾기 자료와 코어는 쓸 때 불러온다 |
+| `.github/workflows/pages.yml` | 시험 → 짓기 → 자료 받기 → 지은 것 살피기 → Pages 배포(main) |
+
+```sh
+cargo test --workspace                 # 시험
+cargo run -p ces-data -- check-places  # 장소 자료 살피기
+cargo run -p ces-data -- build         # 공식 사이트에서 받아 dist/data에 쓴다 (물음 110번쯤, 1분)
+```
+
+폰용 코어(`core.wasm`)는 Actions에서 짓는다(`cargo build --release -p ces-core --target wasm32-unknown-unknown`). 공식 사이트에는 하루에 한 번만 묻고, 그날 받은 답은 Actions 캐시에 두고 다시 쓴다. 새로 받으려면 Actions의 "짓기와 배포"를 손으로 돌리면서 "새로 받는다"를 켠다.
+
+- **오프라인:** 서비스 워커와 홈 화면에 추가 (세션 4). 명함 QR도 폰에서 만든다.
 - 참고: [`reference/미리보기판/`](reference/미리보기판/)은 11/19에 만든 3D 미리 보기 판(JS)의 본문과 자료 스크립트다.
+
+### 아직 정하지 않은 것
+
+`config/settings.json`의 값은 임시다. 이재엽이 정하면 이 파일만 고친다.
+
+| 칸 | 지금 값 | 고를 수 있는 값 |
+|---|---|---|
+| `companyIntro` 공개 판의 회사 소개 | `link-only` (소개 글은 싣지 않고 공식 링크만) | `first-sentence` (공식 소개 첫 문장 + 출처 링크) |
+| `collector` 일기를 모으는 곳 | `undecided` | 세션 6에서 자리를 만든다 (구글 시트 한 장 / 파일로 받기) |
+| `codysseyIcon` 코디세이 아이콘 | `false` (글자만) | `true` (운영팀 확인 뒤) |
+| `privateOn` 비공개로 돌리는 날 | `null` | 날짜 |
 
 ## 자료
 
 - 전시사: CES 공식 전시사 검색 exhibitors.ces.tech. 받은 날짜를 화면에 보인다.
 - 홀 위치: CES 공식 캠퍼스 지도(2026-09-29판). 홀 안 부스 자리는 정식 배치도가 열리기 전까지 부스 번호로 짐작한다.
+- 구글맵 주소: CES 공식 자료에는 거리 주소가 없어, 장소가 스스로 밝힌 주소를 적고 확인한 날을 남겼다 (`data/places.json`의 `venues`).
 - 자세한 출처와 날짜: [data/출처.md](data/출처.md). 네 태그 규칙 초안: [data/네태그_규칙.md](data/네태그_규칙.md). 기록 틀: [docs/기록틀.md](docs/기록틀.md).
 
 ## 지키는 것
