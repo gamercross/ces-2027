@@ -1,94 +1,72 @@
-// 첫 화면. 가볍게 연다: 자료 요약(meta.json)만 먼저 읽고,
-// 찾기 자료(코어 · 색인 · 전시사 · 장소)는 찾기 칸을 누를 때 불러온다.
+// 뼈대: 주소(#/…)에 맞는 화면을 그때 불러와 그린다. 첫 화면은 가볍게 둔다.
 
-const $ = (id) => document.getElementById(id);
-const num = (n) => Number(n).toLocaleString('ko-KR');
+import { getProfile } from './store.js';
+import { getSettings } from './data.js';
 
-async function getJson(path) {
-  const res = await fetch(path);
-  if (!res.ok) throw new Error(`${path} ${res.status}`);
-  return res.json();
-}
+const VIEWS = {
+  '': () => import('./views/home.js'),
+  card: () => import('./views/card.js'),
+  find: () => import('./views/find.js'),
+};
+const TAB_OF = { '': 'home', card: 'card', find: 'find' };
 
-async function showData() {
-  let meta;
-  try {
-    meta = await getJson('data/meta.json');
-  } catch {
-    $('data-line').textContent = '전시사 자료를 아직 받지 못했다.';
-    return;
-  }
-  $('data-line').textContent = `전시사 ${num(meta.exhibitors)}곳 · 분야 ${num(meta.categories)}개 · 한국 ${num(meta.korea)}곳`;
-  $('data-date').textContent = meta.v;
-  $('data-guess').textContent = meta.places.boothSpotsGuess > 0
-    ? `홀 안 자리는 짐작이다 (공식 캠퍼스 지도 ${meta.places.edition}판, 정식 배치도 전)`
-    : `공식 배치도 (${meta.places.edition}판)`;
-  $('data-facts').hidden = false;
-  $('find').hidden = false;
-}
-
-let ready = null;
-function loadFind() {
-  ready ??= (async () => {
-    const { loadCore } = await import('./core.js');
-    const [core, index, data, places] = await Promise.all([
-      loadCore(fetch('core.wasm')),
-      fetch('data/search-index.txt').then((r) => r.arrayBuffer()),
-      getJson('data/exhibitors.json'),
-      getJson('data/places.json'),
-    ]);
-    core.loadIndex(new Uint8Array(index));
-    const placeKo = new Map(places.places.map((p) => [p.k, p.ko]));
-    return { core, data, placeKo };
-  })();
-  return ready;
-}
-
-function el(tag, cls, text) {
-  const node = document.createElement(tag);
-  if (cls) node.className = cls;
-  if (text != null) node.textContent = text;
-  return node;
-}
-
-function renderHit(row, data, placeKo) {
-  const [id, name, , country, , award, , booths] = row;
-  const li = el('li');
-  const head = el('div', 'name', name);
-  if (award) head.append(el('span', 'badge', award & 2 ? '최고 혁신상' : '혁신상'));
-  const where = booths.map((b) => {
-    const at = b.lastIndexOf('@');
-    const place = b.slice(at + 1);
-    return `${b.slice(0, at)} · ${placeKo.get(place) || '장소 모름'}`;
-  });
-  if (country >= 0) where.push(data.countries[country]);
-  const link = el('a', '', '공식 전시사 페이지');
-  link.href = data.link.replace('{id}', encodeURIComponent(id));
-  link.rel = 'noopener';
-  li.append(head, el('div', 'where', where.join(' / ')), link);
-  return li;
-}
-
+const view = document.getElementById('view');
 let turn = 0;
-async function find() {
-  const mine = ++turn;
-  const q = $('q').value.trim();
-  const note = $('find-note');
-  let got;
-  try {
-    got = await loadFind();
-  } catch {
-    note.textContent = '찾기 자료를 불러오지 못했다. 인터넷을 확인하고 다시 눌러 본다.';
-    ready = null;
-    return;
-  }
-  if (mine !== turn) return;
-  const { core, data, placeKo } = got;
-  const rows = q ? core.search(q, 30) : [];
-  $('hits').replaceChildren(...rows.map((i) => renderHit(data.ex[i], data, placeKo)));
-  note.textContent = !q ? '이름 · 분야 · 부스 번호 · 장소로 찾는다.' : rows.length ? `${rows.length === 30 ? '먼저 30곳' : `${rows.length}곳`}. 부스 자리는 짐작이다.` : '맞는 회사가 없다.';
+
+function route() {
+  const [name = '', ...rest] = location.hash.replace(/^#\/?/, '').split('/');
+  return { name: name in VIEWS ? name : '', rest };
 }
 
-$('q').addEventListener('focus', () => { loadFind().catch(() => { ready = null; }); }, { once: true });
-$('q').addEventListener('input', find);
-showData();
+async function show() {
+  const mine = ++turn;
+  let { name, rest } = route();
+  // 처음 들어오면 명함부터 만든다. "나중에"를 누르면 이번에는 묻지 않는다.
+  if (name === '' && !getProfile() && !sessionStorage.getItem('ces2027.skipCard')) {
+    location.replace('#/card');
+    return;
+  }
+  for (const a of document.querySelectorAll('.tabs a')) {
+    if (a.dataset.tab === TAB_OF[name]) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+  }
+  refreshChip();
+  try {
+    const mod = await VIEWS[name]();
+    if (mine !== turn) return;
+    const node = await mod.render({ rest, go });
+    if (mine !== turn) return;
+    view.replaceChildren(node);
+  } catch (e) {
+    if (mine !== turn) return;
+    const p = document.createElement('p');
+    p.className = 'panel';
+    p.textContent = '화면을 불러오지 못했다. 인터넷을 확인하고 다시 열어 본다.';
+    view.replaceChildren(p);
+    console.error(e);
+  }
+  window.scrollTo(0, 0);
+}
+
+export function go(hash) {
+  if (location.hash === hash) show(); else location.hash = hash;
+}
+
+export function refreshChip() {
+  const profile = getProfile();
+  document.getElementById('me-chip').textContent = profile?.nick ? profile.nick : '내 명함';
+}
+
+// 코디세이 아이콘: 아직 정하지 않은 칸. 설정(codysseyIcon)에 그림 주소가 있을 때만 보인다.
+getSettings().then((s) => {
+  if (typeof s.codysseyIcon !== 'string' || !s.codysseyIcon) return;
+  const img = document.createElement('img');
+  img.src = s.codysseyIcon;
+  img.alt = '코디세이';
+  img.width = 24;
+  img.height = 24;
+  const slot = document.getElementById('brand-icon');
+  img.addEventListener('load', () => { slot.replaceChildren(img); slot.hidden = false; });
+});
+
+window.addEventListener('hashchange', show);
+show();

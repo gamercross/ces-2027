@@ -9,43 +9,29 @@
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
-<header class="top">
-  <p class="brand"><span class="brand-name">글로벌 어학연수</span><span class="tag">비공식</span></p>
-  <h1>CES 2027 준비 지도</h1>
-  <p class="lead">라스베이거스, 2027년 1월 6일 ~ 9일. 우리 팀이 정보와 위치를 헷갈리지 않게 하는 폰 준비 지도다.</p>
+<header class="bar">
+  <a class="brand" href="#/" aria-label="첫 화면">
+    <span class="brand-icon" id="brand-icon" hidden></span>
+    <span class="brand-name">글로벌 어학연수</span>
+    <span class="tag">비공식</span>
+  </a>
+  <a class="chip" id="me-chip" href="#/card">내 명함</a>
 </header>
 
-<main>
-  <section class="panel" aria-labelledby="h-now">
-    <h2 id="h-now">지금</h2>
-    <p>뼈대만 있다. 명함 · 분야 · 관심 · 동선 · 지도 · 일기가 차례로 들어온다.</p>
-  </section>
-
-  <section class="panel" aria-labelledby="h-data">
-    <h2 id="h-data">전시사 자료</h2>
-    <p id="data-line" class="big">불러오는 중이다.</p>
-    <dl class="facts" id="data-facts" hidden>
-      <div><dt>받은 날짜</dt><dd id="data-date"></dd></div>
-      <div><dt>출처</dt><dd><a href="https://exhibitors.ces.tech/8_0/" rel="noopener">CES 공식 전시사 검색</a></dd></div>
-      <div><dt>부스 자리</dt><dd id="data-guess"></dd></div>
-    </dl>
-  </section>
-
-  <section class="panel" aria-labelledby="h-find" id="find" hidden>
-    <h2 id="h-find">회사 찾아 보기</h2>
-    <label class="field">
-      <span class="sr">회사 이름 · 분야 · 부스 번호</span>
-      <input id="q" type="search" inputmode="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="삼성, 로봇, 14731">
-    </label>
-    <p id="find-note" class="note">이름 · 분야 · 부스 번호 · 장소로 찾는다. 누르면 찾기 자료를 불러온다.</p>
-    <ol id="hits" class="hits"></ol>
+<main id="view" tabindex="-1">
+  <section class="panel">
+    <h1>CES 2027 준비 지도</h1>
+    <p class="lead">라스베이거스, 2027년 1월 6일 ~ 9일. 불러오는 중이다.</p>
   </section>
 </main>
 
-<footer class="foot">
-  <p>연수에 가는 참가자가 만든 비공식 안내다. CES(CTA)나 코디세이 운영 측의 공식 자료가 아니다.</p>
-</footer>
+<nav class="tabs" aria-label="화면">
+  <a href="#/" data-tab="home">홈</a>
+  <a href="#/find" data-tab="find">회사</a>
+  <a href="#/card" data-tab="card">명함</a>
+</nav>
 
+<noscript><p class="panel">이 안내는 자바스크립트가 켜져 있어야 열린다.</p></noscript>
 <script type="module" src="app.js"></script>
 </body>
 </html>

@@ -110,8 +110,9 @@ jobs:
 
       - name: 화면과 코어를 모은다
         run: |
-          mkdir -p dist
+          mkdir -p dist/data
           cp -R web/. dist/
+          cp data/info.json data/categories.json data/places.json config/settings.json dist/data/
           cp target/wasm32-unknown-unknown/release/ces_core.wasm dist/core.wasm
           ls -la dist dist/data 2>/dev/null || true
 

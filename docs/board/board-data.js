@@ -4,7 +4,7 @@
 window.BOARD = {
   format: 1,
   title: '글로벌 어학연수 · CES 2027 준비 지도',
-  sub: '우리 팀이 CES에서 정보와 위치를 헷갈리지 않게 · 만드는 중 · 세션 1 (자료 도구 · 장소 자료 · 배포 뼈대)',
+  sub: '우리 팀이 CES에서 정보와 위치를 헷갈리지 않게 · 만드는 중 · 세션 2 (첫 화면 · 알아둘 것 · 명함과 QR)',
   start: 'v_big',
   frames: [
     {id: 'v_big', kicker: '처음 보는 사람에게', title: '준비 지도는 이렇게 돈다', layout: 'view', w: 1700, cols: 4, weight: 5,
@@ -28,13 +28,13 @@ window.BOARD = {
     // ── 한 장 그림 ──
     {f: 'v_big', id: 'v_team', t: 'bactor', n: '연수에 가는 우리 팀', sub: '학생 · 취준생 · 정년 · 장년', s: 'todo', col: 0.5, span: 2},
     {f: 'v_big', id: 'v_lead', t: 'bactor', n: '정리하는 사람', sub: '모인 일기를 네 태그로', s: 'todo', col: 2.5},
-    {f: 'v_big', id: 'v_s_info', t: 'bservice', n: 'CES 2027 알아둘 것', sub: '날짜 · 홀 · 오가는 법', s: 'todo', col: 0},
+    {f: 'v_big', id: 'v_s_info', t: 'bservice', n: 'CES 2027 알아둘 것', sub: '날짜 · 홀 · 오가는 법', s: 'done', col: 0},
     {f: 'v_big', id: 'v_s_route', t: 'bservice', n: '관심 회사 동선', sub: '날짜 · 캠퍼스 · 걷는 차례', s: 'todo', col: 1},
     {f: 'v_big', id: 'v_s_where', t: 'bservice', n: '내 위치와 다음 갈 곳', sub: '2D · 3D · 크게 보기', s: 'todo', col: 2},
     {f: 'v_big', id: 'v_s_know', t: 'bservice', n: '올해의 IT 정보', sub: '네 태그로 정리한 한 장', s: 'todo', col: 3},
     {f: 'v_big', id: 'v_start', t: 'bevent', n: '연수에 가기로 함', s: 'todo', col: 0},
-    {f: 'v_big', id: 'v_steps', t: 'bprocess', n: '준비하고 다녀오기', col: 1, span: 3, kids: ['v_p1', 'v_p2', 'v_p3', 'v_p4', 'v_p5'], s: 'todo'},
-    {f: 'v_big', id: 'v_p1', t: 'bprocess', n: '명함을 만든다', sub: '깃허브 · 디스코드 QR', s: 'todo'},
+    {f: 'v_big', id: 'v_steps', t: 'bprocess', n: '준비하고 다녀오기', col: 1, span: 3, kids: ['v_p1', 'v_p2', 'v_p3', 'v_p4', 'v_p5'], s: 'part'},
+    {f: 'v_big', id: 'v_p1', t: 'bprocess', n: '명함을 만든다', sub: '깃허브 · 디스코드 QR', s: 'done'},
     {f: 'v_big', id: 'v_p2', t: 'bprocess', n: '분야를 고른다', s: 'todo'},
     {f: 'v_big', id: 'v_p3', t: 'bprocess', n: '관심을 등록한다', s: 'todo'},
     {f: 'v_big', id: 'v_p4', t: 'bprocess', n: '동선을 짠다', s: 'todo'},
@@ -46,7 +46,7 @@ window.BOARD = {
     {f: 'v_big', id: 'v_app', t: 'acomp', n: '폰 앱 (웹)', sub: '오프라인으로도', s: 'part', col: 0, span: 2, see: 'data'},
     {f: 'v_big', id: 'v_build', t: 'acomp', n: '자료 짓는 도구', sub: 'Rust · Actions에서 돈다', s: 'done', col: 2},
     {f: 'v_big', id: 'v_hub', t: 'acomp', n: '[제안] 모으는 곳', sub: '구글 시트 한 장', s: 'cand', col: 3},
-    {f: 'v_big', id: 'v_d_me', t: 'dobject', n: '나 · 관심 · 동선', sub: '내 폰에', s: 'todo', col: 0},
+    {f: 'v_big', id: 'v_d_me', t: 'dobject', n: '나 · 관심 · 동선', sub: '내 폰에', s: 'part', col: 0},
     {f: 'v_big', id: 'v_d_diary', t: 'dobject', n: '회사 일기', sub: '내 폰에', s: 'todo', col: 1},
     {f: 'v_big', id: 'v_d_ces', t: 'dobject', n: 'CES 전시사 자료', sub: '공식 검색에서 · 받은 날짜', s: 'done', col: 2},
     {f: 'v_big', id: 'v_d_four', t: 'dobject', n: '네 태그 정리 한 장', sub: '모인 뒤', s: 'todo', col: 3},
@@ -55,8 +55,8 @@ window.BOARD = {
 
     // ── 한 번 쓰는 길 ──
     {f: 'v_flow', id: 'f_start', t: 'bevent', n: '연수에 가기로 함', s: 'todo', col: 0},
-    {f: 'v_flow', id: 'f_box', t: 'bprocess', n: '준비하고 다녀오기', col: 1, span: 3, kids: ['f_1', 'f_2', 'f_3', 'f_4', 'f_5', 'f_6'], s: 'todo'},
-    {f: 'v_flow', id: 'f_1', t: 'bprocess', n: '온라인 명함 만들기', sub: '태그 · 한 줄 · QR 둘', s: 'todo'},
+    {f: 'v_flow', id: 'f_box', t: 'bprocess', n: '준비하고 다녀오기', col: 1, span: 3, kids: ['f_1', 'f_2', 'f_3', 'f_4', 'f_5', 'f_6'], s: 'part'},
+    {f: 'v_flow', id: 'f_1', t: 'bprocess', n: '온라인 명함 만들기', sub: '태그 · 한 줄 · QR 둘', s: 'done'},
     {f: 'v_flow', id: 'f_2', t: 'bprocess', n: '분야 고르기', sub: '나뉜 분야에서', s: 'todo'},
     {f: 'v_flow', id: 'f_3', t: 'bprocess', n: '회사 보고 관심 등록', s: 'todo'},
     {f: 'v_flow', id: 'f_4', t: 'bprocess', n: '동선 짜기', sub: '날짜 · 캠퍼스', s: 'todo'},
@@ -70,9 +70,9 @@ window.BOARD = {
     {f: 'v_data', id: 'd_me', t: 'bactor', n: '나', s: 'todo', col: 0},
     {f: 'v_data', id: 'd_lead', t: 'bactor', n: '정리하는 사람', s: 'todo', col: 2},
     {f: 'v_data', id: 'd_send', t: 'bevent', n: '보내기를 누름', s: 'todo', col: 1},
-    {f: 'v_data', id: 'd_app', t: 'acomp', n: '내 폰의 앱', s: 'todo', col: 0},
+    {f: 'v_data', id: 'd_app', t: 'acomp', n: '내 폰의 앱', s: 'part', col: 0},
     {f: 'v_data', id: 'd_hub', t: 'acomp', n: '[제안] 모으는 곳', sub: '구글 시트 한 장', s: 'cand', col: 1.5},
-    {f: 'v_data', id: 'd_local', t: 'dobject', n: '명함 · 관심 · 동선 · 일기', sub: '내 폰에만', s: 'todo', col: 0},
+    {f: 'v_data', id: 'd_local', t: 'dobject', n: '명함 · 관심 · 동선 · 일기', sub: '내 폰에만', s: 'part', col: 0},
     {f: 'v_data', id: 'd_pool', t: 'dobject', n: '모인 일기', sub: '보낸 것만', s: 'todo', col: 1},
     {f: 'v_data', id: 'd_four', t: 'dobject', n: '네 태그 정리 한 장', sub: '학생 · 취준생 · 정년 · 장년', s: 'todo', col: 2},
 
@@ -87,8 +87,8 @@ window.BOARD = {
     {f: 'plan', id: 'wp_data', t: 'wp', n: '전시사 자료 받기', s: 'done', col: 0, when: '11/19', who: 'Aside'},
     {f: 'plan', id: 'wp_rust', t: 'wp', n: 'Rust 자료 도구', s: 'done', col: 1, when: '11/20', who: 'Orca'},
     {f: 'plan', id: 'wp_places', t: 'wp', n: '장소 자료 · 구글맵 이름', s: 'done', col: 1, when: '11/20', who: 'Orca'},
-    {f: 'plan', id: 'wp_home', t: 'wp', n: '첫 화면 · 알아둘 것', s: 'todo', col: 1, when: '~11/29', who: 'Orca'},
-    {f: 'plan', id: 'wp_onboard', t: 'wp', n: '명함 · 분야 · 관심', s: 'todo', col: 1, when: '~12/3', who: 'Orca'},
+    {f: 'plan', id: 'wp_home', t: 'wp', n: '첫 화면 · 알아둘 것', s: 'part', col: 1, when: '11/20 (아이콘은 정할 것)', who: 'Orca'},
+    {f: 'plan', id: 'wp_onboard', t: 'wp', n: '명함 · 분야 · 관심', s: 'part', col: 1, when: '~12/3', who: 'Orca'},
     {f: 'plan', id: 'wp_route', t: 'wp', n: '동선 · 2D · 3D', s: 'todo', col: 1, when: '~12/6', who: 'Orca'},
     {f: 'plan', id: 'wp_offline', t: 'wp', n: '오프라인 · 배포', s: 'part', col: 1, when: '~12/6', who: 'Orca'},
     {f: 'plan', id: 'wp_locate', t: 'wp', n: '내 위치 · 다음 곳', s: 'todo', col: 2, when: '~12/11', who: 'Orca'},
@@ -153,7 +153,7 @@ window.BOARD = {
       {id: 'hub', n: '[제안] 모으는 곳', l: 'app', life: '정리가 끝날 때까지', d: '보내기를 누른 일기만. 방식은 정할 것(구글 시트 한 장 안)'}
     ],
     data: [
-      {id: 'd_profile', st: 'phone', n: '내 온라인 명함', one: '별명 · 태그 하나 · 한 줄 소개 · 깃허브 · 디스코드', shape: ['별명', '태그(학생 · 취준생 · 정년 · 장년)', '한 줄', '깃허브 주소', '디스코드 주소', '고른 분야'], w: [[null, '처음 열 때 명함을 만든다']], r: [[null, '명함 화면의 QR 둘 · 분야 추천 · 일기의 태그 기본값']], life: '내 폰에만', never: '전화번호 · 주민번호 같은 민감한 것은 받지 않는다'},
+      {id: 'd_profile', st: 'phone', n: '내 온라인 명함', one: '별명 · 태그 하나 · 한 줄 소개 · 깃허브 · 디스코드', shape: ['별명', '태그(학생 · 취준생 · 정년 · 장년)', '한 줄', '깃허브 주소', '디스코드 주소', '고른 분야'], w: [[null, '처음 열 때 명함을 만든다']], r: [[null, '명함 화면의 QR 둘(폰에서 만든다) · 분야 추천 · 일기의 태그 기본값']], life: '내 폰에만 (localStorage ces2027.profile.v1)', never: '전화번호 · 주민번호 같은 민감한 것은 받지 않는다'},
       {id: 'd_interest', st: 'phone', n: '관심 회사', one: '등록한 회사와 날짜', shape: ['회사', '날짜', '메모'], w: [[null, '회사 목록에서 관심 등록']], r: [[null, '동선 짜기']]},
       {id: 'd_route', st: 'phone', n: '동선', one: '날짜별 걷는 차례', shape: ['날짜', '차례', '캠퍼스'], w: [[null, '앱이 관심 회사로 묶고 내가 고친다']], r: [[null, '현장에서 다음 갈 곳']]},
       {id: 'd_diary', st: 'phone', n: '회사 일기', one: '본 것 · 느낀 점 · 네 태그', shape: ['날짜', '회사', '본 것', '느낀 점', '누구에게(네 태그)'], w: [[null, '본 회사마다 쓴다']], r: [[null, '보내기 · 내보내기']]},

@@ -24,6 +24,26 @@ const wasm = await readFile(join(dist, 'core.wasm'));
 const core = await loadCore(wasm);
 check(true, `코어를 읽었다 (core.wasm ${(wasm.length / 1024).toFixed(1)} KB)`);
 
+// 명함 QR: 다른 QR 구현과 칸마다 맞춰 본 값(2026-11-20)에서 바뀌지 않았는지 본다.
+const { qrCells } = await import('../web/qr.js');
+const print = (text) => {
+  const cells = qrCells(text);
+  let x = 2166136261;
+  for (const row of cells) for (const v of row) { x ^= v; x = Math.imul(x, 16777619) >>> 0; }
+  return `${cells.length}:${x.toString(16)}`;
+};
+const QR = [['https://github.com/octocat', '25:da63c817'], ['seal.bot', '21:a6c1afb1'], ['https://discord.gg/' + 'a'.repeat(150), '53:cd12c59a']];
+check(QR.every(([text, want]) => print(text) === want), '명함 QR이 맞춰 본 값과 같다 (판 1 · 2 · 9)');
+let tooLong = false;
+try { qrCells('a'.repeat(214)); } catch { tooLong = true; }
+check(tooLong, 'QR에 담기에 긴 글(214바이트)은 거절한다');
+
+const info = await json('data/info.json');
+check(info.show.days.length === 4 && info.campuses.length === 3 && info.badge.spots.length > 0 && info.moving.length > 0 && /^\d{4}-\d\d-\d\d$/.test(info.read), `알아둘 것: 날짜 4 · 캠퍼스 3 · 오가는 법 ${info.moving.length} · 배지 ${info.badge.spots.length}곳 · 읽은 날짜 ${info.read}`);
+const settings = await json('data/settings.json');
+check(['companyIntro', 'collector', 'codysseyIcon', 'privateOn'].every((k) => k in settings), `아직 정하지 않은 넷의 자리가 설정에 있다 (회사 소개 ${settings.companyIntro} · 모으는 곳 ${settings.collector} · 아이콘 ${settings.codysseyIcon} · 비공개 날 ${settings.privateOn})`);
+for (const f of ['app.js', 'store.js', 'views/home.js', 'views/card.js', 'views/find.js', 'qr.js']) check(await exists(f), `${f}가 있다`);
+
 if (await exists('data/meta.json')) {
   const meta = await json('data/meta.json');
   const data = await json('data/exhibitors.json');
