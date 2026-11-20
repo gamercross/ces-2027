@@ -1,6 +1,7 @@
 {
-  "about": "첫 화면의 'CES 2027 알아둘 것'이다. CES 공식 안내에서 읽은 것만 적고 읽은 날짜를 남긴다. 바뀌면 이 파일만 고친다.",
+  "about": "첫 화면의 'CES 2027 알아둘 것'이다. CES 공식 안내에서 읽은 것만 적는다. 묶음마다(캠퍼스는 캠퍼스마다) source에 출처 주소와 확인한 날짜(read)가 있고, 화면은 줄마다 그것을 보인다. 줄에 source를 따로 적으면 그 줄은 그것을 쓴다. 바뀌면 이 파일만 고친다.",
   "read": "2026-11-20",
+  "recheck": "가기 전에 다시 확인한다. 시간 · 셔틀 · 배지 받는 곳은 바뀔 수 있다. 줄마다 확인한 날짜와 출처가 있으니, 날짜가 오래됐으면 출처를 눌러 본다.",
   "show": {
     "name": "CES 2027",
     "city": "라스베이거스",
@@ -12,25 +13,46 @@
       { "date": "2027-01-08", "ko": "1/8 (금)", "hours": "9 ~ 18시" },
       { "date": "2027-01-09", "ko": "1/9 (토)", "hours": "9 ~ 16시" }
     ],
-    "note": "C Space(아리아)는 1/6 ~ 1/8, 9 ~ 18시만 연다. 시각은 라스베이거스 시각이다."
+    "note": "C Space(아리아)는 1/6 ~ 1/8, 9 ~ 18시만 연다. 시각은 라스베이거스 시각이다.",
+    "source": { "ko": "날짜와 시간", "url": "https://www.ces.tech/plan-your-visit/dates-and-hours", "read": "2026-11-19" },
+    "noteSource": { "ko": "C Space 캠퍼스", "url": "https://www.ces.tech/explore-ces/maps-and-locations/c-space-campus/", "read": "2026-11-20" }
   },
   "campuses": [
-    { "k": "lvcc", "ko": "LVCC 캠퍼스", "sub": "컨벤션 센터. 가장 큰 곳", "halls": [
-      { "ko": "웨스트 홀", "what": "모빌리티 · 자동차" },
-      { "ko": "노스 홀", "what": "AI · 에너지 · IoT · 기업" },
-      { "ko": "센트럴 홀", "what": "큰 브랜드 · 게임 · XR · 영상" },
-      { "ko": "사우스 홀", "what": "로봇 · 액세서리 · 디자인과 소싱 · 국가관. 셔틀이 내려 주는 곳" },
-      { "ko": "퐁텐블로", "what": "CES Foundry (AI · 양자). 웨스트 홀에서 걸어서" }
-    ] },
-    { "k": "ven", "ko": "베네시안 캠퍼스", "sub": "베네시안 엑스포. 생활과 스타트업", "halls": [
-      { "ko": "홀 A-D (2층)", "what": "스마트홈 · 라이프스타일 · 디지털 헬스 · 푸드 테크 · 국가관" },
-      { "ko": "홀 G (1층)", "what": "유레카 파크. 스타트업" },
-      { "ko": "혁신상 쇼케이스", "what": "홀 A, 부스 50243" }
-    ] },
-    { "k": "cs", "ko": "C Space 캠퍼스", "sub": "아리아 일대. 베네시안에서 약 3km 남쪽", "halls": [
-      { "ko": "아리아", "what": "광고 · 미디어 · 엔터테인먼트. 전시보다 만남과 발표" }
-    ] }
+    {
+      "k": "lvcc",
+      "ko": "LVCC 캠퍼스",
+      "sub": "컨벤션 센터. 가장 큰 곳",
+      "halls": [
+        { "ko": "웨스트 홀", "what": "모빌리티 · 자동차" },
+        { "ko": "노스 홀", "what": "AI · 에너지 · IoT · 기업" },
+        { "ko": "센트럴 홀", "what": "큰 브랜드 · 게임 · XR · 영상" },
+        { "ko": "사우스 홀", "what": "로봇 · 액세서리 · 디자인과 소싱 · 국가관. 셔틀이 내려 주는 곳" },
+        { "ko": "퐁텐블로", "what": "CES Foundry (AI · 양자). 웨스트 홀에서 걸어서" }
+      ],
+      "source": { "ko": "LVCC 캠퍼스", "url": "https://www.ces.tech/explore-ces/maps-and-locations/lvcc-campus/", "read": "2026-11-20" }
+    },
+    {
+      "k": "ven",
+      "ko": "베네시안 캠퍼스",
+      "sub": "베네시안 엑스포. 생활과 스타트업",
+      "halls": [
+        { "ko": "홀 A-D (2층)", "what": "스마트홈 · 라이프스타일 · 디지털 헬스 · 푸드 테크 · 국가관" },
+        { "ko": "홀 G (1층)", "what": "유레카 파크. 스타트업" },
+        { "ko": "혁신상 쇼케이스", "what": "홀 A, 부스 50243" }
+      ],
+      "source": { "ko": "베네시안 캠퍼스", "url": "https://www.ces.tech/explore-ces/maps-and-locations/venetian-campus/", "read": "2026-11-20" }
+    },
+    {
+      "k": "cs",
+      "ko": "C Space 캠퍼스",
+      "sub": "아리아 일대. 베네시안에서 약 3km 남쪽",
+      "halls": [
+        { "ko": "아리아", "what": "광고 · 미디어 · 엔터테인먼트. 전시보다 만남과 발표" }
+      ],
+      "source": { "ko": "C Space 캠퍼스", "url": "https://www.ces.tech/explore-ces/maps-and-locations/c-space-campus/", "read": "2026-11-20" }
+    }
   ],
+  "movingSource": { "ko": "오가는 법", "url": "https://www.ces.tech/attendee-guides/transportation/", "read": "2026-11-20" },
   "moving": [
     { "ko": "Tech Express (9번)", "what": "LVCC ↔ 베네시안 엑스포를 잇는 무료 셔틀. LVCC는 센트럴 플라자(모노레일 가는 길 옆), 베네시안은 Sands Ave 쪽 엑스포 앞에서 탄다." },
     { "ko": "C Space 셔틀 (7번)", "what": "LVCC · 베네시안 엑스포 ↔ 아리아. 1/6(수) ~ 1/8(금)만 다닌다." },
@@ -49,7 +71,8 @@
       { "ko": "아리아 (동쪽 컨벤션 2층 마리포사 포이어)", "hours": "1/4 · 1/5 8 ~ 18시 · 1/6 7:30 ~ 18시 · 1/7 · 1/8 8 ~ 18시" },
       { "ko": "퐁텐블로 (사우스 로비)", "hours": "1/4 · 1/5 8 ~ 18시 · 1/6 7:30 ~ 18시 · 1/7 8 ~ 18시 · 1/8 9 ~ 18시" }
     ],
-    "more": "MGM 그랜드 · 앙코르 · 코스모폴리탄 · 엑스칼리버 · 만달레이 베이 같은 호텔에도 있다. 전체 목록과 시간은 공식 안내에서 다시 확인한다."
+    "more": "MGM 그랜드 · 앙코르 · 코스모폴리탄 · 엑스칼리버 · 만달레이 베이 같은 호텔에도 있다. 전체 목록과 시간은 공식 안내에서 다시 확인한다.",
+    "source": { "ko": "배지 받는 곳", "url": "https://www.ces.tech/attendee-guides/badge-pickup/", "read": "2026-11-20" }
   },
   "sources": [
     { "ko": "날짜와 시간", "url": "https://www.ces.tech/plan-your-visit/dates-and-hours", "read": "2026-11-19" },

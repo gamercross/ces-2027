@@ -1,5 +1,6 @@
 // 3D 지도: 지도 탭에서 "3D"를 누를 때만 불러온다. 바깥 3D 엔진 없이 캔버스에 직접 그린다.
 // 장소를 기둥으로 세우고(홀은 낮게, 호텔은 높게), 끌어서 돌리고, 관심 회사를 번호로 찍는다.
+// 장소를 톡 누르면 그 장소가, 장소가 없는 캠퍼스 바닥을 누르면 캠퍼스가 골라진다.
 
 const FILL = { hall: [201, 214, 238], room: [226, 220, 239], out: [217, 230, 220], hotel: [236, 220, 203] };
 const DAY = ['#b9c0cf', '#f4b9a7', '#a9c6ee', '#a8d8bf', '#f1d38a'];
@@ -13,7 +14,19 @@ function heights(p) {
   return [0, 2];
 }
 
-export function create(L, places, pins) {
+export function create(L, places, pins, on = {}) {
+  // 누를 수 있게, 그린 모양을 화면 좌표로 기억해 둔다 (뒤에 그린 것이 앞에 있다).
+  let hitShapes = [];
+  let hitCampuses = [];
+  let chosen = null;
+  const inPoly = (x, y, poly) => {
+    let hit = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, yi] = poly[i], [xj, yj] = poly[j];
+      if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) hit = !hit;
+    }
+    return hit;
+  };
   const canvas = document.createElement('canvas');
   canvas.className = 'map';
   canvas.setAttribute('role', 'img');
@@ -62,6 +75,14 @@ export function create(L, places, pins) {
       ctx.stroke();
     }
 
+    // 캠퍼스 바닥: 누르면 캠퍼스가 골라진다.
+    hitCampuses = L.campuses.map((c) => {
+      const [x0, z0, x1, z1] = [c.box[0] - 40, c.box[1] - 40, c.box[2] + 40, c.box[3] + 40];
+      const poly = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]].map(([x, z]) => project(x, 0, z));
+      face(poly, 'rgba(223,231,241,0.55)');
+      return { c, polys: [poly] };
+    });
+    hitShapes = [];
     const solids = L.list.map((p) => ({ p, depth: project(p.center[0], 0, p.center[1])[2] })).sort((a, b) => a.depth - b.depth);
     const labels = [];
     for (const { p } of solids) {
@@ -73,11 +94,18 @@ export function create(L, places, pins) {
         const b = p.world[(i + 1) % n];
         return { a, b, depth: project((a[0] + b[0]) / 2, 0, (a[1] + b[1]) / 2)[2] };
       }).sort((s, t) => s.depth - t.depth);
+      const polys = [];
       for (const s of sides) {
         const light = 0.72 + 0.16 * Math.abs(Math.cos(Math.atan2(s.b[1] - s.a[1], s.b[0] - s.a[0]) + cam.yaw));
-        face([project(s.a[0], y0, s.a[1]), project(s.b[0], y0, s.b[1]), project(s.b[0], y1, s.b[1]), project(s.a[0], y1, s.a[1])], shade(base, light));
+        const quad = [project(s.a[0], y0, s.a[1]), project(s.b[0], y0, s.b[1]), project(s.b[0], y1, s.b[1]), project(s.a[0], y1, s.a[1])];
+        face(quad, shade(base, light));
+        polys.push(quad);
       }
-      face(p.world.map(([x, z]) => project(x, y1, z)), shade(base, 1), '#56679a');
+      const top = p.world.map(([x, z]) => project(x, y1, z));
+      face(top, p.k === chosen ? '#cfe6dc' : shade(base, 1), '#56679a');
+      if (p.k === chosen) { ctx.lineWidth = 3; ctx.strokeStyle = '#1f2a44'; ctx.stroke(); }
+      polys.push(top);
+      hitShapes.push({ p, polys });
       if (p.kind === 'hall' || p.kind === 'hotel' || cam.span < 1100) labels.push({ text: p.ko.replace('LVCC ', '').replace('베네시안 엑스포 ', '').replace(/ \(.*\)$/, ''), at: project(p.center[0], y1, p.center[1]) });
     }
 
@@ -114,7 +142,7 @@ export function create(L, places, pins) {
   // 한 손가락으로 끌면 돈다. 두 손가락은 크게 · 작게.
   const touch = new Map();
   let gap = 0;
-  canvas.addEventListener('pointerdown', (ev) => { touch.set(ev.pointerId, [ev.clientX, ev.clientY]); canvas.setPointerCapture?.(ev.pointerId); });
+  canvas.addEventListener('pointerdown', (ev) => { touch.set(ev.pointerId, [ev.clientX, ev.clientY]); try { canvas.setPointerCapture(ev.pointerId); } catch { /* 잡지 못해도 끌기는 된다 */ } });
   canvas.addEventListener('pointermove', (ev) => {
     if (!touch.has(ev.pointerId)) return;
     const before = touch.get(ev.pointerId);
@@ -130,11 +158,34 @@ export function create(L, places, pins) {
     }
     draw();
   });
+  // 끌지 않고 톡 누르면 장소를(없으면 캠퍼스를) 고른다.
+  let down = null;
+  canvas.addEventListener('pointerdown', (ev) => { down = touch.size === 1 ? [ev.clientX, ev.clientY] : null; });
+  function tap(ev) {
+    if (!down || Math.hypot(ev.clientX - down[0], ev.clientY - down[1]) > 8) return;
+    const r = canvas.getBoundingClientRect();
+    const x = ev.clientX - r.left, y = ev.clientY - r.top;
+    for (let i = hitShapes.length - 1; i >= 0; i--) {
+      if (hitShapes[i].polys.some((poly) => inPoly(x, y, poly))) { chosen = hitShapes[i].p.k; draw(); on.onPlace?.(hitShapes[i].p); return; }
+    }
+    const campus = hitCampuses.find((h) => h.polys.some((poly) => inPoly(x, y, poly)));
+    if (campus) { chosen = null; draw(); on.onCampus?.(campus.c); }
+  }
   const lift = (ev) => { touch.delete(ev.pointerId); gap = 0; };
+  canvas.addEventListener('pointerup', (ev) => { tap(ev); down = null; });
   canvas.addEventListener('pointerup', lift);
   canvas.addEventListener('pointercancel', lift);
   canvas.addEventListener('wheel', (ev) => { ev.preventDefault(); cam.span = Math.min(7000, Math.max(150, cam.span * (ev.deltaY > 0 ? 1.15 : 0.87))); draw(); }, { passive: false });
   new ResizeObserver(draw).observe(canvas);
 
-  return { node: canvas, look, zoom: (f) => { cam.span = Math.min(7000, Math.max(150, cam.span * f)); draw(); }, cam };
+  return {
+    node: canvas,
+    look,
+    zoom: (f) => { cam.span = Math.min(7000, Math.max(150, cam.span * f)); draw(); },
+    // 고른 장소를 밝게 칠한다 (null이면 지운다).
+    choose: (k) => { if (chosen !== k) { chosen = k; draw(); } },
+    // 시험할 때 쓴다: 장소 꼭대기 가운데의 화면 자리.
+    screenOf: (k) => { const h = hitShapes.find((s) => s.p.k === k); if (!h) return null; const top = h.polys[h.polys.length - 1]; return [top.reduce((a, p) => a + p[0], 0) / top.length, top.reduce((a, p) => a + p[1], 0) / top.length]; },
+    cam,
+  };
 }

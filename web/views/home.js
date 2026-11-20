@@ -40,6 +40,14 @@ function daysLeft(show) {
   return '끝났다';
 }
 
+// 줄마다 붙는 작은 글: 확인한 날짜와 출처 링크. 줄에 source가 없으면 그 묶음의 것을 쓴다.
+function proof(item, fallback) {
+  const s = item?.source || fallback;
+  if (!s) return null;
+  const [, m, d] = s.read.split('-');
+  return el('small', { class: 'proof' }, `${Number(m)}/${Number(d)} 확인 · `, out(s.url, '출처'));
+}
+
 function section(title, ...kids) {
   return el('section', { class: 'panel' }, el('h2', { text: title }), ...kids);
 }
@@ -62,22 +70,22 @@ export async function render() {
   );
 
   const days = section('날짜와 시간',
-    el('ul', { class: 'rows' }, show.days.map((d) => el('li', {}, el('b', { text: d.ko }), el('span', { text: d.hours })))),
-    el('p', { class: 'note', text: show.note }));
+    el('ul', { class: 'rows' }, show.days.map((d) => el('li', {}, el('b', { text: d.ko }), el('span', {}, d.hours, ' ', proof(d, show.source))))),
+    el('p', { class: 'note' }, show.note, ' ', proof(null, show.noteSource)));
 
   const campuses = section('캠퍼스 셋',
     info.campuses.map((c) => el('div', { class: 'block' },
       el('h3', { text: c.ko }),
       el('p', { class: 'note', text: c.sub }),
-      el('ul', { class: 'rows' }, c.halls.map((h) => el('li', {}, el('b', { text: h.ko }), el('span', { text: h.what })))))));
+      el('ul', { class: 'rows' }, c.halls.map((h) => el('li', {}, el('b', { text: h.ko }), el('span', {}, h.what, ' ', proof(h, c.source))))))));
 
   const moving = section('오가는 법',
-    el('ul', { class: 'stack' }, info.moving.map((m) => el('li', {}, el('b', { text: m.ko }), el('span', { text: m.what })))));
+    el('ul', { class: 'stack' }, info.moving.map((m) => el('li', {}, el('b', { text: m.ko }), el('span', { text: m.what }), proof(m, info.movingSource)))));
 
   const badge = section('배지 받는 곳',
-    el('p', { text: info.badge.rule }),
-    el('ul', { class: 'stack' }, info.badge.spots.map((s) => el('li', {}, el('b', { text: s.ko }), el('span', { text: s.hours })))),
-    el('p', { class: 'note', text: info.badge.more }));
+    el('p', {}, info.badge.rule, ' ', proof(null, info.badge.source)),
+    el('ul', { class: 'stack' }, info.badge.spots.map((s) => el('li', {}, el('b', { text: s.ko }), el('span', { text: s.hours }), proof(s, info.badge.source)))),
+    el('p', { class: 'note' }, info.badge.more, ' ', proof(null, info.badge.source)));
 
   const data = section('전시사 자료',
     meta
@@ -90,10 +98,11 @@ export async function render() {
         ? `홀 안 자리는 짐작이다 (공식 캠퍼스 지도 ${meta.places.edition}판, 정식 배치도 전)`
         : `공식 배치도 (${meta.places.edition}판)` }))));
 
+  const recheck = el('section', { class: 'panel notice' }, el('h2', { text: 'CES 2027 알아둘 것' }), el('p', { text: info.recheck }));
   const sources = el('section', { class: 'foot' },
-    el('p', { text: `알아둘 것은 CES 공식 안내에서 ${info.read}에 읽었다. 가기 전에 공식 안내를 다시 확인한다.` }),
+    el('p', { text: '알아둘 것은 CES 공식 안내에서 읽은 것이다. 줄마다 확인한 날짜가 있다.' }),
     el('p', {}, info.sources.flatMap((s, i) => [i ? ' · ' : '', out(s.url, s.ko)])),
     el('p', { text: '연수에 가는 참가자가 만든 비공식 안내다. CES(CTA)나 코디세이 운영 측의 공식 자료가 아니다.' }));
 
-  return el('div', { class: 'page' }, hero, days, campuses, moving, badge, data, offlineBox(), sources);
+  return el('div', { class: 'page' }, hero, recheck, days, campuses, moving, badge, data, offlineBox(), sources);
 }

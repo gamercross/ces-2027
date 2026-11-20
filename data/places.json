@@ -14,7 +14,8 @@
     "distance": "캠퍼스 사이 거리는 줄여서 그렸다. 실제로 C Space(아리아)는 베네시안에서 약 3km 남쪽이다.",
     "addresses": "CES 공식 페이지와 지도에는 거리 주소가 없다. 주소는 장소가 스스로 밝힌 것을 적었고, 그 장소 사이트에서 확인한 날을 addressChecked에 적었다. null은 아직 확인하지 못한 주소다.",
     "shapeGuess": "shapeGuess가 true인 장소는 공식 캠퍼스 지도에 그려져 있지 않아 모양과 자리를 어림으로 놓은 곳이다 (벨라지오: 공식 안내가 C Space 캠퍼스에 든다고만 적는다).",
-    "geo": "캠퍼스의 geo(위도 · 경도 · 반지름)는 어림값이다. 폰의 GPS가 어느 캠퍼스에 가까운지 고르는 데만 쓰고, 홀 안 자리는 부스 번호로 맞춘다. 캠퍼스 그림은 실제 좌표에 맞춘 것이 아니다."
+    "geo": "캠퍼스의 geo(위도 · 경도 · 반지름)는 어림값이다. 폰의 GPS가 어느 캠퍼스에 가까운지 고르는 데 쓴다. 캠퍼스 그림은 실제 좌표에 맞춘 것이 아니다.",
+    "gpsAreas": "gpsAreas는 GPS로 캠퍼스 다음에 어느 홀 · 건물 근처인지 짐작할 때 쓰는 어림 자리다. 어디서 재거나 받아 온 값이 아니라 지도를 보고 어림한 것이라 100m 넘게 틀릴 수 있다. 그래서 화면에는 늘 짐작이라고 보이고, 홀 안 자리는 부스 번호로 맞춘다. 현장에서 재면 고친다."
   },
   "mapsUrls": {
     "search": "https://www.google.com/maps/search/?api=1&query={query}",
@@ -106,6 +107,22 @@
     { "from": { "c": "lvcc", "at": [596, 1103] }, "to": { "c": "ven", "at": [765, 1790] }, "ko": "Tech Express" },
     { "from": { "c": "lvcc", "at": [607, 1397] }, "to": { "c": "cs", "at": [-2325, 2270] }, "ko": "C Space 셔틀 (7번)" },
     { "from": { "c": "ven", "at": [973, 1385] }, "to": { "c": "cs", "at": [-2325, 2270] }, "ko": "C Space 셔틀 (7번)" }
+  ],
+  "gpsAreas": [
+    { "c": "lvcc", "ko": "LVCC 웨스트 홀", "places": ["LVCC_W", "LVCC_W_MTG", "LVCC_DIAMOND"], "lat": 36.1338, "lng": -115.1577, "approx": true },
+    { "c": "lvcc", "ko": "LVCC 노스 홀", "places": ["LVCC_N", "LVCC_N_MTG", "LVCC_GL"], "lat": 36.1324, "lng": -115.1523, "approx": true },
+    { "c": "lvcc", "ko": "LVCC 센트럴 홀", "places": ["LVCC_C", "LVCC_C_MTG", "LVCC_CP"], "lat": 36.1309, "lng": -115.1512, "approx": true },
+    { "c": "lvcc", "ko": "LVCC 사우스 홀", "places": ["LVCC_S3", "LVCC_S1", "LVCC_S2", "LVCC_S_MTG", "LVCC_SILVER3"], "lat": 36.1285, "lng": -115.1496, "approx": true },
+    { "c": "lvcc", "ko": "퐁텐블로", "places": ["FONT"], "lat": 36.1374, "lng": -115.1590, "approx": true },
+    { "c": "lvcc", "ko": "웨스트게이트", "places": ["WESTGATE"], "lat": 36.1357, "lng": -115.1518, "approx": true },
+    { "c": "lvcc", "ko": "리조트 월드", "places": ["RW"], "lat": 36.1342, "lng": -115.1666, "approx": true },
+    { "c": "ven", "ko": "베네시안 엑스포 (홀 A-D · 홀 G는 층이 달라 GPS로 가르지 못한다)", "places": ["VEN_AD", "VEN_G"], "lat": 36.1217, "lng": -115.1654, "approx": true },
+    { "c": "ven", "ko": "베네시안 회의실 · 타워", "places": ["VEN_BALL", "VEN_L1", "VEN_L2", "VEN_L3", "VEN_L4", "VEN_TOWER"], "lat": 36.1216, "lng": -115.1692, "approx": true },
+    { "c": "ven", "ko": "윈 · 앙코르", "places": ["WYNN"], "lat": 36.1265, "lng": -115.1657, "approx": true },
+    { "c": "cs", "ko": "아리아", "places": ["ARIA"], "lat": 36.1072, "lng": -115.1766, "approx": true },
+    { "c": "cs", "ko": "브다라", "places": ["VDARA"], "lat": 36.1092, "lng": -115.1784, "approx": true },
+    { "c": "cs", "ko": "코스모폴리탄", "places": ["COSMO"], "lat": 36.1098, "lng": -115.1741, "approx": true },
+    { "c": "cs", "ko": "벨라지오", "places": ["BELLAGIO"], "lat": 36.1126, "lng": -115.1767, "approx": true }
   ],
   "boothRules": {
     "numbers": [

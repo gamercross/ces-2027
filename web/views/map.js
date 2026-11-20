@@ -7,7 +7,7 @@ import { getInterests } from '../store.js';
 import { layout } from '../geo.js';
 import { boothSpots, spotOf } from '../spots.js';
 import { mapsLink } from '../maps.js';
-import { findBooth, nearBooth, nearestCampus } from '../locate.js';
+import { findBooth, nearBooth, nearestArea, nearestCampus } from '../locate.js';
 import { nextStop } from '../route.js';
 import { getWhere, setWhere } from '../store.js';
 import { companyRow } from '../company.js';
@@ -65,18 +65,62 @@ export async function render({ rest = [] } = {}) {
   const me = svg('g', { id: 'me-layer' });
   const board = svg('svg', { class: 'map', role: 'img', 'aria-label': 'CES 2027 캠퍼스 지도. 홀 안 부스 자리는 짐작이다.' }, roads, decor, links, shapes, campusLabels, labels, marks, pinLayer, me);
 
-  const detail = el('div', { class: 'panel', 'aria-live': 'polite' }, el('p', { class: 'note', text: '장소를 누르면 이름과 구글맵 링크가 나온다.' }));
-  function pick(p) {
+  const detail = el('div', { class: 'panel', 'aria-live': 'polite' }, el('p', { class: 'note', text: '장소를 누르면 이름 · 구글맵 링크 · 그 장소의 회사가 나온다. 3D에서도 누를 수 있다.' }));
+  // 그 장소에 부스가 있는 회사 (이름 차례). 많으면 조금씩 보인다.
+  function companyList(rows) {
+    const list = el('ol', { class: 'hits' });
+    const more = el('button', { class: 'btn ghost wide', type: 'button' });
+    let shown = 0;
+    const add = () => {
+      list.append(...rows.slice(shown, shown + 20).map((r) => companyRow(r, data, placeKo)));
+      shown = Math.min(rows.length, shown + 20);
+      more.hidden = shown >= rows.length;
+      more.textContent = `더 보기 (${rows.length - shown}곳 남음)`;
+    };
+    more.addEventListener('click', add);
+    add();
+    return [list, more];
+  }
+  const rowsAt = (keys) => (data?.ex || []).filter((r) => r[7].some((b) => keys.includes(b.slice(b.lastIndexOf('@') + 1))));
+  const in3d = () => solid.getAttribute('aria-pressed') === 'true';
+  // 2D로 넘어가 그 칸을 보인다.
+  const to2d = (box) => { focus = box; if (in3d()) mode(false); else fit(box); };
+  function pick(p, scroll) {
     for (const node of shapes.children) node.setAttribute('stroke-width', node.dataset.k === p.k ? 4 : 1.5);
+    three?.choose(p.k);
     const link = mapsLink(places, p);
     const route = mapsLink(places, p, 'directions');
     const here = pins.filter((pin) => pin.booth.endsWith(`@${p.k}`));
+    const rows = rowsAt([p.k]);
+    const box = pad([Math.min(...p.world.map((w) => w[0])), Math.min(...p.world.map((w) => w[1])), Math.max(...p.world.map((w) => w[0])), Math.max(...p.world.map((w) => w[1]))], 30);
     detail.replaceChildren(
       el('h2', { text: p.ko }),
       el('p', { text: p.theme }),
       here.length ? el('p', { class: 'note', text: `내 관심 ${here.length}곳: ${here.map((h) => h.name).slice(0, 4).join(' · ')}${here.length > 4 ? ' …' : ''}` }) : null,
-      el('p', { class: 'note', text: p.boothSpots === 'guess' ? '이 안의 부스 자리는 짐작이다 (정식 배치도 전).' : '부스 자리는 공식 배치도다.' }),
-      link ? el('div', { class: 'actions' }, out(link, '구글맵에서 열기', 'btn'), out(route, '걸어서 길찾기', 'btn ghost')) : el('p', { class: 'note', text: '구글맵에서 쓸 이름을 아직 모른다.' }));
+      el('p', { class: 'note', text: `${p.shapeGuess ? '이 장소는 공식 지도에 그려져 있지 않아 자리와 모양이 어림이다. ' : ''}${p.boothSpots === 'guess' ? '이 안의 부스 자리는 짐작이다 (정식 배치도 전).' : '부스 자리는 공식 배치도다.'}` }),
+      el('div', { class: 'actions' },
+        in3d() ? el('button', { class: 'btn', type: 'button', text: '2D 지도에서 보기', onclick: () => to2d(box) }) : null,
+        link ? out(link, '구글맵에서 열기', in3d() ? 'btn ghost' : 'btn') : null,
+        link ? out(route, '걸어서 길찾기', 'btn ghost') : null),
+      link ? null : el('p', { class: 'note', text: '구글맵에서 쓸 이름을 아직 모른다.' }),
+      el('h3', { text: `이 장소의 회사 ${rows.length}곳` }),
+      ...(rows.length ? companyList(rows) : [el('p', { class: 'note', text: '받은 자료에는 이 장소의 회사가 없다.' })]));
+    if (scroll) detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  // 캠퍼스를 누르면(3D의 바닥): 그 캠퍼스의 장소들과 회사 수.
+  function pickCampus(c, scroll) {
+    three?.choose(null);
+    const mine = L.list.filter((p) => p.c === c.k);
+    const count = new Map(mine.map((p) => [p.k, 0]));
+    for (const r of data?.ex || []) for (const k of new Set(r[7].map((b) => b.slice(b.lastIndexOf('@') + 1)))) if (count.has(k)) count.set(k, count.get(k) + 1);
+    detail.replaceChildren(
+      el('h2', { text: c.ko }),
+      el('p', { text: c.sub }),
+      el('p', { class: 'note', text: `장소 ${mine.length}곳 · 회사 ${rowsAt(mine.map((p) => p.k)).length}곳. 장소를 누르면 그곳의 회사가 나온다.` }),
+      el('div', { class: 'actions' }, el('button', { class: 'btn', type: 'button', text: '2D 지도에서 보기', onclick: () => to2d(pad(c.box, 40)) })),
+      el('div', { class: 'fields' }, mine.filter((p) => count.get(p.k) > 0).map((p) => el('button', { class: 'field-link', type: 'button', onclick: () => pick(p, true) },
+        el('span', { text: p.ko.replace('LVCC ', '').replace('베네시안 엑스포 ', '') }), el('small', { text: String(count.get(p.k)) })))));
+    if (scroll) detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
   for (const p of L.list) {
     const shape = svg('polygon', { points: pts(p.world), fill: FILL[p.kind] || '#dde3ee', tabindex: 0, role: 'button', 'aria-label': p.ko });
@@ -237,7 +281,7 @@ export async function render({ rest = [] } = {}) {
     frame.replaceChildren(el('p', { class: 'note map-wait', text: '3D를 불러오는 중이다.' }));
     try {
       // 3D는 여기서 처음 불러온다. 첫 화면에는 싣지 않는다.
-      three ??= (await import('../map3d.js')).create(L, places, pins);
+      three ??= (await import('../map3d.js')).create(L, places, pins, { onPlace: (p) => pick(p, true), onCampus: (c) => pickCampus(c, true) });
       frame.replaceChildren(three.node);
       three.look(focus);
     } catch {
@@ -255,6 +299,10 @@ export async function render({ rest = [] } = {}) {
   const placeBy = new Map(L.list.map((p) => [p.k, p]));
   function myPoint(where) {
     if (where?.by === 'booth') return [where.x, where.z];
+    if (where?.by === 'gps' && where.area) {
+      const centers = where.area.places.map((k) => placeBy.get(k)?.center).filter(Boolean);
+      if (centers.length) return [centers.reduce((a, c) => a + c[0], 0) / centers.length, centers.reduce((a, c) => a + c[1], 0) / centers.length];
+    }
     if (where?.by === 'gps' && where.inside) { const c = L.campuses.find((x) => x.k === where.campus); return c ? [(c.box[0] + c.box[2]) / 2, (c.box[1] + c.box[3]) / 2] : null; }
     return null;
   }
@@ -270,11 +318,12 @@ export async function render({ rest = [] } = {}) {
       // 부스로 맞췄으면 작은 점, GPS(캠퍼스까지)면 넓은 고리로 보인다.
       const wide = where.by === 'gps';
       me.append(
-        svg('circle', { cx: at[0], cy: at[1], r: (unit * (wide ? 60 : 16)).toFixed(1), fill: 'rgba(86,103,154,0.18)', stroke: '#56679a', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' }),
+        svg('circle', { cx: at[0], cy: at[1], r: (unit * (wide ? (where.area ? 34 : 60) : 16)).toFixed(1), fill: 'rgba(86,103,154,0.18)', stroke: '#56679a', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' }),
         svg('circle', { cx: at[0], cy: at[1], r: (unit * 6).toFixed(1), fill: '#56679a', stroke: '#f4f1ea', 'stroke-width': 2, 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' }));
     }
     if (!where) whereText.textContent = '아직 내 위치를 모른다.';
     else if (where.by === 'booth') whereText.textContent = `${placeBy.get(where.place)?.ko || '장소 모름'} · 부스 ${where.code} 근처`;
+    else if (where.area) whereText.textContent = `${where.area.ko} 근처 (GPS, 짐작)`;
     else if (where.inside) whereText.textContent = `${L.campuses.find((c) => c.k === where.campus)?.ko} 안 (GPS)`;
     else whereText.textContent = `가장 가까운 곳은 ${L.campuses.find((c) => c.k === where.campus)?.ko}, 약 ${where.meters >= 1000 ? `${(where.meters / 1000).toFixed(where.meters >= 10000 ? 0 : 1)}km` : `${where.meters}m`} 떨어져 있다 (GPS)`;
     if (!next) {
@@ -295,16 +344,66 @@ export async function render({ rest = [] } = {}) {
   }
   board.addEventListener('viewchange', drawMe);
 
-  const gpsButton = el('button', { class: 'btn', type: 'button', text: 'GPS로 캠퍼스 찾기', onclick: () => {
-    if (!('geolocation' in navigator)) { whereNote.textContent = '이 브라우저는 위치를 알려 주지 않는다. 부스 번호로 맞춘다.'; return; }
+  // GPS로 받은 자리 하나를 쓴다: 캠퍼스 → (짐작으로) 홀 · 건물. 지도는 그 자리를 가운데로 옮긴다.
+  let lastCampus = null;
+  function useFix(lat, lng, following) {
+    const near = nearestCampus(places, lat, lng);
+    const area = near.inside ? nearestArea(places, lat, lng) : null;
+    const where = { by: 'gps', campus: area ? area.c : near.k, inside: near.inside, meters: Math.round(near.meters), area: area ? { ko: area.ko, places: area.places, meters: Math.round(area.meters) } : null, at: Date.now() };
+    setWhere(where);
+    whereNote.textContent = !near.inside ? '캠퍼스 밖이다. 현장에 가면 다시 누른다.'
+      : area ? 'GPS로 본 홀 · 건물은 짐작이다 (자리가 어림값이고 실내에서는 GPS가 흔들린다). 홀 안에서는 가까운 부스 번호를 적는다.'
+      : 'GPS는 캠퍼스까지만 맞췄다. 홀 안에서는 가까운 부스 번호를 적는다.';
+    const at = myPoint(where);
+    if (!at) { drawMe(); return; }
+    if (in3d()) { three?.look([at[0] - 260, at[1] - 260, at[0] + 260, at[1] + 260]); drawMe(); return; }
+    if (following && lastCampus === where.campus) {
+      // 따라가기: 보는 크기는 그대로 두고 내 자리를 가운데로.
+      const w = view[2] - view[0], h = view[3] - view[1];
+      view = [at[0] - w / 2, at[1] - h / 2, at[0] + w / 2, at[1] + h / 2];
+      apply();
+    } else {
+      focus = null;
+      fit(area ? [at[0] - 260, at[1] - 260, at[0] + 260, at[1] + 260] : pad(L.campuses.find((c) => c.k === where.campus).box, 40));
+    }
+    lastCampus = where.campus;
+  }
+  const noGps = () => { whereNote.textContent = '이 브라우저는 위치를 알려 주지 않는다. 부스 번호로 맞춘다.'; };
+  const gpsButton = el('button', { class: 'btn', type: 'button', text: 'GPS로 찾기', onclick: () => {
+    if (!('geolocation' in navigator)) return noGps();
     whereNote.textContent = '위치를 받는 중이다.';
-    navigator.geolocation.getCurrentPosition((pos) => {
-      const near = nearestCampus(places, pos.coords.latitude, pos.coords.longitude);
-      setWhere({ by: 'gps', campus: near.k, inside: near.inside, meters: Math.round(near.meters), at: Date.now() });
-      whereNote.textContent = near.inside ? 'GPS는 캠퍼스까지만 맞춘다. 홀 안에서는 가까운 부스 번호를 적는다.' : '캠퍼스 밖이다. 현장에 가면 다시 누른다.';
-      if (near.inside) go(pad(L.campuses.find((c) => c.k === near.k).box, 40)); else drawMe();
-    }, () => { whereNote.textContent = '위치를 받지 못했다. 위치 허락을 켜거나 부스 번호로 맞춘다.'; }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
+    navigator.geolocation.getCurrentPosition((pos) => useFix(pos.coords.latitude, pos.coords.longitude, false),
+      () => { whereNote.textContent = '위치를 받지 못했다. 위치 허락을 켜거나 부스 번호로 맞춘다.'; }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
   } });
+  // 따라가기: 걸으면 지도가 나를 따라온다. 배터리를 아끼려고 20초에 한 번만 고치고, 화면이 꺼지거나 지도를 떠나면 멈춘다.
+  const FOLLOW_EVERY = 20000;
+  let watchId = null;
+  let lastFix = 0;
+  const followButton = el('button', { class: 'btn ghost', type: 'button', text: '따라가기 켜기', 'aria-pressed': 'false' });
+  function stopFollow(note) {
+    if (watchId != null) navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+    followButton.textContent = '따라가기 켜기';
+    followButton.setAttribute('aria-pressed', 'false');
+    if (note) whereNote.textContent = note;
+  }
+  function startFollow() {
+    if (!('geolocation' in navigator)) return noGps();
+    lastFix = 0;
+    followButton.textContent = '따라가기 끄기';
+    followButton.setAttribute('aria-pressed', 'true');
+    whereNote.textContent = '따라가기를 켰다. 20초에 한 번 내 자리를 고친다.';
+    watchId = navigator.geolocation.watchPosition((pos) => {
+      // 지도를 떠났으면 멈춘다.
+      if (!frame.isConnected) { stopFollow(); return; }
+      if (document.hidden || Date.now() - lastFix < FOLLOW_EVERY) return;
+      lastFix = Date.now();
+      useFix(pos.coords.latitude, pos.coords.longitude, true);
+    }, () => stopFollow('위치를 받지 못해 따라가기를 껐다. 위치 허락을 켜거나 부스 번호로 맞춘다.'), { enableHighAccuracy: false, maximumAge: FOLLOW_EVERY, timeout: 60000 });
+  }
+  followButton.addEventListener('click', () => (watchId == null ? startFollow() : stopFollow('따라가기를 껐다.')));
+  // 화면을 다시 켜면 바로 한 번 고친다.
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) lastFix = 0; });
   const boothInput = el('input', { type: 'text', inputmode: 'text', autocapitalize: 'off', autocomplete: 'off', spellcheck: 'false', placeholder: '가까운 부스 번호 (예: 14731)', 'aria-label': '가까운 부스 번호' });
   const boothForm = el('form', { class: 'inline' }, el('label', { class: 'field' }, boothInput), el('button', { class: 'btn ghost', type: 'submit', text: '맞추기' }));
   boothForm.addEventListener('submit', (ev) => {
@@ -323,28 +422,28 @@ export async function render({ rest = [] } = {}) {
   const mePanel = el('section', { class: 'panel' },
     el('h2', { text: '내 위치와 다음 갈 곳' }),
     whereText,
-    el('div', { class: 'actions' }, gpsButton),
+    el('div', { class: 'actions' }, gpsButton, followButton),
     boothForm,
     whereNote,
     nextBox,
-    el('p', { class: 'note', text: '위치는 이 폰 안에서만 쓴다. GPS는 어느 캠퍼스인지까지만 맞추고(캠퍼스 자리는 어림값), 홀 안은 부스 번호로 맞춘다.' }));
+    el('p', { class: 'note', text: '위치는 이 폰 안에서만 쓴다. GPS로는 어느 캠퍼스인지와, 짐작으로 어느 홀 · 건물 근처인지까지 본다(자리가 어림값이다). 홀 안은 부스 번호로 맞춘다.' }));
 
   const page = el('div', { class: 'page' },
     el('section', { class: 'panel' },
       el('h1', { text: '지도' }),
+      frame,
       el('div', { class: 'segs' },
         el('button', { class: 'seg', type: 'button', text: '크게 보기', onclick: () => go(null) }),
         L.campuses.map((c) => el('button', { class: 'seg', type: 'button', text: c.ko.replace(' 캠퍼스', ''), onclick: () => go(pad(c.box, 40)) }))),
       el('div', { class: 'segs' }, flat, solid,
         el('button', { class: 'seg', type: 'button', text: '크게', 'aria-label': '지도 크게', onclick: () => (solid.getAttribute('aria-pressed') === 'true' ? three?.zoom(0.8) : zoom(0.7)) }),
         el('button', { class: 'seg', type: 'button', text: '작게', 'aria-label': '지도 작게', onclick: () => (solid.getAttribute('aria-pressed') === 'true' ? three?.zoom(1.25) : zoom(1.4)) })),
-      frame,
       el('p', { class: 'note', text: `홀 안 부스 자리는 짐작이다 (공식 캠퍼스 지도 ${places.edition}판, 정식 배치도 전). 캠퍼스 사이 거리는 줄여서 그렸다.` }),
       pins.length
         ? el('p', { class: 'note', text: `번호는 내 동선의 차례다. 색은 날짜다: ${info.show.days.map((d, i) => `${d.ko.split(' ')[0]} ${['분홍', '파랑', '초록', '노랑'][i]}`).join(' · ')} · 미정 회색.` })
         : el('p', { class: 'note' }, '관심 회사를 넣으면 지도에 번호로 찍힌다. ', el('a', { href: '#/find', text: '회사 고르러 가기' }))),
-    mePanel,
-    detail);
+    detail,
+    mePanel);
   // 화면에 붙은 뒤에야 크기를 알 수 있다.
   requestAnimationFrame(() => {
     fit(all);

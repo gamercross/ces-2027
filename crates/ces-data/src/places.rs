@@ -178,6 +178,24 @@ pub fn check(json: &Value) -> Vec<String> {
         }
     }
 
+    // GPS로 홀 · 건물 근처를 짐작할 때 쓰는 어림 자리.
+    for (i, g) in json["gpsAreas"].as_array().into_iter().flatten().enumerate() {
+        let lat_ok = g["lat"].as_f64().is_some_and(|v| (-90.0..=90.0).contains(&v));
+        let lng_ok = g["lng"].as_f64().is_some_and(|v| (-180.0..=180.0).contains(&v));
+        if str_of(g, "ko").is_empty() || !campuses.contains(str_of(g, "c")) || !lat_ok || !lng_ok || g["approx"] != true {
+            bad.push(format!("gpsAreas[{i}]: ko · c · lat · lng가 맞지 않거나 approx가 true가 아니다 (어림 자리는 늘 짐작으로 보인다)"));
+        }
+        let inside: Vec<&str> = g["places"].as_array().into_iter().flatten().filter_map(Value::as_str).collect();
+        if inside.is_empty() {
+            bad.push(format!("gpsAreas[{i}]: places가 비었다"));
+        }
+        for k in inside {
+            if !places.contains(k) {
+                bad.push(format!("gpsAreas[{i}]: 없는 장소 `{k}`"));
+            }
+        }
+    }
+
     match Rules::from_json(json) {
         Ok(rules) => {
             for place in rules.places() {

@@ -21,6 +21,17 @@ export function nearestCampus(places, lat, lng) {
   return best;
 }
 
+// 캠퍼스 다음으로, 어느 홀 · 건물 근처인지 짐작한다. 장소 자료의 gpsAreas는 어림 자리라 결과는 늘 짐작이다.
+// limit(m)보다 멀면 null.
+export function nearestArea(places, lat, lng, limit = 350) {
+  let best = null;
+  for (const a of places.gpsAreas || []) {
+    const m = meters(lat, lng, a.lat, a.lng);
+    if (!best || m < best.meters) best = { ko: a.ko, c: a.c, places: a.places, meters: m };
+  }
+  return best && best.meters <= limit ? best : null;
+}
+
 // 적은 부스 글과 같은 부스를 찾는다. 같은 글이 여러 장소에 있으면 모두 돌려준다.
 // spots는 web/spots.js의 "장소|부스 글" → 자리.
 export function findBooth(spots, text) {
