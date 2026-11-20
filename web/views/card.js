@@ -50,7 +50,7 @@ function form(profile, done, go) {
       el('button', { class: 'btn', type: 'submit', text: '명함 만들기' }),
       profile
         ? el('button', { class: 'btn ghost', type: 'button', text: '그만두기', onclick: () => done(profile) })
-        : el('button', { class: 'btn ghost', type: 'button', text: '나중에', onclick: () => { sessionStorage.setItem('ces2027.skipCard', '1'); go('#/'); } })));
+        : el('button', { class: 'btn ghost', type: 'button', text: '나중에', onclick: () => { sessionStorage.setItem('ces2027.introLater', '1'); go('#/'); } })));
 
   node.addEventListener('submit', (ev) => {
     ev.preventDefault();

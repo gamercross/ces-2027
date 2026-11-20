@@ -26,7 +26,7 @@ async function show() {
   const mine = ++turn;
   let { name, rest } = route();
   // 처음 들어오면 명함부터 만든다. "나중에"를 누르면 이번에는 묻지 않는다.
-  if (name === '' && !getProfile() && !sessionStorage.getItem('ces2027.skipCard')) {
+  if (name === '' && !getProfile() && !sessionStorage.getItem('ces2027.introLater')) {
     location.replace('#/card');
     return;
   }
