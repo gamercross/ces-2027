@@ -144,8 +144,8 @@ fn 장소_자료에_잘못이_없다() {
     assert_eq!(check(&json), Vec::<String>::new());
     let places = Places::from_json(json).unwrap();
     let (count, guess) = places.counts();
-    assert_eq!(count, 30);
-    assert_eq!(guess, 30, "정식 배치도가 열리기 전이라 모든 곳이 짐작이다");
+    assert_eq!(count, 31);
+    assert_eq!(guess, 31, "정식 배치도가 열리기 전이라 모든 곳이 짐작이다");
 }
 
 #[test]
@@ -200,6 +200,8 @@ fn 부스에서_장소를_정한다() {
         ("Vdara Suite", "BB", "VDARA"),
         ("Condesa 3", "YY", "COSMO"),
         ("Beach Lot", "HH", "BEACH"),
+        ("Bellagio Hospitality Suites", "MM", "BELLAGIO"),
+        ("Somewhere Else", "MM", "BELLAGIO"),
         ("Somewhere Else", "GG", "ARIA"),
         ("Somewhere Else", "QX", "HALL_QX"),
         ("Somewhere Else", "", "UNKNOWN"),

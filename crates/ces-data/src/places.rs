@@ -129,6 +129,9 @@ pub fn check(json: &Value) -> Vec<String> {
         if !KINDS.contains(&str_of(p, "kind")) {
             bad.push(format!("{at}: kind는 {KINDS:?} 가운데 하나"));
         }
+        if p.get("shapeGuess").is_some_and(|v| !v.is_boolean()) {
+            bad.push(format!("{at}: shapeGuess는 true나 false다 (공식 지도에 없어 어림으로 놓은 곳이면 true)"));
+        }
         if !SPOTS.contains(&str_of(p, "boothSpots")) {
             bad.push(format!("{at}: boothSpots는 {SPOTS:?} 가운데 하나 (짐작이면 guess)"));
         }
