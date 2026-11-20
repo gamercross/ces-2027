@@ -33,3 +33,16 @@ export const tagKo = (k) => TAGS.find((t) => t.k === k)?.ko || '';
 
 export const getProfile = () => load('profile.v1', null);
 export const setProfile = (profile) => save('profile.v1', profile);
+
+// 관심 회사: [{ id, day }] — day는 0(날짜 미정) 또는 1 ~ 4(전시 첫날 ~ 넷째 날). 이 차례가 걷는 차례다.
+export const getInterests = () => load('interests.v1', []);
+export const setInterests = (list) => save('interests.v1', list);
+export const hasInterest = (id) => getInterests().some((it) => it.id === id);
+// 넣거나 뺀다. 넣었으면 true.
+export function toggleInterest(id) {
+  const list = getInterests();
+  const at = list.findIndex((it) => it.id === id);
+  if (at >= 0) list.splice(at, 1); else list.push({ id, day: 0 });
+  setInterests(list);
+  return at < 0;
+}

@@ -22,6 +22,7 @@ export const getInfo = () => cached('info', () => getJson('data/info.json'));
 export const getMeta = () => cached('meta', () => getJson('data/meta.json').catch(() => null));
 export const getPlaces = () => cached('places', () => getJson('data/places.json'));
 export const getExhibitors = () => cached('exhibitors', () => getJson('data/exhibitors.json'));
+export const getCategories = () => cached('categories', () => getJson('data/categories.json'));
 
 // 찾기: 코어(WASM) + 색인 + 전시사 + 장소 이름.
 export const getFinder = () => cached('finder', async () => {

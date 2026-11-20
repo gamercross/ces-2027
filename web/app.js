@@ -7,8 +7,9 @@ const VIEWS = {
   '': () => import('./views/home.js'),
   card: () => import('./views/card.js'),
   find: () => import('./views/find.js'),
+  plan: () => import('./views/plan.js'),
 };
-const TAB_OF = { '': 'home', card: 'card', find: 'find' };
+const TAB_OF = { '': 'home', find: 'find', plan: 'plan' };
 
 const view = document.getElementById('view');
 let turn = 0;
