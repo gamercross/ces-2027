@@ -50,7 +50,7 @@ export async function render() {
       el('div', { class: 'stop-main' },
         el('div', { class: 'name', text: row ? row[1] : '자료에서 빠진 회사' }),
         el('div', { class: 'where', text: booth ? `${place ? place.ko : '장소 모름'} ${splitBooth(booth).code}${row[7].length > 1 ? ` 밖에 ${row[7].length - 1}곳` : ''}` : (row ? '부스 미정' : '새로 받은 자료에 없다') })),
-      el('div', { class: 'stop-side' }, seen, select, remove, route ? out(route, '길찾기') : null));
+      el('div', { class: 'stop-side' }, seen, select, remove, route ? out(route, '길찾기') : null, row ? el('a', { href: `#/diary/new/${it.id}`, text: '일기' }) : null));
   }
 
   function draw() {

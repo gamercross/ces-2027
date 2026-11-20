@@ -4,6 +4,7 @@
 //! 부스마다 장소를 붙이고 줄여(`shrink`), 폰의 코어가 읽을 찾기 색인을 만든다.
 //! 장소 자료(`data/places.json`)는 여기서 읽고 살핀다(`places`).
 
+pub mod diary;
 pub mod fetch;
 pub mod places;
 pub mod shrink;

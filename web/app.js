@@ -10,8 +10,9 @@ const VIEWS = {
   find: () => import('./views/find.js'),
   plan: () => import('./views/plan.js'),
   map: () => import('./views/map.js'),
+  diary: () => import('./views/diary.js'),
 };
-const TAB_OF = { '': 'home', find: 'find', plan: 'plan', map: 'map' };
+const TAB_OF = { '': 'home', find: 'find', plan: 'plan', map: 'map', diary: 'diary' };
 
 const view = document.getElementById('view');
 let turn = 0;

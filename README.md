@@ -50,6 +50,7 @@ Rust는 두 자리에만 쓴다. 화면은 폰 먼저이고 묶는 도구 없이
 cargo test --workspace                 # 시험
 cargo run -p ces-data -- check-places  # 장소 자료 살피기
 cargo run -p ces-data -- build         # 공식 사이트에서 받아 dist/data에 쓴다 (물음 110번쯤, 1분)
+cargo run -p ces-data -- sort-diary --in <폴더> --out 한장.md   # 폰에서 내보낸 일기 파일들을 네 태그로 나눈 한 장으로
 ```
 
 폰용 코어(`core.wasm`)는 Actions에서 짓는다(`cargo build --release -p ces-core --target wasm32-unknown-unknown`). 공식 사이트에는 하루에 한 번만 묻고, 그날 받은 답은 Actions 캐시에 두고 다시 쓴다. 새로 받으려면 Actions의 "짓기와 배포"를 손으로 돌리면서 "새로 받는다"를 켠다.
@@ -65,7 +66,8 @@ cargo run -p ces-data -- build         # 공식 사이트에서 받아 dist/data
 | 칸 | 지금 값 | 고를 수 있는 값 |
 |---|---|---|
 | `companyIntro` 공개 판의 회사 소개 | `link-only` (소개 글은 싣지 않고 공식 링크만) | `first-sentence` (공식 소개 첫 문장 + 출처 링크) |
-| `collector` 일기를 모으는 곳 | `undecided` | 세션 6에서 자리를 만든다 (구글 시트 한 장 / 파일로 받기) |
+| `collector` 일기를 모으는 곳 | `undecided` | 정하면 적는다 (구글 시트 한 장 / 파일로 받기) |
+| `collectorUrl` 보내기가 가는 주소 | `""` (비어 있으면 꺼짐: 보내기가 파일로 내려온다) | `https://`로 시작하는 주소. 넣으면 보내기가 그 주소로 일기 묶음을 POST한다 |
 | `codysseyIcon` 코디세이 아이콘 | `false` (글자만) | `true` (운영팀 확인 뒤) |
 | `privateOn` 비공개로 돌리는 날 | `null` | 날짜 |
 

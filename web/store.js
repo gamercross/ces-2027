@@ -50,3 +50,8 @@ export function toggleInterest(id) {
 // 내 위치: { by: 'gps' | 'booth', campus, place?, code?, x?, z?, meters?, at } — 폰에만 남는다.
 export const getWhere = () => load('where.v1', null);
 export const setWhere = (where) => save('where.v1', where);
+
+// 회사 일기: [{ id, date, exId, company, booth, saw, felt, for: [태그], sent }] — 폰에만 남는다.
+// sent는 보내기(또는 내보내기)를 누른 때다. 보내기를 누른 일기만 폰 밖으로 나간다.
+export const getDiary = () => load('diary.v1', []);
+export const setDiary = (list) => save('diary.v1', list);

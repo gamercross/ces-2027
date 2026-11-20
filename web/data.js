@@ -14,7 +14,7 @@ async function getJson(path) {
   return res.json();
 }
 
-const SETTINGS_DEFAULT = { companyIntro: 'link-only', collector: 'undecided', codysseyIcon: false, privateOn: null };
+const SETTINGS_DEFAULT = { companyIntro: 'link-only', collector: 'undecided', collectorUrl: '', codysseyIcon: false, privateOn: null };
 
 export const getSettings = () => cached('settings', () => getJson('data/settings.json').catch(() => SETTINGS_DEFAULT));
 export const getInfo = () => cached('info', () => getJson('data/info.json'));

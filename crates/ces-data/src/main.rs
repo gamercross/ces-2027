@@ -14,6 +14,8 @@ ces-data: CES 공식 전시사 검색에서 자료를 받아 줄이고 찾기 �
 쓰는 법:
   ces-data build [고름]         받아서 exhibitors.json · search-index.txt · meta.json · places.json을 쓴다
   ces-data check-places [고름]  장소 자료만 살핀다
+  ces-data sort-diary --in <폴더> [--out <파일>]
+                                폰에서 내보낸 일기 파일들을 네 태그로 나눈 한 장(마크다운)으로 만든다
 
 고름:
   --out <폴더>         쓰는 곳 (기본 dist/data)
@@ -23,6 +25,7 @@ ces-data: CES 공식 전시사 검색에서 자료를 받아 줄이고 찾기 �
   --aliases <파일>     찾기 별칭 (기본 data/aliases.json)
   --from <폴더>        공식 사이트 대신 받아 둔 폴더에서 읽는다
   --save-raw <폴더>    받은 답을 그대로 이 폴더에 둔다 (공개 레포에 올리지 않는다)
+  --in <폴더>          sort-diary: 내보낸 일기 파일(.json)이 있는 폴더 (공개 레포에 올리지 않는다)
 ";
 
 struct Args {
@@ -33,6 +36,8 @@ struct Args {
     aliases: PathBuf,
     from: Option<PathBuf>,
     save_raw: Option<PathBuf>,
+    input: Option<PathBuf>,
+    out_given: bool,
 }
 
 fn parse_args(rest: &[String]) -> Result<Args, String> {
@@ -44,12 +49,18 @@ fn parse_args(rest: &[String]) -> Result<Args, String> {
         aliases: "data/aliases.json".into(),
         from: None,
         save_raw: None,
+        input: None,
+        out_given: false,
     };
     let mut it = rest.iter();
     while let Some(flag) = it.next() {
         let mut value = || it.next().map(PathBuf::from).ok_or_else(|| format!("{flag} 뒤에 값이 없다"));
         match flag.as_str() {
-            "--out" => a.out = value()?,
+            "--out" => {
+                a.out = value()?;
+                a.out_given = true;
+            }
+            "--in" => a.input = Some(value()?),
             "--places" => a.places = value()?,
             "--settings" => a.settings = value()?,
             "--categories" => a.categories = value()?,
@@ -133,11 +144,36 @@ fn run_check_places(a: &Args) -> Result<(), String> {
     Ok(())
 }
 
+/// 내보낸 일기 파일들을 읽어 네 태그로 나눈 한 장을 쓴다.
+fn run_sort_diary(a: &Args) -> Result<(), String> {
+    let dir = a.input.as_ref().ok_or("--in <폴더>가 있어야 한다")?;
+    let mut paths: Vec<PathBuf> = std::fs::read_dir(dir).map_err(|e| format!("{}: {e}", dir.display()))?.filter_map(|e| e.ok().map(|e| e.path())).filter(|p| p.extension().is_some_and(|x| x == "json")).collect();
+    paths.sort();
+    let mut bundles = Vec::new();
+    for path in &paths {
+        match read_json(path).and_then(|json| ces_data::diary::read_bundle(&json)) {
+            Ok(entries) => bundles.push(entries),
+            Err(e) => warn(&format!("{}: 건너뛴다 ({e})", path.display())),
+        }
+    }
+    let files = bundles.len();
+    let all = ces_data::diary::merge(bundles);
+    let page = ces_data::diary::one_page(&all, &time::now_iso());
+    if a.out_given {
+        write(&a.out, &page)?;
+        println!("끝: 파일 {files}개 · 일기 {}개 → {}", all.len(), a.out.display());
+    } else {
+        print!("{page}");
+    }
+    Ok(())
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let result = match args.first().map(String::as_str) {
         Some("build") => parse_args(&args[1..]).and_then(|a| run_build(&a)),
         Some("check-places") => parse_args(&args[1..]).and_then(|a| run_check_places(&a)),
+        Some("sort-diary") => parse_args(&args[1..]).and_then(|a| run_sort_diary(&a)),
         Some("--help" | "-h" | "help") | None => {
             print!("{HELP}");
             return ExitCode::SUCCESS;
