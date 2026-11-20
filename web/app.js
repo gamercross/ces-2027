@@ -2,7 +2,7 @@
 
 import { getProfile } from './store.js';
 import { getSettings } from './data.js';
-import './offline.js';
+import { offline } from './offline.js';
 
 const VIEWS = {
   '': () => import('./views/home.js'),
@@ -71,6 +71,10 @@ getSettings().then((s) => {
   const slot = document.getElementById('brand-icon');
   img.addEventListener('load', () => { slot.replaceChildren(img); slot.hidden = false; });
 });
+
+// 새 판이 있으면 탭 위에 알리고, 누르면 다시 연다. 폰에 남긴 것(명함 · 관심 · 동선 · 일기)은 그대로다.
+window.addEventListener('ces-offline', () => { document.getElementById('update').hidden = !offline.update; });
+document.getElementById('update-go').addEventListener('click', () => location.reload());
 
 window.addEventListener('hashchange', show);
 show();

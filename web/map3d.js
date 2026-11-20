@@ -1,6 +1,7 @@
 // 3D 지도: 지도 탭에서 "3D"를 누를 때만 불러온다. 바깥 3D 엔진 없이 캔버스에 직접 그린다.
 // 장소를 기둥으로 세우고(홀은 낮게, 호텔은 높게), 끌어서 돌리고, 관심 회사를 번호로 찍는다.
 // 장소를 톡 누르면 그 장소가, 장소가 없는 캠퍼스 바닥을 누르면 캠퍼스가 골라진다.
+// 가까이 보면 부스가 점으로 찍히고, 점을 누르면 그 부스가 골라진다.
 
 const FILL = { hall: [201, 214, 238], room: [226, 220, 239], out: [217, 230, 220], hotel: [236, 220, 203] };
 const DAY = ['#b9c0cf', '#f4b9a7', '#a9c6ee', '#a8d8bf', '#f1d38a'];
@@ -18,7 +19,13 @@ export function create(L, places, pins, on = {}) {
   // 누를 수 있게, 그린 모양을 화면 좌표로 기억해 둔다 (뒤에 그린 것이 앞에 있다).
   let hitShapes = [];
   let hitCampuses = [];
+  let hitBooths = [];
   let chosen = null;
+  let chosenBooth = null;
+  // 부스: 가까이 볼 때만 점으로 찍는다. 장소의 꼭대기 높이에 올려놓는다.
+  const BOOTH_SPAN = 620;
+  const topOf = new Map(L.list.map((p) => [p.k, heights(p)[1]]));
+  const booths = (on.booths || []).map((b) => ({ ...b, top: topOf.get(b.key.slice(0, b.key.indexOf('|'))) ?? 0 }));
   const inPoly = (x, y, poly) => {
     let hit = false;
     for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
@@ -109,6 +116,27 @@ export function create(L, places, pins, on = {}) {
       if (p.kind === 'hall' || p.kind === 'hotel' || cam.span < 1100) labels.push({ text: p.ko.replace('LVCC ', '').replace('베네시안 엑스포 ', '').replace(/ \(.*\)$/, ''), at: project(p.center[0], y1, p.center[1]) });
     }
 
+    // 부스 점 (자리는 짐작). 화면 안에 든 것만, 많으면 900개까지.
+    hitBooths = [];
+    if (cam.span <= BOOTH_SPAN) {
+      for (const b of booths) {
+        const [sx, sy] = project(b.x, b.top, b.z);
+        if (sx < -6 || sy < -6 || sx > w + 6 || sy > h + 6) continue;
+        hitBooths.push({ key: b.key, sx, sy });
+        if (hitBooths.length >= 900) break;
+      }
+      for (const b of hitBooths) {
+        const on1 = b.key === chosenBooth;
+        ctx.beginPath();
+        ctx.arc(b.sx, b.sy, on1 ? 6 : 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = on1 ? '#56679a' : '#9aa9cc';
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#f4f1ea';
+        ctx.stroke();
+      }
+    }
+
     for (const pin of pins) {
       const place = L.list.find((p) => pin.booth.endsWith(`@${p.k}`));
       const top = place ? heights(place)[1] : 0;
@@ -165,6 +193,13 @@ export function create(L, places, pins, on = {}) {
     if (!down || Math.hypot(ev.clientX - down[0], ev.clientY - down[1]) > 8) return;
     const r = canvas.getBoundingClientRect();
     const x = ev.clientX - r.left, y = ev.clientY - r.top;
+    // 부스 점이 보일 때는 가장 가까운 점(손가락 크기 안)을 먼저 고른다.
+    let near = null;
+    for (const b of hitBooths) {
+      const d = Math.hypot(b.sx - x, b.sy - y);
+      if (d <= 16 && (!near || d < near.d)) near = { key: b.key, d };
+    }
+    if (near) { chosenBooth = near.key; draw(); on.onBooth?.(near.key); return; }
     for (let i = hitShapes.length - 1; i >= 0; i--) {
       if (hitShapes[i].polys.some((poly) => inPoly(x, y, poly))) { chosen = hitShapes[i].p.k; draw(); on.onPlace?.(hitShapes[i].p); return; }
     }
@@ -184,6 +219,10 @@ export function create(L, places, pins, on = {}) {
     zoom: (f) => { cam.span = Math.min(7000, Math.max(150, cam.span * f)); draw(); },
     // 고른 장소를 밝게 칠한다 (null이면 지운다).
     choose: (k) => { if (chosen !== k) { chosen = k; draw(); } },
+    // 고른 부스를 짙게 칠한다.
+    chooseBooth: (key) => { if (chosenBooth !== key) { chosenBooth = key; draw(); } },
+    // 시험할 때 쓴다: 지금 화면에 찍힌 부스 점들.
+    boothsOnScreen: () => hitBooths.map((b) => ({ ...b })),
     // 시험할 때 쓴다: 장소 꼭대기 가운데의 화면 자리.
     screenOf: (k) => { const h = hitShapes.find((s) => s.p.k === k); if (!h) return null; const top = h.polys[h.polys.length - 1]; return [top.reduce((a, p) => a + p[0], 0) / top.length, top.reduce((a, p) => a + p[1], 0) / top.length]; },
     cam,

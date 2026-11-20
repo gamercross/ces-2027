@@ -205,3 +205,11 @@ h3 { font-size: 16px; }
 .linkish, .row-actions a, .stop-side a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; padding: 0 4px; }
 .proof a, .foot a, .note a, .panel p > a, .rows a { display: inline-block; padding: 14px 4px; margin: -14px 0; }
 .toggle { flex: 1 1 auto; }
+
+/* 새 판 안내: 탭 바로 위에 뜬다. */
+.update {
+  position: fixed; left: 8px; right: 8px; bottom: calc(var(--tabs) + env(safe-area-inset-bottom) + 8px); z-index: 7;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  max-width: 544px; margin: 0 auto; padding: 8px 8px 8px 16px; border-radius: var(--radius);
+  background: var(--peach); font-weight: 700; box-shadow: 0 6px 18px rgba(31, 42, 68, 0.18);
+}

@@ -65,7 +65,7 @@ export async function render({ rest = [] } = {}) {
   const me = svg('g', { id: 'me-layer' });
   const board = svg('svg', { class: 'map', role: 'img', 'aria-label': 'CES 2027 캠퍼스 지도. 홀 안 부스 자리는 짐작이다.' }, roads, decor, links, shapes, campusLabels, labels, marks, pinLayer, me);
 
-  const detail = el('div', { class: 'panel', 'aria-live': 'polite' }, el('p', { class: 'note', text: '장소를 누르면 이름 · 구글맵 링크 · 그 장소의 회사가 나온다. 3D에서도 누를 수 있다.' }));
+  const detail = el('div', { class: 'panel', 'aria-live': 'polite' }, el('p', { class: 'note', text: '장소를 누르면 이름 · 구글맵 링크 · 그 장소의 회사가 나온다. 가까이 보면 부스가 점으로 찍히고, 점을 누르면 그 회사가 나온다. 3D에서도 된다.' }));
   // 그 장소에 부스가 있는 회사 (이름 차례). 많으면 조금씩 보인다.
   function companyList(rows) {
     const list = el('ol', { class: 'hits' });
@@ -169,16 +169,22 @@ export async function render({ rest = [] } = {}) {
   const BOOTH_ZOOM = 560;
   let boothFrame = 0;
   let chosenBooth = null;
-  function pickBooth(key) {
+  // 부스를 누르면(2D의 점, 3D의 점): 그 부스의 회사 카드와 관심 단추.
+  function pickBooth(key, scroll) {
     chosenBooth = key;
     const bar = key.indexOf('|');
     const place = L.list.find((p) => p.k === key.slice(0, bar));
     const rows = boothEx.get(key) || [];
+    const spot = spots.get(key);
     for (const node of boothLayer.children) node.setAttribute('fill', node.dataset.key === key ? '#56679a' : '#9aa9cc');
-    detail.replaceChildren(
+    three?.chooseBooth(key);
+    detail.replaceChildren(...[
       el('h2', { text: `부스 ${key.slice(bar + 1)}` }),
       el('p', { class: 'note', text: `${place ? place.ko : '장소 모름'} · 자리는 짐작이다` }),
-      el('ol', { class: 'hits' }, rows.map((r) => companyRow(r, data, placeKo))));
+      in3d() && spot ? el('div', { class: 'actions' }, el('button', { class: 'btn ghost', type: 'button', text: '2D 지도에서 보기', onclick: () => to2d([spot.x - 110, spot.z - 110, spot.x + 110, spot.z + 110]) })) : null,
+      el('ol', { class: 'hits' }, rows.map((r) => companyRow(r, data, placeKo))),
+    ].filter(Boolean));
+    if (scroll) detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
   function drawBooths() {
     boothFrame = 0;
@@ -283,7 +289,8 @@ export async function render({ rest = [] } = {}) {
     frame.replaceChildren(el('p', { class: 'note map-wait', text: '3D를 불러오는 중이다.' }));
     try {
       // 3D는 여기서 처음 불러온다. 첫 화면에는 싣지 않는다.
-      three ??= (await import('../map3d.js')).create(L, places, pins, { onPlace: (p) => pick(p, true), onCampus: (c) => pickCampus(c, true) });
+      three ??= (await import('../map3d.js')).create(L, places, pins, { onPlace: (p) => pick(p, true), onCampus: (c) => pickCampus(c, true), onBooth: (key) => pickBooth(key, true), booths: boothList });
+      page.three = three;
       frame.replaceChildren(three.node);
       three.look(focus);
     } catch {
