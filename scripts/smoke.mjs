@@ -109,6 +109,32 @@ check(diary.fileName(who, new Date(2027, 0, 7)) === 'ces2027-일기-물개-20270
   }
 }
 
+// 주제 판: 후보 세우기 · 볼 회사 후보 · 출발 전 판 한 장.
+{
+  const T = await import('../web/topics.js');
+  const fake = { v: '2026-11-20', cats: ['Robotics', 'Health', 'Audio'], ex: [
+    ['A', 'Alpha Robotics', '', 0, '0', 2, 0, ['14731@LVCC_N']],
+    ['B', 'Beta Health', '', 0, '1', 1, 0, []],
+    ['C', 'Core Bots', '', 0, '0.1', 1, 0, ['52011A@VEN_AD']],
+    ['D', 'Delta Sound', '', 0, '2', 0, 0, []],
+    ['E', 'Echo Bots', '', 0, '0', 0, 0, []],
+  ] };
+  const tbl = { ko: { Robotics: '로봇', Health: '헬스케어', Audio: '오디오' }, audiences: { ret: ['Health'] } };
+  const order = (tag, topics) => T.candidates(fake, tbl, tag, topics).map((c) => `${c.ko}${c.mine ? '*' : ''}:${c.awards}/${c.count}`).join(' ');
+  check(order(null, []) === '로봇:2/3 헬스케어:2/2 오디오:0/1' && order('ret', []) === '헬스케어*:2/2 로봇:2/3 오디오:0/1' && order(null, [{ cats: ['Robotics'] }]) === '헬스케어:2/2 오디오:0/1', '주제 후보: 내 태그에 맞는 분야 먼저, 혁신상이 많은 차례, 이미 든 분야는 뺀다');
+  const topic = { ...T.newTopic('로봇 | 팔', ['Robotics']), ex: ['C', 'ZZ'], notes: { stu: '배워 볼 만하다\n둘째 줄', job: '', ret: '', mid: '' } };
+  const sug = T.suggestions(topic, fake);
+  check(sug.awards.map((r) => r[0]).join('') === 'A' && sug.others === 1 && T.pinned(topic, fake).map((r) => r[0]).join('') === 'C', '주제의 볼 회사 후보: 혁신상 받은 곳(최고 혁신상 먼저), 넣은 곳과 자료에서 빠진 곳은 뺀다');
+  const md = T.boardMarkdown([topic], fake, new Map([['VEN_AD', '베네시안 엑스포 홀 A-D']]), [{ k: 'stu', ko: '학생' }, { k: 'job', ko: '취준생' }, { k: 'ret', ko: '정년' }, { k: 'mid', ko: '장년' }], '2026-12-20');
+  check(md.includes('| # | 주제 | 볼 곳 | 학생 | 취준생 | 정년 | 장년 |') && md.includes('| 1 | 로봇 / 팔 | Core Bots (베네시안 엑스포 홀 A-D 52011A) | 배워 볼 만하다 둘째 줄 |  |  |  |') && md.includes('2026-11-20에 받음'), '출발 전 판 한 장: 주제 · 볼 곳 · 네 태그 칸 (docs/기록틀.md 1절의 꼴)');
+  const team = { topics: [{ name: '로봇 | 팔' }, { name: '소리', cats: ['Audio', 'Nope'] }] };
+  const got = T.fromTeam(team, [topic], fake);
+  const full = Array.from({ length: T.MAX_TOPICS }, (_, i) => T.newTopic(`주제 ${i}`));
+  check(got.length === 1 && got[0].name === '소리' && String(got[0].cats) === 'Audio' && T.fromTeam(team, full, fake).length === 0, `팀 주제 가져오기: 없는 것만, 없는 분야는 빼고, ${T.MAX_TOPICS}개를 넘기지 않는다`);
+  const teamFile = await json('data/topics.json');
+  check(Array.isArray(teamFile.topics) && teamFile.topics.length <= T.MAX_TOPICS && teamFile.topics.every((t) => t.name && (t.cats || []).every((c) => c in cats.ko)), `팀 주제 자리(data/topics.json): ${teamFile.topics.length}개`);
+}
+
 // 지도와 오프라인.
 const appJs = await readFile(join(dist, 'app.js'), 'utf8');
 check(!html.includes('map3d') && !appJs.includes('map3d') && (await exists('map3d.js')), '3D 지도는 첫 화면에 싣지 않고 지도 화면에서 그때 불러온다');
@@ -122,7 +148,7 @@ const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 const version = await json('version.json').catch(() => null);
 const swFiles = JSON.parse(`[${(sw.match(/const FILES = \[(.*)\];/) || [])[1] || ''}]`);
 check(!!version && sw.includes(JSON.stringify(version.v)) && !sw.includes('__VERSION__'), `판 이름이 찍혔다 (${version?.v})`);
-const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'views/map.js', 'views/diary.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
+const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'views/map.js', 'views/diary.js', 'views/topics.js', 'topics.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/topics.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
 const missing = mustCache.filter((f) => !swFiles.includes(f));
 const gone = [];
 for (const f of swFiles) if (f !== './' && !(await exists(f))) gone.push(f);

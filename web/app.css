@@ -213,3 +213,13 @@ h3 { font-size: 16px; }
   max-width: 544px; margin: 0 auto; padding: 8px 8px 8px 16px; border-radius: var(--radius);
   background: var(--peach); font-weight: 700; box-shadow: 0 6px 18px rgba(31, 42, 68, 0.18);
 }
+
+/* 주제 판 */
+.topic-link { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; min-height: 48px; color: var(--ink); text-decoration: none; }
+.topic-name { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.topic-name small { font-size: 13px; color: var(--ink-2); }
+.field-link { border: 0; text-align: left; cursor: pointer; }
+.field-link.mine { background: var(--mint); }
+details.more > summary { min-height: 44px; display: flex; align-items: center; font-weight: 700; color: var(--accent); cursor: pointer; }
+details.more[open] > summary { margin-bottom: 8px; }
+.tabs a { min-width: 0; }

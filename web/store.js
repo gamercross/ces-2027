@@ -55,3 +55,7 @@ export const setWhere = (where) => save('where.v1', where);
 // sent는 보내기(또는 내보내기)를 누른 때다. 보내기를 누른 일기만 폰 밖으로 나간다.
 export const getDiary = () => load('diary.v1', []);
 export const setDiary = (list) => save('diary.v1', list);
+
+// 주제 판: [{ id, name, cats: [공식 분야 이름], notes: { stu, job, ret, mid }, ex: [회사 id] }] — 폰에만 남는다.
+export const getTopics = () => load('topics.v1', []);
+export const setTopics = (list) => save('topics.v1', list);

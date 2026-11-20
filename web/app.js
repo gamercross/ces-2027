@@ -11,8 +11,9 @@ const VIEWS = {
   plan: () => import('./views/plan.js'),
   map: () => import('./views/map.js'),
   diary: () => import('./views/diary.js'),
+  topics: () => import('./views/topics.js'),
 };
-const TAB_OF = { '': 'home', find: 'find', plan: 'plan', map: 'map', diary: 'diary' };
+const TAB_OF = { '': 'home', find: 'find', plan: 'plan', map: 'map', diary: 'diary', topics: 'topics' };
 
 // 명함이 있으면 첫 화면이 쓸 자료를 화면 조각과 같이 받기 시작한다.
 if (getProfile()) { getInfo().catch(() => {}); getMeta(); }

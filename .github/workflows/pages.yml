@@ -112,7 +112,7 @@ jobs:
         run: |
           mkdir -p dist/data
           cp -R web/. dist/
-          cp data/info.json data/categories.json data/places.json config/settings.json dist/data/
+          cp data/info.json data/categories.json data/places.json data/topics.json config/settings.json dist/data/
           cp target/wasm32-unknown-unknown/release/ces_core.wasm dist/core.wasm
           ls -la dist dist/data 2>/dev/null || true
 
