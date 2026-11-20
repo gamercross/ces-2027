@@ -45,12 +45,26 @@ export async function render() {
       draw();
     } });
     const route = mapsLink(places, placeOf(it.id), 'directions');
+    // 같은 날짜 안에서 한 칸 위 · 아래로 옮긴다 (걷는 차례를 손으로 고칠 때).
+    const move = (step) => {
+      const list = getInterests();
+      const same = list.map((x, n) => ({ x, n })).filter((v) => (v.x.day || 0) === (it.day || 0));
+      const at = same.findIndex((v) => v.x.id === it.id);
+      const other = same[at + step];
+      if (at < 0 || !other) return;
+      [list[same[at].n], list[other.n]] = [list[other.n], list[same[at].n]];
+      setInterests(list);
+      status.textContent = '차례를 바꿨다.';
+      draw();
+    };
+    const up = el('button', { class: 'pick', type: 'button', text: '위로', 'aria-label': `${row ? row[1] : '회사'} 한 칸 위로`, onclick: () => move(-1) });
+    const down = el('button', { class: 'pick', type: 'button', text: '아래로', 'aria-label': `${row ? row[1] : '회사'} 한 칸 아래로`, onclick: () => move(1) });
     return el('li', { class: it.seen ? 'stop seen' : 'stop' },
       el('span', { class: 'no', text: String(no) }),
       el('div', { class: 'stop-main' },
         el('div', { class: 'name', text: row ? row[1] : '자료에서 빠진 회사' }),
         el('div', { class: 'where', text: booth ? `${place ? place.ko : '장소 모름'} ${splitBooth(booth).code}${row[7].length > 1 ? ` 밖에 ${row[7].length - 1}곳` : ''}` : (row ? '부스 미정' : '새로 받은 자료에 없다') })),
-      el('div', { class: 'stop-side' }, seen, select, remove, route ? out(route, '길찾기') : null, row ? el('a', { href: `#/diary/new/${it.id}`, text: '일기' }) : null));
+      el('div', { class: 'stop-side' }, seen, select, up, down, remove, route ? out(route, '길찾기') : null, row ? el('a', { href: `#/diary/new/${it.id}`, text: '일기' }) : null));
   }
 
   function draw() {

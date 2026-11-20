@@ -32,5 +32,7 @@ export function companyRow(row, data, placeKo, onChange) {
     el('div', { class: 'where', text: [booths.length ? whereText(booths, placeKo) : '부스 미정', country >= 0 ? data.countries[country] : null].filter(Boolean).join(' / ') }),
     catKo && el('div', { class: 'where', text: catKo }),
     intro && el('div', { class: 'where', text: intro }),
-    el('div', { class: 'row-actions' }, button, out(data.link.replace('{id}', encodeURIComponent(id)), '공식 전시사 페이지')));
+    el('div', { class: 'row-actions' }, button,
+      booths.some((b) => placeKo.has(splitBooth(b).place)) ? el('a', { href: `#/map/at/${encodeURIComponent(id)}`, text: '지도' }) : null,
+      out(data.link.replace('{id}', encodeURIComponent(id)), '공식 전시사 페이지')));
 }

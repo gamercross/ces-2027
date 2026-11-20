@@ -10,6 +10,7 @@ import { mapsLink } from '../maps.js';
 import { findBooth, nearBooth, nearestCampus } from '../locate.js';
 import { nextStop } from '../route.js';
 import { getWhere, setWhere } from '../store.js';
+import { companyRow } from '../company.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const FILL = { hall: '#c9d6ee', room: '#e2dcef', out: '#d9e6dc', hotel: '#ecdccb' };
@@ -40,12 +41,13 @@ export function interestPins(data, spots) {
   return pins;
 }
 
-export async function render() {
+export async function render({ rest = [] } = {}) {
   const places = await getPlaces();
   const [data, info] = await Promise.all([getExhibitors().catch(() => null), getInfo()]);
   const L = layout(places);
   const spots = data ? boothSpots(places, data) : new Map();
   const pins = data ? interestPins(data, spots) : [];
+  const placeKo = new Map(places.places.map((p) => [p.k, p.ko]));
   const pad = (b, m) => [b[0] - m, b[1] - m, b[2] + m, b[3] + m];
   const all = pad(L.box, 120);
   let view = [...all];
@@ -111,6 +113,46 @@ export async function render() {
     g.append(text);
     pinLayer.append(g);
   }
+
+  // 가까이 보면 부스를 점으로 찍는다 (보이는 칸 안의 것만). 누르면 그 부스의 회사가 나온다. 자리는 짐작이다.
+  const boothLayer = svg('g', {});
+  shapes.after(boothLayer);
+  const boothEx = new Map();
+  for (const row of data?.ex || []) for (const b of row[7]) { const at = b.lastIndexOf('@'); const key = `${b.slice(at + 1)}|${b.slice(0, at)}`; if (!boothEx.has(key)) boothEx.set(key, []); boothEx.get(key).push(row); }
+  const boothList = [...spots].map(([key, s]) => ({ key, x: s.x, z: s.z }));
+  const BOOTH_ZOOM = 560;
+  let boothFrame = 0;
+  let chosenBooth = null;
+  function pickBooth(key) {
+    chosenBooth = key;
+    const bar = key.indexOf('|');
+    const place = L.list.find((p) => p.k === key.slice(0, bar));
+    const rows = boothEx.get(key) || [];
+    for (const node of boothLayer.children) node.setAttribute('fill', node.dataset.key === key ? '#56679a' : '#9aa9cc');
+    detail.replaceChildren(
+      el('h2', { text: `부스 ${key.slice(bar + 1)}` }),
+      el('p', { class: 'note', text: `${place ? place.ko : '장소 모름'} · 자리는 짐작이다` }),
+      el('ol', { class: 'hits' }, rows.map((r) => companyRow(r, data, placeKo))));
+  }
+  function drawBooths() {
+    boothFrame = 0;
+    const [x0, z0, x1, z1] = view;
+    const w = x1 - x0;
+    if (w > BOOTH_ZOOM) { boothLayer.replaceChildren(); return; }
+    // 화면에서 반지름 5px쯤 되게 (손가락으로 누를 수 있게).
+    const r = ((w / 360) * 5).toFixed(2);
+    const nodes = [];
+    for (const b of boothList) {
+      if (b.x < x0 || b.x > x1 || b.z < z0 || b.z > z1) continue;
+      const dot = svg('circle', { cx: b.x.toFixed(1), cy: b.z.toFixed(1), r, fill: b.key === chosenBooth ? '#56679a' : '#9aa9cc', stroke: '#f4f1ea', 'stroke-width': 1, 'vector-effect': 'non-scaling-stroke' });
+      dot.dataset.key = b.key;
+      nodes.push(dot);
+      if (nodes.length >= 900) break;
+    }
+    boothLayer.replaceChildren(...nodes);
+  }
+  boothLayer.addEventListener('click', (ev) => { const key = ev.target?.dataset?.key; if (key) pickBooth(key); });
+  board.addEventListener('viewchange', () => { if (!boothFrame) boothFrame = requestAnimationFrame(drawBooths); });
 
   // 보는 칸을 바꾸면 글자와 점의 크기를 화면에 맞춘다.
   function apply() {
@@ -304,7 +346,19 @@ export async function render() {
     mePanel,
     detail);
   // 화면에 붙은 뒤에야 크기를 알 수 있다.
-  requestAnimationFrame(() => fit(all));
+  requestAnimationFrame(() => {
+    fit(all);
+    // 회사 화면의 "지도"에서 왔으면 그 회사의 첫 부스로 간다.
+    const row = rest[0] === 'at' ? data?.ex.find((r) => r[0] === rest[1]) : null;
+    const booth = row?.[7]?.[0];
+    const spot = spotOf(spots, booth);
+    if (spot) {
+      fit([spot.x - 110, spot.z - 110, spot.x + 110, spot.z + 110]);
+      const at = booth.lastIndexOf('@');
+      drawBooths();
+      pickBooth(`${booth.slice(at + 1)}|${booth.slice(0, at)}`);
+    }
+  });
   page.mapApi = { board, layer: me, get view() { return view; }, fit, L, places, spots, pad };
   return page;
 }
