@@ -18,7 +18,6 @@ if ('serviceWorker' in navigator) {
     asked = Date.now();
     navigator.serviceWorker.getRegistration().then((reg) => reg?.update()).catch(() => {});
   });
-  navigator.serviceWorker.register('sw.js').catch(() => {});
   navigator.serviceWorker.ready.then(async () => {
     try {
       const res = await fetch('version.json');
@@ -29,6 +28,15 @@ if ('serviceWorker' in navigator) {
     } catch { /* 판 이름이 없으면 그대로 둔다 */ }
     changed();
   });
+}
+
+// 서비스 워커를 건다. 첫 화면이 그려진 뒤에 부른다: 폰에 담는 일(파일 서른몇 개)이 첫 화면과 회선을 다투지 않게.
+let started = false;
+export function startOffline() {
+  if (started || !('serviceWorker' in navigator)) return;
+  started = true;
+  const go = () => navigator.serviceWorker.register('sw.js').catch(() => {});
+  if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 3000 }); else setTimeout(go, 1200);
 }
 
 // 홈 화면에 추가: 브라우저가 물어볼 수 있게 되면 단추를 보인다.

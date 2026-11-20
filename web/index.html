@@ -12,6 +12,14 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="CES 준비 지도">
 <link rel="stylesheet" href="app.css">
+<!-- 첫 화면에 쓰는 조각을 한꺼번에 받는다 (하나씩 이어 받느라 늦어지지 않게). 3D · 찾기 자료는 여기 없다. -->
+<link rel="modulepreload" href="app.js">
+<link rel="modulepreload" href="store.js">
+<link rel="modulepreload" href="data.js">
+<link rel="modulepreload" href="offline.js">
+<link rel="modulepreload" href="dom.js">
+<link rel="modulepreload" href="views/home.js">
+<link rel="modulepreload" href="views/card.js">
 </head>
 <body>
 <header class="bar">

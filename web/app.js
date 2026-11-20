@@ -1,8 +1,8 @@
 // 뼈대: 주소(#/…)에 맞는 화면을 그때 불러와 그린다. 첫 화면은 가볍게 둔다.
 
 import { getProfile } from './store.js';
-import { getSettings } from './data.js';
-import { offline } from './offline.js';
+import { getInfo, getMeta, getSettings } from './data.js';
+import { offline, startOffline } from './offline.js';
 
 const VIEWS = {
   '': () => import('./views/home.js'),
@@ -13,6 +13,9 @@ const VIEWS = {
   diary: () => import('./views/diary.js'),
 };
 const TAB_OF = { '': 'home', find: 'find', plan: 'plan', map: 'map', diary: 'diary' };
+
+// 명함이 있으면 첫 화면이 쓸 자료를 화면 조각과 같이 받기 시작한다.
+if (getProfile()) { getInfo().catch(() => {}); getMeta(); }
 
 const view = document.getElementById('view');
 let turn = 0;
@@ -40,12 +43,14 @@ async function show() {
     const node = await mod.render({ rest, go });
     if (mine !== turn) return;
     view.replaceChildren(node);
+    startOffline();
   } catch (e) {
     if (mine !== turn) return;
     const p = document.createElement('p');
     p.className = 'panel';
     p.textContent = '화면을 불러오지 못했다. 인터넷을 확인하고 다시 열어 본다.';
     view.replaceChildren(p);
+    startOffline();
     console.error(e);
   }
   window.scrollTo(0, 0);
