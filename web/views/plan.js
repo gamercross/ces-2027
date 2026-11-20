@@ -138,8 +138,9 @@ export async function render() {
     el('section', { class: 'panel' },
       el('h1', { text: '동선' }),
       el('p', { class: 'lead', text: '관심 회사를 날짜와 캠퍼스로 묶고 걷는 차례로 세운다.' }),
-      el('div', { class: 'actions' }, fill, sort),
       status,
       el('p', { class: 'note', text: '걷는 차례는 부스 번호로 짐작한 것이다 (정식 배치도 전). 이 목록은 이 폰에만 남는다.' })),
-    holder);
+    holder,
+    // 한 손으로 닿게 아래에 붙여 둔다.
+    el('div', { class: 'dock' }, fill, sort));
 }

@@ -34,7 +34,7 @@ function form(entry, preset, companies, done) {
     field('느낀 점', felt),
     el('div', { class: 'field' }, el('span', { class: 'label', text: '누구에게 (여럿 골라도 된다)' }), tags),
     error,
-    el('div', { class: 'actions' },
+    el('div', { class: 'dock' },
       el('button', { class: 'btn', type: 'submit', text: '폰에 남기기' }),
       el('button', { class: 'btn ghost', type: 'button', text: '그만두기', onclick: () => done() })));
   node.addEventListener('submit', (ev) => {
@@ -122,7 +122,6 @@ export async function render({ rest, go }) {
       el('section', { class: 'panel' },
         el('h1', { text: '일기' }),
         el('p', { class: 'lead', text: '본 회사마다 본 것과 느낀 점을 적는다. 일기는 이 폰에만 남고, 보내기를 누른 것만 밖으로 나간다.' }),
-        el('div', { class: 'actions' }, el('a', { class: 'btn', href: '#/diary/new', text: '일기 쓰기' })),
         el('p', { class: 'note', text: `일기 ${all.length}개 · 아직 보내지 않은 것 ${unsent.length}개` })),
       el('section', { class: 'panel' },
         el('h2', { text: '보내기' }),
@@ -140,7 +139,9 @@ export async function render({ rest, go }) {
           el('div', { class: 'row-actions' },
             el('span', { class: 'note', text: e.sent ? `보냄 ${new Date(e.sent).toLocaleDateString('ko-KR')}` : '아직 보내지 않음' }),
             el('a', { href: `#/diary/edit/${e.id}`, text: '고치기' }),
-            el('button', { class: 'linkish', type: 'button', text: '지우기', onclick: () => { setDiary(getDiary().filter((x) => x.id !== e.id)); show('일기를 지웠다.'); } })))))))));
+            el('button', { class: 'linkish', type: 'button', text: '지우기', onclick: () => { setDiary(getDiary().filter((x) => x.id !== e.id)); show('일기를 지웠다.'); } }))))))),
+      // 한 손으로 닿게 아래에 붙여 둔다.
+      el('div', { class: 'dock' }, el('a', { class: 'btn', href: '#/diary/new', text: '일기 쓰기' }))));
   }
   function show(message) {
     if (location.hash !== '#/diary') { sessionStorage.setItem('ces2027.diaryNote', message || ''); go('#/diary'); return; }

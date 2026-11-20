@@ -40,7 +40,7 @@ Rust는 두 자리에만 쓴다. 화면은 폰 먼저이고 묶는 도구 없이
 |---|---|
 | `crates/ces-data` | 빌드 때 도는 자료 도구. CES 공식 전시사 검색에서 받아(`X-Requested-With` 머리글) 부스마다 장소를 붙이고 줄여, 전시사 자료 · 찾기 색인 · 받은 날짜를 쓴다. GitHub Actions에서 돈다 |
 | `crates/ces-core` | 폰에 보내는 작은 WASM 코어(의존 없음). 찾기 색인을 읽고 찾는다. 동선 · 위치 맞추기는 뒤 세션에서 더한다 |
-| `data/places.json` | 장소 자료 한 장: 홀 · 캠퍼스 모양, 부스 → 장소 규칙, 구글맵에서 쓸 이름 · 주소(Maps URLs, API 키 없음), 부스 자리가 짐작인지 |
+| `data/places.json` | 장소 자료 한 장: 홀 · 캠퍼스 모양, 부스 → 장소 규칙, 구글맵에서 쓸 이름 · 주소(Maps URLs, API 키 없음), 부스 자리가 짐작인지, GPS로 캠퍼스와 홀 근처를 고를 때 쓰는 어림 자리 |
 | `data/categories.json` · `data/aliases.json` | 분야 한글 이름과 묶음, 찾기 별칭 |
 | `config/settings.json` | 아직 정하지 않은 것을 바꾸는 자리 (아래 표) |
 | `web/` | 화면. 첫 화면은 가볍게, 찾기 자료와 코어는 쓸 때 불러온다 |

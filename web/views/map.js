@@ -93,7 +93,8 @@ export async function render({ rest = [] } = {}) {
     const here = pins.filter((pin) => pin.booth.endsWith(`@${p.k}`));
     const rows = rowsAt([p.k]);
     const box = pad([Math.min(...p.world.map((w) => w[0])), Math.min(...p.world.map((w) => w[1])), Math.max(...p.world.map((w) => w[0])), Math.max(...p.world.map((w) => w[1]))], 30);
-    detail.replaceChildren(
+    // replaceChildren은 null을 글자 "null"로 찍으므로 빈 것은 걸러서 넣는다.
+    detail.replaceChildren(...[
       el('h2', { text: p.ko }),
       el('p', { text: p.theme }),
       here.length ? el('p', { class: 'note', text: `내 관심 ${here.length}곳: ${here.map((h) => h.name).slice(0, 4).join(' · ')}${here.length > 4 ? ' …' : ''}` }) : null,
@@ -104,7 +105,8 @@ export async function render({ rest = [] } = {}) {
         link ? out(route, '걸어서 길찾기', 'btn ghost') : null),
       link ? null : el('p', { class: 'note', text: '구글맵에서 쓸 이름을 아직 모른다.' }),
       el('h3', { text: `이 장소의 회사 ${rows.length}곳` }),
-      ...(rows.length ? companyList(rows) : [el('p', { class: 'note', text: '받은 자료에는 이 장소의 회사가 없다.' })]));
+      ...(rows.length ? companyList(rows) : [el('p', { class: 'note', text: '받은 자료에는 이 장소의 회사가 없다.' })]),
+    ].filter(Boolean));
     if (scroll) detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
   // 캠퍼스를 누르면(3D의 바닥): 그 캠퍼스의 장소들과 회사 수.

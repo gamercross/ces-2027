@@ -55,12 +55,13 @@ async function categoryPage(index, go) {
       el('p', {}, el('a', { href: '#/find', text: '분야 전체' })),
       el('h1', { text: table.ko[name] || name }),
       el('p', { class: 'note', text: `CES 공식 분야: ${name}` }),
-      el('div', { class: 'toggles' },
-        el('label', { class: 'toggle' }, onlyKorea, el('span', { text: '한국 회사만' })),
-        el('label', { class: 'toggle' }, onlyAward, el('span', { text: '혁신상만' }))),
-      count,
-      plan.link),
-    holder);
+      count),
+    holder,
+    // 한 손으로 닿게 아래에 붙여 둔다.
+    el('div', { class: 'dock' },
+      el('label', { class: 'toggle' }, onlyKorea, el('span', { text: '한국 회사만' })),
+      el('label', { class: 'toggle' }, onlyAward, el('span', { text: '혁신상만' })),
+      plan.link));
 }
 
 function fieldLinks(names, data, counts, table) {
@@ -111,11 +112,11 @@ async function frontPage() {
   return el('div', { class: 'page' },
     el('section', { class: 'panel' },
       el('h1', { text: '회사' }),
-      el('label', { class: 'field' }, input),
-      note,
-      plan.link),
+      note),
     results,
-    fields);
+    fields,
+    // 한 손으로 닿게 찾기 칸을 아래에 붙여 둔다.
+    el('div', { class: 'dock' }, el('label', { class: 'field' }, input), plan.link));
 }
 
 export async function render({ rest, go }) {

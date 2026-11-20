@@ -187,3 +187,21 @@ h3 { font-size: 16px; }
 .proof { display: inline-block; font-size: 12px; color: var(--ink-2); white-space: nowrap; }
 .proof a { display: inline-block; padding: 6px 2px; margin: -6px 0; }
 .notice { background: var(--peach); }
+
+/* 한 손으로 닿게: 화면의 주요 단추를 아래(탭 바로 위)에 붙여 둔다. */
+.dock {
+  position: sticky; bottom: calc(var(--tabs) + env(safe-area-inset-bottom) + 8px); z-index: 4;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: 8px; border-radius: var(--radius);
+  background: var(--panel); box-shadow: 0 0 0 1px var(--line), 0 6px 18px rgba(31, 42, 68, 0.12);
+}
+.dock .btn { flex: 1 1 auto; }
+.dock .field { flex: 1 1 100%; }
+.dock .chip { flex: 1 1 auto; justify-content: center; max-width: none; }
+.form .dock { margin-top: 4px; }
+
+/* 누르는 것은 44px 이상. 글 속 링크는 줄 높이만큼 두되 위아래로 누를 자리를 넓힌다. */
+.chip, .pick, .stop-side select { min-height: 44px; }
+.linkish, .row-actions a, .stop-side a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; padding: 0 4px; }
+.proof a, .foot a, .note a, .panel p > a, .rows a { display: inline-block; padding: 14px 4px; margin: -14px 0; }
+.toggle { flex: 1 1 auto; }

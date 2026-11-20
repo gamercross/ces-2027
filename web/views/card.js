@@ -46,7 +46,7 @@ function form(profile, done, go) {
     field('깃허브', github, '비워 두면 QR이 생기지 않는다'),
     field('디스코드', discord),
     error,
-    el('div', { class: 'actions' },
+    el('div', { class: 'dock' },
       el('button', { class: 'btn', type: 'submit', text: '명함 만들기' }),
       profile
         ? el('button', { class: 'btn ghost', type: 'button', text: '그만두기', onclick: () => done(profile) })
