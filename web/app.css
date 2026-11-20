@@ -157,3 +157,13 @@ h3 { font-size: 16px; }
 .stop .where { font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere; }
 .stop-side { grid-column: 2; display: flex; align-items: center; gap: 8px; }
 .stop-side select { min-height: 40px; padding: 0 10px; border: 0; border-radius: 10px; background: var(--panel); font-size: 14px; }
+
+/* 지도 */
+.map-frame { border-radius: 12px; overflow: hidden; background: var(--bg); }
+.map { display: block; width: 100%; height: min(62vh, 520px); min-height: 320px; touch-action: none; user-select: none; -webkit-user-select: none; }
+.map polygon { cursor: pointer; }
+.map polygon:focus-visible { outline: none; stroke-width: 4; }
+.map-wait { padding: 24px 12px; }
+.segs { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg { flex: 1 1 auto; min-height: 44px; padding: 0 10px; border: 2px solid transparent; border-radius: 12px; background: var(--panel-2); font-weight: 700; font-size: 14px; cursor: pointer; }
+.seg[aria-pressed="true"] { background: var(--mint); border-color: var(--accent); }

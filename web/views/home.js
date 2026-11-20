@@ -3,6 +3,32 @@
 import { el, num, out } from '../dom.js';
 import { getInfo, getMeta } from '../data.js';
 import { getProfile, tagKo } from '../store.js';
+import { offline } from '../offline.js';
+
+// 인터넷 없이 쓰기: 담겼는지 · 판 이름 · 홈 화면에 추가.
+function offlineBox() {
+  const state = el('p', { class: 'big' });
+  const version = el('p', { class: 'note' });
+  const button = el('button', { class: 'btn', type: 'button', text: '홈 화면에 추가', hidden: true, onclick: async () => {
+    const ask = offline.install;
+    if (!ask) return;
+    ask.prompt();
+    await ask.userChoice.catch(() => {});
+    offline.install = null;
+    paint();
+  } });
+  function paint() {
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    state.textContent = offline.ready ? '인터넷 없이 열 준비가 됐다.' : ('serviceWorker' in navigator ? '한 번 열어 두면 다음부터 인터넷 없이 열린다. 담는 중이다.' : '이 브라우저는 인터넷 없이 여는 것을 돕지 않는다.');
+    version.textContent = offline.version ? `판 이름 ${offline.version}${standalone ? ' · 홈 화면에서 열었다' : ''}` : '';
+    button.hidden = !offline.install;
+  }
+  paint();
+  window.addEventListener('ces-offline', paint);
+  return el('section', { class: 'panel' }, el('h2', { text: '인터넷 없이 쓰기' }), state,
+    el('p', { class: 'note', text: '홈 화면에 추가해 두면 앱처럼 열린다. 아이폰은 사파리의 공유 단추에서, 안드로이드는 크롬 메뉴에서 "홈 화면에 추가"를 누른다.' }),
+    el('div', { class: 'actions' }, button), version);
+}
 
 function daysLeft(show) {
   const day = 86400000;
@@ -69,5 +95,5 @@ export async function render() {
     el('p', {}, info.sources.flatMap((s, i) => [i ? ' · ' : '', out(s.url, s.ko)])),
     el('p', { text: '연수에 가는 참가자가 만든 비공식 안내다. CES(CTA)나 코디세이 운영 측의 공식 자료가 아니다.' }));
 
-  return el('div', { class: 'page' }, hero, days, campuses, moving, badge, data, sources);
+  return el('div', { class: 'page' }, hero, days, campuses, moving, badge, data, offlineBox(), sources);
 }

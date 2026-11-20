@@ -54,7 +54,8 @@ cargo run -p ces-data -- build         # 공식 사이트에서 받아 dist/data
 
 폰용 코어(`core.wasm`)는 Actions에서 짓는다(`cargo build --release -p ces-core --target wasm32-unknown-unknown`). 공식 사이트에는 하루에 한 번만 묻고, 그날 받은 답은 Actions 캐시에 두고 다시 쓴다. 새로 받으려면 Actions의 "짓기와 배포"를 손으로 돌리면서 "새로 받는다"를 켠다.
 
-- **오프라인:** 서비스 워커와 홈 화면에 추가 (세션 4). 명함 QR도 폰에서 만든다.
+- **오프라인:** 한 번 열면 서비스 워커(`web/sw.js`)가 화면 · 코어 · 자료를 폰에 담아 다음부터 인터넷 없이 연다. 판 이름(자료 받은 날짜 + 커밋)과 담아 둘 파일 목록은 지을 때 `scripts/stamp.mjs`가 채운다. 홈 화면에 추가할 수 있다. 명함 QR도 폰에서 만든다.
+- **지도:** 2D가 기본이고 3D는 지도 화면에서 누를 때 불러온다(`web/map3d.js`, 바깥 3D 엔진 없음). 홀 안 부스 자리는 부스 번호로 짐작한다(`web/spots.js`).
 - 참고: [`reference/미리보기판/`](reference/미리보기판/)은 11/19에 만든 3D 미리 보기 판(JS)의 본문과 자료 스크립트다.
 
 ### 아직 정하지 않은 것

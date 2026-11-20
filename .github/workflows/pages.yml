@@ -116,6 +116,9 @@ jobs:
           cp target/wasm32-unknown-unknown/release/ces_core.wasm dist/core.wasm
           ls -la dist dist/data 2>/dev/null || true
 
+      - name: 판 이름 찍기 · 인터넷 없이 담아 둘 목록
+        run: node scripts/stamp.mjs dist
+
       - name: 지은 것 살피기
         run: node scripts/smoke.mjs dist
 

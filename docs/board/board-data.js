@@ -4,7 +4,7 @@
 window.BOARD = {
   format: 1,
   title: '글로벌 어학연수 · CES 2027 준비 지도',
-  sub: '우리 팀이 CES에서 정보와 위치를 헷갈리지 않게 · 만드는 중 · 세션 3 (분야 · 관심 · 동선)',
+  sub: '우리 팀이 CES에서 정보와 위치를 헷갈리지 않게 · 만드는 중 · 세션 4 (2D · 3D 지도 · 오프라인)',
   start: 'v_big',
   frames: [
     {id: 'v_big', kicker: '처음 보는 사람에게', title: '준비 지도는 이렇게 돈다', layout: 'view', w: 1700, cols: 4, weight: 5,
@@ -30,7 +30,7 @@ window.BOARD = {
     {f: 'v_big', id: 'v_lead', t: 'bactor', n: '정리하는 사람', sub: '모인 일기를 네 태그로', s: 'todo', col: 2.5},
     {f: 'v_big', id: 'v_s_info', t: 'bservice', n: 'CES 2027 알아둘 것', sub: '날짜 · 홀 · 오가는 법', s: 'done', col: 0},
     {f: 'v_big', id: 'v_s_route', t: 'bservice', n: '관심 회사 동선', sub: '날짜 · 캠퍼스 · 걷는 차례', s: 'done', col: 1},
-    {f: 'v_big', id: 'v_s_where', t: 'bservice', n: '내 위치와 다음 갈 곳', sub: '2D · 3D · 크게 보기', s: 'todo', col: 2},
+    {f: 'v_big', id: 'v_s_where', t: 'bservice', n: '내 위치와 다음 갈 곳', sub: '2D · 3D · 크게 보기', s: 'part', col: 2},
     {f: 'v_big', id: 'v_s_know', t: 'bservice', n: '올해의 IT 정보', sub: '네 태그로 정리한 한 장', s: 'todo', col: 3},
     {f: 'v_big', id: 'v_start', t: 'bevent', n: '연수에 가기로 함', s: 'todo', col: 0},
     {f: 'v_big', id: 'v_steps', t: 'bprocess', n: '준비하고 다녀오기', col: 1, span: 3, kids: ['v_p1', 'v_p2', 'v_p3', 'v_p4', 'v_p5'], s: 'part'},
@@ -51,7 +51,7 @@ window.BOARD = {
     {f: 'v_big', id: 'v_d_ces', t: 'dobject', n: 'CES 전시사 자료', sub: '공식 검색에서 · 받은 날짜', s: 'done', col: 2},
     {f: 'v_big', id: 'v_d_four', t: 'dobject', n: '네 태그 정리 한 장', sub: '모인 뒤', s: 'todo', col: 3},
     {f: 'v_big', id: 'v_t_pages', t: 'tservice', n: '웹 주소와 오프라인 저장', sub: 'GitHub Pages · 서비스 워커', s: 'part', col: 0.5, span: 2},
-    {f: 'v_big', id: 'v_t_maps', t: 'tservice', n: '구글맵 길찾기', sub: '키 없는 링크', s: 'todo', col: 2.5, span: 1.5},
+    {f: 'v_big', id: 'v_t_maps', t: 'tservice', n: '구글맵 길찾기', sub: '키 없는 링크', s: 'part', col: 2.5, span: 1.5},
 
     // ── 한 번 쓰는 길 ──
     {f: 'v_flow', id: 'f_start', t: 'bevent', n: '연수에 가기로 함', s: 'todo', col: 0},
@@ -89,8 +89,8 @@ window.BOARD = {
     {f: 'plan', id: 'wp_places', t: 'wp', n: '장소 자료 · 구글맵 이름', s: 'done', col: 1, when: '11/20', who: 'Orca'},
     {f: 'plan', id: 'wp_home', t: 'wp', n: '첫 화면 · 알아둘 것', s: 'part', col: 1, when: '11/20 (아이콘은 정할 것)', who: 'Orca'},
     {f: 'plan', id: 'wp_onboard', t: 'wp', n: '명함 · 분야 · 관심', s: 'done', col: 1, when: '11/20', who: 'Orca'},
-    {f: 'plan', id: 'wp_route', t: 'wp', n: '동선 · 2D · 3D', s: 'part', col: 1, when: '~12/6', who: 'Orca'},
-    {f: 'plan', id: 'wp_offline', t: 'wp', n: '오프라인 · 배포', s: 'part', col: 1, when: '~12/6', who: 'Orca'},
+    {f: 'plan', id: 'wp_route', t: 'wp', n: '동선 · 2D · 3D', s: 'part', col: 1, when: '11/20 (3D는 단순한 모양)', who: 'Orca'},
+    {f: 'plan', id: 'wp_offline', t: 'wp', n: '오프라인 · 배포', s: 'part', col: 1, when: '11/20 (Pages 켜기 남음)', who: 'Orca'},
     {f: 'plan', id: 'wp_locate', t: 'wp', n: '내 위치 · 다음 곳', s: 'todo', col: 2, when: '~12/11', who: 'Orca'},
     {f: 'plan', id: 'wp_maps', t: 'wp', n: '구글맵 길찾기', s: 'todo', col: 2, when: '~12/11', who: 'Orca'},
     {f: 'plan', id: 'wp_diary', t: 'wp', n: '회사 일기 · 보내기', s: 'todo', col: 2, when: '~12/13', who: 'Orca'},
@@ -148,7 +148,7 @@ window.BOARD = {
   ],
   dataMap: {
     stores: [
-      {id: 'phone', n: '내 폰', l: 'app', life: '앱을 지우거나 브라우저 기록을 지울 때까지', d: '나 · 관심 · 동선 · 일기 — 다른 사람에게 가지 않는다'},
+      {id: 'phone', n: '내 폰', l: 'app', life: '앱을 지우거나 브라우저 기록을 지울 때까지', d: '나 · 관심 · 동선 · 일기 — 다른 사람에게 가지 않는다. 서비스 워커가 화면 · 코어 · 자료도 폰에 담아 인터넷 없이 연다'},
       {id: 'site', n: '웹 주소 (GitHub Pages)', l: 'tec', life: '공개 판 동안', d: '앱 화면 · 폰용 코어(WASM) · CES 전시사 자료 · 찾기 색인 · 장소 자료'},
       {id: 'hub', n: '[제안] 모으는 곳', l: 'app', life: '정리가 끝날 때까지', d: '보내기를 누른 일기만. 방식은 정할 것(구글 시트 한 장 안)'}
     ],

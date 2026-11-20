@@ -2,14 +2,16 @@
 
 import { getProfile } from './store.js';
 import { getSettings } from './data.js';
+import './offline.js';
 
 const VIEWS = {
   '': () => import('./views/home.js'),
   card: () => import('./views/card.js'),
   find: () => import('./views/find.js'),
   plan: () => import('./views/plan.js'),
+  map: () => import('./views/map.js'),
 };
-const TAB_OF = { '': 'home', find: 'find', plan: 'plan' };
+const TAB_OF = { '': 'home', find: 'find', plan: 'plan', map: 'map' };
 
 const view = document.getElementById('view');
 let turn = 0;
@@ -71,3 +73,4 @@ getSettings().then((s) => {
 
 window.addEventListener('hashchange', show);
 show();
+

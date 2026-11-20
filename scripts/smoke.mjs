@@ -54,6 +54,22 @@ const filled = fillDays(['b', 'e', 'f', 'd', 'a', 'c', 'g', 'h'].map((id) => ({ 
 check(filled.filled === 8 && filled.items.map((it) => `${it.id}${it.day}`).join(' ') === 'a1 h1 f1 g1 c2 b2 d3 e3', `동선: 날짜 채우기와 걷는 차례 (${filled.items.map((it) => `${it.id}${it.day}`).join(' ')})`);
 const moved = sortRoute(filled.items.map((it) => (it.id === 'a' ? { ...it, day: 0 } : it.id === 'd' ? { ...it, day: 1 } : it)), firstBooth, walkTable);
 check(moved.map((it) => `${it.id}${it.day}`).join(' ') === 'h1 f1 g1 d1 c2 b2 e3 a0', '동선: 날짜를 바꾸면 그 날짜로 가고 미정은 맨 뒤');
+// 지도와 오프라인.
+const appJs = await readFile(join(dist, 'app.js'), 'utf8');
+check(!html.includes('map3d') && !appJs.includes('map3d') && (await exists('map3d.js')), '3D 지도는 첫 화면에 싣지 않고 지도 화면에서 그때 불러온다');
+const sw = await readFile(join(dist, 'sw.js'), 'utf8');
+const version = await json('version.json').catch(() => null);
+const swFiles = JSON.parse(`[${(sw.match(/const FILES = \[(.*)\];/) || [])[1] || ''}]`);
+check(!!version && sw.includes(JSON.stringify(version.v)) && !sw.includes('__VERSION__'), `판 이름이 찍혔다 (${version?.v})`);
+const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'views/map.js', 'data/places.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
+const missing = mustCache.filter((f) => !swFiles.includes(f));
+const gone = [];
+for (const f of swFiles) if (f !== './' && !(await exists(f))) gone.push(f);
+check(missing.length === 0 && gone.length === 0, `서비스 워커가 담아 둘 파일 ${swFiles.length}개 (빠진 것 ${missing.join(' ') || '없음'} · 없는 파일 ${gone.join(' ') || '없음'})`);
+const manifest = await json('manifest.webmanifest');
+let iconsOk = manifest.display === 'standalone' && manifest.icons.length >= 2;
+for (const icon of manifest.icons) iconsOk = iconsOk && (await exists(icon.src));
+check(iconsOk, '홈 화면에 추가: 매니페스트와 아이콘이 있다');
 const cats = await json('data/categories.json');
 check(cats.groups.length === 7 && ['stu', 'job', 'ret', 'mid'].every((k) => cats.audiences[k].length > 0), `분야 묶음 ${cats.groups.length}개 · 네 태그마다 먼저 보일 분야가 있다${cats.audiencesDraft ? ' (초안)' : ''}`);
 
@@ -67,6 +83,20 @@ if (await exists('data/meta.json')) {
   check(places.places.every((p) => p.boothSpots === 'guess' || p.boothSpots === 'official'), `장소 ${places.places.length}곳마다 부스 자리가 짐작인지 적혀 있다`);
   check(!/[?&]key=/.test(JSON.stringify(places.mapsUrls)), '구글맵 주소는 키 없는 Maps URLs다');
 
+  // 부스 자리 짐작: 장소가 정해진 부스는 모두 제 장소 모양 안에 놓여야 한다.
+  const { boothSpots, spotOf } = await import('../web/spots.js');
+  const { layout, inside } = await import('../web/geo.js');
+  const L = layout(places);
+  const spots = boothSpots(places, data);
+  let placed = 0, outside = 0;
+  for (const row of data.ex) for (const b of row[7]) {
+    const spot = spotOf(spots, b);
+    if (!spot) continue;
+    placed += 1;
+    const p = L.list.find((x) => b.endsWith(`@${x.k}`));
+    if (!inside([spot.x, spot.z], p.world)) outside += 1;
+  }
+  check(placed === meta.booths - meta.unplacedBooths && outside === 0, `부스 자리 짐작: ${placed}개가 제 장소 모양 안에 있다 (밖 ${outside})`);
   const rows = core.loadIndex(await readFile(join(dist, 'data/search-index.txt')));
   check(rows === data.n, `찾기 색인의 줄 수가 전시사 수와 같다 (${rows})`);
   const names = (q) => core.search(q, 5).map((i) => data.ex[i][1]);
