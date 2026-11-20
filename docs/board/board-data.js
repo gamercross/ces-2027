@@ -77,7 +77,7 @@ window.BOARD = {
     {f: 'v_data', id: 'd_four', t: 'dobject', n: '네 태그 정리 한 장', sub: '학생 · 취준생 · 정년 · 장년', s: 'todo', col: 2},
 
     // ── 만드는 순서 (time): 칸마다 단계 하나, 그 아래 작업 묶음 ──
-    {f: 'plan', id: 'pl_now', t: 'plateau', n: '지금 · 11/20', d: '비공개 저장소의 미리 보기 판과 자료 스크립트', s: 'done', col: 0},
+    {f: 'plan', id: 'pl_now', t: 'plateau', n: '지금 · 11/20', d: '3D 미리 보기 판과 자료 스크립트 (reference/미리보기판)', s: 'done', col: 0},
     {f: 'plan', id: 'pl_m1', t: 'plateau', n: '프리 프로토타입', d: '기능을 만드는 단계. 12/6에 닫는다', s: 'todo', col: 1},
     {f: 'plan', id: 'pl_m2', t: 'plateau', n: '프로토타입', d: '팀이 실제로 써 보는 단계. 12/16까지', s: 'todo', col: 2},
     {f: 'plan', id: 'pl_m3', t: 'plateau', n: '공개 판', d: '정식 배치도와 다듬기. 12/31까지', s: 'todo', col: 3},
