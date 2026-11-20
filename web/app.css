@@ -167,3 +167,8 @@ h3 { font-size: 16px; }
 .segs { display: flex; flex-wrap: wrap; gap: 6px; }
 .seg { flex: 1 1 auto; min-height: 44px; padding: 0 10px; border: 2px solid transparent; border-radius: 12px; background: var(--panel-2); font-weight: 700; font-size: 14px; cursor: pointer; }
 .seg[aria-pressed="true"] { background: var(--mint); border-color: var(--accent); }
+.inline { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+.next { background: var(--lilac); }
+.stop.seen { opacity: 0.6; }
+.stop-side { flex-wrap: wrap; }
+.stop-side a { font-size: 13px; }

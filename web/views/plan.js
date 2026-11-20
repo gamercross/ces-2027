@@ -1,9 +1,10 @@
 // 동선: 관심 회사를 날짜 · 캠퍼스 · 걷는 차례로 세운다. 날짜는 바꿀 수 있다. 폰에만 남는다.
 
-import { el } from '../dom.js';
+import { el, out } from '../dom.js';
 import { getExhibitors, getInfo, getMeta, getPlaces } from '../data.js';
 import { getInterests, setInterests } from '../store.js';
-import { fillDays, placeTable, sortRoute, splitBooth } from '../route.js';
+import { fillDays, nextStop, placeTable, sortRoute, splitBooth } from '../route.js';
+import { mapsLink } from '../maps.js';
 
 export async function render() {
   const meta = await getMeta();
@@ -14,6 +15,8 @@ export async function render() {
   const table = placeTable(places);
   const campusKo = new Map(places.campuses.map((c) => [c.k, c.ko]));
   const byId = new Map(data.ex.map((r) => [r[0], r]));
+  const placeBy = new Map(places.places.map((p) => [p.k, p]));
+  const placeOf = (id) => { const b = byId.get(id)?.[7]?.[0]; return b ? placeBy.get(splitBooth(b).place) : null; };
   const firstBooth = (id) => byId.get(id)?.[7]?.[0] || null;
   const days = [...info.show.days.map((d, i) => ({ key: i + 1, ko: d.ko, hours: d.hours })), { key: 0, ko: '날짜 미정', hours: '' }];
 
@@ -36,12 +39,18 @@ export async function render() {
       status.textContent = '관심에서 뺐다.';
       draw();
     } });
-    return el('li', { class: 'stop' },
+    const seen = el('button', { class: 'pick', type: 'button', text: it.seen ? '봤다' : '아직', 'aria-pressed': it.seen ? 'true' : 'false', 'aria-label': `${row ? row[1] : '회사'} 봤다고 표시`, onclick: () => {
+      setInterests(getInterests().map((x) => (x.id === it.id ? { ...x, seen: !x.seen } : x)));
+      status.textContent = it.seen ? '아직 보지 않은 곳으로 돌렸다.' : '봤다고 표시했다. 다음 갈 곳이 바뀐다.';
+      draw();
+    } });
+    const route = mapsLink(places, placeOf(it.id), 'directions');
+    return el('li', { class: it.seen ? 'stop seen' : 'stop' },
       el('span', { class: 'no', text: String(no) }),
       el('div', { class: 'stop-main' },
         el('div', { class: 'name', text: row ? row[1] : '자료에서 빠진 회사' }),
         el('div', { class: 'where', text: booth ? `${place ? place.ko : '장소 모름'} ${splitBooth(booth).code}${row[7].length > 1 ? ` 밖에 ${row[7].length - 1}곳` : ''}` : (row ? '부스 미정' : '새로 받은 자료에 없다') })),
-      el('div', { class: 'stop-side' }, select, remove));
+      el('div', { class: 'stop-side' }, seen, select, remove, route ? out(route, '길찾기') : null));
   }
 
   function draw() {
@@ -53,6 +62,28 @@ export async function render() {
       return;
     }
     const sections = [];
+    const next = nextStop(list);
+    if (next) {
+      const row = byId.get(next.id);
+      const booth = firstBooth(next.id);
+      const place = placeOf(next.id);
+      const route = mapsLink(places, place, 'directions');
+      const day = days.find((d) => d.key === (next.day || 0));
+      sections.push(el('section', { class: 'panel next' },
+        el('h2', { text: '다음 갈 곳' }),
+        el('p', { class: 'big', text: row ? row[1] : '자료에서 빠진 회사' }),
+        el('p', { class: 'note', text: [day?.ko, booth ? `${place ? place.ko : '장소 모름'} · 부스 ${splitBooth(booth).code} (자리는 짐작)` : '부스 미정'].filter(Boolean).join(' · ') }),
+        el('div', { class: 'actions' },
+          route ? out(route, '구글맵 길찾기', 'btn') : null,
+          el('a', { class: 'btn ghost', href: '#/map', text: '지도에서 보기' }),
+          el('button', { class: 'btn ghost', type: 'button', text: '봤다', onclick: () => {
+            setInterests(getInterests().map((x) => (x.id === next.id ? { ...x, seen: true } : x)));
+            status.textContent = '봤다고 표시했다.';
+            draw();
+          } }))));
+    } else {
+      sections.push(el('section', { class: 'panel next' }, el('h2', { text: '다음 갈 곳' }), el('p', { text: '동선의 회사를 다 봤다.' })));
+    }
     for (const d of days) {
       const items = list.filter((it) => (it.day || 0) === d.key);
       if (!items.length) continue;

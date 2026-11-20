@@ -6,6 +6,10 @@ import { getExhibitors, getInfo, getPlaces } from '../data.js';
 import { getInterests } from '../store.js';
 import { layout } from '../geo.js';
 import { boothSpots, spotOf } from '../spots.js';
+import { mapsLink } from '../maps.js';
+import { findBooth, nearBooth, nearestCampus } from '../locate.js';
+import { nextStop } from '../route.js';
+import { getWhere, setWhere } from '../store.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const FILL = { hall: '#c9d6ee', room: '#e2dcef', out: '#d9e6dc', hotel: '#ecdccb' };
@@ -19,14 +23,6 @@ function svg(tag, attrs, ...kids) {
 }
 const pts = (poly) => poly.map(([x, z]) => `${x.toFixed(1)},${z.toFixed(1)}`).join(' ');
 
-// 구글맵에서 열 주소 (Maps URLs, API 키 없음).
-export function mapsLink(places, place, kind = 'search') {
-  if (!place.maps) return null;
-  const venue = places.venues[place.maps.venue];
-  const query = [place.maps.query, venue?.address].filter(Boolean).join(', ');
-  return places.mapsUrls[kind].replace('{query}', encodeURIComponent(query));
-}
-
 // 관심 회사를 동선 차례대로, 날짜마다 번호를 붙여 돌려준다.
 export function interestPins(data, spots) {
   const byId = new Map(data.ex.map((r) => [r[0], r]));
@@ -39,7 +35,7 @@ export function interestPins(data, spots) {
     const day = it.day || 0;
     const no = (counter.get(day) || 0) + 1;
     counter.set(day, no);
-    if (spot) pins.push({ ...spot, no, day, name: row[1], booth });
+    if (spot) pins.push({ ...spot, id: it.id, seen: !!it.seen, no, day, name: row[1], booth });
   }
   return pins;
 }
@@ -108,7 +104,7 @@ export async function render() {
     marks.append(g);
   }
   for (const pin of pins) {
-    const g = svg('g', {}, svg('circle', { cx: pin.x, cy: pin.z, fill: DAY_FILL[pin.day], stroke: '#1f2a44', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke' }), svg('title', {}));
+    const g = svg('g', {}, svg('circle', { cx: pin.x, cy: pin.z, fill: DAY_FILL[pin.day], stroke: '#1f2a44', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke', opacity: pin.seen ? 0.45 : 1 }), svg('title', {}));
     g.querySelector('title').textContent = `${pin.no}. ${pin.name}`;
     const text = svg('text', { x: pin.x, y: pin.z, 'text-anchor': 'middle', 'dominant-baseline': 'central', fill: '#1f2a44', 'font-weight': 700, 'pointer-events': 'none' });
     text.textContent = String(pin.no);
@@ -210,6 +206,87 @@ export async function render() {
   solid.addEventListener('click', () => mode(true));
   const go = (box) => { focus = box; if (solid.getAttribute('aria-pressed') === 'true') three?.look(box); else fit(box || all); };
 
+  // 내 위치: GPS로는 어느 캠퍼스인지까지, 홀 안은 가까운 부스 번호로 맞춘다. 위치는 폰 밖으로 나가지 않는다.
+  const whereText = el('p', { class: 'big' });
+  const whereNote = el('p', { class: 'note', role: 'status' });
+  const nextBox = el('div', { class: 'block' });
+  const placeBy = new Map(L.list.map((p) => [p.k, p]));
+  function myPoint(where) {
+    if (where?.by === 'booth') return [where.x, where.z];
+    if (where?.by === 'gps' && where.inside) { const c = L.campuses.find((x) => x.k === where.campus); return c ? [(c.box[0] + c.box[2]) / 2, (c.box[1] + c.box[3]) / 2] : null; }
+    return null;
+  }
+  function drawMe() {
+    const where = getWhere();
+    const next = nextStop(getInterests());
+    const nextPin = next ? pins.find((p) => p.id === next.id) : null;
+    const at = myPoint(where);
+    const unit = (view[2] - view[0]) / 360;
+    me.replaceChildren();
+    if (at && nextPin) me.append(svg('line', { x1: at[0], y1: at[1], x2: nextPin.x, y2: nextPin.z, stroke: '#1f2a44', 'stroke-width': 2, 'stroke-dasharray': '6 5', 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' }));
+    if (at) {
+      // 부스로 맞췄으면 작은 점, GPS(캠퍼스까지)면 넓은 고리로 보인다.
+      const wide = where.by === 'gps';
+      me.append(
+        svg('circle', { cx: at[0], cy: at[1], r: (unit * (wide ? 60 : 16)).toFixed(1), fill: 'rgba(86,103,154,0.18)', stroke: '#56679a', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' }),
+        svg('circle', { cx: at[0], cy: at[1], r: (unit * 6).toFixed(1), fill: '#56679a', stroke: '#f4f1ea', 'stroke-width': 2, 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' }));
+    }
+    if (!where) whereText.textContent = '아직 내 위치를 모른다.';
+    else if (where.by === 'booth') whereText.textContent = `${placeBy.get(where.place)?.ko || '장소 모름'} · 부스 ${where.code} 근처`;
+    else if (where.inside) whereText.textContent = `${L.campuses.find((c) => c.k === where.campus)?.ko} 안 (GPS)`;
+    else whereText.textContent = `가장 가까운 곳은 ${L.campuses.find((c) => c.k === where.campus)?.ko}, 약 ${where.meters >= 1000 ? `${(where.meters / 1000).toFixed(where.meters >= 10000 ? 0 : 1)}km` : `${where.meters}m`} 떨어져 있다 (GPS)`;
+    if (!next) {
+      nextBox.replaceChildren(el('p', { class: 'note', text: pins.length ? '동선의 회사를 다 봤다.' : '관심 회사를 넣으면 다음 갈 곳이 나온다.' }));
+      return;
+    }
+    const row = data?.ex.find((r) => r[0] === next.id);
+    const booth = row?.[7]?.[0];
+    const place = booth ? placeBy.get(booth.slice(booth.lastIndexOf('@') + 1)) : null;
+    const route = mapsLink(places, place, 'directions');
+    nextBox.replaceChildren(
+      el('h3', { text: `다음 갈 곳: ${row ? row[1] : '자료에서 빠진 회사'}` }),
+      el('p', { class: 'note', text: booth ? `${place ? place.ko : '장소 모름'} · 부스 ${booth.slice(0, booth.lastIndexOf('@'))} (자리는 짐작)` : '부스 미정' }),
+      el('div', { class: 'actions' },
+        route ? out(route, '구글맵 길찾기', 'btn') : null,
+        nextPin ? el('button', { class: 'btn ghost', type: 'button', text: '지도에서 보기', onclick: () => { if (solid.getAttribute('aria-pressed') === 'true') mode(false); focus = null; fit([nextPin.x - 140, nextPin.z - 140, nextPin.x + 140, nextPin.z + 140]); } }) : null,
+        el('a', { class: 'btn ghost', href: '#/plan', text: '동선에서 표시' })));
+  }
+  board.addEventListener('viewchange', drawMe);
+
+  const gpsButton = el('button', { class: 'btn', type: 'button', text: 'GPS로 캠퍼스 찾기', onclick: () => {
+    if (!('geolocation' in navigator)) { whereNote.textContent = '이 브라우저는 위치를 알려 주지 않는다. 부스 번호로 맞춘다.'; return; }
+    whereNote.textContent = '위치를 받는 중이다.';
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const near = nearestCampus(places, pos.coords.latitude, pos.coords.longitude);
+      setWhere({ by: 'gps', campus: near.k, inside: near.inside, meters: Math.round(near.meters), at: Date.now() });
+      whereNote.textContent = near.inside ? 'GPS는 캠퍼스까지만 맞춘다. 홀 안에서는 가까운 부스 번호를 적는다.' : '캠퍼스 밖이다. 현장에 가면 다시 누른다.';
+      if (near.inside) go(pad(L.campuses.find((c) => c.k === near.k).box, 40)); else drawMe();
+    }, () => { whereNote.textContent = '위치를 받지 못했다. 위치 허락을 켜거나 부스 번호로 맞춘다.'; }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
+  } });
+  const boothInput = el('input', { type: 'text', inputmode: 'text', autocapitalize: 'off', autocomplete: 'off', spellcheck: 'false', placeholder: '가까운 부스 번호 (예: 14731)', 'aria-label': '가까운 부스 번호' });
+  const boothForm = el('form', { class: 'inline' }, el('label', { class: 'field' }, boothInput), el('button', { class: 'btn ghost', type: 'submit', text: '맞추기' }));
+  boothForm.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const text = boothInput.value.trim();
+    if (!text) return;
+    const exact = findBooth(spots, text);
+    const hit = exact[0] || nearBooth(spots, text);
+    if (!hit) { whereNote.textContent = '그 부스를 찾지 못했다. 번호를 다시 본다.'; return; }
+    setWhere({ by: 'booth', campus: placeBy.get(hit.place)?.c, place: hit.place, code: hit.code, x: hit.x, z: hit.z, at: Date.now() });
+    whereNote.textContent = exact.length > 1 ? `같은 이름의 부스가 ${exact.length}곳 있어 첫 곳으로 맞췄다.` : exact.length ? '부스 번호로 맞췄다. 자리는 짐작이다.' : `그 번호는 자료에 없어 가장 가까운 ${hit.code}로 맞췄다.`;
+    if (solid.getAttribute('aria-pressed') === 'true') mode(false);
+    focus = null;
+    fit([hit.x - 160, hit.z - 160, hit.x + 160, hit.z + 160]);
+  });
+  const mePanel = el('section', { class: 'panel' },
+    el('h2', { text: '내 위치와 다음 갈 곳' }),
+    whereText,
+    el('div', { class: 'actions' }, gpsButton),
+    boothForm,
+    whereNote,
+    nextBox,
+    el('p', { class: 'note', text: '위치는 이 폰 안에서만 쓴다. GPS는 어느 캠퍼스인지까지만 맞추고(캠퍼스 자리는 어림값), 홀 안은 부스 번호로 맞춘다.' }));
+
   const page = el('div', { class: 'page' },
     el('section', { class: 'panel' },
       el('h1', { text: '지도' }),
@@ -224,6 +301,7 @@ export async function render() {
       pins.length
         ? el('p', { class: 'note', text: `번호는 내 동선의 차례다. 색은 날짜다: ${info.show.days.map((d, i) => `${d.ko.split(' ')[0]} ${['분홍', '파랑', '초록', '노랑'][i]}`).join(' · ')} · 미정 회색.` })
         : el('p', { class: 'note' }, '관심 회사를 넣으면 지도에 번호로 찍힌다. ', el('a', { href: '#/find', text: '회사 고르러 가기' }))),
+    mePanel,
     detail);
   // 화면에 붙은 뒤에야 크기를 알 수 있다.
   requestAnimationFrame(() => fit(all));

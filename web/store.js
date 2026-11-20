@@ -46,3 +46,7 @@ export function toggleInterest(id) {
   setInterests(list);
   return at < 0;
 }
+
+// 내 위치: { by: 'gps' | 'booth', campus, place?, code?, x?, z?, meters?, at } — 폰에만 남는다.
+export const getWhere = () => load('where.v1', null);
+export const setWhere = (where) => save('where.v1', where);

@@ -88,6 +88,13 @@ pub fn check(json: &Value) -> Vec<String> {
         if point(&t["origin"]).is_none() || point(&t["offset"]).is_none() || t["scale"].as_f64().map_or(true, |s| s <= 0.0) {
             bad.push(format!("캠퍼스 {k}: toWorld(origin · scale · offset)가 맞지 않다"));
         }
+        // GPS로 가까운 캠퍼스를 고를 때 쓰는 어림 자리.
+        let g = &c["geo"];
+        let lat_ok = g["lat"].as_f64().is_some_and(|v| (-90.0..=90.0).contains(&v));
+        let lng_ok = g["lng"].as_f64().is_some_and(|v| (-180.0..=180.0).contains(&v));
+        if !lat_ok || !lng_ok || g["radiusM"].as_f64().map_or(true, |r| r <= 0.0) || !g["approx"].is_boolean() {
+            bad.push(format!("캠퍼스 {k}: geo(lat · lng · radiusM · approx)가 맞지 않다"));
+        }
     }
     if campuses.is_empty() {
         bad.push("campuses가 비었다".to_string());

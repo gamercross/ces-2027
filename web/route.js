@@ -62,3 +62,13 @@ export function fillDays(items, firstBooth, table) {
   });
   return { items: sortRoute(next, firstBooth, table), filled };
 }
+
+// 다음 갈 곳: 날짜 차례(미정은 맨 뒤), 그 안에서는 목록 차례로 보아 아직 보지 않은 첫 곳.
+// day를 주면 그 날짜 안에서만 찾는다.
+export function nextStop(items, day) {
+  const rank = (d) => (d ? d : 99);
+  return items
+    .map((it, n) => ({ it, n }))
+    .filter((x) => !x.it.seen && (day == null || (x.it.day || 0) === day))
+    .sort((a, b) => rank(a.it.day) - rank(b.it.day) || a.n - b.n)[0]?.it || null;
+}

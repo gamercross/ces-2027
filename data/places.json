@@ -12,7 +12,8 @@
     "boothSpots": "홀 안 부스 하나하나의 자리는 짐작이다. 정식 배치도가 열리기 전이라 부스 번호로 통로와 순서를 읽어 홀 칸(reg)에 고르게 펼친다. 장소마다 boothSpots가 guess면 화면에 '짐작'이라고 보인다. 정식 배치도를 넣은 곳만 official로 바꾼다.",
     "boothRules": "부스가 어느 장소인지는 공식 지도의 부스 번호 대(numbers)와 방 이름(text), 전시사 검색이 주는 홀 기호(halls)로 정한다. 번호 대는 공식 지도에 적힌 것이고, 사우스 홀 1과 2를 가르는 번호(32999 · 35000)와 방 이름 · 홀 기호 짝은 우리가 읽은 것이다.",
     "distance": "캠퍼스 사이 거리는 줄여서 그렸다. 실제로 C Space(아리아)는 베네시안에서 약 3km 남쪽이다.",
-    "addresses": "CES 공식 페이지와 지도에는 거리 주소가 없다. 주소는 장소가 스스로 밝힌 것을 적었고, 그 장소 사이트에서 확인한 날을 addressChecked에 적었다. null은 아직 확인하지 못한 주소다."
+    "addresses": "CES 공식 페이지와 지도에는 거리 주소가 없다. 주소는 장소가 스스로 밝힌 것을 적었고, 그 장소 사이트에서 확인한 날을 addressChecked에 적었다. null은 아직 확인하지 못한 주소다.",
+    "geo": "캠퍼스의 geo(위도 · 경도 · 반지름)는 어림값이다. 폰의 GPS가 어느 캠퍼스에 가까운지 고르는 데만 쓰고, 홀 안 자리는 부스 번호로 맞춘다. 캠퍼스 그림은 실제 좌표에 맞춘 것이 아니다."
   },
   "mapsUrls": {
     "search": "https://www.google.com/maps/search/?api=1&query={query}",
@@ -33,9 +34,9 @@
     "COSMO": { "name": "The Cosmopolitan of Las Vegas", "address": "3708 S Las Vegas Blvd, Las Vegas, NV 89109", "addressChecked": null, "addressSource": null }
   },
   "campuses": [
-    { "k": "lvcc", "ko": "LVCC 캠퍼스", "en": "LVCC Campus", "sub": "Tech East · 컨벤션 센터", "toWorld": { "origin": [780, 1000], "scale": 1, "offset": [0, 0] }, "venue": "LVCC" },
-    { "k": "ven", "ko": "베네시안 캠퍼스", "en": "Venetian Campus", "sub": "Tech West · 베네시안 엑스포", "toWorld": { "origin": [700, 1300], "scale": 0.85, "offset": [-1650, 1450] }, "venue": "VEN_EXPO" },
-    { "k": "cs", "ko": "C Space 캠퍼스", "en": "C Space Campus", "sub": "Tech South · 아리아 일대 (실제로는 약 3km 남쪽)", "toWorld": { "origin": [0, 0], "scale": 1, "offset": [0, 0] }, "venue": "ARIA" }
+    { "k": "lvcc", "ko": "LVCC 캠퍼스", "en": "LVCC Campus", "sub": "Tech East · 컨벤션 센터", "toWorld": { "origin": [780, 1000], "scale": 1, "offset": [0, 0] }, "venue": "LVCC", "geo": { "lat": 36.1313, "lng": -115.1525, "radiusM": 900, "approx": true } },
+    { "k": "ven", "ko": "베네시안 캠퍼스", "en": "Venetian Campus", "sub": "Tech West · 베네시안 엑스포", "toWorld": { "origin": [700, 1300], "scale": 0.85, "offset": [-1650, 1450] }, "venue": "VEN_EXPO", "geo": { "lat": 36.1216, "lng": -115.1658, "radiusM": 650, "approx": true } },
+    { "k": "cs", "ko": "C Space 캠퍼스", "en": "C Space Campus", "sub": "Tech South · 아리아 일대 (실제로는 약 3km 남쪽)", "toWorld": { "origin": [0, 0], "scale": 1, "offset": [0, 0] }, "venue": "ARIA", "geo": { "lat": 36.1072, "lng": -115.1766, "radiusM": 600, "approx": true } }
   ],
   "places": [
     { "k": "LVCC_W", "c": "lvcc", "ko": "LVCC 웨스트 홀", "en": "West Hall", "kind": "hall", "theme": "모빌리티·자동차", "poly": [[250, 560], [398, 560], [487, 826], [250, 826]], "reg": [262, 574, 478, 814], "trap": true, "floorY": 0, "boothSpots": "guess", "maps": { "venue": "LVCC_WEST", "query": "Las Vegas Convention Center West Hall" } },
