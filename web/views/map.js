@@ -2,7 +2,7 @@
 // 관심 회사는 동선 번호로 찍힌다. 홀 안 부스 자리는 짐작이다.
 
 import { el, out } from '../dom.js';
-import { getExhibitors, getInfo, getPlaces } from '../data.js';
+import { getExhibitors, getInfo, getOfficialSpots, getPlaces } from '../data.js';
 import { getInterests } from '../store.js';
 import { layout } from '../geo.js';
 import { boothSpots, spotOf } from '../spots.js';
@@ -43,9 +43,9 @@ export function interestPins(data, spots) {
 
 export async function render({ rest = [] } = {}) {
   const places = await getPlaces();
-  const [data, info] = await Promise.all([getExhibitors().catch(() => null), getInfo()]);
+  const [data, info, official] = await Promise.all([getExhibitors().catch(() => null), getInfo(), getOfficialSpots()]);
   const L = layout(places);
-  const spots = data ? boothSpots(places, data) : new Map();
+  const spots = data ? boothSpots(places, data, official) : new Map();
   const pins = data ? interestPins(data, spots) : [];
   const placeKo = new Map(places.places.map((p) => [p.k, p.ko]));
   const pad = (b, m) => [b[0] - m, b[1] - m, b[2] + m, b[3] + m];
@@ -180,7 +180,7 @@ export async function render({ rest = [] } = {}) {
     three?.chooseBooth(key);
     detail.replaceChildren(...[
       el('h2', { text: `부스 ${key.slice(bar + 1)}` }),
-      el('p', { class: 'note', text: `${place ? place.ko : '장소 모름'} · 자리는 짐작이다` }),
+      el('p', { class: 'note', text: `${place ? place.ko : '장소 모름'} · ${spot?.official ? '자리는 공식 배치도다' : '자리는 짐작이다'}` }),
       in3d() && spot ? el('div', { class: 'actions' }, el('button', { class: 'btn ghost', type: 'button', text: '2D 지도에서 보기', onclick: () => to2d([spot.x - 110, spot.z - 110, spot.x + 110, spot.z + 110]) })) : null,
       el('ol', { class: 'hits' }, rows.map((r) => companyRow(r, data, placeKo))),
     ].filter(Boolean));

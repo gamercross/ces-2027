@@ -8,7 +8,8 @@ import { splitBooth } from './route.js';
 const NUMERIC = /^\d+[a-zA-Z]?$/;
 
 // 전시사 자료의 부스를 모두 놓는다. "장소|부스 글" → { x, z }(세계 좌표).
-export function boothSpots(places, exhibitors) {
+// official은 정식 배치도에서 옮긴 자리(data/booth-spots.json)다. 거기에 있는 부스는 짐작 대신 그 자리를 쓰고 official: true가 붙는다.
+export function boothSpots(places, exhibitors, official) {
   const W = worldOf(places);
   const byPlace = new Map();
   for (const row of exhibitors.ex) {
@@ -69,9 +70,11 @@ export function boothSpots(places, exhibitors) {
       const rows = Math.ceil(rest.length / cols);
       rest.forEach((code, i) => local.set(code, [x0 + ((i % cols) + 0.5) * (wd / cols), z0 + (Math.floor(i / cols) + 0.5) * (dd / rows)]));
     }
+    const known = official?.places?.[p.k] || {};
     for (const [code, [x, z]] of local) {
-      const [wx, wz] = W(p.c, x, z);
-      spots.set(`${p.k}|${code}`, { x: wx, z: wz });
+      const real = Array.isArray(known[code]) && known[code].length === 2 && known[code].every(Number.isFinite) ? known[code] : null;
+      const [wx, wz] = W(p.c, ...(real || [x, z]));
+      spots.set(`${p.k}|${code}`, real ? { x: wx, z: wz, official: true } : { x: wx, z: wz });
     }
   }
   return spots;

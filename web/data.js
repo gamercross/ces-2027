@@ -23,6 +23,8 @@ export const getMeta = () => cached('meta', () => getJson('data/meta.json').catc
 export const getPlaces = () => cached('places', () => getJson('data/places.json'));
 export const getExhibitors = () => cached('exhibitors', () => getJson('data/exhibitors.json'));
 export const getCategories = () => cached('categories', () => getJson('data/categories.json'));
+// 정식 배치도에서 옮긴 부스 자리. 없거나 비어 있으면 모든 자리가 짐작이다.
+export const getOfficialSpots = () => cached('officialSpots', () => getJson('data/booth-spots.json').catch(() => ({ places: {} })));
 // 팀이 같이 쓰는 주제. 없거나 비어 있으면 각자 만든다.
 export const getTeamTopics = () => cached('teamTopics', () => getJson('data/topics.json').catch(() => ({ topics: [] })));
 

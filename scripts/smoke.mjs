@@ -169,7 +169,7 @@ const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 const version = await json('version.json').catch(() => null);
 const swFiles = JSON.parse(`[${(sw.match(/const FILES = \[(.*)\];/) || [])[1] || ''}]`);
 check(!!version && sw.includes(JSON.stringify(version.v)) && !sw.includes('__VERSION__'), `판 이름이 찍혔다 (${version?.v})`);
-const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'views/map.js', 'views/diary.js', 'views/topics.js', 'topics.js', 'share.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/topics.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
+const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'views/map.js', 'views/diary.js', 'views/topics.js', 'topics.js', 'share.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/topics.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
 const missing = mustCache.filter((f) => !swFiles.includes(f));
 const gone = [];
 for (const f of swFiles) if (f !== './' && !(await exists(f))) gone.push(f);
@@ -195,7 +195,7 @@ if (await exists('data/meta.json')) {
   const { boothSpots, spotOf } = await import('../web/spots.js');
   const { layout, inside } = await import('../web/geo.js');
   const L = layout(places);
-  const spots = boothSpots(places, data);
+  const spots = boothSpots(places, data, await json('data/booth-spots.json'));
   let placed = 0, outside = 0;
   for (const row of data.ex) for (const b of row[7]) {
     const spot = spotOf(spots, b);
@@ -204,6 +204,19 @@ if (await exists('data/meta.json')) {
     const p = L.list.find((x) => b.endsWith(`@${x.k}`));
     if (!inside([spot.x, spot.z], p.world)) outside += 1;
   }
+  // 정식 배치도 자리: 적힌 부스는 그 자리를 쓰고, 나머지는 짐작 그대로다.
+  const officialFile = await json('data/booth-spots.json');
+  const someKey = [...spots.keys()].find((k) => k.startsWith('LVCC_N|'));
+  const someCode = someKey.slice(someKey.indexOf('|') + 1);
+  const withOfficial = boothSpots(places, data, { places: { LVCC_N: { [someCode]: [600, 700], 'nope': [1, 2], [someCode + 'x']: 'bad' } } });
+  const moved = withOfficial.get(someKey);
+  const expectAt = L.W('lvcc', 600, 700);
+  let same = 0;
+  for (const [k, v] of spots) { const w = withOfficial.get(k); if (k !== someKey && w.x === v.x && w.z === v.z && !w.official) same += 1; }
+  check(moved.official === true && moved.x === expectAt[0] && moved.z === expectAt[1] && same === spots.size - 1 && withOfficial.size === spots.size, `정식 배치도 자리(data/booth-spots.json): 적힌 부스만 그 자리로 가고 나머지 ${same}개는 짐작 그대로다`);
+  const officialCount = Object.values(officialFile.places || {}).reduce((a, o) => a + Object.keys(o).length, 0);
+  const saysOfficial = places.places.filter((p) => p.boothSpots === 'official').map((p) => p.k);
+  check(saysOfficial.every((k) => Object.keys(officialFile.places?.[k] || {}).length > 0), `공식 자리라고 적은 장소 ${saysOfficial.length}곳에는 정식 자리가 들어 있다 (지금 정식 자리 ${officialCount}개)`);
   check(placed === meta.booths - meta.unplacedBooths && outside === 0, `부스 자리 짐작: ${placed}개가 제 장소 모양 안에 있다 (밖 ${outside})`);
   const rows = core.loadIndex(await readFile(join(dist, 'data/search-index.txt')));
   check(rows === data.n, `찾기 색인의 줄 수가 전시사 수와 같다 (${rows})`);
