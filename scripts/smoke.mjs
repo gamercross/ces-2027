@@ -105,13 +105,19 @@ check(diary.fileName(who, new Date(2027, 0, 7)) === 'ces2027-일기-물개-20270
     const page = execFileSync(bin, ['sort-diary', '--in', dir], { encoding: 'utf8' });
     await rm(dir, { recursive: true, force: true });
     const part = (title) => page.split('\n## ').find((s) => s.startsWith(title)) || '';
-    check(page.includes('- 일기 3개 · 쓴 사람 1명 · 회사 3곳 · 2027-01-06 ~ 2027-01-07') && part('학생 (1개)').includes('**Alpha Robotics** (부스 14731) · 물개') && part('취준생 (1개)').includes('Alpha Robotics') && part('정년 (1개)').includes('Zeta Home') && part('장년 (0개)').includes('아직 없다') && part('누구에게인지 고르지 않은 것 (1개)').includes('Beta Cloud'), '폰이 내보낸 일기 파일을 Rust 자료 도구가 네 태그로 나눈 한 장으로 만든다');
+    check(page.includes('- 일기 3개 · 쓴 사람 1명 · 회사 3곳 · 2027-01-06 ~ 2027-01-07') && part('학생 (일기 1개 · 회사 1곳)').includes('### Alpha Robotics (부스 14731)') && part('학생 (일기 1개 · 회사 1곳)').includes('- 로봇 팔 시연 (물개, 2027-01-06)') && part('취준생 (일기 1개 · 회사 1곳)').includes('Alpha Robotics') && part('정년 (일기 1개 · 회사 1곳)').includes('Zeta Home') && part('장년 (일기 0개 · 회사 0곳)').includes('아직 없다') && part('누구에게인지 고르지 않은 것 (일기 1개 · 회사 1곳)').includes('Beta Cloud'), '폰이 내보낸 일기 파일을 Rust 자료 도구가 네 태그로 나누고 회사로 묶은 한 장으로 만든다');
   }
 }
 
 // 지도와 오프라인.
 const appJs = await readFile(join(dist, 'app.js'), 'utf8');
 check(!html.includes('map3d') && !appJs.includes('map3d') && (await exists('map3d.js')), '3D 지도는 첫 화면에 싣지 않고 지도 화면에서 그때 불러온다');
+// 첫 화면: 미리 받는 조각이 모두 있고, 3D · 코어 · 큰 자료는 미리 받지 않는다.
+const preloads = [...html.matchAll(/<link rel="(?:modulepreload|preload)" href="([^"]+)"/g)].map((m) => m[1]);
+let preloadOk = preloads.length > 0;
+for (const f of preloads) preloadOk = preloadOk && (await exists(f)) && !/map3d|core\.|exhibitors|search-index|views\/(map|find|plan|diary)/.test(f);
+check(preloadOk, `첫 화면이 미리 받는 조각 ${preloads.length}개가 모두 있고, 3D · 코어 · 전시사 자료는 거기에 없다`);
+check(html.includes('id="update"') && appJs.includes('offline.update') && appJs.includes('startOffline'), '새 판 안내 자리가 있고, 서비스 워커는 첫 화면 뒤에 건다');
 const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 const version = await json('version.json').catch(() => null);
 const swFiles = JSON.parse(`[${(sw.match(/const FILES = \[(.*)\];/) || [])[1] || ''}]`);

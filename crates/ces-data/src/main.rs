@@ -14,8 +14,8 @@ ces-data: CES 공식 전시사 검색에서 자료를 받아 줄이고 찾기 �
 쓰는 법:
   ces-data build [고름]         받아서 exhibitors.json · search-index.txt · meta.json · places.json을 쓴다
   ces-data check-places [고름]  장소 자료만 살핀다
-  ces-data sort-diary --in <폴더> [--out <파일>]
-                                폰에서 내보낸 일기 파일들을 네 태그로 나눈 한 장(마크다운)으로 만든다
+  ces-data sort-diary --in <폴더나 파일> [--in ...] [--out <파일>]
+                                폰에서 내보낸 일기 파일들을 네 태그로 나누고 회사로 묶은 한 장(마크다운)으로 만든다
 
 고름:
   --out <폴더>         쓰는 곳 (기본 dist/data)
@@ -25,7 +25,8 @@ ces-data: CES 공식 전시사 검색에서 자료를 받아 줄이고 찾기 �
   --aliases <파일>     찾기 별칭 (기본 data/aliases.json)
   --from <폴더>        공식 사이트 대신 받아 둔 폴더에서 읽는다
   --save-raw <폴더>    받은 답을 그대로 이 폴더에 둔다 (공개 레포에 올리지 않는다)
-  --in <폴더>          sort-diary: 내보낸 일기 파일(.json)이 있는 폴더 (공개 레포에 올리지 않는다)
+  --in <폴더나 파일>   sort-diary: 내보낸 일기 파일(.json)이나 그것이 든 폴더. 여러 번 적을 수 있다 (공개 레포에 올리지 않는다)
+  --made-at <때>       sort-diary: 한 장에 적을 만든 때 (적지 않으면 지금)
 ";
 
 struct Args {
@@ -36,8 +37,9 @@ struct Args {
     aliases: PathBuf,
     from: Option<PathBuf>,
     save_raw: Option<PathBuf>,
-    input: Option<PathBuf>,
+    inputs: Vec<PathBuf>,
     out_given: bool,
+    made_at: Option<String>,
 }
 
 fn parse_args(rest: &[String]) -> Result<Args, String> {
@@ -49,8 +51,9 @@ fn parse_args(rest: &[String]) -> Result<Args, String> {
         aliases: "data/aliases.json".into(),
         from: None,
         save_raw: None,
-        input: None,
+        inputs: Vec::new(),
         out_given: false,
+        made_at: None,
     };
     let mut it = rest.iter();
     while let Some(flag) = it.next() {
@@ -60,7 +63,8 @@ fn parse_args(rest: &[String]) -> Result<Args, String> {
                 a.out = value()?;
                 a.out_given = true;
             }
-            "--in" => a.input = Some(value()?),
+            "--in" => a.inputs.push(value()?),
+            "--made-at" => a.made_at = Some(value()?.to_string_lossy().into_owned()),
             "--places" => a.places = value()?,
             "--settings" => a.settings = value()?,
             "--categories" => a.categories = value()?,
@@ -146,9 +150,19 @@ fn run_check_places(a: &Args) -> Result<(), String> {
 
 /// 내보낸 일기 파일들을 읽어 네 태그로 나눈 한 장을 쓴다.
 fn run_sort_diary(a: &Args) -> Result<(), String> {
-    let dir = a.input.as_ref().ok_or("--in <폴더>가 있어야 한다")?;
-    let mut paths: Vec<PathBuf> = std::fs::read_dir(dir).map_err(|e| format!("{}: {e}", dir.display()))?.filter_map(|e| e.ok().map(|e| e.path())).filter(|p| p.extension().is_some_and(|x| x == "json")).collect();
-    paths.sort();
+    if a.inputs.is_empty() {
+        return Err("--in <폴더나 파일>이 있어야 한다".into());
+    }
+    let mut paths: Vec<PathBuf> = Vec::new();
+    for input in &a.inputs {
+        if input.is_dir() {
+            let mut inside: Vec<PathBuf> = std::fs::read_dir(input).map_err(|e| format!("{}: {e}", input.display()))?.filter_map(|e| e.ok().map(|e| e.path())).filter(|p| p.extension().is_some_and(|x| x == "json")).collect();
+            inside.sort();
+            paths.extend(inside);
+        } else {
+            paths.push(input.clone());
+        }
+    }
     let mut bundles = Vec::new();
     for path in &paths {
         match read_json(path).and_then(|json| ces_data::diary::read_bundle(&json)) {
@@ -158,7 +172,7 @@ fn run_sort_diary(a: &Args) -> Result<(), String> {
     }
     let files = bundles.len();
     let all = ces_data::diary::merge(bundles);
-    let page = ces_data::diary::one_page(&all, &time::now_iso());
+    let page = ces_data::diary::one_page(&all, &a.made_at.clone().unwrap_or_else(time::now_iso));
     if a.out_given {
         write(&a.out, &page)?;
         println!("끝: 파일 {files}개 · 일기 {}개 → {}", all.len(), a.out.display());

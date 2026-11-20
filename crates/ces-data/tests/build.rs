@@ -210,3 +210,20 @@ fn 부스에서_장소를_정한다() {
         assert_eq!(places.rules.place_of(booth, hall), want, "{booth} · {hall}");
     }
 }
+
+/// 가짜 일기 셋(지어낸 사람 · 지어낸 회사)을 네 태그 한 장으로 만들면 docs의 예시와 글자까지 같다.
+/// 한 장의 꼴을 바꾸면 예시도 같이 다시 만든다:
+/// cargo run -p ces-data -- sort-diary --in crates/ces-data/tests/fixtures/diary --made-at 2027-01-15T00:00:00Z --out docs/네태그_한장_예시.md
+#[test]
+fn 가짜_일기_셋으로_네_태그_한_장() {
+    use ces_data::diary::{merge, one_page, read_bundle};
+    let bundles: Vec<_> = ["fake-a.json", "fake-b.json", "fake-c.json"].iter().map(|f| read_bundle(&read(&format!("crates/ces-data/tests/fixtures/diary/{f}"))).expect("가짜 일기")).collect();
+    let all = merge(bundles);
+    assert_eq!(all.len(), 6);
+    let page = one_page(&all, "2027-01-15T00:00:00Z");
+    let example = std::fs::read_to_string(repo("docs/네태그_한장_예시.md")).unwrap();
+    assert_eq!(page, example, "docs/네태그_한장_예시.md를 다시 만들어야 한다");
+    // 같은 회사를 큰 글자 · 작은 글자가 달라도 한 칸으로 묶고, 두 사람의 글이 같이 있다.
+    assert!(page.contains("### Alpha Robotics (지어낸 회사) (부스 14731) · 일기 2개"));
+    assert!(page.contains("(가짜 가, 2027-01-06)") && page.contains("(가짜 나, 2027-01-06)"));
+}

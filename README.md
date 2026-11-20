@@ -50,12 +50,14 @@ Rust는 두 자리에만 쓴다. 화면은 폰 먼저이고 묶는 도구 없이
 cargo test --workspace                 # 시험
 cargo run -p ces-data -- check-places  # 장소 자료 살피기
 cargo run -p ces-data -- build         # 공식 사이트에서 받아 dist/data에 쓴다 (물음 110번쯤, 1분)
-cargo run -p ces-data -- sort-diary --in <폴더> --out 한장.md   # 폰에서 내보낸 일기 파일들을 네 태그로 나눈 한 장으로
+cargo run -p ces-data -- sort-diary --in <폴더나 파일> --out 한장.md   # 폰에서 내보낸 일기 파일들을 네 태그로 나누고 회사로 묶은 한 장으로 (예시: docs/네태그_한장_예시.md)
 ```
 
 폰용 코어(`core.wasm`)는 Actions에서 짓는다(`cargo build --release -p ces-core --target wasm32-unknown-unknown`). 공식 사이트에는 하루에 한 번만 묻고, 그날 받은 답은 Actions 캐시에 두고 다시 쓴다. 새로 받으려면 Actions의 "짓기와 배포"를 손으로 돌리면서 "새로 받는다"를 켠다.
 
 - **오프라인:** 한 번 열면 서비스 워커(`web/sw.js`)가 화면 · 코어 · 자료를 폰에 담아 다음부터 인터넷 없이 연다. 판 이름(자료 받은 날짜 + 커밋)과 담아 둘 파일 목록은 지을 때 `scripts/stamp.mjs`가 채운다. 홈 화면에 추가할 수 있다. 명함 QR도 폰에서 만든다.
+- **빠르기:** 첫 화면에 쓰는 조각만 한꺼번에 받고, 찾기 자료 · 3D · 서비스 워커는 그 뒤에 받는다. `scripts/measure.mjs`가 폰 크기 · CPU 4배 느리게 · 느린 4G에서 첫 화면 시간을 잰다(쓰는 법은 파일 위쪽).
+- **새 판:** 폰이 새 판을 받으면 탭 위에 "새 판이 있다 · 다시 열기"가 뜬다.
 - **지도:** 2D가 기본이고 3D는 지도 화면에서 누를 때 불러온다(`web/map3d.js`, 바깥 3D 엔진 없음). 홀 안 부스 자리는 부스 번호로 짐작한다(`web/spots.js`).
 - 참고: [`reference/미리보기판/`](reference/미리보기판/)은 11/19에 만든 3D 미리 보기 판(JS)의 본문과 자료 스크립트다.
 

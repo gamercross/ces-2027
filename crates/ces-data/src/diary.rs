@@ -68,26 +68,40 @@ pub fn merge(bundles: Vec<Vec<Entry>>) -> Vec<Entry> {
     all
 }
 
+/// 한 사람의 한 줄 뒤에 붙는 꼬리: 누가 · 언제.
+fn tail(e: &Entry) -> String {
+    let who: Vec<&str> = [e.author.as_str(), e.date.as_str()].into_iter().filter(|s| !s.is_empty()).collect();
+    if who.is_empty() { String::new() } else { format!(" ({})", who.join(", ")) }
+}
+
+/// 한 태그의 칸: 회사마다 묶어, 본 것과 느낀 점을 모은다. 일기가 많은 회사가 먼저다.
 fn section(out: &mut String, title: &str, entries: &[&Entry]) {
-    out.push_str(&format!("\n## {title} ({}개)\n", entries.len()));
+    // 회사 이름은 큰 글자 · 작은 글자를 가리지 않고 묶는다. 보이는 이름은 처음 나온 것.
+    let mut order: Vec<String> = Vec::new();
+    let mut by_company: BTreeMap<String, Vec<&Entry>> = BTreeMap::new();
+    for e in entries {
+        let key = e.company.to_lowercase();
+        if !by_company.contains_key(&key) {
+            order.push(key.clone());
+        }
+        by_company.entry(key).or_default().push(e);
+    }
+    order.sort_by(|a, b| by_company[b].len().cmp(&by_company[a].len()).then_with(|| a.cmp(b)));
+    out.push_str(&format!("\n## {title} (일기 {}개 · 회사 {}곳)\n", entries.len(), order.len()));
     if entries.is_empty() {
         out.push_str("\n아직 없다.\n");
         return;
     }
-    let mut day = "";
-    for e in entries {
-        if e.date != day {
-            day = &e.date;
-            out.push_str(&format!("\n### {}\n\n", if day.is_empty() { "날짜 없음" } else { day }));
-        }
-        let booth = e.booth.split('@').next().unwrap_or("");
-        let company = if e.company.is_empty() { "회사 없음" } else { &e.company };
-        out.push_str(&format!("- **{company}**{}{}\n", if booth.is_empty() { String::new() } else { format!(" (부스 {booth})") }, if e.author.is_empty() { String::new() } else { format!(" · {}", e.author) }));
-        if !e.saw.is_empty() {
-            out.push_str(&format!("  - 본 것: {}\n", e.saw));
-        }
-        if !e.felt.is_empty() {
-            out.push_str(&format!("  - 느낀 점: {}\n", e.felt));
+    for key in &order {
+        let list = &by_company[key];
+        let name = if list[0].company.is_empty() { "회사 없음" } else { &list[0].company };
+        let booth = list.iter().map(|e| e.booth.split('@').next().unwrap_or("")).find(|b| !b.is_empty()).unwrap_or("");
+        out.push_str(&format!("\n### {name}{}{}\n", if booth.is_empty() { String::new() } else { format!(" (부스 {booth})") }, if list.len() > 1 { format!(" · 일기 {}개", list.len()) } else { String::new() }));
+        for (label, pick) in [("본 것", (|e: &Entry| e.saw.clone()) as fn(&Entry) -> String), ("느낀 점", |e: &Entry| e.felt.clone())] {
+            let lines: Vec<String> = list.iter().filter(|e| !pick(e).is_empty()).map(|e| format!("- {}{}\n", pick(e), tail(e))).collect();
+            if !lines.is_empty() {
+                out.push_str(&format!("\n{label}\n\n{}", lines.concat()));
+            }
         }
     }
 }
@@ -102,7 +116,7 @@ pub fn one_page(entries: &[Entry], made_at: &str) -> String {
     out.push_str(&format!("- 만든 때: {made_at}\n"));
     out.push_str(&format!("- 일기 {}개 · 쓴 사람 {}명 · 회사 {}곳{}\n", entries.len(), authors.len(), companies.len(), if first.is_empty() { String::new() } else { format!(" · {first} ~ {last}") }));
     out.push_str("- 보내기를 누른 일기를 그대로 묶은 초안이다. 맞다고 확정한 줄만 지식으로 둔다.\n");
-    out.push_str("- 한 일기가 여러 태그에 해당하면 그 태그마다 나온다. 별명과 일기가 들어 있으니 공개 레포에 올리지 않는다.\n");
+    out.push_str("- 태그마다 회사로 묶었다. 한 일기가 여러 태그에 해당하면 그 태그마다 나온다. 별명과 일기가 들어 있으니 공개 레포에 올리지 않는다.\n");
     for (key, ko) in TAGS {
         let mine: Vec<&Entry> = entries.iter().filter(|e| e.tags.iter().any(|t| t == key)).collect();
         section(&mut out, ko, &mine);
@@ -161,11 +175,28 @@ mod tests {
         assert!(page.starts_with("# CES 2027 일기를 네 태그로 나눈 한 장 (초안)\n"));
         assert!(page.contains("- 일기 3개 · 쓴 사람 2명 · 회사 3곳 · 2027-01-06 ~ 2027-01-07\n"));
         let part = |title: &str| page.split("\n## ").find(|s| s.starts_with(title)).unwrap_or_else(|| panic!("{title} 칸이 없다")).to_string();
-        assert!(part("학생 (1개)").contains("- **Alpha Robotics** (부스 14731) · 물개\n  - 본 것: 로봇 팔 시연\n  - 느낀 점: 배워 볼 만하다\n"));
-        assert!(part("취준생 (1개)").contains("Alpha Robotics"));
-        assert!(part("정년 (1개)").contains("### 2027-01-07\n\n- **Zeta Home** (부스 52011A) · 물개\n"));
-        assert!(part("장년 (1개)").contains("부모님 집에 좋겠다"));
-        assert!(part("누구에게인지 고르지 않은 것 (1개)").contains("- **Beta Cloud** · 고래\n  - 느낀 점: 태그를 고르지 않았다\n"));
+        assert!(part("학생 (일기 1개 · 회사 1곳)").contains("### Alpha Robotics (부스 14731)\n\n본 것\n\n- 로봇 팔 시연 (물개, 2027-01-06)\n\n느낀 점\n\n- 배워 볼 만하다 (물개, 2027-01-06)\n"));
+        assert!(part("취준생 (일기 1개 · 회사 1곳)").contains("Alpha Robotics"));
+        assert!(part("정년 (일기 1개 · 회사 1곳)").contains("### Zeta Home (부스 52011A)\n\n본 것\n\n- 조용한 주방 도우미 (물개, 2027-01-07)\n"));
+        assert!(part("장년 (일기 1개 · 회사 1곳)").contains("- 부모님 집에 좋겠다 (물개, 2027-01-07)"));
+        let none = part("누구에게인지 고르지 않은 것 (일기 1개 · 회사 1곳)");
+        assert!(none.contains("### Beta Cloud\n\n느낀 점\n\n- 태그를 고르지 않았다 (고래, 2027-01-06)\n"));
+        assert!(!none.contains("본 것"), "본 것이 빈 회사에는 그 칸이 없다");
+    }
+
+    #[test]
+    fn 같은_회사는_한_칸으로_묶는다() {
+        let a = bundle("가짜 가", json!([
+            { "id": "1", "date": "2027-01-06", "company": "Alpha Robotics", "booth": "14731@LVCC_N", "saw": "팔이 컵을 집는다", "felt": "", "for": ["stu"] },
+            { "id": "2", "date": "2027-01-06", "company": "Solo Works", "saw": "혼자 본 곳", "felt": "", "for": ["stu"] }
+        ]));
+        let b = bundle("가짜 나", json!([{ "id": "1", "date": "2027-01-07", "company": "alpha robotics", "booth": "", "saw": "", "felt": "값이 궁금하다", "for": ["stu"] }]));
+        let all = merge(vec![read_bundle(&a).unwrap(), read_bundle(&b).unwrap()]);
+        let page = one_page(&all, "2027-01-15T00:00:00Z");
+        let stu = page.split("\n## ").find(|s| s.starts_with("학생")).unwrap();
+        assert!(stu.starts_with("학생 (일기 3개 · 회사 2곳)\n"));
+        // 일기가 많은 회사가 먼저, 이름은 처음 나온 대로, 부스는 적힌 것으로.
+        assert!(stu.contains("### Alpha Robotics (부스 14731) · 일기 2개\n\n본 것\n\n- 팔이 컵을 집는다 (가짜 가, 2027-01-06)\n\n느낀 점\n\n- 값이 궁금하다 (가짜 나, 2027-01-07)\n\n### Solo Works\n"));
     }
 
     #[test]
@@ -173,7 +204,7 @@ mod tests {
         let page = one_page(&[], "2027-01-15T00:00:00Z");
         assert!(page.contains("- 일기 0개 · 쓴 사람 0명 · 회사 0곳\n"));
         for (_, ko) in TAGS {
-            assert!(page.contains(&format!("\n## {ko} (0개)\n\n아직 없다.\n")));
+            assert!(page.contains(&format!("\n## {ko} (일기 0개 · 회사 0곳)\n\n아직 없다.\n")));
         }
         assert!(!page.contains("고르지 않은 것"));
     }
