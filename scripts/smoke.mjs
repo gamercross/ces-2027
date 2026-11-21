@@ -356,6 +356,32 @@ const missing = mustCache.filter((f) => !swFiles.includes(f));
 const gone = [];
 for (const f of swFiles) if (f !== './' && !(await exists(f))) gone.push(f);
 check(missing.length === 0 && gone.length === 0, `서비스 워커가 담아 둘 파일 ${swFiles.length}개 (빠진 것 ${missing.join(' ') || '없음'} · 없는 파일 ${gone.join(' ') || '없음'})`);
+// 보드와 테스터 안내: 같은 주소 아래에 열리지만 앱이 미리 담지 않고, 서비스 워커가 앱 화면으로 돌려주지도 않는다.
+{
+  const outside = swFiles.filter((f) => f.startsWith('board/') || f.startsWith('testers/'));
+  const boardOk = (await exists('board/index.html')) && (await exists('board/board-data.js')) && (await exists('board/board.single.html'));
+  check(boardOk && outside.length === 0 && sw.includes("const OUTSIDE = ['board/', 'testers/']") && sw.includes('if (OUTSIDE.some(') && sw.includes('inside.startsWith(dir))) return;'), `보드가 /board/에 있고, 서비스 워커는 보드 · 테스터 안내를 미리 담지 않으며(${outside.length}개) 앱 화면으로 돌려주지도 않는다`);
+  const boardData = await readFile(join(dist, 'board/board-data.js'), 'utf8');
+  const win = {};
+  new Function('window', boardData)(win);
+  const BD = win.BOARD;
+  const reqNos = BD.elements.filter((e) => e.t === 'requirement').map((e) => e.no);
+  const wantNos = Array.from({ length: 14 }, (_, i) => `R${18 + i}`);
+  const frontText = JSON.stringify(BD.elements.filter((e) => e.f === 'v_big' || e.f === 'v_flow'));
+  const frontWords = ['날마다 쓸 시간', '내 일정', '추천', '길 안내', '종이 명함', '이벤트 부스', '명함 알림', '물어볼 말', '듣기', '녹음 알림', '따로 신청', '첫 화면 카드'];
+  check(wantNos.every((no) => reqNos.includes(no)) && frontWords.every((w) => frontText.includes(w)) && Object.keys(BD.objectMap.objects).length >= 20 && BD.usecases.length >= 7 && BD.usecases.every((u) => !u.prop), `보드에 깊게 4 ~ 7이 보인다: 앞면 두 장에 낱말 ${frontWords.length}개, 뒷면에 요구 ${reqNos.length}개(R18 ~ R31) · 객체 ${Object.keys(BD.objectMap.objects).length}개 · 순서도 ${BD.usecases.length}개`);
+  const guide = await readFile(join(dist, 'testers/index.html'), 'utf8').catch(() => '');
+  const guideWords = ['홈 화면에 추가', '비행기 모드', '알림 켜기', '폰 안에서만', '폰의 음성 인식 서비스', '번역', 'QR 두 개', '첫 화면', '안드로이드 크롬', '아이폰 사파리', '이름과 연락처는 적지 않는다', '일정은 바뀔 수 있', 'data-copy'];
+  check(guideWords.every((w) => guide.includes(w)) && !/<input|<form|type="email"|type="tel"/.test(guide) && guide.includes('href="../app.css"'), `테스터 안내가 /testers/에 있다: 확인할 것 여덟 · 폰 둘 · 복사할 글, 이름과 연락처를 받는 칸이 없다`);
+  // 안내에 적은 단추 · 글귀가 앱에 그대로 있는지 (앱의 글이 바뀌면 안내도 고친다).
+  const appText = (await Promise.all(['views/home.js', 'views/card.js', 'views/map.js', 'views/ask.js', 'views/listen.js', 'views/diary.js', 'talk-ui.js', 'app.js', 'index.html'].map((f) => readFile(join(dist, f), 'utf8')))).join('\n');
+  const labels = ['명함부터 만든다', '명함 만들기', '인터넷 없이 쓰기', '인터넷 없이 열 준비가 됐다.', '알림 켜기', '알림이 켜져 있다.', '이벤트 있음으로 표시', '가까운 부스 번호', '맞추기', '가까이에 명함 넣는 이벤트 부스', '크게 띄우기', '읽어 주기', '이 폰에서 되는 것', '이 폰에서는 안 됨', '받아쓰기 · 번역을 어디서 하나', '알겠다 · 이 길로 한다', '그만둔다', '상대의 답', '직접 적어 묻기', '번역 사이트에서 열기', '듣고 일기 초안', '상대에게 알렸다 · 듣기 시작', '알렸다 · 듣기 시작', '손으로 적기', '줄 넣기', '멈추고 일기 초안 만들기', '적은 것으로 초안 만들기', '일기 초안 다듬기', '폰에 남기기', '녹음 듣기', '새 판이 있다'];
+  const missingLabels = labels.filter((l) => !appText.includes(l) || !guide.includes(l.replace(/&/g, '&amp;')));
+  check(missingLabels.length === 0, `테스터 안내에 적은 단추와 글귀 ${labels.length}개가 앱과 안내에 그대로 있다 (없는 것: ${missingLabels.join(' / ') || '없음'})`);
+  const daysJs = await readFile(join(dist, 'views/days.js'), 'utf8');
+  const planJs = await readFile(join(dist, 'views/plan.js'), 'utf8');
+  check(daysJs.includes('일정은 바뀔 수 있다 — 운영팀 안내가 먼저') && planJs.includes('일정은 바뀔 수 있다 — 운영팀 안내가 먼저'), '시간과 일정 · 동선 화면에 "일정은 바뀔 수 있다 — 운영팀 안내가 먼저"가 보인다');
+}
 const manifest = await json('manifest.webmanifest');
 let iconsOk = manifest.display === 'standalone' && manifest.icons.length >= 2;
 for (const icon of manifest.icons) iconsOk = iconsOk && (await exists(icon.src));

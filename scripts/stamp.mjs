@@ -22,7 +22,9 @@ const sha = (process.env.GITHUB_SHA || '').slice(0, 7) || `local${Date.now().toS
 const version = `${meta?.v || 'nodata'}-${sha}`;
 await writeFile(join(dist, 'version.json'), JSON.stringify({ v: version, data: meta?.v || null, built: new Date().toISOString().replace(/\.\d+Z$/, 'Z') }));
 
-const files = (await walk(dist)).filter((f) => f !== 'sw.js' && !f.startsWith('.')).sort();
+// 보드와 테스터 안내는 앱이 아니다. 첫 화면을 가볍게 두려고 미리 담지 않는다 (web/sw.js의 OUTSIDE와 같은 곳).
+const OUTSIDE = ['board/', 'testers/'];
+const files = (await walk(dist)).filter((f) => f !== 'sw.js' && !f.startsWith('.') && !OUTSIDE.some((dir) => f.startsWith(dir))).sort();
 const list = ['./', ...files];
 const swPath = join(dist, 'sw.js');
 const sw = await readFile(swPath, 'utf8');

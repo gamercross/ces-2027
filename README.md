@@ -31,7 +31,13 @@
 
 ## 보드
 
-[`docs/board/`](docs/board/)는 archi-board 보드다. 처음 보는 사람 쪽에는 한 장 그림 · 한 번 쓰는 길 · 내 것은 어디로 가나, 만드는 사람 쪽에는 만드는 순서 · 순서도 · 데이터 지도가 있다. `docs/board/board.single.html`은 인터넷 없이 열리는 묶음이다.
+[`docs/board/`](docs/board/)는 archi-board 보드다. 처음 보는 사람 쪽에는 한 장 그림 · 한 번 쓰는 길 · 내 것은 어디로 가나, 만드는 사람 쪽에는 만드는 순서 · 요구(R18 ~ R31) · 앱의 부품과 순서도 일곱 · 객체 지도 · 데이터 지도가 있다. `docs/board/board.single.html`은 인터넷 없이 열리는 묶음이다.
+
+웹 주소에서도 열린다: [https://gamercross.github.io/ces-2027/board/](https://gamercross.github.io/ces-2027/board/). 앱은 보드를 미리 받지 않는다(첫 화면을 가볍게 두려고).
+
+## 테스터 안내
+
+폰으로 써 보는 사람에게는 이 주소 하나만 보낸다: [https://gamercross.github.io/ces-2027/testers/](https://gamercross.github.io/ces-2027/testers/). 확인할 것 여덟 가지와, 복사해 단톡방에 붙이는 짧은 결과 글이 있다. 이름과 연락처는 받지 않는다. 글의 원본은 [docs/테스터_안내.md](docs/테스터_안내.md)이고, 지을 때 `scripts/guide-page.mjs`가 웹 화면 한 장으로 바꾼다.
 
 ## 만드는 법
 
