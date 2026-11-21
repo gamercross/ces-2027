@@ -167,7 +167,7 @@ const settings = await json('data/settings.json');
   const realRoom = ask.searchAll('fake room', realEntries, faq).groups.find((g) => g.k === 'sessions');
   const realEn = ask.searchAll('mobility', realEntries, faq).groups.find((g) => g.k === 'sessions');
   const k = realKey?.hits.find((h) => h.title.startsWith('Keynote'));
-  check(ask.sessionEntries(realShape).length === 3 && k && k.show === '1/7 09:30 ~ 10:15 · 지어낸 홀 A' && k.src.url === 'https://www.ces.tech/schedule/x1' && k.src.read === '2026-11-21' && k.to === '#/sessions' && realRoom?.hits[0].show === '1/8 14:00 ~ 14:45 · Fake Room 7' && realEn?.hits[0].show === '1/8 13:00 ~ 13:45' && realEn.hits[0].src.read === '2026-11-21', '세션 일정의 실제 꼴(v · items[title · date · from · to · place · url])에서 제목 · 때 · 곳을 읽고, 줄의 url과 받은 날짜를 출처로 보이며 #/sessions로 이어진다');
+  check(ask.sessionEntries(realShape).length === 3 && k && k.live === true && k.show === '1/7 09:30 ~ 10:15 · 지어낸 홀 A' && k.src.url === 'https://www.ces.tech/schedule/x1' && k.src.read === '2026-11-21' && k.to === '#/sessions' && realRoom?.hits[0].show === '1/8 14:00 ~ 14:45 · Fake Room 7' && realEn?.hits[0].show === '1/8 13:00 ~ 13:45' && realEn.hits[0].src.read === '2026-11-21', '세션 일정의 실제 꼴(v · items[title · date · from · to · place · url])에서 제목 · 때 · 곳과 라이브 표시를 읽고, 줄의 url과 받은 날짜를 출처로 보이며 #/sessions로 이어진다');
   // 화면 규칙: 첫 화면에 고정 import를 더하지 않고, "AI" · "챗봇"이라는 말이 없고, 안내 글이 앱 안에 있다.
   const sources = await Promise.all(['askall.js', 'views/askall.js', 'data/faq.json'].map((p) => readFile(join(dist, p), 'utf8')));
   const homeSrc = await readFile(join(dist, 'views/home.js'), 'utf8');

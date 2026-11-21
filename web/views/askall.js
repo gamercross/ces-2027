@@ -29,7 +29,7 @@ function proofLine(src, extra) {
 
 function hitCard(h) {
   return el('li', { class: 'entry' },
-    el('div', { class: 'name' }, h.title, h.status ? el('span', { class: h.status === 'confirmed' ? 'tag mint' : 'tag', text: STATUS_KO[h.status] }) : null),
+    el('div', { class: 'name' }, h.title, h.status ? el('span', { class: h.status === 'confirmed' ? 'tag mint' : 'tag', text: STATUS_KO[h.status] }) : null, h.live ? el('span', { class: 'tag', text: '라이브 표시' }) : null),
     h.show && el('p', { lang: h.en ? 'en' : null, text: h.show }),
     el('small', { class: 'proof wrap' }, `${h.spot}`),
     h.src ? proofLine(h.src, h.more ? `출처 ${h.more + 1}개` : '') : el('small', { class: 'proof wrap', text: h.note || '' }),
@@ -80,7 +80,10 @@ export async function render({ rest }) {
   const ask = (text) => { input.value = text; run(); input.focus(); };
 
   function idle() {
-    note.textContent = '궁금한 말을 적는다. 낱말도 되고 물음 그대로도 된다.';
+    const sessionCount = Array.isArray(sessions?.items) ? sessions.items.length : 0;
+    note.textContent = sessionCount
+      ? `궁금한 말을 적는다. 공식 세션 ${num(sessionCount)}개도 같이 찾는다.`
+      : '궁금한 말을 적는다. 낱말도 되고 물음 그대로도 된다.';
     results.replaceChildren(
       el('section', { class: 'panel' },
         el('h2', { text: '자주 묻는 것' }),
