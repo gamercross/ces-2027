@@ -42,7 +42,7 @@
     "enabled": false,
     "lang": "en-ko",
     "kind": "폰 안 영한 번역 모델 후보",
-    "status": "package_check와 회귀 시험이 끝나지 않아 받지 않음",
+    "status": "원본 토크나이저와 ONNX 변환본을 짝지어 package_check · 회귀 시험을 끝내지 못해 받지 않음",
     "candidate": {
       "id": "noticemkjung/opus-mt-tc-big-en-ko-ONNX",
       "base": "Helsinki-NLP/opus-mt-tc-big-en-ko",
@@ -50,6 +50,9 @@
       "license": "CC-BY-4.0",
       "source": "https://huggingface.co/noticemkjung/opus-mt-tc-big-en-ko-ONNX",
       "baseSource": "https://huggingface.co/Helsinki-NLP/opus-mt-tc-big-en-ko",
+      "baseRevision": "ae8606b7b29a495f31ce679cee2007f536a3a5ce",
+      "tokenizer": "source.spm · target.spm · vocab.json · tokenizer_config.json",
+      "tokenizerSha256": "source.spm: 3d0591e65c49541d82f48df33d7b322c3d4ee7aa0ee8747f9a7f9355dbf22c95 · target.spm: 3d2aa641a0890d8966ab8703b109895a4e522713ce99b4a0192bfacb495bc97c · vocab.json: 9e03014979d240f6a6d1c5dc53cd14f4841351326d345d437d48d115eff67b5f",
       "checked": "2026-11-21",
       "smallest": "encoder_model_q4f16.onnx + decoder_with_past_model_q4f16.onnx",
       "expectedBytes": 246521277,
