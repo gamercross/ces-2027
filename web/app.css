@@ -269,3 +269,13 @@ details.more[open] > summary { margin-bottom: 8px; }
 /* 따로 신청하는 곳: 출처가 여럿이라 줄을 바꾼다 */
 .proof.wrap { display: block; white-space: normal; overflow-wrap: anywhere; line-height: 2; }
 .entry .where { font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere; }
+
+/* 남의 명함 받기 · 만난 사람 */
+.scan-video { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 12px; background: var(--panel-2); }
+.link-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.link-text { min-width: 0; overflow-wrap: anywhere; font-size: 14px; }
+a.link-text { display: inline-flex; align-items: center; min-height: 44px; }
+.form h2 { font-size: 16px; padding-top: 6px; }
+.inline select { min-height: 48px; padding: 0 8px; border: 2px solid transparent; border-radius: 12px; background: var(--panel-2); font-size: 14px; max-width: 40vw; }
+.inline input { min-height: 48px; padding: 8px 12px; background: var(--panel); border: 2px solid transparent; border-radius: 12px; min-width: 0; }
+.inline input:focus { outline: none; border-color: var(--accent); }
