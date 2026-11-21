@@ -109,6 +109,31 @@ check(diary.fileName(who, new Date(2027, 0, 7)) === 'ces2027-일기-물개-20270
   }
 }
 
+// 지도 색칠: 분야 묶음 · 한국 · 혁신상.
+{
+  const C = await import('../web/colors.js');
+  const tbl = { groups: [{ k: 'ai', ko: 'AI·컴퓨팅', cats: ['Artificial Intelligence', 'Computing'] }, { k: 'rob', ko: '로봇·제조', cats: ['Robotics'] }, { k: 'hea', ko: '건강', cats: ['Health'] }] };
+  const fake = { cats: ['Artificial Intelligence', 'Computing', 'Robotics', 'Health', 'Unknown'], countries: ['United States', 'South Korea'], ex: [
+    ['A', 'a', '', 1, '0.1.2', 0, 0, []],   // AI 둘 · 로봇 하나 → AI
+    ['B', 'b', '', 0, '2', 2, 0, []],       // 로봇, 최고 혁신상
+    ['C', 'c', '', 0, '0.2', 1, 0, []],     // AI 하나 · 로봇 하나 → 차례가 앞선 AI, 혁신상
+    ['D', 'd', '', 0, '4', 0, 0, []],       // 묶음에 없는 분야
+    ['E', 'e', '', -1, '', 0, 0, []],       // 분야 없음
+  ] };
+  const byId = new Map(fake.ex.map((r) => [r[0], r]));
+  const at = { one: ['A'], mix: ['B', 'C', 'B'], none: ['D', 'E'], empty: [] };
+  const rowsAt = (key) => at[key].map((id) => byId.get(id));
+  const groups = C.rowGroups(fake, tbl);
+  const paint = (mode) => Object.keys(at).map((k) => C.boothColorer(mode, fake, tbl, rowsAt)(k));
+  const g = paint('group'), k = paint('korea'), a = paint('award'), p = paint('plain');
+  check([...groups.values()].join(',') === 'ai,rob,ai,,' && g[0] === C.GROUP_COLORS.ai && g[1] === C.GROUP_COLORS.rob && g[2] === g[3] && g[2] !== g[0] && k[0] !== k[1] && k[1] === k[2] && a[1] !== a[0] && a[0] === a[2] && new Set(p).size === 1 && p[0] === C.PLAIN, '지도 색칠: 분야 묶음(회사가 여럿이면 많은 쪽) · 한국 · 혁신상 · 한 색');
+  const colors = [...Object.values(C.GROUP_COLORS), ...C.legend('korea', tbl).map((l) => l.color), ...C.legend('award', tbl).map((l) => l.color), C.PLAIN];
+  const soft = (hex) => { const n = parseInt(hex.slice(1), 16); const [r, gg, b] = [n >> 16, (n >> 8) & 255, n & 255]; return Math.max(r, gg, b) >= 200 && Math.min(r, gg, b) >= 60; };
+  check(colors.every(soft) && C.legend('group', tbl).length === tbl.groups.length + 1 && C.legend('plain', tbl).length === 0 && new Set(Object.values(C.GROUP_COLORS)).size === 7, `지도 색은 모두 파스텔이고(${colors.length}가지) 범례가 칠하기마다 있다`);
+  const realTable = await json('data/categories.json');
+  check(realTable.groups.every((gr) => gr.k in C.GROUP_COLORS), '분야 묶음 일곱에 모두 색이 있다');
+}
+
 // 나누기와 내보내기: 목록 코드 · 링크 · 글 · 마크다운 · CSV.
 {
   const Sh = await import('../web/share.js');
@@ -169,7 +194,7 @@ const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 const version = await json('version.json').catch(() => null);
 const swFiles = JSON.parse(`[${(sw.match(/const FILES = \[(.*)\];/) || [])[1] || ''}]`);
 check(!!version && sw.includes(JSON.stringify(version.v)) && !sw.includes('__VERSION__'), `판 이름이 찍혔다 (${version?.v})`);
-const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'views/map.js', 'views/diary.js', 'views/topics.js', 'topics.js', 'share.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/topics.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
+const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'views/map.js', 'views/diary.js', 'views/topics.js', 'topics.js', 'share.js', 'colors.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/topics.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
 const missing = mustCache.filter((f) => !swFiles.includes(f));
 const gone = [];
 for (const f of swFiles) if (f !== './' && !(await exists(f))) gone.push(f);

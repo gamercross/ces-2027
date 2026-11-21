@@ -2,7 +2,9 @@
 // 관심 회사는 동선 번호로 찍힌다. 홀 안 부스 자리는 짐작이다.
 
 import { el, out } from '../dom.js';
-import { getExhibitors, getInfo, getOfficialSpots, getPlaces } from '../data.js';
+import { getCategories, getExhibitors, getInfo, getOfficialSpots, getPlaces } from '../data.js';
+import { boothColorer, legend, MODES } from '../colors.js';
+import { load, save } from '../store.js';
 import { getInterests } from '../store.js';
 import { layout } from '../geo.js';
 import { boothSpots, spotOf } from '../spots.js';
@@ -43,7 +45,7 @@ export function interestPins(data, spots) {
 
 export async function render({ rest = [] } = {}) {
   const places = await getPlaces();
-  const [data, info, official] = await Promise.all([getExhibitors().catch(() => null), getInfo(), getOfficialSpots()]);
+  const [data, info, official, table] = await Promise.all([getExhibitors().catch(() => null), getInfo(), getOfficialSpots(), getCategories()]);
   const L = layout(places);
   const spots = data ? boothSpots(places, data, official) : new Map();
   const pins = data ? interestPins(data, spots) : [];
@@ -167,6 +169,15 @@ export async function render({ rest = [] } = {}) {
   for (const row of data?.ex || []) for (const b of row[7]) { const at = b.lastIndexOf('@'); const key = `${b.slice(at + 1)}|${b.slice(0, at)}`; if (!boothEx.has(key)) boothEx.set(key, []); boothEx.get(key).push(row); }
   const boothList = [...spots].map(([key, s]) => ({ key, x: s.x, z: s.z }));
   const BOOTH_ZOOM = 560;
+  // 부스 점을 무엇으로 칠할까: 한 색 · 분야 묶음 · 한국 · 혁신상. 고른 것은 폰에 남는다.
+  let colorMode = MODES.some((m) => m.k === load('mapColor.v1', 'plain')) ? load('mapColor.v1', 'plain') : 'plain';
+  const noRows = [];
+  let colorOf = data ? boothColorer(colorMode, data, table, (key) => boothEx.get(key) || noRows) : () => '#9aa9cc';
+  const legendBox = el('div', { class: 'legend', 'aria-label': '부스 점의 색' });
+  function paintLegend() {
+    legendBox.replaceChildren(...legend(colorMode, table).map((l) => el('span', { class: 'swatch' }, el('i', { style: `background:${l.color}` }), l.ko)));
+    legendBox.hidden = colorMode === 'plain';
+  }
   let boothFrame = 0;
   let chosenBooth = null;
   // 부스를 누르면(2D의 점, 3D의 점): 그 부스의 회사 카드와 관심 단추.
@@ -176,7 +187,7 @@ export async function render({ rest = [] } = {}) {
     const place = L.list.find((p) => p.k === key.slice(0, bar));
     const rows = boothEx.get(key) || [];
     const spot = spots.get(key);
-    for (const node of boothLayer.children) node.setAttribute('fill', node.dataset.key === key ? '#56679a' : '#9aa9cc');
+    drawBooths();
     three?.chooseBooth(key);
     detail.replaceChildren(...[
       el('h2', { text: `부스 ${key.slice(bar + 1)}` }),
@@ -196,7 +207,9 @@ export async function render({ rest = [] } = {}) {
     const nodes = [];
     for (const b of boothList) {
       if (b.x < x0 || b.x > x1 || b.z < z0 || b.z > z1) continue;
-      const dot = svg('circle', { cx: b.x.toFixed(1), cy: b.z.toFixed(1), r, fill: b.key === chosenBooth ? '#56679a' : '#9aa9cc', stroke: '#f4f1ea', 'stroke-width': 1, 'vector-effect': 'non-scaling-stroke' });
+      // 고른 부스는 짙은 테두리로 보인다 (색은 칠하기에 쓰고 있어서).
+      const on1 = b.key === chosenBooth;
+      const dot = svg('circle', { cx: b.x.toFixed(1), cy: b.z.toFixed(1), r, fill: colorOf(b.key), stroke: on1 ? '#1f2a44' : '#f4f1ea', 'stroke-width': on1 ? 3 : 1, 'vector-effect': 'non-scaling-stroke' });
       dot.dataset.key = b.key;
       nodes.push(dot);
       if (nodes.length >= 900) break;
@@ -289,7 +302,7 @@ export async function render({ rest = [] } = {}) {
     frame.replaceChildren(el('p', { class: 'note map-wait', text: '3D를 불러오는 중이다.' }));
     try {
       // 3D는 여기서 처음 불러온다. 첫 화면에는 싣지 않는다.
-      three ??= (await import('../map3d.js')).create(L, places, pins, { onPlace: (p) => pick(p, true), onCampus: (c) => pickCampus(c, true), onBooth: (key) => pickBooth(key, true), booths: boothList });
+      three ??= (await import('../map3d.js')).create(L, places, pins, { onPlace: (p) => pick(p, true), onCampus: (c) => pickCampus(c, true), onBooth: (key) => pickBooth(key, true), booths: boothList, colorOf: (key) => colorOf(key) });
       page.three = three;
       frame.replaceChildren(three.node);
       three.look(focus);
@@ -437,6 +450,19 @@ export async function render({ rest = [] } = {}) {
     nextBox,
     el('p', { class: 'note', text: '위치는 이 폰 안에서만 쓴다. GPS로는 어느 캠퍼스인지와, 짐작으로 어느 홀 · 건물 근처인지까지 본다(자리가 어림값이다). 홀 안은 부스 번호로 맞춘다.' }));
 
+  const colorButtons = MODES.map((m) => el('button', { class: 'seg', type: 'button', text: m.k === 'plain' ? '색: 한 색' : m.ko, 'aria-pressed': m.k === colorMode ? 'true' : 'false', onclick: (ev) => {
+    colorMode = m.k;
+    save('mapColor.v1', colorMode);
+    colorOf = data ? boothColorer(colorMode, data, table, (key) => boothEx.get(key) || noRows) : colorOf;
+    for (const b of colorButtons) b.setAttribute('aria-pressed', b === ev.currentTarget ? 'true' : 'false');
+    paintLegend();
+    drawBooths();
+    three?.redraw();
+    // 점은 가까이 봐야 찍힌다. 멀리 보고 있으면 알려 준다.
+    if (!in3d() && view[2] - view[0] > BOOTH_ZOOM) whereNote.textContent = '부스 점은 지도를 가까이 봐야 찍힌다. 홀을 누르거나 "크게"를 누른다.';
+  } }));
+  paintLegend();
+
   const page = el('div', { class: 'page' },
     el('section', { class: 'panel' },
       el('h1', { text: '지도' }),
@@ -447,6 +473,8 @@ export async function render({ rest = [] } = {}) {
       el('div', { class: 'segs' }, flat, solid,
         el('button', { class: 'seg', type: 'button', text: '크게', 'aria-label': '지도 크게', onclick: () => (solid.getAttribute('aria-pressed') === 'true' ? three?.zoom(0.8) : zoom(0.7)) }),
         el('button', { class: 'seg', type: 'button', text: '작게', 'aria-label': '지도 작게', onclick: () => (solid.getAttribute('aria-pressed') === 'true' ? three?.zoom(1.25) : zoom(1.4)) })),
+      el('div', { class: 'segs', role: 'group', 'aria-label': '부스 점 칠하기' }, colorButtons),
+      legendBox,
       el('p', { class: 'note', text: `홀 안 부스 자리는 짐작이다 (공식 캠퍼스 지도 ${places.edition}판, 정식 배치도 전). 캠퍼스 사이 거리는 줄여서 그렸다.` }),
       pins.length
         ? el('p', { class: 'note', text: `번호는 내 동선의 차례다. 색은 날짜다: ${info.show.days.map((d, i) => `${d.ko.split(' ')[0]} ${['분홍', '파랑', '초록', '노랑'][i]}`).join(' · ')} · 미정 회색.` })
