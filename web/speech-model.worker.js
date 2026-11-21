@@ -10,13 +10,15 @@ self.onmessage = async (ev) => {
       const base = new URL(m.runtime.dir, new URL('./', self.location.href));
       const { pipeline, env } = await import(new URL(m.runtime.entry, base).href);
       env.allowLocalModels = false;
+      // 모델의 판을 주소에 못 박는다. 실행기가 판을 적지 않고 묻는 파일도 같은 판에서 받고, 받아 둔 것과 같은 열쇠로 찾는다.
+      env.remoteHost = m.model.host;
+      env.remotePathTemplate = `{model}/resolve/${m.model.revision}/`;
       // 실행기 파일은 앱이 따로 담아 둔다 (speech-model.js의 KEEP). 두 번 담지 않는다.
       env.useWasmCache = false;
       env.backends.onnx.wasm.wasmPaths = { mjs: new URL(m.runtime.mjs, base).href, wasm: new URL(m.runtime.wasm, base).href };
       // GitHub Pages에서는 여러 가닥으로 돌릴 수 없다 (그에 필요한 머리글을 줄 수 없다).
       env.backends.onnx.wasm.numThreads = 1;
       asr = await pipeline('automatic-speech-recognition', m.model.id, {
-        revision: m.model.revision,
         dtype: m.model.dtype,
         device: 'wasm',
         progress_callback: (p) => { if (p.status === 'progress' && p.file) self.postMessage({ type: 'progress', file: p.file, loaded: p.loaded || 0, total: p.total || 0 }); },
