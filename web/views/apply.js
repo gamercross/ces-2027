@@ -10,7 +10,7 @@ import { placeLink } from './days.js';
 const pad = (n) => String(n).padStart(2, '0');
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
 const md = (date) => { const [, m, d] = date.split('-').map(Number); return `${m}/${d}`; };
-const MARK = { watch: ['안내를 봤다', '안내를 봤다고 표시함'], apply: ['신청함', '신청했다고 표시함'], badge: ['갈 것', '가기로 표시함'], press: null, ride: ['앱을 받았다', '앱을 받았다고 표시함'] };
+const MARK = { watch: ['안내를 봤다', '안내를 봤다고 표시함'], apply: ['신청함', '신청했다고 표시함'], badge: ['갈 것', '가기로 표시함'], press: null, ride: ['앱을 받았다', '앱을 받았다고 표시함'], media: null };
 
 export async function render() {
   const [data, places] = await Promise.all([getSeparate(), getPlaces()]);
@@ -63,6 +63,12 @@ export async function render() {
         const items = data.items.filter((it) => it.group === g.k);
         return items.length ? el('section', { class: 'panel' }, el('h2', { text: `${g.ko} ${items.length}` }), el('p', { class: 'note', text: g.note }), el('ul', { class: 'stack' }, items.map(row))) : null;
       }),
+      data.mediaReferences?.length ? el('section', { class: 'panel' },
+        el('h2', { text: '참고(언론)' }),
+        el('p', { class: 'note', text: '아래는 기사 근거다. 공식 확인이 아니므로 공식 줄과 따로 본다.' }),
+        el('ul', { class: 'stack' }, data.mediaReferences.map((m) => el('li', { class: 'entry' },
+          el('div', { class: 'name' }, `${m.org} · ${m.what}`, el('span', { class: 'tag', text: '공식 확인 아님' })),
+          el('small', { class: 'proof wrap' }, `${md(m.read)} 확인 · `, out(m.url, m.ko)))))) : null,
       el('div', { class: 'dock' }, el('a', { class: 'btn', href: '#/', text: '첫 화면으로' }), el('a', { class: 'btn ghost', href: '#/days', text: '시간과 일정' })),
     ].filter(Boolean));
   }

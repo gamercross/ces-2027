@@ -1,6 +1,15 @@
 {
-  "about": "CES 배지와 따로 신청 · 예약 · 초대가 필요한 곳과, 배지만 있으면 되는 큰 일정, 자율주행 이동을 모은 자료다. 근거는 CES 공식 사이트(ces.tech)와 그 회사 공식 사이트만 쓴다. 줄마다 출처와 확인한 날짜가 있다. 2027 안내가 아직 없는 줄은 status가 check이고, 작년(CES 2026)에 어떻게 했는지를 last에 적는다. 짐작해서 채우지 않는다. 시간은 라스베이거스 시간이다.",
+  "about": "CES 배지와 따로 신청 · 예약 · 초대가 필요한 곳과, 배지만 있으면 되는 큰 일정, 자율주행 이동을 모은 자료다. 근거는 CES 공식 사이트(ces.tech)와 그 회사 공식 사이트만 쓴다. 언론 근거는 참고(언론)으로 따로 둔다. 줄마다 출처와 확인한 날짜가 있다. 2027 안내가 아직 없는 줄은 status가 check이고, 작년(CES 2026)에 어떻게 했는지를 last에 적는다. 짐작해서 채우지 않는다. 시간은 라스베이거스 시간이다.",
   "read": "2026-11-21",
+  "mediaReferences": [
+    { "org": "소니", "what": "2027 불참", "url": "https://videogameschronicle.com/news/sony-is-officially-skipping-ces-for-the-first-time-in-decades", "read": "2026-11-21", "ko": "VGC · 소니 불참 보도(보조)" },
+    { "org": "파나소닉", "what": "2027 자사 이름으로 불참", "url": "https://kumanichi.com/articles/2036198", "read": "2026-11-21", "ko": "구마니치 · 교도통신 보도(보조)" },
+    { "org": "현대모비스", "what": "고객사 전용 부스 가능성", "url": "https://ceoscoredaily.com/page/view/2025120915142397575", "read": "2026-11-21", "ko": "CEO스코어데일리 · 현대모비스 고객용 부스(보조)" },
+    { "org": "SK하이닉스", "what": "고객사 전용 전시관 가능성", "url": "https://www.koreatimes.co.kr/business/tech-science/20260106/ces-2026-sk-hynix-unveils-16-high-48gb-hbm4", "read": "2026-11-21", "ko": "코리아타임스 · SK하이닉스 CES 참가 보도(보조)" },
+    { "org": "롯데", "what": "2026 부스 없음 · 2027 소식 없음", "url": "https://v.daum.net/v/20251224094549263", "read": "2026-11-21", "ko": "뉴시스 · 롯데 부스 보도(보조)" },
+    { "org": "HD현대", "what": "2026 부스 없음 · 2027 참가 명단 없음", "url": "https://www.koreatimes.co.kr/business/20261014/ces-organizer-highlights-korean-firms-ai-innovation-ahead-of-2027-show", "read": "2026-11-21", "ko": "코리아타임스 · 한국 기업 CES 명단(보조)" },
+    { "org": "Zoox", "what": "요금과 승하차 안내", "url": "https://lasvegassun.com/news/2026/aug/06/free-rides-no-more-zoox-robotaxi-service-to-begin/", "read": "2026-11-21", "ko": "라스베이거스 선 · Zoox 유료 운행 보도(보조)" }
+  ],
   "groups": [
     { "k": "watch", "ko": "2027 안내를 기다리는 곳", "note": "아직 2027 안내가 없다. 작년에는 12월 초 ~ 중순에 나왔다. 적어 둔 날부터 다시 본다." },
     { "k": "apply", "ko": "따로 신청 · 문의하는 것", "note": "배지 말고 따로 표나 신청이 있어야 한다." },
@@ -215,12 +224,12 @@
       "sources": [ { "ko": "Zoox · 라스베이거스", "url": "https://zoox.com/las-vegas", "read": "2026-11-21" } ]
     },
     {
-      "id": "ride-loop", "group": "ride", "org": "베가스 루프", "what": "지하 터널 탈것 (자율주행 아님으로 본다)",
+      "id": "ride-loop", "group": "ride", "org": "베가스 루프", "what": "지하 터널 탈것 (운전 방식은 공식 안내 없음)",
       "where": "LVCC 캠퍼스의 역 다섯 곳과 캠퍼스 밖 역들", "place": "", "date": null, "from": null, "to": null,
       "apply": { "url": "https://www.vegasmeansbusiness.com/planning-tools/transportation/vegas-loop/", "ko": "LVCVA 베가스 루프 안내" }, "deadline": null, "watchFrom": null,
       "who": "누구나.",
       "status": "confirmed", "last": null,
-      "todo": "공식 안내는 테슬라 차가 다니는 지하 교통이라고만 적고, 자율주행이라는 말은 없다. LVCC 캠퍼스 안은 무료, 캠퍼스 밖은 표가 있어야 한다.",
+      "todo": "운전 방식은 공식 안내에 없다. 테슬라 차가 다니는 지하 교통이라고만 적는다. LVCC 캠퍼스 안은 무료, 캠퍼스 밖은 표가 있어야 한다.",
       "sources": [ { "ko": "LVCVA · 베가스 루프", "url": "https://www.vegasmeansbusiness.com/planning-tools/transportation/vegas-loop/", "read": "2026-11-21" } ]
     }
   ]
