@@ -21,7 +21,7 @@ export const GROUPS = [
   { k: 'phrases', ko: '부스에서 쓸 질문' },
 ];
 
-const SESSIONS_LINK = '#/days';
+const SESSIONS_LINK = '#/sessions';
 
 const lower = (s) => String(s || '').toLowerCase().normalize('NFC');
 const md = (date) => { const m = /^(\d{4})-(\d\d)-(\d\d)/.exec(date || ''); return m ? `${Number(m[2])}/${Number(m[3])}` : ''; };
@@ -156,11 +156,15 @@ export function sessionEntries(json) {
       const to = first(it, ['to', 'end']);
       const when = first(it, ['when']) || [md(date) || date, from && to ? `${from} ~ ${to}` : from].filter(Boolean).join(' ');
       const place = first(it, ['where', 'place', 'room', 'venue', 'location', 'hall']);
-      const src = [it.source, top.source].find((s) => s && typeof s === 'object' && s.url);
-      const read = (src && src.read) || first(it, ['read']) || first(top, ['read']);
+      // 출처: 줄에 source가 있으면 그것, 없으면 자료 머리의 source에 줄의 url(그 세션 쪽)을 쓴다.
+      // 확인한 날짜는 read, 없으면 받은 때(v)의 날짜 부분이다. 날짜를 못 찾으면 출처를 보이지 않는다.
+      const head = [it.source, top.source].find((s) => s && typeof s === 'object' && s.url);
+      const url = [str(it.url).startsWith('https://') ? str(it.url) : '', head && head.url].find(Boolean);
+      const read = [head && head.read, it.read, top.read, top.v].map((v) => String(v || '').slice(0, 10)).find((v) => /^\d{4}-\d\d-\d\d$/.test(v));
+      const src = url && read ? { ko: str(head && head.ko) || '세션 일정', url, read } : null;
       out.push(entry('sessions', {
         title, text: [when, place].filter(Boolean).join(' '), show: [when, place].filter(Boolean).join(' · '),
-        src: src ? { ko: str(src.ko) || '세션 일정', url: src.url, read } : null, note: src ? '' : '세션 일정 자료',
+        src, note: src ? '' : '세션 일정 자료',
         spot: '세션 일정', to: link, toKo: '세션 일정에서 보기',
       }));
     }

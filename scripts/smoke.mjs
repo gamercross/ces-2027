@@ -156,6 +156,18 @@ const settings = await json('data/settings.json');
   const sessWhere = ask.searchAll('지어낸 방', withSessions, faq).groups.find((g) => g.k === 'sessions');
   const broken = [null, undefined, 5, 'x', {}, [], [1, 'a', null], { items: 'x' }, { sessions: [{}] }].map((j) => ask.sessionEntries(j).length);
   check(sessHit?.hits[0].title === '지어낸 세션 제목' && sessHit.hits[0].show.includes('1/7') && sessHit.hits[0].show.includes('10:00 ~ 11:00') && sessHit.hits[0].show.includes('지어낸 방 100') && sessHit.hits[0].src?.read === '2026-11-21' && sessWhere?.hits[0].title === '지어낸 세션 제목' && ask.sessionEntries(fakeSessions).length === 2 && broken.every((n) => n === 0) && withSessions.length === entries.length + 2, '세션 일정: 있으면 제목 · 때 · 곳으로 찾고, 없거나 꼴이 달라도 깨지지 않고 건너뛴다');
+  // 세션 일정 자료의 실제 꼴(crates/ces-data/src/sessions.rs의 to_json: v · source(ko, url) · items[id, date, from, to, title, place, topics, track, url, live]).
+  // 줄에 확인 날짜(read)가 없으므로 받은 때(v)의 날짜를 확인 날짜로 쓰고, 줄의 url을 출처로 쓴다. (지어낸 값)
+  const realShape = { v: '2026-11-21T03:00:00Z', source: { ko: 'CES 공식 일정', url: 'https://www.ces.tech/schedule/' }, zone: '라스베이거스 시각', days: ['2027-01-07'], skipped: 0, items: [
+    { id: 'x1', date: '2027-01-07', from: '09:30', to: '10:15', title: 'Keynote: 지어낸 기조연설', place: '지어낸 홀 A', topics: ['robotics'], track: 'Keynote', url: 'https://www.ces.tech/schedule/x1', live: true },
+    { id: 'x2', date: '2027-01-08', from: '13:00', to: '13:45', title: 'Fake Mobility Panel', place: '', topics: [], track: 'Conference', url: 'https://www.ces.tech/schedule/x2', live: false },
+    { id: 'x3', date: '2027-01-08', from: '14:00', to: '14:45', title: 'Fake Robot Talk', place: 'Fake Room 7', topics: ['ai'], track: 'Conference', url: 'https://www.ces.tech/schedule/x3', live: false }] };
+  const realEntries = ask.buildEntries({ ...docs, sessions: realShape });
+  const realKey = ask.searchAll('기조연설', realEntries, faq).groups.find((g) => g.k === 'sessions');
+  const realRoom = ask.searchAll('fake room', realEntries, faq).groups.find((g) => g.k === 'sessions');
+  const realEn = ask.searchAll('mobility', realEntries, faq).groups.find((g) => g.k === 'sessions');
+  const k = realKey?.hits.find((h) => h.title.startsWith('Keynote'));
+  check(ask.sessionEntries(realShape).length === 3 && k && k.show === '1/7 09:30 ~ 10:15 · 지어낸 홀 A' && k.src.url === 'https://www.ces.tech/schedule/x1' && k.src.read === '2026-11-21' && k.to === '#/sessions' && realRoom?.hits[0].show === '1/8 14:00 ~ 14:45 · Fake Room 7' && realEn?.hits[0].show === '1/8 13:00 ~ 13:45' && realEn.hits[0].src.read === '2026-11-21', '세션 일정의 실제 꼴(v · items[title · date · from · to · place · url])에서 제목 · 때 · 곳을 읽고, 줄의 url과 받은 날짜를 출처로 보이며 #/sessions로 이어진다');
   // 화면 규칙: 첫 화면에 고정 import를 더하지 않고, "AI" · "챗봇"이라는 말이 없고, 안내 글이 앱 안에 있다.
   const sources = await Promise.all(['askall.js', 'views/askall.js', 'data/faq.json'].map((p) => readFile(join(dist, p), 'utf8')));
   const homeSrc = await readFile(join(dist, 'views/home.js'), 'utf8');
