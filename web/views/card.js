@@ -2,7 +2,7 @@
 // 명함은 이 폰에만 남는다. QR은 폰에서 만든다(인터넷 없이).
 
 import { el } from '../dom.js';
-import { getProfile, setProfile, TAGS, tagKo } from '../store.js';
+import { addMeeting, getMeetings, getProfile, setProfile, TAGS, tagKo } from '../store.js';
 import { getInfo } from '../data.js';
 import { dateOf, defaultRemind } from '../alerts.js';
 import { checkAlerts, getPaper, setPaper } from '../notify.js';
@@ -42,6 +42,84 @@ export function paperPanel(showFrom) {
     ].filter(Boolean));
   }
   draw();
+  return box;
+}
+
+// 남의 명함 QR을 카메라로 읽거나 글을 손으로 넣어 만난 사람으로 남긴다.
+function meetingPanel() {
+  const box = el('section', { class: 'panel' });
+  const status = el('p', { class: 'note', role: 'status' });
+  const manual = el('textarea', { rows: 3, maxlength: 800, placeholder: '상대가 만든 명함 글을 붙인다', 'aria-label': '다른 사람의 명함 글' });
+  const video = el('video', { autoplay: true, muted: true, playsinline: true });
+  let stream = null;
+  let timer = null;
+
+  const saveText = (text) => {
+    let person;
+    try { person = JSON.parse(text); } catch { status.textContent = '명함 글을 읽지 못했다. 명함 교환 QR의 글을 그대로 붙인다.'; return; }
+    if (!person || typeof person !== 'object' || !person.nick) {
+      status.textContent = '별명이 없는 명함은 저장하지 않는다.';
+      return;
+    }
+    person = {
+      nick: String(person.nick).slice(0, 20),
+      tag: typeof person.tag === 'string' ? person.tag : '',
+      line: typeof person.line === 'string' ? person.line.slice(0, 60) : '',
+      github: typeof person.github === 'string' ? person.github : '',
+      discord: typeof person.discord === 'string' ? person.discord : '',
+      met: new Date().toISOString(),
+    };
+    if (!addMeeting(person)) { status.textContent = '이 폰에 저장하지 못했다.'; return; }
+    status.textContent = `${person.nick} 님을 만난 사람에 남겼다. 일기에서도 고를 수 있다.`;
+  };
+
+  const stop = () => {
+    if (timer) clearInterval(timer);
+    timer = null;
+    if (stream) stream.getTracks().forEach((track) => track.stop());
+    stream = null;
+    video.removeAttribute('srcObject');
+  };
+  const start = async () => {
+    status.textContent = '';
+    if (!navigator.mediaDevices?.getUserMedia) { status.textContent = '이 폰의 카메라를 읽을 수 없다. 손으로 넣는다.'; return; }
+    if (!('BarcodeDetector' in window)) { status.textContent = '이 브라우저는 QR 카메라 읽기를 지원하지 않는다. 손으로 넣는다.'; return; }
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      video.srcObject = stream;
+      await video.play();
+      const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+      timer = setInterval(async () => {
+        try {
+          const got = await detector.detect(video);
+          const raw = got.find((row) => row.rawValue)?.rawValue;
+          if (raw) { stop(); saveText(raw); draw(); }
+        } catch { /* 카메라를 읽는 중에는 다음 칸을 본다. */ }
+      }, 500);
+    } catch {
+      status.textContent = '카메라 권한을 받지 못했다. 손으로 넣는다.';
+      stop();
+    }
+  };
+
+  function draw() {
+    const meetings = getMeetings();
+    box.replaceChildren(
+      el('h2', { text: '만난 사람' }),
+      el('p', { text: '남의 명함 QR을 읽거나, 아래에 명함 글을 붙여 이 폰에 남긴다.' }),
+      el('div', { class: 'actions' },
+        el('button', { class: 'btn', type: 'button', text: '카메라로 읽기', onclick: () => start() }),
+        el('button', { class: 'btn ghost', type: 'button', text: '카메라 멈추기', onclick: () => { stop(); status.textContent = '카메라를 멈췄다.'; } })),
+      video,
+      el('label', { class: 'field' }, el('span', { class: 'label', text: '손으로 넣기' }), manual),
+      el('div', { class: 'actions' }, el('button', { class: 'btn ghost', type: 'button', text: '만난 사람에 남기기', onclick: () => saveText(manual.value.trim()) })),
+      status,
+      meetings.length ? el('div', { class: 'block' },
+        el('h3', { text: `남긴 사람 ${meetings.length}` }),
+        el('ul', { class: 'dots' }, meetings.slice().reverse().map((p) => el('li', { text: [p.nick, p.line, p.github, p.discord].filter(Boolean).join(' · ') })))) : null);
+  }
+  draw();
+  window.addEventListener('hashchange', stop, { once: true });
   return box;
 }
 
@@ -132,6 +210,13 @@ async function qrBlock(title, text, shown) {
 async function card(profile, edit, showFrom) {
   const gh = githubUrl(profile.github) || '';
   const dc = discordText(profile.discord) || '';
+  const exchange = JSON.stringify({
+    nick: profile.nick,
+    tag: profile.tag,
+    line: profile.line,
+    github: gh,
+    discord: dc,
+  });
   return el('div', { class: 'page' },
     el('section', { class: 'panel namecard' },
       el('p', { class: 'eyebrow', text: '글로벌 어학연수 · CES 2027' }),
@@ -140,7 +225,9 @@ async function card(profile, edit, showFrom) {
       profile.line && el('p', { class: 'lead', text: profile.line }),
       el('div', { class: 'qrs' },
         await qrBlock('깃허브', gh, gh.replace('https://', '')),
-        await qrBlock('디스코드', dc))),
+        await qrBlock('디스코드', dc),
+        await qrBlock('명함 교환', exchange, '남의 카메라로 읽기'))),
+    meetingPanel(),
     paperPanel(showFrom),
     el('section', { class: 'panel' },
       el('p', { class: 'note', text: '이 명함은 이 폰에만 남는다. QR은 폰에서 만들어서 인터넷이 없어도 보인다.' }),

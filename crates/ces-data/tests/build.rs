@@ -96,9 +96,9 @@ fn 받아서_줄인다() {
     assert_eq!(
         x["ex"],
         json!([
-            ["ID01", "Alpha Robotics", "", 1, "0", 1, 1, ["14731@LVCC_N"]],
-            ["ID02", "Samsung Electronics, Inc.", "", 0, "", 0, 0, ["CP120@LVCC_CP", "Mystery Room@HALL_QX"]],
-            ["ID03", "Zeta Home", "", 0, "0.1", 0, 0, ["52011A@VEN_AD", "Wynn Encore Latour 2@WYNN"]]
+            ["ID01", "Alpha Robotics", "", 1, "0", 1, 1, ["14731@LVCC_N"], "", ""],
+            ["ID02", "Samsung Electronics, Inc.", "", 0, "", 0, 0, ["CP120@LVCC_CP", "Mystery Room@HALL_QX"], "", ""],
+            ["ID03", "Zeta Home", "", 0, "0.1", 0, 0, ["52011A@VEN_AD", "Wynn Encore Latour 2@WYNN"], "", ""]
         ])
     );
     let m = &out.meta;

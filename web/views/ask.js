@@ -3,12 +3,18 @@
 // 직접 적은 글을 옮기는 일과 상대의 답을 받아 적는 일은 폰이 할 수 있을 때만 된다 (안 되면 안 된다고 보인다).
 
 import { el, out } from '../dom.js';
-import { getPhrases, getSettings } from '../data.js';
+import { getExhibitors, getPhrases, getSeparate, getSessions, getSettings } from '../data.js';
 import { capabilities, dictate, speak, translate, translateLink } from '../speech.js';
 import { capRows, capText, currentMode, modePicker, showBig } from '../talk-ui.js';
 
 export async function render({ rest, go }) {
-  const [phrases, settings] = await Promise.all([getPhrases(), getSettings()]);
+  const [phrases, settings, exhibitors, separate, sessions] = await Promise.all([
+    getPhrases(),
+    getSettings(),
+    getExhibitors().catch(() => null),
+    getSeparate().catch(() => null),
+    getSessions().catch(() => null),
+  ]);
   const mode = currentMode(settings);
   const caps = await capabilities(mode);
   const back = rest[0] ? `#/listen/${rest[0]}` : null;
@@ -78,11 +84,35 @@ export async function render({ rest, go }) {
       link, status, result);
   }
 
+  const searchBox = el('input', { type: 'search', placeholder: '회사 · 세션 · 이동 · 따로 신청 찾기', 'aria-label': '앱 자료 찾기' });
+  const searchList = el('ul', { class: 'stack' });
+  searchBox.addEventListener('input', () => {
+    const q = searchBox.value.trim().toLowerCase();
+    if (!q) { searchList.replaceChildren(); return; }
+    const rows = [];
+    for (const row of exhibitors?.ex || []) {
+      if (`${row[1]} ${row[2]}`.toLowerCase().includes(q)) rows.push(el('li', {}, el('a', { href: `#/find?q=${encodeURIComponent(q)}`, text: `회사 · ${row[1]}` })));
+    }
+    for (const it of sessions?.items || []) {
+      if (`${it.name} ${it.where || ''}`.toLowerCase().includes(q)) rows.push(el('li', {}, el('a', { href: '#/sessions', text: `세션 · ${it.name}` })));
+    }
+    for (const it of separate?.items || []) {
+      if (`${it.org} ${it.what} ${it.where || ''}`.toLowerCase().includes(q)) rows.push(el('li', {}, el('a', { href: '#/apply', text: `따로 신청 · ${it.org} ${it.what}` })));
+    }
+    rows.push(el('li', {}, el('a', { href: '#/transport', text: '이동 · 셔틀과 타는 곳' })));
+    searchList.replaceChildren(...rows.slice(0, 20));
+  });
+
   return el('div', { class: 'page' },
     el('section', { class: 'panel' },
       el('h1', { text: '물어볼 말' }),
       el('p', { class: 'lead', text: '한국어 질문을 고르면 영어가 보인다. 크게 띄워 보여 주거나 읽어 준다. 묶음의 질문은 인터넷 없이도 된다.' }),
       back ? el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: back, text: '듣기로 돌아가기' })) : null),
+    el('section', { class: 'panel' },
+      el('h2', { text: '앱 안 자료 찾기' }),
+      el('label', { class: 'field' }, el('span', { class: 'label', text: '회사 · 세션 · 이동 · 따로 신청' }), searchBox),
+      el('p', { class: 'note', text: '이 찾기는 서버로 보내지 않고 폰이 받은 자료 안에서만 찾는다.' }),
+      searchList),
     el('section', { class: 'panel notice' },
       el('h2', { text: '녹음하기 전에 알리는 말' }),
       el('div', { class: 'name', text: phrases.notice.ko }),

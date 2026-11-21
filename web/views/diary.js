@@ -4,7 +4,7 @@
 
 import { el } from '../dom.js';
 import { getExhibitors, getSettings } from '../data.js';
-import { getDiary, getInterests, getProfile, setDiary, TAGS, tagKo } from '../store.js';
+import { getDiary, getInterests, getMeetings, getProfile, setDiary, TAGS, tagKo } from '../store.js';
 import { asText, bundle, collectorUrl, fileName } from '../diary.js';
 
 const today = () => { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
@@ -54,6 +54,9 @@ function form(entry, preset, companies, done) {
   saw.value = e.saw || '';
   const felt = el('textarea', { name: 'felt', rows: 3, maxlength: 600, placeholder: '무엇이 달라질 것 같나 · 해 볼 것 하나' });
   felt.value = e.felt || '';
+  const meetingPick = el('select', { name: 'meeting', 'aria-label': '만난 사람' },
+    el('option', { value: '', text: '만난 사람을 고르지 않음' }),
+    getMeetings().map((p) => el('option', { value: p.nick, selected: e.meet === p.nick, text: p.nick })));
   const tags = el('div', { class: 'choices', role: 'group', 'aria-label': '누구에게' },
     TAGS.map((t) => el('label', { class: 'choice' }, el('input', { type: 'checkbox', name: 'for', value: t.k, checked: e.for?.includes(t.k) }), el('span', { text: t.ko }))));
   const error = el('p', { class: 'error', role: 'alert', hidden: true });
@@ -68,6 +71,7 @@ function form(entry, preset, companies, done) {
     entry ? el('div', { class: 'entry' }, heardBox(entry), entry.audio ? el('p', { class: 'note', text: '녹음은 일기 목록에서 듣는다.' }) : null) : null,
     field('느낀 점', felt),
     el('div', { class: 'field' }, el('span', { class: 'label', text: '누구에게 (여럿 골라도 된다)' }), tags),
+    el('div', { class: 'field' }, el('span', { class: 'label', text: '만난 사람' }), meetingPick),
     error,
     el('div', { class: 'dock' },
       el('button', { class: 'btn', type: 'submit', text: '폰에 남기기' }),
@@ -91,6 +95,7 @@ function form(entry, preset, companies, done) {
       saw: saw.value.trim(),
       felt: felt.value.trim(),
       for: [...node.querySelectorAll('input[name=for]:checked')].map((i) => i.value),
+      ...(meetingPick.value ? { meet: meetingPick.value } : {}),
       // 고친 일기는 다시 보내야 하므로 보낸 표시를 지운다.
       sent: null,
       // 들은 글과 녹음 표시는 그대로 둔다. 사람이 남겼으니 초안 표시는 뗀다.

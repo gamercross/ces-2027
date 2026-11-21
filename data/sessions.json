@@ -1,0 +1,27 @@
+{
+  "read": "2026-11-21",
+  "source": {
+    "ko": "CES 공식 앱",
+    "url": "https://www.ces.tech/app"
+  },
+  "items": [
+    {
+      "id": "waymo-keynote",
+      "date": "2027-01-05",
+      "from": "18:30",
+      "to": "19:45",
+      "name": "Waymo 기조연설",
+      "speaker": "",
+      "place": "VEN",
+      "where": "베네시안 Palazzo Ballroom",
+      "live": null,
+      "ondemand": null,
+      "status": "confirmed",
+      "source": {
+        "ko": "CES 공식 일정표",
+        "url": "https://www.ces.tech/app",
+        "read": "2026-11-21"
+      }
+    }
+  ]
+}

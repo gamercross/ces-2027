@@ -7,9 +7,12 @@ use serde_json::{json, Value};
 use std::collections::{BTreeMap, HashMap};
 
 /// 공식 전시사 상세 주소. `{id}`에 전시사 id를 넣는다.
-pub const DETAIL_LINK: &str = "https://exhibitors.ces.tech/8_0/exhibitor/exhibitor-details.cfm?exhid={id}";
+pub const DETAIL_LINK: &str =
+    "https://exhibitors.ces.tech/8_0/exhibitor/exhibitor-details.cfm?exhid={id}";
 /// `ex` 한 줄의 칸 차례.
-pub const FIELDS: [&str; 8] = ["id", "name", "intro", "country", "cats", "award", "featured", "booths"];
+pub const FIELDS: [&str; 10] = [
+    "id", "name", "intro", "country", "cats", "award", "featured", "booths", "logo", "photo",
+];
 const INTRO_MAX: usize = 200;
 
 /// 회사 소개를 어떻게 실을지. 아직 정하지 않은 칸이라 설정으로 바꾼다.
@@ -26,7 +29,9 @@ impl Intro {
         match s {
             "link-only" => Ok(Intro::LinkOnly),
             "first-sentence" => Ok(Intro::FirstSentence),
-            other => Err(format!("companyIntro는 link-only 또는 first-sentence다 (지금: {other})")),
+            other => Err(format!(
+                "companyIntro는 link-only 또는 first-sentence다 (지금: {other})"
+            )),
         }
     }
 
@@ -52,8 +57,18 @@ pub struct Tables {
 impl Tables {
     /// `data/categories.json`과 `data/aliases.json`에서 읽는다.
     pub fn from_json(categories: &Value, aliases: &Value) -> Tables {
-        let pairs = |v: &Value| -> Vec<(String, String)> { v.as_object().into_iter().flatten().filter_map(|(k, v)| Some((k.clone(), v.as_str()?.to_string()))).collect() };
-        Tables { cat_ko: pairs(&categories["ko"]).into_iter().collect(), alias_words: pairs(&aliases["words"]), alias_names: pairs(&aliases["names"]) }
+        let pairs = |v: &Value| -> Vec<(String, String)> {
+            v.as_object()
+                .into_iter()
+                .flatten()
+                .filter_map(|(k, v)| Some((k.clone(), v.as_str()?.to_string())))
+                .collect()
+        };
+        Tables {
+            cat_ko: pairs(&categories["ko"]).into_iter().collect(),
+            alias_words: pairs(&aliases["words"]),
+            alias_names: pairs(&aliases["names"]),
+        }
     }
 }
 
@@ -101,10 +116,17 @@ pub fn first_sentence(desc: &str, max: usize) -> String {
 
 /// 혁신상 표시를 읽는다: 1 = 혁신상, 2 = 최고 혁신상 (둘 다면 3).
 fn award_of(fields: &Value) -> u8 {
-    let Some(raw) = fields.get("exhicons_l").and_then(Value::as_str) else { return 0 };
+    let Some(raw) = fields.get("exhicons_l").and_then(Value::as_str) else {
+        return 0;
+    };
     let t = raw.trim();
-    let t = t.strip_prefix('"').and_then(|s| s.strip_suffix('"')).unwrap_or(t);
-    let Ok(Value::Array(icons)) = serde_json::from_str::<Value>(t) else { return 0 };
+    let t = t
+        .strip_prefix('"')
+        .and_then(|s| s.strip_suffix('"'))
+        .unwrap_or(t);
+    let Ok(Value::Array(icons)) = serde_json::from_str::<Value>(t) else {
+        return 0;
+    };
     let mut award = 0;
     for icon in &icons {
         match icon.get("columnname").and_then(Value::as_str) {
@@ -125,6 +147,23 @@ fn truthy(v: Option<&Value>) -> bool {
     }
 }
 
+fn media_url(f: &Value, keys: &[&str]) -> String {
+    for key in keys {
+        if let Some(s) = f.get(*key).and_then(Value::as_str).map(clean) {
+            if s.starts_with("https://") {
+                return s;
+            }
+            if s.starts_with("http://") {
+                return String::new();
+            }
+            if s.starts_with('/') {
+                return format!("https://exhibitors.ces.tech{s}");
+            }
+        }
+    }
+    String::new()
+}
+
 struct Row {
     id: String,
     name: String,
@@ -135,10 +174,18 @@ struct Row {
     featured: u8,
     /// (부스 글, 장소 기호)
     booths: Vec<(String, String)>,
+    logo: String,
+    photo: String,
 }
 
 /// 줄이고 색인을 만든다. `fetched_at`은 받은 시각(ISO)이다.
-pub fn build(raw: &Raw, places: &Places, intro: Intro, tables: &Tables, fetched_at: &str) -> Output {
+pub fn build(
+    raw: &Raw,
+    places: &Places,
+    intro: Intro,
+    tables: &Tables,
+    fetched_at: &str,
+) -> Output {
     let mut warnings = Vec::new();
 
     let mut ex_cats: HashMap<&str, Vec<usize>> = HashMap::new();
@@ -160,12 +207,19 @@ pub fn build(raw: &Raw, places: &Places, intro: Intro, tables: &Tables, fetched_
 
     let mut rows: Vec<Row> = Vec::with_capacity(raw.exhibitors.len());
     for f in &raw.exhibitors {
-        let Some(id) = f.get("exhid_l").and_then(text_of) else { continue };
+        let Some(id) = f.get("exhid_l").and_then(text_of) else {
+            continue;
+        };
         let name = clean(f.get("exhname_t").and_then(Value::as_str).unwrap_or(""));
         if name.is_empty() {
             continue;
         }
-        let halls: Vec<&str> = f["hallid_la"].as_array().into_iter().flatten().map(|h| h.as_str().unwrap_or("")).collect();
+        let halls: Vec<&str> = f["hallid_la"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|h| h.as_str().unwrap_or(""))
+            .collect();
         let booths = f["booths_la"]
             .as_array()
             .into_iter()
@@ -174,7 +228,9 @@ pub fn build(raw: &Raw, places: &Places, intro: Intro, tables: &Tables, fetched_
             .enumerate()
             .map(|(i, b)| {
                 let code = clean(&b.replace("randomstring", ""));
-                let place = places.rules.place_of(&code, halls.get(i).copied().unwrap_or(""));
+                let place = places
+                    .rules
+                    .place_of(&code, halls.get(i).copied().unwrap_or(""));
                 (code, place)
             })
             .collect();
@@ -184,7 +240,10 @@ pub fn build(raw: &Raw, places: &Places, intro: Intro, tables: &Tables, fetched_
         rows.push(Row {
             intro: match intro {
                 Intro::LinkOnly => String::new(),
-                Intro::FirstSentence => first_sentence(f.get("exhdesc_t").and_then(Value::as_str).unwrap_or(""), INTRO_MAX),
+                Intro::FirstSentence => first_sentence(
+                    f.get("exhdesc_t").and_then(Value::as_str).unwrap_or(""),
+                    INTRO_MAX,
+                ),
             },
             country: ex_country.get(id.as_str()).map_or(-1, |&i| i as i64),
             cats,
@@ -193,14 +252,36 @@ pub fn build(raw: &Raw, places: &Places, intro: Intro, tables: &Tables, fetched_
             booths,
             id,
             name,
+            logo: media_url(f, &["exhlogourl_t", "exhlogo_t", "exhlogo_s"]),
+            photo: media_url(f, &["exhphotourl_t", "exhphoto_t", "exhimage_t"]),
         });
     }
-    rows.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()).then_with(|| a.name.cmp(&b.name)).then_with(|| a.id.cmp(&b.id)));
+    rows.sort_by(|a, b| {
+        a.name
+            .to_lowercase()
+            .cmp(&b.name.to_lowercase())
+            .then_with(|| a.name.cmp(&b.name))
+            .then_with(|| a.id.cmp(&b.id))
+    });
 
-    let cats_ko: Vec<&str> = raw.cats.iter().map(|c| tables.cat_ko.get(c).map_or("", String::as_str)).collect();
-    let no_ko: Vec<&str> = raw.cats.iter().zip(&cats_ko).filter(|(_, ko)| ko.is_empty()).map(|(c, _)| c.as_str()).collect();
+    let cats_ko: Vec<&str> = raw
+        .cats
+        .iter()
+        .map(|c| tables.cat_ko.get(c).map_or("", String::as_str))
+        .collect();
+    let no_ko: Vec<&str> = raw
+        .cats
+        .iter()
+        .zip(&cats_ko)
+        .filter(|(_, ko)| ko.is_empty())
+        .map(|(c, _)| c.as_str())
+        .collect();
     if !no_ko.is_empty() {
-        warnings.push(format!("한글 이름이 없는 분야 {}개 (data/categories.json에 더한다): {}", no_ko.len(), no_ko.join(" · ")));
+        warnings.push(format!(
+            "한글 이름이 없는 분야 {}개 (data/categories.json에 더한다): {}",
+            no_ko.len(),
+            no_ko.join(" · ")
+        ));
     }
 
     // 찾기 색인
@@ -241,9 +322,22 @@ pub fn build(raw: &Raw, places: &Places, intro: Intro, tables: &Tables, fetched_
     let index = index.finish(rows.len() as u32);
 
     let all_booths: Vec<&(String, String)> = rows.iter().flat_map(|r| &r.booths).collect();
-    let unplaced: Vec<String> = all_booths.iter().filter(|b| is_unplaced(&b.1)).map(|b| format!("{}@{}", b.0, b.1)).collect();
+    let unplaced: Vec<String> = all_booths
+        .iter()
+        .filter(|b| is_unplaced(&b.1))
+        .map(|b| format!("{}@{}", b.0, b.1))
+        .collect();
     if !unplaced.is_empty() {
-        warnings.push(format!("장소를 못 정한 부스 {}개 (data/places.json의 boothRules를 고친다): {}", unplaced.len(), unplaced.iter().take(20).cloned().collect::<Vec<_>>().join(" · ")));
+        warnings.push(format!(
+            "장소를 못 정한 부스 {}개 (data/places.json의 boothRules를 고친다): {}",
+            unplaced.len(),
+            unplaced
+                .iter()
+                .take(20)
+                .cloned()
+                .collect::<Vec<_>>()
+                .join(" · ")
+        ));
     }
 
     let version = fetched_at.get(..10).unwrap_or(fetched_at);
@@ -251,9 +345,21 @@ pub fn build(raw: &Raw, places: &Places, intro: Intro, tables: &Tables, fetched_
     let ex: Vec<Value> = rows
         .iter()
         .map(|r| {
-            let cats = r.cats.iter().map(usize::to_string).collect::<Vec<_>>().join(".");
-            let booths: Vec<String> = r.booths.iter().map(|(code, place)| format!("{code}@{place}")).collect();
-            json!([r.id, r.name, r.intro, r.country, cats, r.award, r.featured, booths])
+            let cats = r
+                .cats
+                .iter()
+                .map(usize::to_string)
+                .collect::<Vec<_>>()
+                .join(".");
+            let booths: Vec<String> = r
+                .booths
+                .iter()
+                .map(|(code, place)| format!("{code}@{place}"))
+                .collect();
+            json!([
+                r.id, r.name, r.intro, r.country, cats, r.award, r.featured, booths, r.logo,
+                r.photo
+            ])
         })
         .collect();
     let exhibitors = json!({
@@ -285,7 +391,12 @@ pub fn build(raw: &Raw, places: &Places, intro: Intro, tables: &Tables, fetched_
         "companyIntro": intro.as_str(),
         "places": { "edition": places.json["edition"], "count": place_count, "boothSpotsGuess": guess_count },
     });
-    Output { exhibitors, index, meta, warnings }
+    Output {
+        exhibitors,
+        index,
+        meta,
+        warnings,
+    }
 }
 
 #[cfg(test)]
@@ -297,7 +408,13 @@ mod tests {
         let d = "1NCE offers a software platform for connected products that delivers IoT in +170 countries. The platform enables customers.";
         assert_eq!(first_sentence(d, 200), "1NCE offers a software platform for connected products that delivers IoT in +170 countries.");
         // 앞쪽 줄임말에서는 끊지 않는다.
-        assert_eq!(first_sentence("Acme Inc. builds small robots for homes and schools. More.", 200), "Acme Inc. builds small robots for homes and schools.");
+        assert_eq!(
+            first_sentence(
+                "Acme Inc. builds small robots for homes and schools. More.",
+                200
+            ),
+            "Acme Inc. builds small robots for homes and schools."
+        );
         assert_eq!(first_sentence("  no   end  mark ", 200), "no end mark");
         assert_eq!(first_sentence("", 200), "");
     }
@@ -309,13 +426,17 @@ mod tests {
         assert!(s.chars().count() <= 40, "{s}");
         assert!(s.ends_with('…'));
         assert!(d.starts_with(s.trim_end_matches('…')));
-        assert_eq!(first_sentence("가나다라마바사아자차카타파하", 5), "가나다라…");
+        assert_eq!(
+            first_sentence("가나다라마바사아자차카타파하", 5),
+            "가나다라…"
+        );
     }
 
     #[test]
     fn 혁신상_표시() {
         let honoree = json!({ "exhicons_l": "\"[{\"columnname\":\"innovation\",\"iconfile\":\"a.png\",\"title\":\"Innovation Awards Honoree\"}]\"" });
-        let both = json!({ "exhicons_l": "[{\"columnname\":\"boi\"},{\"columnname\":\"innovation\"}]" });
+        let both =
+            json!({ "exhicons_l": "[{\"columnname\":\"boi\"},{\"columnname\":\"innovation\"}]" });
         assert_eq!(award_of(&honoree), 1);
         assert_eq!(award_of(&both), 3);
         assert_eq!(award_of(&json!({ "exhicons_l": "" })), 0);

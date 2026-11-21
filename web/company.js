@@ -16,7 +16,7 @@ export function whereText(booths, placeKo) {
 }
 
 export function companyRow(row, data, placeKo, onChange) {
-  const [id, name, intro, country, cats, award, , booths] = row;
+  const [id, name, intro, country, cats, award, , booths, logo, photo] = row;
   const button = el('button', { class: 'pick', type: 'button' });
   const paint = () => {
     const on = hasInterest(id);
@@ -27,7 +27,13 @@ export function companyRow(row, data, placeKo, onChange) {
   button.addEventListener('click', () => { toggleInterest(id); paint(); onChange?.(); });
   paint();
   const catKo = cats ? cats.split('.').map((c) => data.catsKo[c] || data.cats[c]).slice(0, 4).join(' · ') : '';
+  const media = photo
+    ? el('img', { src: photo, alt: `${name} 공식 사진`, loading: 'lazy', class: 'company-photo' })
+    : logo
+      ? el('img', { src: logo, alt: `${name} 공식 로고`, loading: 'lazy', class: 'company-logo' })
+      : null;
   return el('li', {},
+    media,
     el('div', { class: 'name' }, name, award ? el('span', { class: 'tag mint', text: award & 2 ? '최고 혁신상' : '혁신상' }) : null),
     el('div', { class: 'where', text: [booths.length ? whereText(booths, placeKo) : '부스 미정', country >= 0 ? data.countries[country] : null].filter(Boolean).join(' / ') }),
     catKo && el('div', { class: 'where', text: catKo }),

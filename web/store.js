@@ -78,3 +78,12 @@ export const setPace = (n) => save('pace.v1', n);
 // 주제 판: [{ id, name, cats: [공식 분야 이름], notes: { stu, job, ret, mid }, ex: [회사 id] }] — 폰에만 남는다.
 export const getTopics = () => load('topics.v1', []);
 export const setTopics = (list) => save('topics.v1', list);
+
+// 만난 사람: 카메라로 읽거나 손으로 넣은 명함 교환 정보. 이름과 공개하기로 한 주소만 넣는다.
+export const getMeetings = () => load('meetings.v1', []);
+export function addMeeting(person) {
+  const list = getMeetings();
+  const key = person.nick || person.github || person.discord || `${Date.now()}`;
+  if (!list.some((p) => (p.nick || p.github || p.discord || '') === key)) list.push(person);
+  return save('meetings.v1', list);
+}

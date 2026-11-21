@@ -31,6 +31,17 @@ export const getPhrases = () => cached('phrases', () => getJson('data/phrases.js
 export const getSeparate = () => cached('separate', () => getJson('data/separate.json'));
 // 팀이 같이 쓰는 주제. 없거나 비어 있으면 각자 만든다.
 export const getTeamTopics = () => cached('teamTopics', () => getJson('data/topics.json').catch(() => ({ topics: [] })));
+// 공식 세션 일정은 누를 때 받는다. 2027 일정이 없으면 빈 목록과 확인 필요를 보인다.
+export const getSessions = () => cached('sessions', () => getJson('data/sessions.json').catch(() => ({
+  read: null,
+  source: { ko: 'CES 공식 앱', url: 'https://www.ces.tech/app' },
+  items: [],
+})));
+export const getTransport = () => cached('transport', () => getJson('data/transport.json').catch(() => ({
+  read: null,
+  source: { ko: 'CES 공식 교통 안내', url: 'https://www.ces.tech/attendee-guides/transportation' },
+  items: [],
+})));
 
 // 찾기: 코어(WASM) + 색인 + 전시사 + 장소 이름.
 export const getFinder = () => cached('finder', async () => {

@@ -112,7 +112,7 @@ jobs:
         run: |
           mkdir -p dist/data
           cp -R web/. dist/
-          cp data/info.json data/categories.json data/places.json data/topics.json data/booth-spots.json data/phrases.json data/separate.json config/settings.json dist/data/
+          cp data/info.json data/categories.json data/places.json data/topics.json data/booth-spots.json data/phrases.json data/separate.json data/sessions.json data/transport.json config/settings.json dist/data/
           cp target/wasm32-unknown-unknown/release/ces_core.wasm dist/core.wasm
           # 보드(/board/)와 테스터 안내(/testers/). 앱이 미리 받지 않는 곳이다.
           mkdir -p dist/board
