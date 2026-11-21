@@ -251,7 +251,10 @@ const settings = await json('data/settings.json');
   const items = phrases.packs.flatMap((p) => p.items);
   check(WANT.every((k) => phrases.packs.some((p) => p.k === k && p.items.length >= 3)) && items.every((it) => it.ko && /^[\x20-\x7e]+$/.test(it.en)) && /record/i.test(phrases.notice.en) && phrases.notice.ko, `질문 묶음: ${phrases.packs.length}묶음 ${items.length}줄이 한국어 · 영어 짝으로 들어 있고(제품 · 가격 · 출시 · 한국 판매 · 채용 · 명함 교환 · 이벤트), 녹음을 알리는 말이 있다`);
   check(settings.speech === 'on-device' && speech.modeOf({}) === 'on-device' && speech.modeOf({ speech: 'x' }) === 'on-device' && speech.modeOf({ speech: 'device-service' }) === 'device-service' && speech.modeOf(settings, 'device-service') === 'device-service' && speech.modeOf(settings, 'nope') === 'on-device' && speech.modeOf({ speech: 'device-service' }, 'on-device') === 'on-device', '받아쓰기 · 번역을 어디서 하나: 두 길을 다 두고 쓰는 사람이 고른다. 고르기 전 기본값은 "폰 안에서만"이다');
-  check(settings.companyImage === true && settings.translationModel === 'off' && model.translation?.enabled === false && model.translation?.candidate?.license === 'CC-BY-4.0' && model.translation?.candidate?.revision === 'aea67600956847d47609f96b364f33a734007d50', '회사 로고는 켬으로 기본한다. 영한 번역 모델은 기본 끔이고 후보 판 · 라이선스 · 받지 않는 상태가 고정돼 있다');
+  {
+    const translationModel = await json('data/speech-model.json');
+    check(settings.companyImage === true && settings.translationModel === 'off' && translationModel.translation?.enabled === false && translationModel.translation?.candidate?.license === 'CC-BY-4.0' && translationModel.translation?.candidate?.revision === 'aea67600956847d47609f96b364f33a734007d50', '회사 로고는 켬으로 기본한다. 영한 번역 모델은 기본 끔이고 후보 판 · 라이선스 · 받지 않는 상태가 고정돼 있다');
+  }
   const talkUi = await readFile(join(dist, 'talk-ui.js'), 'utf8');
   check(speech.allowedMode('device-service', null) === 'on-device' && speech.allowedMode('device-service', '2026-11-21') === 'device-service' && speech.allowedMode('on-device', null) === 'on-device' && /인터넷이 필요하고 소리가 구글 · 애플로 간다/.test(speech.SERVICE_NOTE) && talkUi.includes('speechConsent.v1') && talkUi.includes('SERVICE_NOTE'), '폰의 음성 인식 서비스 길: "인터넷이 필요하고 소리가 구글 · 애플로 간다"를 보이고 한 번 확인받은 뒤에만 쓴다 (확인이 없으면 폰 안에서만)');
   const bare = await speech.capabilities('on-device', { navigator: {} });
