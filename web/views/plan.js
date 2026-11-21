@@ -2,7 +2,7 @@
 
 import { el, out } from '../dom.js';
 import { getExhibitors, getInfo, getMeta, getPlaces } from '../data.js';
-import { getInterests, setInterests } from '../store.js';
+import { getDayLimit, getInterests, setDayLimit, setInterests } from '../store.js';
 import { fillDays, nextStop, placeTable, sortRoute, splitBooth } from '../route.js';
 import { mapsLink } from '../maps.js';
 import { mergeItems, planCode, planCsv, planMd, planText, readCode, shareLink } from '../share.js';
@@ -124,17 +124,30 @@ export async function render() {
       });
       sections.push(el('section', { class: 'panel' },
         el('h2', { text: `${d.ko}${d.hours ? ` · ${d.hours}` : ''} · ${items.length}곳` }),
+        // 내가 정한 하루의 수를 넘으면 알려 준다 (막지는 않는다).
+        d.key && getDayLimit() && items.length > getDayLimit() ? el('p', { class: 'note', text: `내가 정한 하루 ${getDayLimit()}곳보다 ${items.length - getDayLimit()}곳 많다. 날짜를 옮기거나 그대로 둔다.` }) : null,
         el('ol', { class: 'stops' }, kids)));
     }
     holder.replaceChildren(...sections);
   }
 
+  // 하루에 볼 곳은 사람마다 다르다. 여기서 정한 수를 "날짜 채우기"가 지킨다. 폰에만 남는다.
+  const limitSelect = el('select', { 'aria-label': '하루에 볼 곳' },
+    [0, 5, 6, 8, 10, 12, 15, 20].map((n) => el('option', { value: n, selected: n === getDayLimit(), text: n ? `${n}곳까지` : '정하지 않음' })));
+  if (getDayLimit() && ![5, 6, 8, 10, 12, 15, 20].includes(getDayLimit())) limitSelect.prepend(el('option', { value: getDayLimit(), selected: true, text: `${getDayLimit()}곳까지` }));
+  limitSelect.addEventListener('change', () => {
+    setDayLimit(Number(limitSelect.value));
+    status.textContent = Number(limitSelect.value)
+      ? `하루 ${limitSelect.value}곳까지로 정했다. "날짜 채우기"가 날짜 미정인 곳을 이 수에 맞춰 나눈다. 이미 정한 날짜는 옮기지 않는다.`
+      : '하루에 볼 곳을 정하지 않았다. "날짜 채우기"는 캠퍼스로만 나눈다.';
+    draw();
+  });
   const fill = el('button', { class: 'btn', type: 'button', text: '날짜 채우기', onclick: () => {
-    const { items, filled } = fillDays(getInterests(), firstBooth, table);
+    const limit = getDayLimit();
+    const { items, filled, moved, over } = fillDays(getInterests(), firstBooth, table, limit);
     setInterests(items);
-    status.textContent = filled
-      ? `날짜 미정 ${filled}곳을 캠퍼스로 채웠다 (LVCC 첫날, 베네시안 둘째 날, C Space와 그 밖은 셋째 날). 바꿔도 된다.`
-      : '날짜 미정인 곳이 없다. 걷는 차례로 다시 세웠다.';
+    status.textContent = !filled ? '날짜 미정인 곳이 없다. 걷는 차례로 다시 세웠다.'
+      : `날짜 미정 ${filled}곳을 캠퍼스로 채웠다 (LVCC 첫날, 베네시안 둘째 날, C Space와 그 밖은 셋째 날).${limit ? ` 하루 ${limit}곳을 넘는 ${moved}곳은 자리가 있는 다음 날로 넘겼다.${over ? ` ${over}곳은 넘길 날이 없어 그대로 두었다.` : ''}` : ''} 바꿔도 된다.`;
     draw();
   } });
   const sort = el('button', { class: 'btn ghost', type: 'button', text: '걷는 차례로', onclick: () => {
@@ -192,6 +205,7 @@ export async function render() {
     el('section', { class: 'panel' },
       el('h1', { text: '동선' }),
       el('p', { class: 'lead', text: '관심 회사를 날짜와 캠퍼스로 묶고 걷는 차례로 세운다.' }),
+      el('label', { class: 'field' }, el('span', { class: 'label', text: '하루에 볼 곳 (내가 정한다)' }), limitSelect),
       status,
       el('p', { class: 'note', text: '걷는 차례는 부스 번호로 짐작한 것이다 (정식 배치도 전). 이 목록은 이 폰에만 남는다.' })),
     holder,

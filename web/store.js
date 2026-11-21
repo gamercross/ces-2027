@@ -56,6 +56,10 @@ export const setWhere = (where) => save('where.v1', where);
 export const getDiary = () => load('diary.v1', []);
 export const setDiary = (list) => save('diary.v1', list);
 
+// 하루에 볼 곳: 사람마다 정한다. 0이면 정하지 않음. "날짜 채우기"가 이 수를 넘기지 않게 날을 나눈다.
+export const getDayLimit = () => { const n = Number(load('dayLimit.v1', 0)); return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0; };
+export const setDayLimit = (n) => save('dayLimit.v1', n);
+
 // 주제 판: [{ id, name, cats: [공식 분야 이름], notes: { stu, job, ret, mid }, ex: [회사 id] }] — 폰에만 남는다.
 export const getTopics = () => load('topics.v1', []);
 export const setTopics = (list) => save('topics.v1', list);
