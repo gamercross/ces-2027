@@ -223,3 +223,8 @@ h3 { font-size: 16px; }
 details.more > summary { min-height: 44px; display: flex; align-items: center; font-weight: 700; color: var(--accent); cursor: pointer; }
 details.more[open] > summary { margin-bottom: 8px; }
 .tabs a { min-width: 0; }
+
+/* 지도 범례: 부스 점의 색이 무엇인지 */
+.legend { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 13px; color: var(--ink-2); }
+.swatch { display: inline-flex; align-items: center; gap: 6px; }
+.swatch i { width: 14px; height: 14px; border-radius: 999px; border: 1px solid var(--line); flex: none; }

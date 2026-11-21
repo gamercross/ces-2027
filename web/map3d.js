@@ -129,10 +129,10 @@ export function create(L, places, pins, on = {}) {
         const on1 = b.key === chosenBooth;
         ctx.beginPath();
         ctx.arc(b.sx, b.sy, on1 ? 6 : 3.5, 0, Math.PI * 2);
-        ctx.fillStyle = on1 ? '#56679a' : '#9aa9cc';
+        ctx.fillStyle = on.colorOf ? on.colorOf(b.key) : '#9aa9cc';
         ctx.fill();
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = '#f4f1ea';
+        ctx.lineWidth = on1 ? 3 : 1;
+        ctx.strokeStyle = on1 ? '#1f2a44' : '#f4f1ea';
         ctx.stroke();
       }
     }
@@ -221,6 +221,8 @@ export function create(L, places, pins, on = {}) {
     choose: (k) => { if (chosen !== k) { chosen = k; draw(); } },
     // 고른 부스를 짙게 칠한다.
     chooseBooth: (key) => { if (chosenBooth !== key) { chosenBooth = key; draw(); } },
+    // 칠하기를 바꿨을 때 다시 그린다.
+    redraw: () => draw(),
     // 시험할 때 쓴다: 지금 화면에 찍힌 부스 점들.
     boothsOnScreen: () => hitBooths.map((b) => ({ ...b })),
     // 시험할 때 쓴다: 장소 꼭대기 가운데의 화면 자리.
