@@ -14,6 +14,7 @@ ces-data: CES 공식 전시사 검색에서 자료를 받아 줄이고 찾기 �
 쓰는 법:
   ces-data build [고름]         받아서 exhibitors.json · search-index.txt · meta.json · places.json을 쓴다
   ces-data check-places [고름]  장소 자료만 살핀다
+  ces-data sessions [고름]      CES 공식 일정(ces.tech/schedule)에서 기조연설 · 세션을 받아 sessions.json을 쓴다 (--out · --from · --save-raw)
   ces-data sort-diary --in <폴더나 파일> [--in ...] [--out <파일>]
                                 폰에서 내보낸 일기 파일들을 네 태그로 나누고 회사로 묶은 한 장(마크다운)으로 만든다
   ces-data check-links --in <파일> [--in ...]
@@ -150,6 +151,35 @@ fn run_check_places(a: &Args) -> Result<(), String> {
     Ok(())
 }
 
+/// 공식 일정을 받아 `sessions.json`을 쓴다. 못 받으면 파일을 쓰지 않고 실패로 끝난다(짐작해서 채우지 않는다).
+fn run_sessions(a: &Args) -> Result<(), String> {
+    use ces_data::sessions as s;
+    let mut log = |line: &str| println!("{line}");
+    let (fetched, at) = match &a.from {
+        Some(dir) => {
+            println!("받아 둔 폴더에서 읽는다: {}", dir.display());
+            let f = s::fetch_all(&mut s::Dir { dir: dir.clone() }, &mut log)?;
+            let stamp = std::fs::read_to_string(dir.join("fetched-at.txt")).map(|t| t.trim().to_string()).ok();
+            (f, stamp.filter(|t| time::looks_iso(t)).unwrap_or_else(time::now_iso))
+        }
+        None => {
+            println!("공식 일정에서 받는다: {}/schedule", s::ORIGIN);
+            let mut src = s::Http::new(a.save_raw.clone())?;
+            let f = s::fetch_all(&mut src, &mut log)?;
+            let at = time::now_iso();
+            if let Some(dir) = &a.save_raw {
+                write(&dir.join("fetched-at.txt"), &at)?;
+            }
+            println!("물음 {}번", src.calls);
+            (f, at)
+        }
+    };
+    s::write_json(&a.out, &fetched, &at)?;
+    println!("끝: 날짜 {} · 일정 {} · 읽지 못한 카드 {} · 받은 날짜 {}", fetched.days.len(), fetched.items.len(), fetched.skipped, at);
+    println!("쓴 곳: {}", a.out.join("sessions.json").display());
+    Ok(())
+}
+
 /// 자료 파일의 출처 링크를 하나씩 열어 본다.
 fn run_check_links(a: &Args) -> Result<(), String> {
     if a.inputs.is_empty() {
@@ -222,6 +252,7 @@ fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let result = match args.first().map(String::as_str) {
         Some("build") => parse_args(&args[1..]).and_then(|a| run_build(&a)),
+        Some("sessions") => parse_args(&args[1..]).and_then(|a| run_sessions(&a)),
         Some("check-places") => parse_args(&args[1..]).and_then(|a| run_check_places(&a)),
         Some("sort-diary") => parse_args(&args[1..]).and_then(|a| run_sort_diary(&a)),
         Some("check-links") => parse_args(&args[1..]).and_then(|a| run_check_links(&a)),
