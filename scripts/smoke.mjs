@@ -203,6 +203,16 @@ const manifest = await json('manifest.webmanifest');
 let iconsOk = manifest.display === 'standalone' && manifest.icons.length >= 2;
 for (const icon of manifest.icons) iconsOk = iconsOk && (await exists(icon.src));
 check(iconsOk, '홈 화면에 추가: 매니페스트와 아이콘이 있다');
+// 하루에 볼 만큼만: 사람마다 정한 수를 넘으면 다음 날로 넘긴다. 내가 정한 날짜는 옮기지 않는다.
+{
+  const all0 = ['b', 'e', 'f', 'd', 'a', 'c', 'g', 'h'].map((id) => ({ id, day: 0 }));
+  const show = (r) => r.items.map((it) => `${it.id}${it.day}`).join(' ');
+  const two = fillDays(all0, firstBooth, walkTable, 2);
+  const kept = fillDays([{ id: 'f', day: 1 }, { id: 'g', day: 1 }, { id: 'a', day: 0 }, { id: 'h', day: 0 }], firstBooth, walkTable, 2);
+  const none = fillDays(all0, firstBooth, walkTable, 0);
+  const roomy = fillDays(all0, firstBooth, walkTable, 10);
+  check(show(two) === 'a1 h1 f2 g2 c3 b3 d3 e4' && two.filled === 8 && two.moved === 5 && two.over === 1 && show(kept) === 'f1 g1 a2 h2' && kept.moved === 2 && show(none) === show(roomy) && none.moved === 0 && roomy.moved === 0, `하루에 볼 만큼만: 하루 2곳이면 ${show(two)} (C Space는 넷째 날로 넘기지 않는다), 정한 날짜는 그대로`);
+}
 const cats = await json('data/categories.json');
 check(cats.groups.length === 7 && ['stu', 'job', 'ret', 'mid'].every((k) => cats.audiences[k].length > 0), `분야 묶음 ${cats.groups.length}개 · 네 태그마다 먼저 보일 분야가 있다${cats.audiencesDraft ? ' (초안)' : ''}`);
 

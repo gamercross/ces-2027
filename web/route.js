@@ -49,18 +49,42 @@ export function sortRoute(items, firstBooth, table) {
     .map((x) => x.it);
 }
 
+// 캠퍼스마다 갈 수 있는 날. C Space는 넷째 날(1/9)에 열지 않는다 (data/info.json의 show.note).
+const DAYS_OPEN = { cs: [1, 2, 3] };
+const ALL_DAYS = [1, 2, 3, 4];
+
 // 날짜 미정인 곳을 캠퍼스로 채운다: LVCC 첫날, 베네시안 둘째 날, C Space와 그 밖은 셋째 날.
-// 채운 수를 돌려준다. 고친 목록은 걷는 차례로 다시 선다.
-export function fillDays(items, firstBooth, table) {
-  let filled = 0;
-  const next = items.map((it) => {
-    if (it.day) return it;
-    const booth = firstBooth(it.id);
-    const campus = booth ? table.get(splitBooth(booth).place)?.campus : null;
-    filled += 1;
-    return { ...it, day: campus === 'lvcc' ? 1 : campus === 'ven' ? 2 : 3 };
-  });
-  return { items: sortRoute(next, firstBooth, table), filled };
+// limit(하루에 볼 곳, 사람마다 정한다. 0이면 없음)를 주면, 하루가 그 수를 넘을 때 걷는 차례의 뒤쪽부터 자리가 있는
+// 다음 날로 넘긴다. 내가 이미 날짜를 정한 곳은 옮기지 않는다. 어느 날에도 자리가 없으면 제 날에 그대로 둔다.
+// { items(걷는 차례로 다시 선 목록), filled(채운 수), moved(다른 날로 넘긴 수), over(자리가 없어 넘친 수) }
+export function fillDays(items, firstBooth, table, limit = 0) {
+  const campusOf = (it) => { const booth = firstBooth(it.id); return booth ? table.get(splitBooth(booth).place)?.campus || null : null; };
+  const baseDay = (campus) => (campus === 'lvcc' ? 1 : campus === 'ven' ? 2 : 3);
+  const fresh = items.filter((it) => !it.day);
+  if (!limit || limit < 1) {
+    const next = items.map((it) => (it.day ? it : { ...it, day: baseDay(campusOf(it)) }));
+    return { items: sortRoute(next, firstBooth, table), filled: fresh.length, moved: 0, over: 0 };
+  }
+  const count = [0, 0, 0, 0, 0];
+  for (const it of items) if (it.day) count[it.day] += 1;
+  // 새로 채울 곳을 제 날 · 걷는 차례로 세워, 앞에서부터 자리를 준다.
+  const queue = fresh
+    .map((it, n) => { const campus = campusOf(it); return { it, n, campus, base: baseDay(campus), key: walkKey(firstBooth(it.id), table) }; })
+    .sort((a, b) => a.base - b.base || compareKeys(a.key, b.key) || a.n - b.n);
+  const dayOf = new Map();
+  let moved = 0, over = 0;
+  for (const q of queue) {
+    const open = DAYS_OPEN[q.campus] || ALL_DAYS;
+    const at = open.indexOf(q.base);
+    const tryOrder = [...open.slice(at), ...open.slice(0, at)];
+    const day = tryOrder.find((d) => count[d] < limit);
+    if (day === undefined) { over += 1; dayOf.set(q.it.id, q.base); count[q.base] += 1; continue; }
+    if (day !== q.base) moved += 1;
+    dayOf.set(q.it.id, day);
+    count[day] += 1;
+  }
+  const next = items.map((it) => (it.day ? it : { ...it, day: dayOf.get(it.id) }));
+  return { items: sortRoute(next, firstBooth, table), filled: fresh.length, moved, over };
 }
 
 // 다음 갈 곳: 날짜 차례(미정은 맨 뒤), 그 안에서는 목록 차례로 보아 아직 보지 않은 첫 곳.
