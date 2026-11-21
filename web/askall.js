@@ -165,6 +165,7 @@ export function sessionEntries(json) {
       out.push(entry('sessions', {
         title, text: [when, place].filter(Boolean).join(' '), show: [when, place].filter(Boolean).join(' · '),
         src, note: src ? '' : '세션 일정 자료',
+        live: !!it.live,
         spot: '세션 일정', to: link, toKo: '세션 일정에서 보기',
       }));
     }

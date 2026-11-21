@@ -5,7 +5,7 @@
 import { el, out } from '../dom.js';
 import { getPhrases, getSettings } from '../data.js';
 import { capabilities, speak, translate, translateLink } from '../speech.js';
-import { capRows, capText, currentMode, modelBox, modePicker, showBig, startDictation } from '../talk-ui.js';
+import { capRows, capText, currentMode, modelBox, modePicker, showBig, startDictation, translationModelPicker } from '../talk-ui.js';
 import { modelStatus } from '../speech-model.js';
 
 export async function render({ rest, go }) {
@@ -99,5 +99,6 @@ export async function render({ rest, go }) {
       el('h2', { text: '이 폰에서 되는 것' }),
       capRows([['읽어 주기', caps.speak], ['글 옮기기', caps.translate], ['받아 적기', caps.dictate]]),
       caps.dictate.engine === 'model' ? modelBox(caps.dictate, () => go(location.hash)) : null,
-      modePicker(mode, () => go(location.hash))));
+      modePicker(mode, () => go(location.hash)),
+      translationModelPicker(settings)));
 }

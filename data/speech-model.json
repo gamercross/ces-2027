@@ -1,5 +1,5 @@
 {
-  "about": "폰 안 받아쓰기 모델과 그것을 돌리는 실행기의 목록이다. 누를 때만 받는다. 실행기 파일은 지을 때 아래 주소에서 받아 sha256과 크기가 맞는지 본 뒤 같은 주소(vendor/speech/) 아래에 놓는다 (scripts/fetch-speech-runtime.mjs). 모델 파일은 폰이 huggingface.co에서 바로 받는다(판을 못 박았다). 영한 번역 모델은 별도 package_check와 라이선스 확인이 끝나지 않아 넣지 않았다.",
+  "about": "폰 안 받아쓰기 모델과 그것을 돌리는 실행기의 목록이다. 누를 때만 받는다. 실행기 파일은 지을 때 아래 주소에서 받아 sha256과 크기가 맞는지 본 뒤 같은 주소(vendor/speech/) 아래에 놓는다 (scripts/fetch-speech-runtime.mjs). 모델 파일은 폰이 huggingface.co에서 바로 받는다(판을 못 박았다). 영한 번역 후보의 판 · CC-BY-4.0 · 작은 ONNX 두 파일과 sha256은 적었지만 package_check와 회귀 시험이 끝나기 전에는 기본 끔으로 받지 않는다.",
   "checked": "2026-11-21",
   "runtime": {
     "dir": "vendor/speech/",
@@ -38,5 +38,23 @@
       { "name": "onnx/decoder_model_merged_quantized.onnx", "bytes": 20243286 }
     ]
   },
-  "translation": null
+  "translation": {
+    "enabled": false,
+    "lang": "en-ko",
+    "kind": "폰 안 영한 번역 모델 후보",
+    "status": "package_check와 회귀 시험이 끝나지 않아 받지 않음",
+    "candidate": {
+      "id": "noticemkjung/opus-mt-tc-big-en-ko-ONNX",
+      "base": "Helsinki-NLP/opus-mt-tc-big-en-ko",
+      "revision": "aea67600956847d47609f96b364f33a734007d50",
+      "license": "CC-BY-4.0",
+      "source": "https://huggingface.co/noticemkjung/opus-mt-tc-big-en-ko-ONNX",
+      "baseSource": "https://huggingface.co/Helsinki-NLP/opus-mt-tc-big-en-ko",
+      "checked": "2026-11-21",
+      "smallest": "encoder_model_q4f16.onnx + decoder_with_past_model_q4f16.onnx",
+      "expectedBytes": 246521277,
+      "sha256": "encoder_model_q4f16.onnx: 47f49baad7127cfd90171a6256da1d90d38ad3ef6ff0eea5d010ab30c2f4f0e4 · decoder_with_past_model_q4f16.onnx: 2eb5c722f60bd083b226c446a753a2a4ec119257edf94e99348438842e6c9b3a",
+      "packageCheck": "없음"
+    }
+  }
 }

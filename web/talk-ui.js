@@ -35,6 +35,23 @@ export function modePicker(mode, onChange) {
   return box;
 }
 
+// 영한 번역 모델 후보는 기본으로 끈다. 라이선스와 크기는 고정했지만 package_check와
+// 브라우저 회귀 시험이 끝나기 전에는 받기 단추를 켜지 않는다.
+export function translationModelPicker(settings) {
+  const box = el('div', { class: 'block' });
+  const enabled = settings?.translationModel === 'on';
+  box.replaceChildren(
+    el('div', { class: 'label', text: '폰 안 영한 번역 모델' }),
+    el('div', { class: 'segs', role: 'group', 'aria-label': '폰 안 영한 번역 모델' },
+      el('button', { class: 'seg', type: 'button', text: '끄기', 'aria-pressed': !enabled ? 'true' : 'false', onclick: () => { save('translationModel.v1', 'off'); draw(); } }),
+      el('button', { class: 'seg', type: 'button', text: '받기 후보 · 아직 못 받음', disabled: true, 'aria-pressed': enabled ? 'true' : 'false' })),
+    el('p', { class: 'note', text: '기본 끔. 후보는 Helsinki-NLP/opus-mt-tc-big-en-ko의 ONNX 변환본(CC-BY-4.0), 약 235 MiB이다. package_check와 회귀 시험이 끝나지 않아 아직 받지 않는다.' }));
+  function draw() {
+    box.querySelectorAll('button')[0].setAttribute('aria-pressed', load('translationModel.v1', 'off') === 'off' ? 'true' : 'false');
+  }
+  return box;
+}
+
 // 받아쓰기를 시작한다: 폰이 가진 것으로, 아니면 받아 둔 폰 안 모델로. 돌려주는 것: { stop() } 또는 null.
 export async function startDictation(mode, cap, handlers, stream) {
   if (cap.engine === 'model') {

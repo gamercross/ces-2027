@@ -6,7 +6,8 @@
     { "k": "apply", "ko": "따로 신청 · 문의하는 것", "note": "배지 말고 따로 표나 신청이 있어야 한다." },
     { "k": "badge", "ko": "배지만 있으면 되는 것", "note": "따로 신청은 없다. 자리는 먼저 온 차례다." },
     { "k": "press", "ko": "보도 배지만 들어가는 것", "note": "우리는 들어가지 못한다. 생중계가 있으면 그것으로 본다." },
-    { "k": "ride", "ko": "이동: 자율주행", "note": "가기 전에 앱을 받아 둔다. 무료라고 확인된 것만 무료라고 적는다." }
+    { "k": "ride", "ko": "이동: 자율주행", "note": "가기 전에 앱을 받아 둔다. 무료라고 확인된 것만 무료라고 적는다." },
+    { "k": "reference", "ko": "참고(언론)", "note": "기사만 근거한 정보다. CES 공식 확인 전에는 공식 행사 안내로 쓰지 않는다." }
   ],
   "items": [
     {
@@ -215,13 +216,58 @@
       "sources": [ { "ko": "Zoox · 라스베이거스", "url": "https://zoox.com/las-vegas", "read": "2026-11-21" } ]
     },
     {
-      "id": "ride-loop", "group": "ride", "org": "베가스 루프", "what": "지하 터널 탈것 (자율주행 아님으로 본다)",
+      "id": "ride-loop", "group": "ride", "org": "베가스 루프", "what": "지하 터널 탈것 (운전 방식은 공식 안내 없음)",
       "where": "LVCC 캠퍼스의 역 다섯 곳과 캠퍼스 밖 역들", "place": "", "date": null, "from": null, "to": null,
       "apply": { "url": "https://www.vegasmeansbusiness.com/planning-tools/transportation/vegas-loop/", "ko": "LVCVA 베가스 루프 안내" }, "deadline": null, "watchFrom": null,
       "who": "누구나.",
       "status": "confirmed", "last": null,
-      "todo": "공식 안내는 테슬라 차가 다니는 지하 교통이라고만 적고, 자율주행이라는 말은 없다. LVCC 캠퍼스 안은 무료, 캠퍼스 밖은 표가 있어야 한다.",
+      "todo": "공식 안내는 테슬라 차가 다니는 지하 교통이라고만 적고 운전 방식은 설명하지 않는다. LVCC 캠퍼스 안은 무료, 캠퍼스 밖은 표가 있어야 한다.",
       "sources": [ { "ko": "LVCVA · 베가스 루프", "url": "https://www.vegasmeansbusiness.com/planning-tools/transportation/vegas-loop/", "read": "2026-11-21" } ]
+    },
+    {
+      "id": "ref-sony", "group": "reference", "org": "소니", "what": "2027 CES 불참 보도", "where": "", "place": "", "date": null, "from": null, "to": null,
+      "apply": { "url": null, "ko": "공식 행사 확인 전이다" }, "deadline": null, "watchFrom": null, "who": "참고로만 본다.", "status": "check", "last": null,
+      "todo": "기사만 근거한다. 소니의 공식 불참 발표는 확인하지 못했다.",
+      "sources": [ { "ko": "VGC(언론)", "url": "https://videogameschronicle.com/news/sony-is-officially-skipping-ces-for-the-first-time-in-decades", "read": "2026-11-21", "official": false, "linkCheck": "403-봇-차단" } ]
+    },
+    {
+      "id": "ref-panasonic", "group": "reference", "org": "파나소닉", "what": "2027 자사 이름으로 불참 보도", "where": "", "place": "", "date": null, "from": null, "to": null,
+      "apply": { "url": null, "ko": "공식 행사 확인 전이다" }, "deadline": null, "watchFrom": null, "who": "참고로만 본다.", "status": "check", "last": null,
+      "todo": "교도통신 보도만 근거한다. 파나소닉 공식 불참 발표는 확인하지 못했다.",
+      "sources": [ { "ko": "구마니치(교도통신, 언론)", "url": "https://kumanichi.com/articles/2036198", "read": "2026-11-21", "official": false } ]
+    },
+    {
+      "id": "ref-mobis", "group": "reference", "org": "현대모비스", "what": "2027 고객사 전용 부스 보도", "where": "LVCC 웨스트홀 별도 미팅룸(2026 참고)", "place": "", "date": null, "from": null, "to": null,
+      "apply": { "url": null, "ko": "공식 초청 확인 전이다" }, "deadline": null, "watchFrom": null, "who": "사전에 초청받은 고객사만 보인다.", "status": "check", "last": null,
+      "todo": "2027 고객용 부스 방식은 공식 확인 전이다.",
+      "sources": [ { "ko": "CEO스코어데일리(언론)", "url": "https://ceoscoredaily.com/page/view/2025120915142397575", "read": "2026-11-21", "official": false } ]
+    },
+    {
+      "id": "ref-skhynix", "group": "reference", "org": "SK하이닉스", "what": "2027 고객용 전시관 보도", "where": "베네시안 엑스포(2026 참고)", "place": "", "date": null, "from": null, "to": null,
+      "apply": { "url": null, "ko": "공식 초청 확인 전이다" }, "deadline": null, "watchFrom": null, "who": "핵심 고객 상담용으로 보인다.", "status": "check", "last": null,
+      "todo": "2027 참가와 고객 초대 방식은 공식 확인 전이다.",
+      "sources": [
+        { "ko": "코리아타임스(언론, 2026-01-06)", "url": "https://www.koreatimes.co.kr/business/tech-science/20260106/ces-2026-sk-hynix-unveils-16-high-48gb-hbm4", "read": "2026-11-21", "official": false },
+        { "ko": "코리아타임스(언론, 2026-10-14)", "url": "https://www.koreatimes.co.kr/business/20261014/ces-organizer-highlights-korean-firms-ai-innovation-ahead-of-2027-show", "read": "2026-11-21", "official": false }
+      ]
+    },
+    {
+      "id": "ref-lotte", "group": "reference", "org": "롯데", "what": "2026 부스 없음 · 2027 소식 없음 보도", "where": "", "place": "", "date": null, "from": null, "to": null,
+      "apply": { "url": null, "ko": "참가 여부를 공식 확인하지 못했다" }, "deadline": null, "watchFrom": null, "who": "참고로만 본다.", "status": "check", "last": null,
+      "todo": "2027 계획은 기사 근거만 있고 공식 확인은 없다.",
+      "sources": [ { "ko": "다음 뉴스 · 뉴시스(언론)", "url": "https://v.daum.net/v/20251224094549263", "read": "2026-11-21", "official": false } ]
+    },
+    {
+      "id": "ref-hdhyundai", "group": "reference", "org": "HD현대", "what": "2026 부스 없음 · 2027 참가 명단 빠짐 보도", "where": "", "place": "", "date": null, "from": null, "to": null,
+      "apply": { "url": null, "ko": "참가 여부를 공식 확인하지 못했다" }, "deadline": null, "watchFrom": null, "who": "참고로만 본다.", "status": "check", "last": null,
+      "todo": "근거가 약하고 2027 공식 불참 발표는 확인하지 못했다.",
+      "sources": [ { "ko": "코리아타임스(언론)", "url": "https://www.koreatimes.co.kr/business/20261014/ces-organizer-highlights-korean-firms-ai-innovation-ahead-of-2027-show", "read": "2026-11-21", "official": false } ]
+    },
+    {
+      "id": "ref-zoox-price", "group": "reference", "org": "Zoox", "what": "라스베이거스 유료 운행 보도와 요금", "where": "라스베이거스 스트립 · 다운타운", "place": "", "date": null, "from": null, "to": null,
+      "apply": { "url": "https://lasvegassun.com/news/2026/aug/06/free-rides-no-more-zoox-robotaxi-service-to-begin/", "ko": "라스베이거스 선 보도" }, "deadline": null, "watchFrom": null, "who": "앱을 쓰는 사람.", "status": "check", "last": null,
+      "todo": "언론 보도만 근거한다. Zoox 공식 요금과 승하차 지점은 확인 전이다.",
+      "sources": [ { "ko": "라스베이거스 선(언론)", "url": "https://lasvegassun.com/news/2026/aug/06/free-rides-no-more-zoox-robotaxi-service-to-begin/", "read": "2026-11-21", "official": false } ]
     }
   ]
 }
