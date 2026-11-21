@@ -25,6 +25,7 @@ export const getExhibitors = () => cached('exhibitors', () => getJson('data/exhi
 export const getCategories = () => cached('categories', () => getJson('data/categories.json'));
 // 정식 배치도에서 옮긴 부스 자리. 없거나 비어 있으면 모든 자리가 짐작이다.
 export const getOfficialSpots = () => cached('officialSpots', () => getJson('data/booth-spots.json').catch(() => ({ places: {} })));
+export const getIndoorPaths = () => cached('indoorPaths', () => getJson('data/indoor-paths-guess.json'));
 // 부스에서 쓸 질문 묶음 (미리 번역해 둔 것). 물어볼 말 · 듣기 화면에서만 읽는다.
 export const getPhrases = () => cached('phrases', () => getJson('data/phrases.json'));
 // CES 배지와 따로 신청하는 곳 · 자율주행 이동 (공식 출처만). 첫 화면을 그린 뒤에 읽는다.

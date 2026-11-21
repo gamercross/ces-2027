@@ -45,7 +45,9 @@ export async function capabilities(mode, env, model) {
   else {
     let state = 'unavailable';
     try { state = await T.availability({ sourceLanguage: 'en', targetLanguage: 'ko' }); } catch { /* 물을 수 없으면 안 되는 것으로 본다 */ }
-    out.translate = state === 'unavailable' ? { ok: false, why: '폰 안에서 하는 번역이 이 폰에는 없다' } : { ok: true, why: state === 'available' ? '폰 안에서 번역한다' : '폰 안에서 번역한다. 처음 쓸 때 번역 꾸러미를 받는다' };
+    out.translate = state === 'available'
+      ? { ok: true, why: '이미 준비된 폰 안 번역기를 쓴다' }
+      : { ok: false, why: state === 'downloadable' || state === 'downloading' ? '폰 안 번역 꾸러미가 아직 준비되지 않았다. 받는 크기를 확인할 수 없어 자동으로 받지 않는다' : '폰 안에서 하는 번역이 이 폰에는 없다' };
   }
   return out;
 }
@@ -58,6 +60,7 @@ export async function translate(text, from, to, env) {
   if (!t || !g.Translator || typeof g.Translator.create !== 'function') return null;
   const key = `${from}>${to}`;
   try {
+    if (typeof g.Translator.availability !== 'function' || (await g.Translator.availability({ sourceLanguage: from, targetLanguage: to })) !== 'available') return null;
     if (!translators.has(key)) translators.set(key, await g.Translator.create({ sourceLanguage: from, targetLanguage: to }));
     return await translators.get(key).translate(t);
   } catch {

@@ -1,5 +1,5 @@
 {
-  "about": "폰 안 받아쓰기 모델과 그것을 돌리는 실행기의 목록이다. 누를 때만 받는다. 실행기 파일은 지을 때 아래 주소에서 받아 sha256과 크기가 맞는지 본 뒤 같은 주소(vendor/speech/) 아래에 놓는다 (scripts/fetch-speech-runtime.mjs). 모델 파일은 폰이 huggingface.co에서 바로 받는다(판을 못 박았다). 영한 번역 모델은 넣지 않았다: 가장 작은 것도 235MB가 넘고 개인이 변환한 것뿐이다.",
+  "about": "폰 안 받아쓰기 모델과 그것을 돌리는 실행기의 목록이다. 누를 때만 받는다. 실행기 파일은 지을 때 아래 주소에서 받아 sha256과 크기가 맞는지 본 뒤 같은 주소(vendor/speech/) 아래에 놓는다 (scripts/fetch-speech-runtime.mjs). 모델 파일은 폰이 huggingface.co에서 바로 받는다(판을 못 박았다). 영한 번역 모델은 별도 package_check와 라이선스 확인이 끝나지 않아 넣지 않았다.",
   "checked": "2026-11-21",
   "runtime": {
     "dir": "vendor/speech/",
@@ -24,8 +24,9 @@
     "dtype": "q8",
     "lang": "en",
     "license": "MIT",
-    "by": "Useful Sensors (모델) · onnx-community (ONNX 변환)",
+    "by": "Moonshine AI (Useful Sensors, Inc., 모델) · onnx-community (ONNX 변환)",
     "source": "https://huggingface.co/onnx-community/moonshine-tiny-ONNX",
+    "licenseSource": "https://github.com/moonshine-ai/moonshine/blob/main/LICENSE",
     "host": "https://huggingface.co/",
     "files": [
       { "name": "config.json", "bytes": 921 },

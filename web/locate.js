@@ -10,6 +10,17 @@ export function meters(lat1, lng1, lat2, lng2) {
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
+// 정확도가 낮거나 갑자기 튄 위치는 내 자리를 옮기지 않는다.
+export function fixProblem(previous, next, maxAccuracy = 150, maxSpeed = 3) {
+  if (![next?.lat, next?.lng, next?.accuracy, next?.at].every(Number.isFinite) || next.accuracy > maxAccuracy) return 'accuracy';
+  if (previous) {
+    const elapsed = Math.max(0, (next.at - previous.at) / 1000);
+    const allowed = 35 + elapsed * maxSpeed + next.accuracy + previous.accuracy;
+    if (meters(next.lat, next.lng, previous.lat, previous.lng) > allowed) return 'jump';
+  }
+  return null;
+}
+
 // 가장 가까운 캠퍼스와 거리. inside는 그 캠퍼스 둘레(반지름) 안인지.
 export function nearestCampus(places, lat, lng) {
   let best = null;

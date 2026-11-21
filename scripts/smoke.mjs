@@ -43,6 +43,15 @@ check(info.show.days.length === 4 && info.campuses.length === 3 && info.badge.sp
 const isCes = (s) => s && /^https:\/\/www\.ces\.tech\//.test(s.url) && /^\d{4}-\d\d-\d\d$/.test(s.read);
 check(isCes(info.show.source) && isCes(info.movingSource) && isCes(info.badge.source) && info.campuses.every((c) => isCes(c.source)) && info.recheck.includes('다시 확인'), '알아둘 것: 묶음마다 CES 공식 출처와 확인한 날짜가 있고 "가기 전에 다시 확인" 안내가 있다');
 const settings = await json('data/settings.json');
+{
+  const model = await json('data/speech-model.json');
+  const { totalBytes, toMB } = await import('../web/speech-model.js');
+  const expected = [...model.runtime.files.filter((f) => !f.notice), ...model.dictation.files].reduce((n, f) => n + f.bytes, 0);
+  const ui = await readFile(join(dist, 'talk-ui.js'), 'utf8');
+  check(model.dictation.revision.length === 40 && model.dictation.license === 'MIT' && model.dictation.licenseSource.startsWith('https://github.com/moonshine-ai/moonshine/')
+    && totalBytes(model) === expected && toMB(expected) === 45 && /와이파이에서 받기를 권한다/.test(ui),
+  `폰 안 받아쓰기 모델: 판 · MIT 출처가 고정되고 받기 전에 ${toMB(expected)}MB와 와이파이 권장을 보인다 (${(expected / 1048576).toFixed(1)} MiB)`);
+}
 
 // 따로 신청하는 곳 (깊게 7): 공식 출처만, 줄마다 출처와 확인 날짜, 2027 안내가 없는 줄은 "확인 필요"와 작년 것.
 {
@@ -105,6 +114,12 @@ const settings = await json('data/settings.json');
   Local.available = async (o) => (o.processLocally ? 'available' : 'unavailable');
   const full = await speech.capabilities('on-device', { navigator: { mediaDevices: { getUserMedia() {} } }, MediaRecorder: class {}, speechSynthesis: {}, SpeechSynthesisUtterance: class {}, SpeechRecognition: Local, Translator: { availability: async () => 'available', create: async () => ({ translate: async (t) => `ko:${t}` }) } });
   check(full.dictate.ok && full.dictate.local === true && full.translate.ok && full.record.ok && full.speak.ok, '폰 안에서 다 되는 폰: 네 가지가 모두 됨이고 받아쓰기는 폰 안에서 한다');
+  let translatorCreated = false;
+  const pendingTranslation = { Translator: { availability: async () => 'downloadable', create: async () => { translatorCreated = true; return { translate: async () => '안녕' }; } } };
+  const notReady = await speech.capabilities('on-device', pendingTranslation);
+  const notDownloaded = await speech.translate('hello', 'en', 'ko', pendingTranslation);
+  check(!notReady.translate.ok && !notDownloaded && !translatorCreated && /크기를 확인할 수 없어 자동으로 받지 않는다/.test(notReady.translate.why),
+    '크기를 알 수 없는 브라우저 번역 꾸러미는 확인 없이 받지 않는다');
   let used = null;
   const voices = [{ lang: 'en-US', localService: false }, { lang: 'ko-KR', localService: true }];
   const synth = (list) => ({ speechSynthesis: { getVoices: () => list, cancel() {}, speak(u) { used = u; } }, SpeechSynthesisUtterance: class { constructor(t) { this.text = t; } } });
@@ -136,7 +151,7 @@ check(filled.filled === 8 && filled.items.map((it) => `${it.id}${it.day}`).join(
 const moved = sortRoute(filled.items.map((it) => (it.id === 'a' ? { ...it, day: 0 } : it.id === 'd' ? { ...it, day: 1 } : it)), firstBooth, walkTable);
 check(moved.map((it) => `${it.id}${it.day}`).join(' ') === 'h1 f1 g1 d1 c2 b2 e3 a0', '동선: 날짜를 바꾸면 그 날짜로 가고 미정은 맨 뒤');
 // 내 위치와 구글맵.
-const { nearestCampus, findBooth, nearBooth } = await import('../web/locate.js');
+const { nearestCampus, findBooth, nearBooth, fixProblem } = await import('../web/locate.js');
 const { mapsLink } = await import('../web/maps.js');
 const { nextStop } = await import('../web/route.js');
 const atLvcc = nearestCampus(placesAll, 36.1318, -115.1519);
@@ -147,6 +162,21 @@ const { nearestArea } = await import('../web/locate.js');
 const areaN = nearestArea(placesAll, 36.1324, -115.1523);
 const areaKeys = new Set(placesAll.places.map((p) => p.k));
 check(areaN?.ko === 'LVCC 노스 홀' && nearestArea(placesAll, 36.2, -115.3) === null && placesAll.gpsAreas.every((a) => a.approx === true && a.places.every((k) => areaKeys.has(k))), `GPS로 홀 · 건물 근처를 짐작한다 (어림 자리 ${placesAll.gpsAreas.length}곳, 모두 짐작 표시)`);
+check(fixProblem(null, { lat: 36.1324, lng: -115.1523, accuracy: 80, at: 1000 }) === null
+  && fixProblem(null, { lat: 36.1324, lng: -115.1523, accuracy: 300, at: 1000 }) === 'accuracy'
+  && fixProblem({ lat: 36.1324, lng: -115.1523, accuracy: 10, at: 1000 }, { lat: 36.14, lng: -115.15, accuracy: 10, at: 2000 }) === 'jump',
+'GPS가 튀면 낮은 정확도 · 갑작스러운 점프를 버린다');
+{
+  const paths = await json('data/indoor-paths-guess.json');
+  const { routeThroughAisle } = await import('../web/indoor-path.js');
+  const start = [10, 0], target = [90, 8], aisle = [[0, 0], [100, 0]];
+  const route = routeThroughAisle(start, target, aisle, [0, 0]);
+  check(paths.source === 'https://www.ces.tech/media/1kqatmqa/lvcc-map-ces-2027.pdf' && paths.approx === true
+    && Object.keys(paths.halls).length >= 8 && Object.values(paths.halls).every((h) => h.entrance.length === 2 && h.aisle.length >= 2)
+    && route[0] === start && route.at(-1) === target && route.length >= 4
+    && routeThroughAisle(null, target, aisle, [0, 0])[0].join() === '0,0',
+  `홀 입구 · 큰 통로 짐작 길: 공식 지도 출처 ${paths.read}, 홀 ${Object.keys(paths.halls).length}곳, 자리가 없으면 홀 입구부터 잇는다`);
+}
 const fakeSpots = new Map([['LVCC_N|14731', { x: 1, z: 2 }], ['LVCC_N|14702A', { x: 3, z: 4 }], ['WYNN|Wynn Encore Latour 2', { x: 5, z: 6 }]]);
 check(findBooth(fakeSpots, ' 14731 ')[0]?.place === 'LVCC_N' && findBooth(fakeSpots, 'wynn encore latour 2').length === 1 && findBooth(fakeSpots, '99').length === 0 && nearBooth(fakeSpots, '14705')?.code === '14702A' && nearBooth(fakeSpots, '20000') === null, '부스 번호로 맞춘다 (같은 번호 · 가까운 번호 · 없는 번호)');
 const hall = placesAll.places.find((p) => p.k === 'LVCC_N');
