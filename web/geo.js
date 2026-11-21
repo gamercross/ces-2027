@@ -49,5 +49,7 @@ export function layout(places) {
     const mine = list.filter((p) => p.c === c.k).flatMap((p) => p.world);
     return { ...c, box: bbox(mine) };
   });
-  return { W, list, campuses, box: bbox(list.flatMap((p) => p.world)) };
+  // 전시장 밖 공개 장소 (자리는 어림).
+  const city = (places.cityPlaces || []).map((p) => ({ ...p, center: W(p.c, p.at[0], p.at[1]) }));
+  return { W, list, campuses, city, box: bbox(list.flatMap((p) => p.world)), boxAll: bbox([...list.flatMap((p) => p.world), ...city.map((p) => p.center)]) };
 }

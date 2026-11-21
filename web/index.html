@@ -17,6 +17,8 @@
 <link rel="modulepreload" href="store.js">
 <link rel="modulepreload" href="data.js">
 <link rel="modulepreload" href="offline.js">
+<link rel="modulepreload" href="notify.js">
+<link rel="modulepreload" href="alerts.js">
 <link rel="modulepreload" href="dom.js">
 <link rel="modulepreload" href="views/home.js">
 <link rel="modulepreload" href="views/card.js">
@@ -37,6 +39,11 @@
     <p class="lead">라스베이거스, 2027년 1월 6일 ~ 9일. 불러오는 중이다.</p>
   </section>
 </main>
+
+<div class="update notice-bar" id="notice" role="status" hidden>
+  <span id="notice-text"></span>
+  <button class="btn" type="button" id="notice-go">명함 열기</button>
+</div>
 
 <div class="update" id="update" role="status" hidden>
   <span>새 판이 있다.</span>

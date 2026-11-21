@@ -3,7 +3,8 @@
 import { el, num } from '../dom.js';
 import { getCategories, getExhibitors, getFinder, getMeta, getPlaces } from '../data.js';
 import { companyRow } from '../company.js';
-import { getInterests, getProfile, tagKo } from '../store.js';
+import { getInterests, getProfile, getTopics, tagKo } from '../store.js';
+import { recommend } from '../recommend.js';
 
 const PAGE = 40;
 
@@ -72,7 +73,8 @@ function fieldLinks(names, data, counts, table) {
 }
 
 async function frontPage() {
-  const [data, table] = await Promise.all([getExhibitors(), getCategories()]);
+  const [data, table, places] = await Promise.all([getExhibitors(), getCategories(), getPlaces()]);
+  const placeKo = new Map(places.places.map((p) => [p.k, p.ko]));
   const counts = data.cats.map(() => 0);
   for (const r of data.ex) if (r[4]) for (const c of r[4].split('.')) counts[c] += 1;
   const profile = getProfile();
@@ -82,7 +84,32 @@ async function frontPage() {
   const input = el('input', { type: 'search', inputmode: 'search', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', placeholder: '삼성, 로봇, 14731', 'aria-label': '회사 이름 · 분야 · 부스 번호 · 장소' });
   const note = el('p', { class: 'note', text: '이름 · 분야 · 부스 번호 · 장소로 찾는다. 한글로도 된다.' });
   const results = el('div');
+  // 추천: 공식 자료만 근거로(혁신상 · 한국 기업 · 내 분야) 먼저 볼 만한 회사. 까닭을 한 줄로 보이고, 한 곳씩 눌러 담는다.
+  const recBox = el('section', { class: 'panel' });
+  const REC_FILTERS = [['all', '전체'], ['award', '혁신상'], ['korea', '한국'], ['mine', '내 분야']];
+  let recFilter = 'all';
+  let recShown = 6;
+  let recs = null;
+  function drawRecs(recount) {
+    // 담은 곳이 목록에서 바로 사라지지 않게, 거르기를 바꿀 때만 다시 뽑는다.
+    if (recount || !recs) recs = recommend(data, table, { tag: profile?.tag, topics: getTopics(), have: new Set(getInterests().map((it) => it.id)), filter: recFilter === 'all' ? null : recFilter });
+    const more = el('button', { class: 'btn ghost wide', type: 'button', text: `더 보기 (${num(recs.length - recShown)}곳 남음)`, hidden: recShown >= recs.length, onclick: () => { recShown += 6; drawRecs(false); } });
+    recBox.replaceChildren(
+      el('h2', { text: `추천 ${num(recs.length)}곳` }),
+      el('p', { class: 'note', text: '먼저 볼 만한 회사다. 근거는 CES 공식 자료뿐이다(혁신상 표시 · 나라 · 전시사가 고른 분야). 까닭을 보고 한 곳씩 "관심"을 누른다.' }),
+      el('div', { class: 'segs', role: 'group', 'aria-label': '추천 거르기' }, REC_FILTERS.map(([k, ko]) => el('button', { class: 'seg', type: 'button', text: ko, 'aria-pressed': k === recFilter ? 'true' : 'false', onclick: () => { recFilter = k; recShown = 6; drawRecs(true); } }))),
+      recs.length
+        ? el('ol', { class: 'hits' }, recs.slice(0, recShown).map((r) => {
+          const li = companyRow(r.row, data, placeKo, plan.paint);
+          li.prepend(el('div', { class: 'why', text: r.why.join(' · ') }));
+          return li;
+        }))
+        : el('p', { class: 'note', text: recFilter === 'mine' ? '내 분야가 없다. 명함에서 태그를 고르거나 주제 판에 주제를 넣는다.' : '추천할 곳이 없다.' }),
+      more);
+  }
+  drawRecs(true);
   const fields = el('div', { class: 'page' },
+    recBox,
     mine && el('section', { class: 'panel' },
       el('h2', { text: `${tagKo(profile.tag)}에게 맞는 분야${table.audiencesDraft ? ' (초안)' : ''}` }),
       fieldLinks(mine, data, counts, table)),

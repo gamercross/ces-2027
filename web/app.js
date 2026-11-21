@@ -3,6 +3,7 @@
 import { getProfile } from './store.js';
 import { getInfo, getMeta, getSettings } from './data.js';
 import { offline, startOffline } from './offline.js';
+import { alerts, checkAlerts, startAlerts } from './notify.js';
 
 const VIEWS = {
   '': () => import('./views/home.js'),
@@ -12,8 +13,12 @@ const VIEWS = {
   map: () => import('./views/map.js'),
   diary: () => import('./views/diary.js'),
   topics: () => import('./views/topics.js'),
+  days: () => import('./views/days.js'),
+  ask: () => import('./views/ask.js'),
+  listen: () => import('./views/listen.js'),
+  apply: () => import('./views/apply.js'),
 };
-const TAB_OF = { '': 'home', find: 'find', plan: 'plan', map: 'map', diary: 'diary', topics: 'topics' };
+const TAB_OF = { '': 'home', find: 'find', plan: 'plan', map: 'map', diary: 'diary', topics: 'topics', days: 'plan', ask: 'find', listen: 'diary', apply: 'home' };
 
 // 명함이 있으면 첫 화면이 쓸 자료를 화면 조각과 같이 받기 시작한다.
 if (getProfile()) { getInfo().catch(() => {}); getMeta(); }
@@ -51,6 +56,8 @@ async function show() {
     if (mine !== turn) return;
     view.replaceChildren(node);
     startOffline();
+    // 화면을 바꿀 때마다 알릴 것을 다시 본다 (표시한 부스가 없으면 아무것도 읽지 않는다).
+    if (!startAlerts()) checkAlerts();
   } catch (e) {
     if (mine !== turn) return;
     const p = document.createElement('p');
@@ -87,6 +94,17 @@ getSettings().then((s) => {
 // 새 판이 있으면 탭 위에 알리고, 누르면 다시 연다. 폰에 남긴 것(명함 · 관심 · 동선 · 일기)은 그대로다.
 window.addEventListener('ces-offline', () => { document.getElementById('update').hidden = !offline.update; });
 document.getElementById('update-go').addEventListener('click', () => location.reload());
+
+// 알림을 누르고 들어오면 그 화면으로 간다.
+navigator.serviceWorker?.addEventListener('message', (ev) => { if (typeof ev.data?.go === 'string' && ev.data.go.startsWith('#/')) go(ev.data.go); });
+// 가까이에 명함 이벤트 부스가 있는데 알림을 못 쓰는 폰이면, 탭 위에 띠로 보인다.
+window.addEventListener('ces-alerts', () => {
+  const bar = document.getElementById('notice');
+  const show = alerts.near.length > 0 && alerts.state !== 'granted';
+  bar.hidden = !show;
+  if (show) document.getElementById('notice-text').textContent = `가까이에 명함 넣는 이벤트 부스 ${alerts.near.length}곳 (사람이 표시한 것)`;
+});
+document.getElementById('notice-go').addEventListener('click', () => go('#/card'));
 
 window.addEventListener('hashchange', show);
 show();

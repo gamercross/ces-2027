@@ -16,6 +16,8 @@ ces-data: CES 공식 전시사 검색에서 자료를 받아 줄이고 찾기 �
   ces-data check-places [고름]  장소 자료만 살핀다
   ces-data sort-diary --in <폴더나 파일> [--in ...] [--out <파일>]
                                 폰에서 내보낸 일기 파일들을 네 태그로 나누고 회사로 묶은 한 장(마크다운)으로 만든다
+  ces-data check-links --in <파일> [--in ...]
+                                자료 파일에 적은 출처 링크가 살아 있는지 본다. 없어진 주소가 있으면 실패로 끝난다
 
 고름:
   --out <폴더>         쓰는 곳 (기본 dist/data)
@@ -148,6 +150,40 @@ fn run_check_places(a: &Args) -> Result<(), String> {
     Ok(())
 }
 
+/// 자료 파일의 출처 링크를 하나씩 열어 본다.
+fn run_check_links(a: &Args) -> Result<(), String> {
+    if a.inputs.is_empty() {
+        return Err("--in <파일>이 있어야 한다 (예: --in data/separate.json)".into());
+    }
+    let mut urls = Vec::new();
+    for path in &a.inputs {
+        urls.extend(ces_data::links::collect(&read_json(path)?));
+    }
+    urls.sort();
+    urls.dedup();
+    println!("링크 {}개를 본다", urls.len());
+    let rows = ces_data::links::check(&urls);
+    let table = ces_data::links::table(&rows);
+    print!("{table}");
+    let count = |s| rows.iter().filter(|r| r.2 == s).count();
+    let (alive, dead, unknown) = (count(ces_data::links::State::Alive), count(ces_data::links::State::Dead), count(ces_data::links::State::Unknown));
+    let line = format!("살아 있음 {alive} · 죽음 {dead} · 확인 못 함 {unknown} (본 때 {})", time::now_iso());
+    println!("{line}");
+    if let Some(path) = std::env::var_os("GITHUB_STEP_SUMMARY") {
+        use std::io::Write;
+        if let Ok(mut f) = std::fs::OpenOptions::new().append(true).create(true).open(path) {
+            let _ = writeln!(f, "### 출처 링크 살피기\n\n{line}\n\n{table}");
+        }
+    }
+    for r in rows.iter().filter(|r| r.2 == ces_data::links::State::Unknown) {
+        warn(&format!("확인 못 함 (사람이 브라우저로 본다): {}", r.0));
+    }
+    if dead > 0 {
+        return Err(format!("없어진 주소가 {dead}개 있다. 자료 파일의 그 줄을 다시 확인한다"));
+    }
+    Ok(())
+}
+
 /// 내보낸 일기 파일들을 읽어 네 태그로 나눈 한 장을 쓴다.
 fn run_sort_diary(a: &Args) -> Result<(), String> {
     if a.inputs.is_empty() {
@@ -188,6 +224,7 @@ fn main() -> ExitCode {
         Some("build") => parse_args(&args[1..]).and_then(|a| run_build(&a)),
         Some("check-places") => parse_args(&args[1..]).and_then(|a| run_check_places(&a)),
         Some("sort-diary") => parse_args(&args[1..]).and_then(|a| run_sort_diary(&a)),
+        Some("check-links") => parse_args(&args[1..]).and_then(|a| run_check_links(&a)),
         Some("--help" | "-h" | "help") | None => {
             print!("{HELP}");
             return ExitCode::SUCCESS;

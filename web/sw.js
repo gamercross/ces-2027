@@ -22,6 +22,19 @@ self.addEventListener('activate', (event) => {
   })());
 });
 
+// 알림을 누르면 앱을 앞으로 가져와 그 화면을 연다 (열려 있지 않으면 새로 연다).
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const hash = event.notification.data?.hash || '#/';
+  event.waitUntil((async () => {
+    const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of all) {
+      if ('focus' in client) { await client.focus(); client.postMessage({ go: hash }); return; }
+    }
+    await self.clients.openWindow(`./${hash}`);
+  })());
+});
+
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin || !FILES.length) return;

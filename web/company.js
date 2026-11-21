@@ -1,4 +1,4 @@
-// 회사 한 줄: 이름 · 혁신상 · 부스와 장소 · 나라 · 공식 링크 · 관심 단추. 찾기와 분야 목록이 같이 쓴다.
+// 회사 한 줄: 이름 · 혁신상 · 부스와 장소 · 나라 · 공식 링크 · 관심 단추 · 듣기(받아 적어 일기 초안). 찾기와 분야 목록이 같이 쓴다.
 
 import { el, out } from './dom.js';
 import { hasInterest, toggleInterest } from './store.js';
@@ -34,5 +34,6 @@ export function companyRow(row, data, placeKo, onChange) {
     intro && el('div', { class: 'where', text: intro }),
     el('div', { class: 'row-actions' }, button,
       booths.some((b) => placeKo.has(splitBooth(b).place)) ? el('a', { href: `#/map/at/${encodeURIComponent(id)}`, text: '지도' }) : null,
+      el('a', { href: `#/listen/${encodeURIComponent(id)}`, text: '듣기' }),
       out(data.link.replace('{id}', encodeURIComponent(id)), '공식 전시사 페이지')));
 }

@@ -1,0 +1,227 @@
+{
+  "about": "CES 배지와 따로 신청 · 예약 · 초대가 필요한 곳과, 배지만 있으면 되는 큰 일정, 자율주행 이동을 모은 자료다. 근거는 CES 공식 사이트(ces.tech)와 그 회사 공식 사이트만 쓴다. 줄마다 출처와 확인한 날짜가 있다. 2027 안내가 아직 없는 줄은 status가 check이고, 작년(CES 2026)에 어떻게 했는지를 last에 적는다. 짐작해서 채우지 않는다. 시간은 라스베이거스 시간이다.",
+  "read": "2026-11-21",
+  "groups": [
+    { "k": "watch", "ko": "2027 안내를 기다리는 곳", "note": "아직 2027 안내가 없다. 작년에는 12월 초 ~ 중순에 나왔다. 적어 둔 날부터 다시 본다." },
+    { "k": "apply", "ko": "따로 신청 · 문의하는 것", "note": "배지 말고 따로 표나 신청이 있어야 한다." },
+    { "k": "badge", "ko": "배지만 있으면 되는 것", "note": "따로 신청은 없다. 자리는 먼저 온 차례다." },
+    { "k": "press", "ko": "보도 배지만 들어가는 것", "note": "우리는 들어가지 못한다. 생중계가 있으면 그것으로 본다." },
+    { "k": "ride", "ko": "이동: 자율주행", "note": "가기 전에 앱을 받아 둔다. 무료라고 확인된 것만 무료라고 적는다." }
+  ],
+  "items": [
+    {
+      "id": "samsung", "group": "watch", "org": "삼성", "what": "The First Look 발표 · 단독 전시관 · Tech Forum",
+      "where": "2027 안내 없음", "place": "", "date": null, "from": null, "to": null,
+      "apply": { "url": null, "ko": "2027 신청 링크 아직 없음" }, "deadline": null, "watchFrom": "2026-12-01",
+      "who": "2027 안내 전이다. 작년 전시관에 누가 들어갈 수 있었는지는 공식 안내에서 확인하지 못했다.",
+      "status": "check",
+      "last": "작년(CES 2026): 초대장이 2025-12-04에 나왔다. 발표는 01-04 19:00 윈 호텔, 단독 전시관도 윈 호텔에 있었다. Tech Forum은 01-05 ~ 01-06.",
+      "todo": "12월 초에 삼성 뉴스룸에 2027 초대장과 전시관 장소가 나왔는지 본다.",
+      "sources": [
+        { "ko": "삼성 · 2026 초대장", "url": "https://www.samsung.com/nz/news/local/invitation-samsung-event-at-ces-2026-the-first-look", "read": "2026-11-21" },
+        { "ko": "삼성 · 2026 단독 전시관 발표", "url": "https://www.samsung.com/nz/news/local/samsung-to-operate-a-standalone-exhibition-hall-at-ces-2026-that-delivers-an-ai-ecosystem-experience", "read": "2026-11-21" },
+        { "ko": "삼성 뉴스룸 · 2026 Tech Forum", "url": "https://news.samsung.com/uk/samsung-to-host-series-of-tech-forums-at-ces-2026", "read": "2026-11-21" }
+      ]
+    },
+    {
+      "id": "nvidia", "group": "watch", "org": "엔비디아", "what": "젠슨 황 발표(NVIDIA Live) · 쇼케이스",
+      "where": "2027 안내 없음", "place": "", "date": null, "from": null, "to": null,
+      "apply": { "url": null, "ko": "2027 신청 링크 아직 없음 (공식 페이지는 아직 2026 내용이다)" }, "deadline": null, "watchFrom": "2026-12-10",
+      "who": "2027 안내 전이다. 작년 쇼케이스는 CES 배지가 있어야 했다(공식 페이지 문구). 발표의 현장 자리를 어떻게 받았는지는 확인하지 못했다.",
+      "status": "check",
+      "last": "작년(CES 2026): 발표 01-05 13:00 ~ 14:30 퐁텐블로, 생중계가 있었다. 쇼케이스는 퐁텐블로에서 01-06 ~ 01-08. 2027 CES 일정표에는 엔비디아 세션이 하나(1/6 11:10 퐁텐블로)만 보인다.",
+      "todo": "12월 중순에 엔비디아 CES 페이지가 2027로 바뀌었는지 본다.",
+      "sources": [
+        { "ko": "엔비디아 CES 페이지", "url": "https://www.nvidia.com/en-us/events/ces/", "read": "2026-11-21" },
+        { "ko": "CES 1/6 일정표", "url": "https://www.ces.tech/schedule?date=2027-01-06", "read": "2026-11-21" }
+      ]
+    },
+    {
+      "id": "hyundai", "group": "watch", "org": "현대차그룹", "what": "부스 · 발표",
+      "where": "2027 안내 없음", "place": "", "date": null, "from": null, "to": null,
+      "apply": { "url": null, "ko": "2027 신청 링크 아직 없음" }, "deadline": null, "watchFrom": "2026-12-15",
+      "who": "2027 안내 전이다. 작년 부스는 CES 배지로 들어갔다.",
+      "status": "check",
+      "last": "작년(CES 2026): 2025-12-22에 발표했다. 부스는 LVCC 웨스트 홀, 발표는 미디어 데이(01-05 13:00 만달레이 베이)였다. 2027 CES 미디어 데이 일정에는 기아 발표(1/5 13:00, 보도 배지만)가 있다.",
+      "todo": "12월 중순에 현대차그룹 뉴스룸에 2027 안내가 나왔는지 본다.",
+      "sources": [
+        { "ko": "현대차 · 2026 발표", "url": "https://www.hyundai.com/worldwide/en/newsroom/detail/hyundai-motor-group-to-unveil-ai-robotics-strategy-at-ces-2026-0000001093", "read": "2026-11-21" },
+        { "ko": "CES 미디어 데이 일정", "url": "https://www.ces.tech/media-guides/media-days/", "read": "2026-11-21" }
+      ]
+    },
+    {
+      "id": "lg", "group": "watch", "org": "LG", "what": "부스 (발표는 보도 배지만)",
+      "where": "2027 부스 위치 안내 없음", "place": "", "date": null, "from": null, "to": null,
+      "apply": { "url": null, "ko": "따로 신청 없음 (부스는 배지)" }, "deadline": null, "watchFrom": "2026-12-01",
+      "who": "부스는 배지를 가진 사람. 발표(World Premiere, 1/5 08:00)는 보도 배지만 들어간다.",
+      "status": "check",
+      "last": "작년(CES 2026): 부스는 LVCC 센트럴 홀에 있었다.",
+      "todo": "12월에 LG 뉴스룸에서 2027 부스 위치와 발표 생중계 안내를 본다.",
+      "sources": [
+        { "ko": "LG · 2026 부스 발표", "url": "https://www.lg.com/global/newsroom/news/corporate/lg-electronics-showcases-affectionate-intelligence-in-action-at-ces-2026/", "read": "2026-11-21" },
+        { "ko": "CES 미디어 데이 일정", "url": "https://www.ces.tech/media-guides/media-days/", "read": "2026-11-21" }
+      ]
+    },
+    {
+      "id": "qualcomm", "group": "watch", "org": "퀄컴", "what": "부스",
+      "where": "2027 안내 없음", "place": "", "date": null, "from": null, "to": null,
+      "apply": { "url": null, "ko": "2027 신청 링크 아직 없음" }, "deadline": null, "watchFrom": "2026-12-10",
+      "who": "2027 안내 전이다.",
+      "status": "check",
+      "last": "퀄컴 CES 페이지는 아직 2026 내용이다.",
+      "todo": "12월에 퀄컴 CES 페이지가 2027로 바뀌었는지 본다.",
+      "sources": [ { "ko": "퀄컴 CES 페이지", "url": "https://www.qualcomm.com/ces", "read": "2026-11-21" } ]
+    },
+    {
+      "id": "lenovo-sphere", "group": "apply", "org": "레노버", "what": "기조연설 Tech World @ CES (스피어)",
+      "where": "스피어", "place": "스피어", "date": "2027-01-06", "from": "17:00", "to": "18:30",
+      "apply": { "url": null, "ko": "2027 티켓 링크 아직 없음. CES 발표는 티켓과 운영 안내를 나중에 알린다고 적었다" }, "deadline": null, "watchFrom": "2026-12-01",
+      "who": "CES 배지를 가진 사람만.",
+      "status": "check",
+      "last": null,
+      "todo": "배지가 먼저 있어야 한다. 12월에 CES 발표 글에 티켓 안내가 붙었는지 본다.",
+      "sources": [ { "ko": "CES 발표 · 레노버 기조연설", "url": "https://www.ces.tech/press-releases/lenovo-takes-ces-2027-keynote-to-new-heights-with-immersive-experience-at-sphere", "read": "2026-11-21" } ]
+    },
+    {
+      "id": "ces-badge", "group": "badge", "mark": false, "org": "CES", "what": "배지 (연수단은 운영팀이 등록)",
+      "where": "받는 곳은 첫 화면의 \"배지 받는 곳\"", "place": "", "date": null, "from": null, "to": null,
+      "apply": { "url": null, "ko": "따로 할 일 없음. 연수단의 배지는 운영팀이 등록한다 (11/21에 확인)" }, "deadline": null, "watchFrom": null,
+      "who": "연수단 모두. 스스로 등록하지 않는다.",
+      "status": "confirmed",
+      "last": null,
+      "todo": "배지를 받는 곳에서 여권을 보인다. CES는 받을 때 정부가 발급한 사진 신분증을 보라고 적는다.",
+      "sources": [
+        { "ko": "CES 등록 안내", "url": "https://www.ces.tech/attendee-guides/registration-information/", "read": "2026-11-21" },
+        { "ko": "CES 배지 받는 곳", "url": "https://www.ces.tech/media/2bgnt0uj/ces-2027-badgepickup_929.pdf", "read": "2026-11-21" }
+      ]
+    },
+    {
+      "id": "ces-tours", "group": "apply", "org": "CES", "what": "쇼플로어 투어 (주제별 1.5시간 · 단체 10 ~ 15명)",
+      "where": "LVCC · 베네시안 엑스포", "place": "", "date": null, "from": null, "to": null,
+      "apply": { "url": "https://www.ces.tech/explore-ces/show-floor-tours/", "ko": "CES 투어 페이지" }, "deadline": null, "watchFrom": null,
+      "who": "배지를 가진 사람. 단체 투어는 모둠으로 신청한다.",
+      "status": "confirmed",
+      "last": null,
+      "todo": "자리가 한정이라 미리 등록하라고 적혀 있다. 주제별 · 단체 투어의 값은 공개돼 있지 않다. 신청은 운영팀과 먼저 이야기한다.",
+      "sources": [ { "ko": "CES 투어 페이지", "url": "https://www.ces.tech/explore-ces/show-floor-tours/", "read": "2026-11-21" } ]
+    },
+    {
+      "id": "ces-delegation", "group": "apply", "org": "CES", "what": "국제 대표단 프로그램",
+      "where": "온라인", "place": "", "date": null, "from": null, "to": null,
+      "apply": { "url": "https://www.ces.tech/attendee-guides/international-delegation-program/", "ko": "CES 대표단 페이지" }, "deadline": null, "watchFrom": null,
+      "who": "대표단 리더가 초대한 사람. 리더 신청은 이미 끝났다.",
+      "status": "confirmed",
+      "last": null,
+      "todo": "우리가 어느 대표단에 들어 있는지는 운영팀에 묻는다.",
+      "sources": [ { "ko": "CES 대표단 페이지", "url": "https://www.ces.tech/attendee-guides/international-delegation-program/", "read": "2026-11-21" } ]
+    },
+    {
+      "id": "key-waymo", "group": "badge", "org": "Waymo", "what": "기조연설",
+      "where": "베네시안 5층 Palazzo Ballroom", "place": "", "date": "2027-01-05", "from": "18:30", "to": "19:45",
+      "apply": { "url": null, "ko": "따로 신청 없음 (배지)" }, "deadline": null, "watchFrom": null,
+      "who": "배지를 가진 사람, 먼저 온 차례.",
+      "status": "confirmed", "last": null,
+      "todo": "전시 전날 저녁이다. 일찍 가서 줄을 선다.",
+      "sources": [
+        { "ko": "CES 발표 · Waymo 기조연설", "url": "https://www.ces.tech/press-releases/waymo-co-ceo-tekedra-mawakana-to-keynote-at-ces-2027", "read": "2026-11-21" },
+        { "ko": "CES 1/5 일정표", "url": "https://www.ces.tech/schedule?date=2027-01-05", "read": "2026-11-21" }
+      ]
+    },
+    {
+      "id": "key-stellantis", "group": "badge", "org": "Stellantis", "what": "기조연설 (CTA 업계 현황 발표와 함께)",
+      "where": "베네시안 Palazzo Ballroom", "place": "", "date": "2027-01-06", "from": "08:30", "to": "10:00",
+      "apply": { "url": null, "ko": "따로 신청 없음 (배지)" }, "deadline": null, "watchFrom": null,
+      "who": "배지를 가진 사람, 먼저 온 차례.",
+      "status": "confirmed", "last": null, "todo": "전시가 열리기 전 아침이다.",
+      "sources": [
+        { "ko": "CES 발표 · Stellantis 기조연설", "url": "https://www.ces.tech/press-releases/stellantis-to-bring-human-centered-mobility-vision-to-ces-2027-keynote", "read": "2026-11-21" },
+        { "ko": "CES 1/6 일정표", "url": "https://www.ces.tech/schedule?date=2027-01-06", "read": "2026-11-21" }
+      ]
+    },
+    {
+      "id": "key-wpp", "group": "badge", "org": "WPP", "what": "기조연설 (C Space)",
+      "where": "아리아 2층 Mariposa", "place": "아리아 · C Space", "date": "2027-01-06", "from": "11:00", "to": null,
+      "apply": { "url": null, "ko": "따로 신청 없음 (배지)" }, "deadline": null, "watchFrom": null,
+      "who": "배지를 가진 사람. C Space에 들어가는 조건은 안내에 없다.",
+      "status": "confirmed", "last": null, "todo": "",
+      "sources": [ { "ko": "CES 발표 · WPP 기조연설", "url": "https://www.ces.tech/press-releases/wpp-chief-executive-officer-cindy-rose-to-explore-the-importance-of-data-independence-and-trust-in-the-age-of-ai-during-c-space-keynote", "read": "2026-11-21" } ]
+    },
+    {
+      "id": "key-warner", "group": "badge", "org": "워너뮤직", "what": "기조연설",
+      "where": "베네시안 Palazzo Ballroom", "place": "", "date": "2027-01-06", "from": "14:00", "to": "15:00",
+      "apply": { "url": null, "ko": "따로 신청 없음 (배지)" }, "deadline": null, "watchFrom": null,
+      "who": "배지를 가진 사람, 먼저 온 차례.",
+      "status": "confirmed", "last": null, "todo": "",
+      "sources": [
+        { "ko": "CES 발표 · 워너뮤직 기조연설", "url": "https://www.ces.tech/press-releases/warner-music-group-ceo-robert-kyncl-to-cover-the-future-of-music-at-ces-2027", "read": "2026-11-21" },
+        { "ko": "CES 1/6 일정표", "url": "https://www.ces.tech/schedule?date=2027-01-06", "read": "2026-11-21" }
+      ]
+    },
+    {
+      "id": "ces-reception", "group": "badge", "org": "CES", "what": "국제 참가자 리셉션",
+      "where": "베네시안 엑스포 1층 Marco Polo 705", "place": "", "date": "2027-01-06", "from": "19:00", "to": "20:30",
+      "apply": { "url": null, "ko": "따로 신청 없음" }, "deadline": null, "watchFrom": null,
+      "who": "해외에서 온 참가자 · 전시자 · 보도.",
+      "status": "confirmed", "last": null, "todo": "",
+      "sources": [ { "ko": "CES 1/6 일정표", "url": "https://www.ces.tech/schedule?date=2027-01-06", "read": "2026-11-21" } ]
+    },
+    {
+      "id": "ces-foundry", "group": "badge", "org": "CES", "what": "CES Foundry (AI · 양자 전시와 무대)",
+      "where": "퐁텐블로", "place": "퐁텐블로 · CES Foundry", "date": null, "from": null, "to": null,
+      "apply": { "url": null, "ko": "따로 신청 없음으로 보인다 (출입 조건은 확인 필요)" }, "deadline": null, "watchFrom": null,
+      "who": "배지를 가진 사람으로 보인다. 출입 조건은 안내에서 확인하지 못했다.",
+      "status": "check", "last": null, "todo": "1/6 ~ 1/8에 열린다.",
+      "sources": [ { "ko": "CES Foundry", "url": "https://www.ces.tech/explore-ces/ces-foundry/", "read": "2026-11-21" } ]
+    },
+    {
+      "id": "media-days", "group": "press", "org": "CES 미디어 데이", "what": "보도 발표: LG 08:00 · 폭스바겐 08:00 · 보쉬 09:00 · AMD 10:00 · 지멘스 11:00 · 기아 13:00",
+      "where": "만달레이 베이", "place": "", "date": "2027-01-05", "from": null, "to": null,
+      "apply": { "url": null, "ko": "보도 배지만" }, "deadline": null, "watchFrom": null,
+      "who": "보도 · 콘텐츠 크리에이터 · 애널리스트만.",
+      "status": "confirmed", "last": null, "todo": "회사마다 생중계가 있는지 12월에 본다. 실물은 1/6부터 부스에서 본다.",
+      "sources": [
+        { "ko": "CES 미디어 데이 일정", "url": "https://www.ces.tech/media-guides/media-days/", "read": "2026-11-21" },
+        { "ko": "CES 발표 · 미디어 데이", "url": "https://www.ces.tech/press-releases/cta-announces-expanded-official-ces-2027-media-days-schedule", "read": "2026-11-21" }
+      ]
+    },
+    {
+      "id": "unveiled", "group": "press", "org": "CES", "what": "CES Unveiled (미리 보기)",
+      "where": "만달레이 베이", "place": "", "date": "2027-01-04", "from": "16:00", "to": "19:00",
+      "apply": { "url": null, "ko": "보도 배지만" }, "deadline": null, "watchFrom": null,
+      "who": "보도만.",
+      "status": "confirmed", "last": null, "todo": "",
+      "sources": [ { "ko": "CES 1/4 일정표", "url": "https://www.ces.tech/schedule?date=2027-01-04", "read": "2026-11-21" } ]
+    },
+    {
+      "id": "ride-waymo", "group": "ride", "org": "Waymo", "what": "무인 택시 (자율주행)",
+      "where": "라스베이거스 스트립(사하라 애비뉴까지)을 포함한 약 24마일 구역. 부스는 LVCC 웨스트 홀 3741",
+      "place": "", "date": null, "from": null, "to": null,
+      "apply": { "url": "https://waymo.com/blog/2026/09/ride-in-las-vegas/", "ko": "Waymo 안내 글 (앱으로 부른다)" }, "deadline": null, "watchFrom": null,
+      "who": "Waymo는 타는 사람을 차차 늘리는 중이라고 적는다. 못 탈 수도 있다.",
+      "status": "confirmed", "last": null,
+      "todo": "가기 전에: Waymo 앱을 받고 관심 등록을 한다 (초대까지 시간이 걸릴 수 있다). 요금은 앱에서 본다. 공식 글에 무료라는 말은 없다.",
+      "sources": [
+        { "ko": "Waymo · 라스베이거스 안내", "url": "https://waymo.com/blog/2026/09/ride-in-las-vegas/", "read": "2026-11-21" },
+        { "ko": "CES 발표 · Waymo (CES 참가자가 타 볼 기회 · 부스 번호)", "url": "https://www.ces.tech/press-releases/waymo-co-ceo-tekedra-mawakana-to-keynote-at-ces-2027", "read": "2026-11-21" }
+      ]
+    },
+    {
+      "id": "ride-zoox", "group": "ride", "org": "Zoox", "what": "로보택시 (자율주행)",
+      "where": "라스베이거스 (타고 내리는 곳은 앱에서 본다)", "place": "", "date": null, "from": null, "to": null,
+      "apply": { "url": "https://zoox.com/las-vegas", "ko": "Zoox 라스베이거스 안내 (앱으로 부른다)" }, "deadline": null, "watchFrom": null,
+      "who": "앱을 쓰는 사람.",
+      "status": "check", "last": null,
+      "todo": "요금과 타고 내리는 곳은 공식 페이지에서 확인하지 못했다. 앱에서 본다. 무료라고 적지 않는다.",
+      "sources": [ { "ko": "Zoox · 라스베이거스", "url": "https://zoox.com/las-vegas", "read": "2026-11-21" } ]
+    },
+    {
+      "id": "ride-loop", "group": "ride", "org": "베가스 루프", "what": "지하 터널 탈것 (자율주행 아님으로 본다)",
+      "where": "LVCC 캠퍼스의 역 다섯 곳과 캠퍼스 밖 역들", "place": "", "date": null, "from": null, "to": null,
+      "apply": { "url": "https://www.vegasmeansbusiness.com/planning-tools/transportation/vegas-loop/", "ko": "LVCVA 베가스 루프 안내" }, "deadline": null, "watchFrom": null,
+      "who": "누구나.",
+      "status": "confirmed", "last": null,
+      "todo": "공식 안내는 테슬라 차가 다니는 지하 교통이라고만 적고, 자율주행이라는 말은 없다. LVCC 캠퍼스 안은 무료, 캠퍼스 밖은 표가 있어야 한다.",
+      "sources": [ { "ko": "LVCVA · 베가스 루프", "url": "https://www.vegasmeansbusiness.com/planning-tools/transportation/vegas-loop/", "read": "2026-11-21" } ]
+    }
+  ]
+}

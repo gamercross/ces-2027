@@ -43,6 +43,84 @@ check(info.show.days.length === 4 && info.campuses.length === 3 && info.badge.sp
 const isCes = (s) => s && /^https:\/\/www\.ces\.tech\//.test(s.url) && /^\d{4}-\d\d-\d\d$/.test(s.read);
 check(isCes(info.show.source) && isCes(info.movingSource) && isCes(info.badge.source) && info.campuses.every((c) => isCes(c.source)) && info.recheck.includes('다시 확인'), '알아둘 것: 묶음마다 CES 공식 출처와 확인한 날짜가 있고 "가기 전에 다시 확인" 안내가 있다');
 const settings = await json('data/settings.json');
+
+// 따로 신청하는 곳 (깊게 7): 공식 출처만, 줄마다 출처와 확인 날짜, 2027 안내가 없는 줄은 "확인 필요"와 작년 것.
+{
+  const sepData = await json('data/separate.json');
+  const sep = await import('../web/separate.js');
+  const OFFICIAL = /^https:\/\/(www\.ces\.tech|www\.samsung\.com|news\.samsung\.com|www\.nvidia\.com|www\.hyundai\.com|www\.lg\.com|www\.qualcomm\.com|waymo\.com|zoox\.com|www\.vegasmeansbusiness\.com)\//;
+  const isDate = (s) => /^\d{4}-\d\d-\d\d$/.test(s);
+  const groups = new Set(sepData.groups.map((g) => g.k));
+  const ids = new Set(sepData.items.map((it) => it.id));
+  const shapeOk = sepData.items.every((it) => it.id && groups.has(it.group) && it.org && it.what && it.who && ['confirmed', 'check'].includes(it.status) && it.apply && (it.apply.url === null || OFFICIAL.test(it.apply.url)) && it.apply.ko && (it.date === null || isDate(it.date)) && (it.deadline === null || isDate(it.deadline)) && (it.watchFrom === null || isDate(it.watchFrom)));
+  check(shapeOk && ids.size === sepData.items.length && isDate(sepData.read), `따로 신청 자료: ${sepData.items.length}줄의 꼴이 맞다 (모둠 · 상태 · 날짜 · 신청 링크)`);
+  const sources = sepData.items.flatMap((it) => it.sources);
+  check(sepData.items.every((it) => it.sources.length > 0) && sources.every((s) => OFFICIAL.test(s.url) && isDate(s.read) && s.ko), `따로 신청 자료: 줄마다 출처와 확인 날짜가 있고, 출처 ${sources.length}개가 모두 CES 공식 · 회사 공식 사이트다`);
+  const waiting = sepData.items.filter((it) => it.status === 'check');
+  check(['삼성', '엔비디아', '현대차그룹'].every((org) => sepData.items.some((it) => it.org === org && it.group === 'watch' && it.status === 'check' && it.last && it.last.startsWith('작년(CES 2026)') && it.apply.url === null && it.watchFrom)), `삼성 · 엔비디아 · 현대차그룹: 2027 안내가 없어 "확인 필요"로 두고 작년에 한 것과 다시 볼 날을 적었다 (확인 필요 ${waiting.length}줄 · 확인됨 ${sepData.items.length - waiting.length}줄)`);
+  const allText = JSON.stringify(sepData.items);
+  const rides = sepData.items.filter((it) => it.group === 'ride');
+  check(rides.length >= 3 && !/무료/.test(JSON.stringify(rides.filter((it) => it.id !== 'ride-loop')).replace(/무료라는 말은 없다|무료라고 적지 않는다/g, '')) && rides.find((it) => it.id === 'ride-loop').what.includes('자율주행 아님') && !/@[a-z]+\.[a-z]/i.test(allText), '이동: 자율주행 택시 줄에는 확인되지 않은 "무료"가 없고, 베가스 루프는 자율주행 아님으로 적었다. 자료에 메일 주소가 없다');
+  const waymo = sepData.items.find((it) => it.id === 'key-waymo');
+  check(waymo.date === '2027-01-05' && waymo.from === '18:30' && waymo.to === '19:45' && /Palazzo/.test(waymo.where), 'Waymo 기조연설은 1/5 18:30 ~ 19:45 베네시안 Palazzo Ballroom이다 (CES 일정표)');
+  const badge = sepData.items.find((it) => it.id === 'ces-badge');
+  check(badge.what.includes('운영팀이 등록') && badge.apply.url === null && badge.apply.ko.includes('따로 할 일 없음') && badge.todo.includes('여권') && badge.deadline === null && !/달러|\$\d/.test(JSON.stringify(badge)), '배지: 연수단은 운영팀이 등록 · 따로 할 일 없음 · 받는 곳에서 여권 보이기로 적고, 값과 마감은 넣지 않았다');
+  // 띠와 일정으로 바꾸는 셈 (지어낸 값으로 본다).
+  const fake = [
+    { id: 'a', org: '가', what: '표', status: 'check', deadline: '2027-01-03', watchFrom: '2026-12-01', date: '2027-01-06', from: '17:00', to: '18:30', where: '어디', place: '' },
+    { id: 'b', org: '나', what: '안내', status: 'check', deadline: null, watchFrom: '2026-12-20', date: null, from: null, to: null, where: '', place: '' },
+    { id: 'c', org: '다', what: '끝난 것', status: 'confirmed', deadline: '2026-12-01', watchFrom: '2026-11-01', date: '2027-01-06', from: '11:00', to: null, where: '', place: '' },
+  ];
+  const due = sep.dueSoon(fake, {}, '2026-12-28');
+  check(due.length === 1 && due[0].item.id === 'a' && due[0].left === 6 && sep.dueSoon(fake, {}, '2026-12-26').length === 0 && sep.dueSoon(fake, { a: 'x' }, '2026-12-28').length === 0 && sep.dueSoon(fake, {}, '2027-01-04').length === 0, '마감 띠: 7일 안일 때만 보이고, 신청했다고 표시했거나 지난 것은 뺀다');
+  check(sep.toWatch(fake, '2026-12-05').map((it) => it.id).join() === 'a' && sep.toWatch(fake, '2026-12-25').map((it) => it.id).join() === 'a,b' && sep.toWatch(fake, '2026-11-20').length === 0, '다시 볼 띠: 적어 둔 날이 된 "확인 필요" 줄만 보인다');
+  const on = sep.toggleApplied(fake[0], {}, [{ id: 'mine', date: '2027-01-06', from: '19:00', to: '20:00', name: '내 일정', place: '' }], '2026-12-28');
+  const off = sep.toggleApplied(fake[0], on.applied, on.events, '2026-12-29');
+  const noTime = sep.toggleApplied(fake[2], {}, [], '2026-12-28');
+  check(on.applied.a === '2026-12-28' && on.events.length === 2 && on.events[1].id === 'sep-a' && on.events[1].from === '17:00' && off.events.length === 1 && off.events[0].id === 'mine' && !off.applied.a && noTime.applied.c && noTime.events.length === 0, '신청함 표시: 날짜와 시간이 정해진 것은 내 일정에 들어가고, 풀면 빠진다. 내가 넣은 일정은 건드리지 않는다');
+  const sum = sep.summary(sepData);
+  check(sum.watch.slice(0, 3).join() === '삼성,엔비디아,현대차그룹' && sum.rides[0] === 'Waymo' && sum.apply.some((t) => t.includes('레노버')), `첫 화면 카드: ${sum.watch.join(' · ')} · 따로 표 ${sum.apply.length}곳 · 가기 전에 ${sum.rides[0]} 앱`);
+  const homeJs = await readFile(join(dist, 'views/home.js'), 'utf8');
+  check(homeJs.includes("import('../separate.js')") && !/^import [^;]*separate\.js/m.test(homeJs) && homeJs.includes('separateSeen.v1') && homeJs.includes('CES 배지와 따로 신청해야 하는 곳'), '첫 화면: 따로 신청 카드는 처음 한 번 크게 보이고(닫은 것을 폰에 적는다), 그 셈과 자료는 첫 화면을 그린 뒤에 읽는다');
+}
+
+// 물어볼 말 · 듣기 (깊게 6): 질문 묶음, 두 길의 자리, 폰이 못 하는 것은 안 된다고 돌려주는지, 일기 초안의 꼴.
+{
+  const speech = await import('../web/speech.js');
+  const phrases = await json('data/phrases.json');
+  const WANT = ['product', 'price', 'launch', 'korea', 'jobs', 'card', 'event'];
+  const items = phrases.packs.flatMap((p) => p.items);
+  check(WANT.every((k) => phrases.packs.some((p) => p.k === k && p.items.length >= 3)) && items.every((it) => it.ko && /^[\x20-\x7e]+$/.test(it.en)) && /record/i.test(phrases.notice.en) && phrases.notice.ko, `질문 묶음: ${phrases.packs.length}묶음 ${items.length}줄이 한국어 · 영어 짝으로 들어 있고(제품 · 가격 · 출시 · 한국 판매 · 채용 · 명함 교환 · 이벤트), 녹음을 알리는 말이 있다`);
+  check(settings.speech === 'on-device' && speech.modeOf({}) === 'on-device' && speech.modeOf({ speech: 'x' }) === 'on-device' && speech.modeOf({ speech: 'device-service' }) === 'device-service' && speech.modeOf(settings, 'device-service') === 'device-service' && speech.modeOf(settings, 'nope') === 'on-device' && speech.modeOf({ speech: 'device-service' }, 'on-device') === 'on-device', '받아쓰기 · 번역을 어디서 하나: 두 길을 다 두고 쓰는 사람이 고른다. 고르기 전 기본값은 "폰 안에서만"이다');
+  const talkUi = await readFile(join(dist, 'talk-ui.js'), 'utf8');
+  check(speech.allowedMode('device-service', null) === 'on-device' && speech.allowedMode('device-service', '2026-11-21') === 'device-service' && speech.allowedMode('on-device', null) === 'on-device' && /인터넷이 필요하고 소리가 구글 · 애플로 간다/.test(speech.SERVICE_NOTE) && talkUi.includes('speechConsent.v1') && talkUi.includes('SERVICE_NOTE'), '폰의 음성 인식 서비스 길: "인터넷이 필요하고 소리가 구글 · 애플로 간다"를 보이고 한 번 확인받은 뒤에만 쓴다 (확인이 없으면 폰 안에서만)');
+  const bare = await speech.capabilities('on-device', { navigator: {} });
+  check(Object.values(bare).every((c) => c.ok === false && c.why.length > 0), '아무 기능도 없는 폰: 읽어 주기 · 받아쓰기 · 번역 · 녹음을 "안 됨"과 까닭으로 돌려준다 (숨기지 않는다)');
+  class OnlyService {}
+  const onlyService = { navigator: {}, webkitSpeechRecognition: OnlyService };
+  const a = await speech.capabilities('on-device', onlyService);
+  const b = await speech.capabilities('device-service', onlyService);
+  check(a.dictate.ok === false && b.dictate.ok === true && /폰 밖/.test(b.dictate.why), '폰 밖 받아쓰기만 있는 폰: 기본 길(폰 안에서만)에서는 안 됨, 폰의 음성 인식 서비스 길에서는 됨이고 소리가 폰 밖으로 간다고 적는다');
+  class Local {}
+  Local.available = async (o) => (o.processLocally ? 'available' : 'unavailable');
+  const full = await speech.capabilities('on-device', { navigator: { mediaDevices: { getUserMedia() {} } }, MediaRecorder: class {}, speechSynthesis: {}, SpeechSynthesisUtterance: class {}, SpeechRecognition: Local, Translator: { availability: async () => 'available', create: async () => ({ translate: async (t) => `ko:${t}` }) } });
+  check(full.dictate.ok && full.dictate.local === true && full.translate.ok && full.record.ok && full.speak.ok, '폰 안에서 다 되는 폰: 네 가지가 모두 됨이고 받아쓰기는 폰 안에서 한다');
+  let used = null;
+  const voices = [{ lang: 'en-US', localService: false }, { lang: 'ko-KR', localService: true }];
+  const synth = (list) => ({ speechSynthesis: { getVoices: () => list, cancel() {}, speak(u) { used = u; } }, SpeechSynthesisUtterance: class { constructor(t) { this.text = t; } } });
+  const refused = speech.speak('Hi', 'on-device', synth(voices));
+  const spoke = speech.speak('Hi', 'device-service', synth(voices));
+  check(refused === false && spoke === true && used.lang === 'en-US', '읽어 주기: 폰 안에서만 길에서는 폰 밖 목소리를 쓰지 않는다');
+  const draft = speech.makeDraft({ id: 'x1', name: '지어낸 회사', booth: '100@LVCC_N' }, [{ t: 3.4, en: ' Hello there. ', ko: '안녕하세요.' }, { t: 9, en: '', ko: '' }, { t: 12, en: 'Price is nine dollars.', ko: '' }], '2027-01-06', 'd1');
+  check(draft.draft === true && draft.felt === '' && draft.for.length === 0 && draft.sent === null && draft.heard.length === 2 && draft.heard[0].t === 3 && draft.heard[0].en === 'Hello there.' && draft.saw.includes('안녕하세요.') && draft.saw.includes('Price is nine dollars.') && draft.exId === 'x1' && draft.date === '2027-01-06', '일기 초안: 날짜 · 회사 · 들은 글(원문 · 번역)이 들어가고 느낀 점과 "누구에게"는 비어 있다');
+  const { bundle } = await import('../web/diary.js');
+  const sentKeys = Object.keys(bundle([{ ...draft, audio: { bytes: 1 } }], { nick: 'a' }).entries[0]);
+  const diaryView = await readFile(join(dist, 'views/diary.js'), 'utf8');
+  check(!sentKeys.includes('heard') && !sentKeys.includes('audio') && diaryView.includes('const ready = all.filter((e) => !e.draft)') && diaryView.includes('const unsent = ready.filter'), '보내는 묶음에는 들은 글과 녹음이 없고, 초안은 다듬어 남기기 전에는 보내지 않는다');
+  check(speech.translateLink('a b', 'en', 'ko').startsWith('https://translate.google.com/?sl=en&tl=ko') && !/[?&]key=/.test(speech.translateLink('a', 'en', 'ko')), '번역 사이트 링크에는 키가 없다 (폰 밖 길에서만 보인다)');
+  const talkCode = (await Promise.all(['speech.js', 'talk-ui.js', 'audio-store.js', 'views/ask.js', 'views/listen.js'].map((f) => readFile(join(dist, f), 'utf8')))).join('\n');
+  check(!/fetch\(|XMLHttpRequest|sendBeacon|WebSocket/.test(talkCode), '말 기능 코드는 스스로 어디로도 보내지 않는다 (fetch · XHR · beacon · 소켓 없음)');
+}
 check(['companyIntro', 'collector', 'collectorUrl', 'codysseyIcon', 'privateOn'].every((k) => k in settings), `아직 정하지 않은 넷의 자리가 설정에 있다 (회사 소개 ${settings.companyIntro} · 모으는 곳 ${settings.collector}${settings.collectorUrl ? ' 주소 있음' : ' 주소 비어 있음'} · 아이콘 ${settings.codysseyIcon} · 비공개 날 ${settings.privateOn})`);
 check(settings.codysseyIcon === false || (typeof settings.codysseyIcon === 'string' && (await exists(settings.codysseyIcon))), `코디세이 아이콘: ${settings.codysseyIcon ? `그림이 있다 (${settings.codysseyIcon})` : '글자만'}`);
 for (const f of ['app.js', 'store.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'qr.js', 'route.js']) check(await exists(f), `${f}가 있다`);
@@ -108,6 +186,77 @@ check(diary.fileName(who, new Date(2027, 0, 7)) === 'ces2027-일기-물개-20270
     const part = (title) => page.split('\n## ').find((s) => s.startsWith(title)) || '';
     check(page.includes('- 일기 3개 · 쓴 사람 1명 · 회사 3곳 · 2027-01-06 ~ 2027-01-07') && part('학생 (일기 1개 · 회사 1곳)').includes('### Alpha Robotics (부스 14731)') && part('학생 (일기 1개 · 회사 1곳)').includes('- 로봇 팔 시연 (물개, 2027-01-06)') && part('취준생 (일기 1개 · 회사 1곳)').includes('Alpha Robotics') && part('정년 (일기 1개 · 회사 1곳)').includes('Zeta Home') && part('장년 (일기 0개 · 회사 0곳)').includes('아직 없다') && part('누구에게인지 고르지 않은 것 (일기 1개 · 회사 1곳)').includes('Beta Cloud'), '폰이 내보낸 일기 파일을 Rust 자료 도구가 네 태그로 나누고 회사로 묶은 한 장으로 만든다');
   }
+}
+
+// 날마다 쓸 시간 · 내 일정: 쓸 시간에서 일정을 빼고, 그만큼만 동선에 넣는다. (시험 값은 지어낸 것이다.)
+{
+  const D = await import('../web/days.js');
+  const inf = { show: { days: [{ date: '2027-01-06', open: '10:00', close: '18:00' }, { date: '2027-01-07', open: '09:00', close: '18:00' }, { date: '2027-01-08', open: '09:00', close: '18:00' }, { date: '2027-01-09', open: '09:00', close: '16:00' }] } };
+  const saved = { '2027-01-07': { from: '10:00', to: '14:00' }, '2027-01-08': { off: true }, '2027-01-09': { from: '15:00', to: '09:00' } };
+  const evs = [{ date: '2027-01-07', from: '11:00', to: '12:00', name: '모임' }, { date: '2027-01-07', from: '11:30', to: '12:30', name: '겹침' }, { date: '2027-01-07', from: '19:00', to: '21:00', name: '밤' }];
+  const h6 = D.hoursFor('2027-01-06', saved, inf), h7 = D.hoursFor('2027-01-07', saved, inf), h8 = D.hoursFor('2027-01-08', saved, inf), h9 = D.hoursFor('2027-01-09', saved, inf);
+  const on7 = D.eventsOn(evs, '2027-01-07');
+  check(!h6.mine && h6.from === 600 && h7.mine && h7.to === 840 && h8.off && !h9.mine && h9.to === 960 && D.freeMinutes(h7, on7) === 150 && D.capacity(h7, on7, 30) === 5 && D.capacity(h8, [], 30) === 0 && String(D.dayLimits(inf, saved, evs, 30, 0)) === '0,16,5,0,14' && String(D.dayLimits(inf, saved, evs, 30, 10)) === '0,10,5,0,10', '날마다 쓸 시간: 기본은 공식 전시 시간, 고친 날은 그 시간, 일정(겹친 것은 한 번만)을 빼고 몇 곳인지 센다');
+  check(String(D.timeline(6, h7, on7, 30).map((t) => (t == null ? 'x' : D.clock(t)))) === '10:00,10:30,12:30,13:00,13:30,x' && D.timeline(2, h8, [], 30).every((t) => t === null), '몇 시쯤: 일정이 있는 시간은 건너뛰고, 쓸 시간을 넘으면 "시간 밖"');
+  const file = JSON.stringify({ app: 'ces-2027-myplan', v: 1, hours: [{ date: '2027-01-06', from: '9:30', to: '17:00' }, { date: '2027-01-08', off: true }, { date: '나쁜 날', from: '1', to: '2' }, { date: '2027-01-09', from: '12:00', to: '11:00' }], events: [{ date: '2027-01-07', from: '11:00', to: '12:00', name: '모임', place: '스피어' }, { date: '2027-01-07', from: '13:00', to: '12:00', name: '거꾸로' }, { date: '2027-01-10', from: '06:00', to: '08:00', name: '  이동  ' }], perStopMinutes: 20 });
+  const got = D.readFile(file);
+  const merged = D.mergeIn({ hours: { '2027-01-07': saved['2027-01-07'] }, events: [D.cleanEvent(evs[0])] }, got);
+  const back = D.readFile(JSON.stringify(D.makeFile(merged.hours, merged.events, 20)));
+  check(got.hours['2027-01-06'].from === '09:30' && got.hours['2027-01-08'].off === true && Object.keys(got.hours).length === 2 && got.events.length === 2 && got.events[1].name === '이동' && got.pace === 20 && got.problems.length === 3 && merged.added === 1 && merged.events.length === 2 && back.events.length === 2 && back.problems.length === 0 && D.readFile('{"app":"x"}').problems.length === 1 && D.readFile('nope').problems.length === 1, '일정 파일: 불러오면 맞는 줄만 넣고 뺀 것을 알린다. 같은 일정은 두 번 넣지 않는다. 내보낸 것을 다시 읽을 수 있다');
+  const limited = fillDays(['b', 'c', 'a', 'h', 'f', 'g'].map((id) => ({ id, day: 0 })), firstBooth, walkTable, [0, 2, 1, 0, 9]);
+  check(limited.items.map((it) => `${it.id}${it.day}`).join(' ') === 'a1 h1 c2 f4 g4 b4' && limited.moved === 3, '날짜 채우기가 날마다 다른 한도를 지킨다 (보지 않는 날에는 넣지 않는다)');
+}
+
+// 추천 즐겨찾기: 공식 자료만 근거로, 까닭과 함께.
+{
+  const R = await import('../web/recommend.js');
+  const tbl = { ko: { Robotics: '로봇', Health: '헬스케어', Audio: '오디오' }, audiences: { stu: ['Robotics'] } };
+  const fake = { cats: ['Robotics', 'Health', 'Audio'], countries: ['United States', 'South Korea'], ex: [
+    ['A', 'Alpha', '', 1, '0', 2, 0, []],      // 최고 혁신상 · 한국 · 내 분야
+    ['B', 'Beta', '', 0, '1', 1, 0, []],       // 혁신상
+    ['C', 'Core', '', 1, '2', 0, 0, []],       // 한국
+    ['D', 'Delta', '', 0, '0.1', 0, 0, []],    // 내 분야
+    ['E', 'Echo', '', 0, '2', 0, 0, []],       // 까닭 없음
+    ['F', 'Fox', '', 0, '1', 0, 0, []],        // 주제 판의 분야
+  ] };
+  const all = R.recommend(fake, tbl, { tag: 'stu', topics: [{ cats: ['Health'] }], have: new Set(['B']) });
+  const names = (list) => list.map((r) => r.row[0]).join('');
+  check(names(all) === 'ADFC' && all[0].why.join(' · ') === '최고 혁신상 2027 · 한국 기업 · 내 분야: 로봇' && all[1].why[0] === '내 분야: 로봇 · 헬스케어' && names(R.recommend(fake, tbl, { tag: 'stu', filter: 'award' })) === 'AB' && names(R.recommend(fake, tbl, { filter: 'korea' })) === 'AC' && names(R.recommend(fake, tbl, { filter: 'mine' })) === '' && all.every((r) => r.why.length > 0), '추천: 혁신상 · 한국 기업 · 내 분야(태그와 주제 판)로만 뽑고, 까닭을 붙이고, 관심에 있는 곳과 까닭 없는 곳은 뺀다');
+}
+
+// 부스까지 길 안내.
+{
+  const G = await import('../web/guide.js');
+  const P = { LVCC_N: { ko: '노스 홀', c: 'lvcc' }, LVCC_C: { ko: '센트럴 홀', c: 'lvcc' }, VEN_G: { ko: '홀 G', c: 'ven' } };
+  const placeOf = (k) => P[k];
+  const me = { by: 'booth', campus: 'lvcc', place: 'LVCC_N', code: '14731' };
+  const kinds = [
+    G.guideTo(null, { place: 'LVCC_N', code: '11835' }, placeOf),
+    G.guideTo(me, { place: 'LVCC_N', code: '11835' }, placeOf),
+    G.guideTo(me, { place: 'LVCC_N', code: '14702A' }, placeOf),
+    G.guideTo(me, { place: 'LVCC_C', code: '20145' }, placeOf),
+    G.guideTo(me, { place: 'VEN_G', code: '60101' }, placeOf),
+    G.guideTo({ by: 'gps', campus: 'lvcc', area: { places: ['LVCC_N'] } }, { place: 'LVCC_N', code: 'N253' }, placeOf),
+  ];
+  check(kinds.map((g) => g.kind).join(' ') === 'unknown same-place same-place same-campus other-campus same-place' && kinds[1].lines[1].includes('작아지는') && kinds[1].lines[1].includes('147번대') && kinds[2].lines[1].includes('같은 통로') && !kinds[1].maps && kinds[3].maps && kinds[4].maps && kinds[5].lines[0].includes('짐작'), '부스까지 길 안내: 같은 곳이면 부스 번호 쪽으로, 같은 캠퍼스의 다른 곳 · 다른 캠퍼스면 구글맵, 내 자리를 모르면 묻는다');
+  check((placesAll.cityPlaces || []).length >= 3 && placesAll.cityPlaces.every((p) => p.shapeGuess === true && p.maps.query && p.maps.address && (p.maps.addressChecked === null || /^\d{4}-\d\d-\d\d$/.test(p.maps.addressChecked))), `전시장 밖 공개 장소 ${(placesAll.cityPlaces || []).length}곳: 자리는 어림으로 표시, 주소는 확인한 날 또는 미확인`);
+}
+
+// 종이 명함 · 명함 이벤트 부스 · 알림.
+{
+  const A = await import('../web/alerts.js');
+  check(A.shouldAskPaper(null, '2026-11-21') === 'first' && A.shouldAskPaper({ has: null }, '2026-11-21') === 'first' && A.shouldAskPaper({ has: false, asked: '2026-11-21', remindOn: '2026-12-29' }, '2026-12-28') === null && A.shouldAskPaper({ has: false, asked: '2026-11-21', remindOn: '2026-12-29' }, '2026-12-29') === 'again' && A.shouldAskPaper({ has: true, asked: '2026-12-30', remindOn: '2026-12-29' }, '2027-01-02') === null && A.defaultRemind('2027-01-06') === '2026-12-29', '종이 명함 묻기: 처음 한 번, 정해 둔 날(기본은 전시 8일 전)에 한 번 더, 그 뒤에는 묻지 않는다');
+  let marks = A.toggleMark({}, 'LVCC_N|14731');
+  marks = A.mergeMarks(marks, ['VEN_G|61300', 'LVCC_N|14731', 'nope', 7, 'LVCC_C|20145']).marks;
+  const boothsOf = (id) => ({ a: ['14731@LVCC_N'], b: ['9@LVCC_W', '61300@VEN_G'], c: ['20145@LVCC_C'], d: ['11111@LVCC_N'] }[id]);
+  const mine = [{ id: 'a', day: 1 }, { id: 'b', day: 1 }, { id: 'c', day: 2 }, { id: 'd', day: 1 }, { id: 'a2', day: 1 }];
+  const dayOf = (date) => ({ '2027-01-06': 1, '2027-01-07': 2 }[date] || null);
+  const day1 = A.cardsNeeded(mine, marks, '2027-01-06', dayOf, boothsOf);
+  check(Object.keys(marks).length === 3 && A.markLabel(marks['LVCC_N|14731']) === '내가 표시' && A.markLabel(marks['VEN_G|61300']) === '팀이 표시' && day1.map((n) => n.id + ':' + n.by).join(' ') === 'a:me b:team' && A.cardsNeeded(mine.map((it) => ({ ...it, seen: true })), marks, '2027-01-06', dayOf, boothsOf).length === 0 && A.cardsNeeded(mine, marks, '2026-12-01', dayOf, boothsOf).length === 0 && Object.keys(A.toggleMark(marks, 'LVCC_N|14731')).length === 2, '명함 이벤트 부스: 사람이 표시한 것만(내가 · 팀이), 그날 동선에서 아직 안 본 곳만 센다');
+  check(String(A.nearMarks({ by: 'booth', place: 'LVCC_N', code: '14706' }, marks)) === 'LVCC_N|14731' && A.nearMarks({ by: 'booth', place: 'LVCC_N', code: '10100' }, marks).length === 0 && String(A.nearMarks({ by: 'gps', campus: 'ven', area: { places: ['VEN_AD', 'VEN_G'] } }, marks)) === 'VEN_G|61300' && A.nearMarks({ by: 'gps', campus: 'lvcc', inside: true }, marks).length === 0 && A.nearMarks(null, marks).length === 0, '가까운 이벤트 부스: 부스 번호로 맞춘 자리면 통로가 가까운 것, GPS면 그 홀 안의 것, 캠퍼스만 알면 알리지 않는다');
+  check(A.fresh({}, 'morning', '2027-01-06') && !A.fresh({ morning: '2027-01-06' }, 'morning', '2027-01-06') && A.fresh({ morning: '2027-01-06' }, 'morning', '2027-01-07') && A.notifyState({}) === 'unsupported' && A.notifyState({ Notification: { permission: 'denied' }, navigator: { serviceWorker: {} } }) === 'denied', '알림: 같은 알림은 하루에 한 번, 알림을 못 쓰는 브라우저를 가려낸다');
+  const swText = await readFile(join(dist, 'sw.js'), 'utf8');
+  check(swText.includes('notificationclick') && html.includes('id="notice"') && !/PushManager|pushManager|subscribe\(/.test(swText + (await readFile(join(dist, 'app.js'), 'utf8')) + (await readFile(join(dist, 'notify.js'), 'utf8'))), '알림은 서버 없이: 서비스 워커가 알림 누르기를 받고, 푸시 구독은 쓰지 않는다. 못 쓰는 폰을 위한 띠 자리가 있다');
 }
 
 // 지도 색칠: 분야 묶음 · 한국 · 혁신상.
@@ -190,12 +339,19 @@ const preloads = [...html.matchAll(/<link rel="(?:modulepreload|preload)" href="
 let preloadOk = preloads.length > 0;
 for (const f of preloads) preloadOk = preloadOk && (await exists(f)) && !/map3d|core\.|exhibitors|search-index|views\/(map|find|plan|diary)/.test(f);
 check(preloadOk, `첫 화면이 미리 받는 조각 ${preloads.length}개가 모두 있고, 3D · 코어 · 전시사 자료는 거기에 없다`);
+// 말 기능(물어볼 말 · 듣기)은 누를 때 불러온다: 첫 화면이 싣는 조각 어디에도 고정으로 물려 있지 않다.
+{
+  const firstScreen = (await Promise.all(['app.js', 'store.js', 'data.js', 'offline.js', 'notify.js', 'alerts.js', 'dom.js', 'views/home.js', 'views/card.js'].map((f) => readFile(join(dist, f), 'utf8')))).join('\n');
+  const fixed = [...firstScreen.matchAll(/^import [^;]*from '([^']+)';/gm)].map((m) => m[1]);
+  const lazy = /speech|talk-ui|audio-store|views\/(ask|listen)/;
+  check(!fixed.some((f) => lazy.test(f)) && !preloads.some((f) => lazy.test(f) || f.includes('phrases')) && appJs.includes("ask: () => import('./views/ask.js')") && appJs.includes("listen: () => import('./views/listen.js')"), '물어볼 말 · 듣기 · 질문 묶음은 첫 화면에 싣지 않고 누를 때 불러온다');
+}
 check(html.includes('id="update"') && appJs.includes('offline.update') && appJs.includes('startOffline'), '새 판 안내 자리가 있고, 서비스 워커는 첫 화면 뒤에 건다');
 const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 const version = await json('version.json').catch(() => null);
 const swFiles = JSON.parse(`[${(sw.match(/const FILES = \[(.*)\];/) || [])[1] || ''}]`);
 check(!!version && sw.includes(JSON.stringify(version.v)) && !sw.includes('__VERSION__'), `판 이름이 찍혔다 (${version?.v})`);
-const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'views/map.js', 'views/diary.js', 'views/topics.js', 'topics.js', 'share.js', 'colors.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/topics.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
+const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'views/map.js', 'views/diary.js', 'views/topics.js', 'views/days.js', 'views/ask.js', 'views/listen.js', 'views/apply.js', 'separate.js', 'data/separate.json', 'speech.js', 'talk-ui.js', 'audio-store.js', 'data/phrases.json', 'topics.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'alerts.js', 'notify.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/topics.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
 const missing = mustCache.filter((f) => !swFiles.includes(f));
 const gone = [];
 for (const f of swFiles) if (f !== './' && !(await exists(f))) gone.push(f);
@@ -212,7 +368,7 @@ check(iconsOk, '홈 화면에 추가: 매니페스트와 아이콘이 있다');
   const kept = fillDays([{ id: 'f', day: 1 }, { id: 'g', day: 1 }, { id: 'a', day: 0 }, { id: 'h', day: 0 }], firstBooth, walkTable, 2);
   const none = fillDays(all0, firstBooth, walkTable, 0);
   const roomy = fillDays(all0, firstBooth, walkTable, 10);
-  check(show(two) === 'a1 h1 f2 g2 c3 b3 d3 e4' && two.filled === 8 && two.moved === 5 && two.over === 1 && show(kept) === 'f1 g1 a2 h2' && kept.moved === 2 && show(none) === show(roomy) && none.moved === 0 && roomy.moved === 0, `하루에 볼 만큼만: 하루 2곳이면 ${show(two)} (C Space는 넷째 날로 넘기지 않는다), 정한 날짜는 그대로`);
+  check(show(two) === 'a1 h1 c2 b2 d3 e3 f4 g4' && two.filled === 8 && two.moved === 2 && two.over === 0 && show(kept) === 'f1 g1 a2 h2' && kept.moved === 2 && show(none) === show(roomy) && none.moved === 0 && roomy.moved === 0, `하루에 볼 만큼만: 하루 2곳이면 ${show(two)} (제 날에 먼저 넣고, 넘친 곳만 자리가 있는 날로), 정한 날짜는 그대로`);
 }
 const cats = await json('data/categories.json');
 check(cats.groups.length === 7 && ['stu', 'job', 'ret', 'mid'].every((k) => cats.audiences[k].length > 0), `분야 묶음 ${cats.groups.length}개 · 네 태그마다 먼저 보일 분야가 있다${cats.audiencesDraft ? ' (초안)' : ''}`);

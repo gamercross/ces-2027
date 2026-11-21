@@ -178,6 +178,22 @@ pub fn check(json: &Value) -> Vec<String> {
         }
     }
 
+    // 전시장 밖의 공개 장소 (내 일정의 장소로 쓰고 구글맵으로 연다).
+    let mut city = BTreeSet::new();
+    for (i, p) in json["cityPlaces"].as_array().into_iter().flatten().enumerate() {
+        let k = str_of(p, "k");
+        if k.is_empty() || str_of(p, "ko").is_empty() || str_of(p, "en").is_empty() || !city.insert(k.to_string()) || places.contains(k) {
+            bad.push(format!("cityPlaces[{i}]: k · ko · en이 비었거나 기호가 겹친다"));
+        }
+        if !campuses.contains(str_of(p, "c")) || point(&p["at"]).is_none() || p["shapeGuess"] != true {
+            bad.push(format!("cityPlaces[{i}]: c · at이 맞지 않거나 shapeGuess가 true가 아니다 (지도에 없는 곳이라 자리는 늘 어림이다)"));
+        }
+        let m = &p["maps"];
+        if str_of(m, "query").is_empty() || str_of(m, "address").is_empty() || !m.get("addressChecked").is_some_and(|c| c.is_null() || c.is_string()) {
+            bad.push(format!("cityPlaces[{i}]: maps.query · address가 비었거나 addressChecked가 날짜 글 · null이 아니다"));
+        }
+    }
+
     // GPS로 홀 · 건물 근처를 짐작할 때 쓰는 어림 자리.
     for (i, g) in json["gpsAreas"].as_array().into_iter().flatten().enumerate() {
         let lat_ok = g["lat"].as_f64().is_some_and(|v| (-90.0..=90.0).contains(&v));
