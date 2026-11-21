@@ -120,6 +120,17 @@ jobs:
           node scripts/guide-page.mjs docs/테스터_안내.md dist/testers/index.html
           ls -la dist dist/data 2>/dev/null || true
 
+      - name: 폰 안 받아쓰기 실행기 캐시
+        uses: actions/cache@v6
+        with:
+          path: .cache/speech-runtime
+          key: speech-runtime-${{ hashFiles('data/speech-model.json') }}
+
+      - name: 폰 안 받아쓰기 실행기를 받아 놓는다 (sha256 확인)
+        run: |
+          cp data/speech-model.json dist/data/
+          node scripts/fetch-speech-runtime.mjs dist .cache/speech-runtime
+
       - name: 판 이름 찍기 · 인터넷 없이 담아 둘 목록
         run: node scripts/stamp.mjs dist
 

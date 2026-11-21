@@ -44,6 +44,13 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET' || url.origin !== self.location.origin || !FILES.length) return;
   const inside = url.pathname.slice(new URL(self.registration.scope).pathname.length);
   if (OUTSIDE.some((dir) => inside === dir.slice(0, -1) || inside.startsWith(dir))) return;
+// 누를 때만 받는 것(폰 안 받아쓰기 모델의 실행기)은 미리 담지 않는다. 받아 둔 것이 있으면 그것을, 없으면 인터넷에서 준다.
+const LAZY = ['vendor/'];
+
+  if (LAZY.some((dir) => inside.startsWith(dir))) {
+    event.respondWith(caches.match(request).then((hit) => hit || fetch(request)));
+    return;
+  }
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const hit = (await cache.match(request, { ignoreSearch: true })) || (request.mode === 'navigate' ? await cache.match('./') : undefined);

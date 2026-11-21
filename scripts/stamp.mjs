@@ -24,7 +24,11 @@ await writeFile(join(dist, 'version.json'), JSON.stringify({ v: version, data: m
 
 // 보드와 테스터 안내는 앱이 아니다. 첫 화면을 가볍게 두려고 미리 담지 않는다 (web/sw.js의 OUTSIDE와 같은 곳).
 const OUTSIDE = ['board/', 'testers/'];
-const files = (await walk(dist)).filter((f) => f !== 'sw.js' && !f.startsWith('.') && !OUTSIDE.some((dir) => f.startsWith(dir))).sort();
+// 누를 때만 받는 것(폰 안 받아쓰기 모델의 실행기, 15MB쯤)은 미리 담지 않는다 (web/sw.js의 LAZY와 같은 곳).
+const LAZY = ['vendor/'];
+const files = (await walk(dist))
+  .filter((f) => f !== 'sw.js' && !f.startsWith('.') && !OUTSIDE.some((dir) => f.startsWith(dir)) && !LAZY.some((dir) => f.startsWith(dir)))
+  .sort();
 const list = ['./', ...files];
 const swPath = join(dist, 'sw.js');
 const sw = await readFile(swPath, 'utf8');
