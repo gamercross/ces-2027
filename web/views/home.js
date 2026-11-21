@@ -146,11 +146,17 @@ export async function render() {
         ? `홀 안 자리는 짐작이다 (공식 캠퍼스 지도 ${meta.places.edition}판, 정식 배치도 전)`
         : `공식 배치도 (${meta.places.edition}판)` }))));
 
+  const talk = section('부스에서',
+    el('p', { class: 'note', text: '영어로 물어볼 말을 미리 골라 크게 띄우고, 들은 말은 받아 적어 일기 초안으로 남긴다. 누를 때 불러온다.' }),
+    el('div', { class: 'actions' },
+      el('a', { class: 'btn ghost', href: '#/ask', text: '물어볼 말' }),
+      el('a', { class: 'btn ghost', href: '#/listen', text: '듣고 일기 초안' })));
+
   const recheck = el('section', { class: 'panel notice' }, el('h2', { text: 'CES 2027 알아둘 것' }), el('p', { text: info.recheck }));
   const sources = el('section', { class: 'foot' },
     el('p', { text: '알아둘 것은 CES 공식 안내에서 읽은 것이다. 줄마다 확인한 날짜가 있다.' }),
     el('p', {}, info.sources.flatMap((s, i) => [i ? ' · ' : '', out(s.url, s.ko)])),
     el('p', { text: '연수에 가는 참가자가 만든 비공식 안내다. CES(CTA)나 코디세이 운영 측의 공식 자료가 아니다.' }));
 
-  return el('div', { class: 'page' }, hero, alertBands(show.from), recheck, days, campuses, moving, badge, data, notifyBox(), offlineBox(), sources);
+  return el('div', { class: 'page' }, hero, alertBands(show.from), recheck, talk, days, campuses, moving, badge, data, notifyBox(), offlineBox(), sources);
 }

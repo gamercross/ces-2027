@@ -43,6 +43,42 @@ check(info.show.days.length === 4 && info.campuses.length === 3 && info.badge.sp
 const isCes = (s) => s && /^https:\/\/www\.ces\.tech\//.test(s.url) && /^\d{4}-\d\d-\d\d$/.test(s.read);
 check(isCes(info.show.source) && isCes(info.movingSource) && isCes(info.badge.source) && info.campuses.every((c) => isCes(c.source)) && info.recheck.includes('다시 확인'), '알아둘 것: 묶음마다 CES 공식 출처와 확인한 날짜가 있고 "가기 전에 다시 확인" 안내가 있다');
 const settings = await json('data/settings.json');
+
+// 물어볼 말 · 듣기 (깊게 6): 질문 묶음, 두 길의 자리, 폰이 못 하는 것은 안 된다고 돌려주는지, 일기 초안의 꼴.
+{
+  const speech = await import('../web/speech.js');
+  const phrases = await json('data/phrases.json');
+  const WANT = ['product', 'price', 'launch', 'korea', 'jobs', 'card', 'event'];
+  const items = phrases.packs.flatMap((p) => p.items);
+  check(WANT.every((k) => phrases.packs.some((p) => p.k === k && p.items.length >= 3)) && items.every((it) => it.ko && /^[\x20-\x7e]+$/.test(it.en)) && /record/i.test(phrases.notice.en) && phrases.notice.ko, `질문 묶음: ${phrases.packs.length}묶음 ${items.length}줄이 한국어 · 영어 짝으로 들어 있고(제품 · 가격 · 출시 · 한국 판매 · 채용 · 명함 교환 · 이벤트), 녹음을 알리는 말이 있다`);
+  check(settings.speech === 'on-device' && speech.modeOf({}) === 'on-device' && speech.modeOf({ speech: 'x' }) === 'on-device' && speech.modeOf({ speech: 'device-service' }) === 'device-service', '받아쓰기 · 번역을 어디서 하나: 설정(speech) 하나로 바꾸고, 정하기 전 기본값은 "폰 안에서만"이다');
+  const bare = await speech.capabilities('on-device', { navigator: {} });
+  check(Object.values(bare).every((c) => c.ok === false && c.why.length > 0), '아무 기능도 없는 폰: 읽어 주기 · 받아쓰기 · 번역 · 녹음을 "안 됨"과 까닭으로 돌려준다 (숨기지 않는다)');
+  class OnlyService {}
+  const onlyService = { navigator: {}, webkitSpeechRecognition: OnlyService };
+  const a = await speech.capabilities('on-device', onlyService);
+  const b = await speech.capabilities('device-service', onlyService);
+  check(a.dictate.ok === false && b.dictate.ok === true && /폰 밖/.test(b.dictate.why), '폰 밖 받아쓰기만 있는 폰: 기본 길(폰 안에서만)에서는 안 됨, 폰의 음성 인식 서비스 길에서는 됨이고 소리가 폰 밖으로 간다고 적는다');
+  class Local {}
+  Local.available = async (o) => (o.processLocally ? 'available' : 'unavailable');
+  const full = await speech.capabilities('on-device', { navigator: { mediaDevices: { getUserMedia() {} } }, MediaRecorder: class {}, speechSynthesis: {}, SpeechSynthesisUtterance: class {}, SpeechRecognition: Local, Translator: { availability: async () => 'available', create: async () => ({ translate: async (t) => `ko:${t}` }) } });
+  check(full.dictate.ok && full.dictate.local === true && full.translate.ok && full.record.ok && full.speak.ok, '폰 안에서 다 되는 폰: 네 가지가 모두 됨이고 받아쓰기는 폰 안에서 한다');
+  let used = null;
+  const voices = [{ lang: 'en-US', localService: false }, { lang: 'ko-KR', localService: true }];
+  const synth = (list) => ({ speechSynthesis: { getVoices: () => list, cancel() {}, speak(u) { used = u; } }, SpeechSynthesisUtterance: class { constructor(t) { this.text = t; } } });
+  const refused = speech.speak('Hi', 'on-device', synth(voices));
+  const spoke = speech.speak('Hi', 'device-service', synth(voices));
+  check(refused === false && spoke === true && used.lang === 'en-US', '읽어 주기: 폰 안에서만 길에서는 폰 밖 목소리를 쓰지 않는다');
+  const draft = speech.makeDraft({ id: 'x1', name: '지어낸 회사', booth: '100@LVCC_N' }, [{ t: 3.4, en: ' Hello there. ', ko: '안녕하세요.' }, { t: 9, en: '', ko: '' }, { t: 12, en: 'Price is nine dollars.', ko: '' }], '2027-01-06', 'd1');
+  check(draft.draft === true && draft.felt === '' && draft.for.length === 0 && draft.sent === null && draft.heard.length === 2 && draft.heard[0].t === 3 && draft.heard[0].en === 'Hello there.' && draft.saw.includes('안녕하세요.') && draft.saw.includes('Price is nine dollars.') && draft.exId === 'x1' && draft.date === '2027-01-06', '일기 초안: 날짜 · 회사 · 들은 글(원문 · 번역)이 들어가고 느낀 점과 "누구에게"는 비어 있다');
+  const { bundle } = await import('../web/diary.js');
+  const sentKeys = Object.keys(bundle([{ ...draft, audio: { bytes: 1 } }], { nick: 'a' }).entries[0]);
+  const diaryView = await readFile(join(dist, 'views/diary.js'), 'utf8');
+  check(!sentKeys.includes('heard') && !sentKeys.includes('audio') && diaryView.includes('const ready = all.filter((e) => !e.draft)') && diaryView.includes('const unsent = ready.filter'), '보내는 묶음에는 들은 글과 녹음이 없고, 초안은 다듬어 남기기 전에는 보내지 않는다');
+  check(speech.translateLink('a b', 'en', 'ko').startsWith('https://translate.google.com/?sl=en&tl=ko') && !/[?&]key=/.test(speech.translateLink('a', 'en', 'ko')), '번역 사이트 링크에는 키가 없다 (폰 밖 길에서만 보인다)');
+  const talkCode = (await Promise.all(['speech.js', 'talk-ui.js', 'audio-store.js', 'views/ask.js', 'views/listen.js'].map((f) => readFile(join(dist, f), 'utf8')))).join('\n');
+  check(!/fetch\(|XMLHttpRequest|sendBeacon|WebSocket/.test(talkCode), '말 기능 코드는 스스로 어디로도 보내지 않는다 (fetch · XHR · beacon · 소켓 없음)');
+}
 check(['companyIntro', 'collector', 'collectorUrl', 'codysseyIcon', 'privateOn'].every((k) => k in settings), `아직 정하지 않은 넷의 자리가 설정에 있다 (회사 소개 ${settings.companyIntro} · 모으는 곳 ${settings.collector}${settings.collectorUrl ? ' 주소 있음' : ' 주소 비어 있음'} · 아이콘 ${settings.codysseyIcon} · 비공개 날 ${settings.privateOn})`);
 check(settings.codysseyIcon === false || (typeof settings.codysseyIcon === 'string' && (await exists(settings.codysseyIcon))), `코디세이 아이콘: ${settings.codysseyIcon ? `그림이 있다 (${settings.codysseyIcon})` : '글자만'}`);
 for (const f of ['app.js', 'store.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'qr.js', 'route.js']) check(await exists(f), `${f}가 있다`);
@@ -261,12 +297,19 @@ const preloads = [...html.matchAll(/<link rel="(?:modulepreload|preload)" href="
 let preloadOk = preloads.length > 0;
 for (const f of preloads) preloadOk = preloadOk && (await exists(f)) && !/map3d|core\.|exhibitors|search-index|views\/(map|find|plan|diary)/.test(f);
 check(preloadOk, `첫 화면이 미리 받는 조각 ${preloads.length}개가 모두 있고, 3D · 코어 · 전시사 자료는 거기에 없다`);
+// 말 기능(물어볼 말 · 듣기)은 누를 때 불러온다: 첫 화면이 싣는 조각 어디에도 고정으로 물려 있지 않다.
+{
+  const firstScreen = (await Promise.all(['app.js', 'store.js', 'data.js', 'offline.js', 'notify.js', 'alerts.js', 'dom.js', 'views/home.js', 'views/card.js'].map((f) => readFile(join(dist, f), 'utf8')))).join('\n');
+  const fixed = [...firstScreen.matchAll(/^import [^;]*from '([^']+)';/gm)].map((m) => m[1]);
+  const lazy = /speech|talk-ui|audio-store|views\/(ask|listen)/;
+  check(!fixed.some((f) => lazy.test(f)) && !preloads.some((f) => lazy.test(f) || f.includes('phrases')) && appJs.includes("ask: () => import('./views/ask.js')") && appJs.includes("listen: () => import('./views/listen.js')"), '물어볼 말 · 듣기 · 질문 묶음은 첫 화면에 싣지 않고 누를 때 불러온다');
+}
 check(html.includes('id="update"') && appJs.includes('offline.update') && appJs.includes('startOffline'), '새 판 안내 자리가 있고, 서비스 워커는 첫 화면 뒤에 건다');
 const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 const version = await json('version.json').catch(() => null);
 const swFiles = JSON.parse(`[${(sw.match(/const FILES = \[(.*)\];/) || [])[1] || ''}]`);
 check(!!version && sw.includes(JSON.stringify(version.v)) && !sw.includes('__VERSION__'), `판 이름이 찍혔다 (${version?.v})`);
-const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'views/map.js', 'views/diary.js', 'views/topics.js', 'views/days.js', 'topics.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'alerts.js', 'notify.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/topics.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
+const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'views/map.js', 'views/diary.js', 'views/topics.js', 'views/days.js', 'views/ask.js', 'views/listen.js', 'speech.js', 'talk-ui.js', 'audio-store.js', 'data/phrases.json', 'topics.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'alerts.js', 'notify.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/topics.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
 const missing = mustCache.filter((f) => !swFiles.includes(f));
 const gone = [];
 for (const f of swFiles) if (f !== './' && !(await exists(f))) gone.push(f);

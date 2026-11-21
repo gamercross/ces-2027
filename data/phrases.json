@@ -1,0 +1,54 @@
+{
+  "about": "부스에서 쓸 질문 묶음이다. 한국어를 고르면 영어가 보인다. 미리 번역해 두어서 인터넷 없이도 된다. 영어는 Orca가 적은 초안이니 사람이 다듬는다 (이 파일만 고치면 된다). 묶음의 차례가 화면의 차례다.",
+  "notice": {
+    "ko": "제 메모를 위해 이 대화를 녹음해도 될까요?",
+    "en": "May I record this conversation for my own notes?"
+  },
+  "packs": [
+    { "k": "hello", "ko": "인사", "items": [
+      { "ko": "안녕하세요. 한국에서 온 학생입니다.", "en": "Hello. I'm a student from Korea." },
+      { "ko": "이 제품을 잠깐 설명해 주실 수 있나요?", "en": "Could you briefly explain this product?" },
+      { "ko": "천천히 말씀해 주실 수 있나요?", "en": "Could you speak a little more slowly, please?" },
+      { "ko": "설명해 주셔서 감사합니다.", "en": "Thank you for explaining." }
+    ] },
+    { "k": "product", "ko": "제품", "items": [
+      { "ko": "이 제품은 어떤 문제를 풀어 주나요?", "en": "What problem does this product solve?" },
+      { "ko": "다른 제품과 무엇이 다른가요?", "en": "How is it different from other products?" },
+      { "ko": "직접 써 봐도 될까요?", "en": "May I try it myself?" },
+      { "ko": "어떤 기술을 썼나요?", "en": "What technology does it use?" },
+      { "ko": "누가 주로 쓰나요?", "en": "Who mainly uses it?" }
+    ] },
+    { "k": "price", "ko": "가격", "items": [
+      { "ko": "가격은 얼마인가요?", "en": "How much does it cost?" },
+      { "ko": "학생이나 개인도 살 수 있나요?", "en": "Can students or individuals buy it?" },
+      { "ko": "구독료가 따로 있나요?", "en": "Is there a separate subscription fee?" }
+    ] },
+    { "k": "launch", "ko": "출시", "items": [
+      { "ko": "언제 출시되나요?", "en": "When will it be released?" },
+      { "ko": "지금 살 수 있나요?", "en": "Is it available to buy now?" },
+      { "ko": "다음 판에서는 무엇이 달라지나요?", "en": "What will change in the next version?" }
+    ] },
+    { "k": "korea", "ko": "한국 판매", "items": [
+      { "ko": "한국에서도 살 수 있나요?", "en": "Is it available in Korea?" },
+      { "ko": "한국어를 지원하나요?", "en": "Does it support Korean?" },
+      { "ko": "한국에 협력 회사가 있나요?", "en": "Do you have a partner in Korea?" }
+    ] },
+    { "k": "jobs", "ko": "채용", "items": [
+      { "ko": "인턴이나 신입을 뽑나요?", "en": "Do you hire interns or new graduates?" },
+      { "ko": "어떤 기술을 가진 사람을 찾나요?", "en": "What skills are you looking for?" },
+      { "ko": "외국 학생도 지원할 수 있나요?", "en": "Can international students apply?" },
+      { "ko": "어디에서 지원하면 되나요?", "en": "Where can I apply?" }
+    ] },
+    { "k": "card", "ko": "명함 교환", "items": [
+      { "ko": "명함을 주실 수 있나요?", "en": "May I have your business card?" },
+      { "ko": "제 연락처는 이 QR에 있습니다.", "en": "My contact details are in this QR code." },
+      { "ko": "나중에 이메일로 여쭤봐도 될까요?", "en": "May I email you with questions later?" }
+    ] },
+    { "k": "event", "ko": "이벤트", "items": [
+      { "ko": "이벤트에 참여하려면 어떻게 하나요?", "en": "How can I join the event?" },
+      { "ko": "명함을 여기에 넣으면 되나요?", "en": "Should I put my business card in here?" },
+      { "ko": "종이 명함이 없는데 다른 방법이 있나요?", "en": "I don't have a paper card. Is there another way to enter?" },
+      { "ko": "결과는 언제, 어떻게 알려 주나요?", "en": "When and how will the results be announced?" }
+    ] }
+  ]
+}
