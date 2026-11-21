@@ -93,6 +93,77 @@ const settings = await json('data/settings.json');
   check(homeJs.includes("import('../separate.js')") && !/^import [^;]*separate\.js/m.test(homeJs) && homeJs.includes('separateSeen.v1') && homeJs.includes('CES 배지와 따로 신청해야 하는 곳'), '첫 화면: 따로 신청 카드는 처음 한 번 크게 보이고(닫은 것을 폰에 적는다), 그 셈과 자료는 첫 화면을 그린 뒤에 읽는다');
 }
 
+// 물어보기: 앱 안 자료를 한 칸에서 찾는 셈(web/askall.js)과 자주 묻는 것(data/faq.json). 답은 앱 안 자료의 줄과 이어져 있어야 한다.
+{
+  const ask = await import('../web/askall.js');
+  const faq = await json('data/faq.json');
+  const infoD = await json('data/info.json');
+  const sepD = await json('data/separate.json');
+  const phrasesD = await json('data/phrases.json');
+  const docs = { info: infoD, separate: sepD, phrases: phrasesD };
+  const isDate = (s) => /^\d{4}-\d\d-\d\d$/.test(s);
+  const entries = ask.buildEntries({ ...docs, sessions: null });
+  const ids = new Set(faq.items.map((it) => it.id));
+  check(faq.items.length >= 10 && ids.size === faq.items.length && isDate(faq.read) && faq.items.every((it) => it.q && it.a && it.keys.length > 0 && it.links.length > 0 && it.links.every((l) => /^#\//.test(l.to) && l.ko) && it.basis.length > 0), `자주 묻는 것: ${faq.items.length}개의 꼴이 맞다 (물음 · 답 · 열쇠말 · 가는 링크 · 근거)`);
+  // 근거: 자료의 줄을 가리키고, 그 줄의 출처와 확인 날짜가 있어야 한다. 앱 안 글은 그 글이 실제로 있어야 한다.
+  const OFFICIAL = /^https:\/\/(www\.ces\.tech|www\.samsung\.com|news\.samsung\.com|www\.nvidia\.com|www\.hyundai\.com|www\.lg\.com|www\.qualcomm\.com|waymo\.com|zoox\.com|www\.vegasmeansbusiness\.com)\//;
+  let basisBad = 0;
+  let basisCount = 0;
+  for (const it of faq.items) {
+    for (const b of it.basis) {
+      basisCount += 1;
+      const r = ask.resolveBasis(b, docs);
+      if (!r.ok) { basisBad += 1; continue; }
+      if (b.app) {
+        let found = isDate(b.read) && Array.isArray(b.check) && b.check.length > 0;
+        for (const c of b.check || []) found = found && (await readFile(join(dist, c.file), 'utf8').catch(() => '')).includes(c.has);
+        if (!found) basisBad += 1;
+      } else if (b.file !== 'phrases' && !(r.sources.length > 0 && r.sources.every((s) => OFFICIAL.test(s.url) && isDate(s.read)))) basisBad += 1;
+    }
+  }
+  check(basisBad === 0, `자주 묻는 것: 근거 ${basisCount}줄이 모두 자료의 줄(또는 앱 안 글)로 이어지고, 자료의 줄은 공식 출처와 확인 날짜가 있다 (안 이어진 것 ${basisBad})`);
+  const factBad = faq.items.flatMap((it) => (it.facts || []).filter((f) => !it.a.includes(f) || !it.basis.some((b) => ask.resolveBasis(b, docs).text.includes(f))).map((f) => `${it.id}:${f}`));
+  check(factBad.length === 0 && faq.items.filter((it) => it.facts.length > 0).length >= 8, `자주 묻는 것: 답에 적은 사실(N107 · Tech Express · 2025-12-04 …)이 근거 줄에도 그대로 있다 ${factBad.length ? `(없는 것 ${factBad.join(' / ')})` : ''}`);
+  // 예시 물음이 맞는 답으로 이어진다.
+  const firstFaq = (q) => ask.searchAll(q, entries, faq).faq[0]?.id;
+  const ASKS = [['배지는 어디서 받나', 'badge-where'], ['베네시안에서 LVCC는 어떻게 가나', 'venetian-to-lvcc'], ['전시는 몇 시에 여나', 'open-hours'], ['삼성은 따로 신청해야 하나', 'samsung-apply'], ['인터넷이 없어도 되나', 'offline'], ['내가 적은 것은 어디에 남나', 'my-data'], ['가격', 'price'], ['셔틀', 'shuttles'], ['삼성', 'samsung-apply'], ['배지', 'badge-where']];
+  const wrong = ASKS.filter(([q, id]) => firstFaq(q) !== id).map(([q]) => q);
+  check(wrong.length === 0, `예시 물음 ${ASKS.length}개가 맞는 답으로 이어진다 ${wrong.length ? `(틀린 것: ${wrong.join(' / ')})` : '(배지 · 셔틀 · 삼성 · 가격 포함)'}`);
+  const samsung = faq.items.find((it) => it.id === 'samsung-apply');
+  const badgeAns = faq.items.find((it) => it.id === 'badge-where');
+  check(samsung.a.includes('확인 필요') && samsung.a.includes('2025-12-04') && !/따로 신청해야 한다\./.test(samsung.a) && badgeAns.a.includes('N107') && badgeAns.a.includes('운영팀이 등록한다') && badgeAns.a.includes('여권'), '삼성: 2027 안내가 없어 "확인 필요"로 답하고 작년 일을 적었다. 배지: 받는 곳 · 운영팀 등록 · 여권이 답에 있다');
+  // 낱말을 넣으면 갈래별로 나오고, 줄마다 가는 링크와 출처(또는 앱에 담은 자료라는 말)가 있다.
+  let linkBad = 0;
+  const kinds = {};
+  for (const q of ['배지', '셔틀', '삼성', '가격']) {
+    const r = ask.searchAll(q, entries, faq);
+    kinds[q] = r.groups.map((g) => g.k).join('+');
+    if (!r.faq.length || !r.groups.length) linkBad += 1;
+    for (const g of r.groups) for (const h of g.hits) if (!/^#\//.test(h.to) || !h.toKo || !(h.src ? h.src.url && isDate(h.src.read) : h.note)) linkBad += 1;
+  }
+  check(linkBad === 0, `"배지" "셔틀" "삼성" "가격": 자주 묻는 것과 갈래별 결과가 나오고, 줄마다 가는 링크와 출처 · 확인 날짜가 있다 (${Object.entries(kinds).map(([q, k]) => `${q}: ${k}`).join(' · ')})`);
+  const price = ask.searchAll('가격', entries, faq).groups.find((g) => g.k === 'phrases');
+  check(price && price.hits.some((h) => h.title === '가격은 얼마인가요?' && h.show === 'How much does it cost?' && h.to === '#/ask'), '"가격" → 부스에서 쓸 질문의 "가격은 얼마인가요?"와 영어 질문이 나오고 물어볼 말(#/ask)로 이어진다');
+  const english = ask.searchAll('cost', entries, faq).groups.find((g) => g.k === 'phrases');
+  check(english?.hits.some((h) => h.title === '가격은 얼마인가요?'), '영어 낱말("cost")로도 부스 질문을 찾는다');
+  const nothing = ask.searchAll('점심 맛집 추천', entries, faq);
+  check(nothing.faq.length === 0 && nothing.groups.length === 0 && ask.searchAll('', entries, faq).groups.length === 0 && ask.searchAll('   ', entries, faq).faq.length === 0, '자료에 없는 말과 빈 칸은 결과 0건이다 (지어내지 않는다)');
+  check(ask.words('배지는 어디서 받나').map((w) => w.strong[0]).join() === '배지' && ask.words('Tech Express 9번').map((w) => w.strong[0]).join() === 'tech,express' && ask.words('베네시안에서 LVCC는 어떻게 가나').map((w) => w.strong[0]).join() === '베네시안,lvcc', '낱말 나누기: 조사와 묻는 끝말을 떼고, 영어는 낱말로 나눈다');
+  // 세션 일정: 있으면 찾고 없으면 건너뛴다. 꼴이 달라도 제목 · 때 · 곳 글만 쓰고, 깨져도 던지지 않는다.
+  const fakeSessions = { read: '2026-11-21', source: { ko: '지어낸 일정', url: 'https://www.ces.tech/x', read: '2026-11-21' }, items: [{ id: 's1', name: '지어낸 세션 제목', date: '2027-01-07', from: '10:00', to: '11:00', where: '지어낸 방 100' }, { id: 's2', title: { ko: '둘째 세션', en: 'Second' }, when: '1/8 오후', place: '다른 방' }, { id: 's3' }, 7, null] };
+  const withSessions = ask.buildEntries({ ...docs, sessions: fakeSessions });
+  const sessHit = ask.searchAll('지어낸 세션', withSessions, faq).groups.find((g) => g.k === 'sessions');
+  const sessWhere = ask.searchAll('지어낸 방', withSessions, faq).groups.find((g) => g.k === 'sessions');
+  const broken = [null, undefined, 5, 'x', {}, [], [1, 'a', null], { items: 'x' }, { sessions: [{}] }].map((j) => ask.sessionEntries(j).length);
+  check(sessHit?.hits[0].title === '지어낸 세션 제목' && sessHit.hits[0].show.includes('1/7') && sessHit.hits[0].show.includes('10:00 ~ 11:00') && sessHit.hits[0].show.includes('지어낸 방 100') && sessHit.hits[0].src?.read === '2026-11-21' && sessWhere?.hits[0].title === '지어낸 세션 제목' && ask.sessionEntries(fakeSessions).length === 2 && broken.every((n) => n === 0) && withSessions.length === entries.length + 2, '세션 일정: 있으면 제목 · 때 · 곳으로 찾고, 없거나 꼴이 달라도 깨지지 않고 건너뛴다');
+  // 화면 규칙: 첫 화면에 고정 import를 더하지 않고, "AI" · "챗봇"이라는 말이 없고, 안내 글이 앱 안에 있다.
+  const sources = await Promise.all(['askall.js', 'views/askall.js', 'data/faq.json'].map((p) => readFile(join(dist, p), 'utf8')));
+  const homeSrc = await readFile(join(dist, 'views/home.js'), 'utf8');
+  const appSrc = await readFile(join(dist, 'app.js'), 'utf8');
+  check(sources.every((s) => !/\bAI\b|챗봇|chatbot/i.test(s)) && sources.every((s) => !/innerHTML/.test(s)), '물어보기 화면 · 셈 · 자료 어디에도 "AI" · "챗봇"이라는 말이 없고 innerHTML을 쓰지 않는다');
+  check(/q: \(\) => import\('\.\/views\/askall\.js'\)/.test(appSrc) && !/^import .*askall/m.test(appSrc) && !/askall/.test(html) && homeSrc.includes("href: '#/q'") && !/import .*askall/.test(homeSrc), '들어가는 길: #/q는 누를 때 불러오고(app.js VIEWS), 첫 화면에는 링크 하나뿐이다 (고정 import 없음)');
+}
+
 // 물어볼 말 · 듣기 (깊게 6): 질문 묶음, 두 길의 자리, 폰이 못 하는 것은 안 된다고 돌려주는지, 일기 초안의 꼴.
 {
   const speech = await import('../web/speech.js');
@@ -476,6 +547,14 @@ if (await exists('data/meta.json')) {
     check(got.length > 0, `"${q}" → ${got.slice(0, 3).join(' · ') || '없음'}`);
   }
   check(core.search('', 5).length === 0, '빈 말은 0건');
+  {
+    // 물어보기의 회사 갈래: 찾기 코어를 그대로 쓰고, 긴 물음은 낱말마다 찾는다.
+    const ask = await import('../web/askall.js');
+    const finder = { core, data };
+    const a = ask.companyHits('삼성', finder, 5);
+    const b = ask.companyHits('삼성은 어디에 있나', finder, 5);
+    check(a.rows.length === 5 && a.total >= 5 && b.rows.length > 0 && ask.companyHits('', finder).rows.length === 0 && ask.companyHits('zzzzqqqq', finder).rows.length === 0, `물어보기 회사: "삼성" ${a.total}곳(앞 5곳을 보임) · 물음으로도 찾고 · 빈 말과 없는 말은 0건`);
+  }
   lines.push(`자료 | 전시사 ${meta.exhibitors} · 분야 ${meta.categories} · 나라 ${meta.countries} · 한국 ${meta.korea} · 부스 ${meta.booths} (장소 못 정함 ${meta.unplacedBooths}) · 색인 낱말 ${meta.indexWords} · 회사 소개 ${meta.companyIntro}`);
 } else {
   lines.push('주의 | 전시사 자료가 없다 (공식 사이트에서 받지 못했다). 코어만 본다');
