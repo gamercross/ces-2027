@@ -4,9 +4,10 @@
 
 import { el, out } from '../dom.js';
 import { getEvents, setEvents } from '../store.js';
-import { clean, daysOf, isIn, isKeynote, onDay, search, toggle } from '../sessions.js';
+import { clean, daysOf, isIn, isKeynote, onDay, recommend, search, toggle } from '../sessions.js';
 import { placeLink } from './days.js';
 import { getPlaces } from '../data.js';
+import { getTopics } from '../store.js';
 
 const dayKo = (date) => { const [, m, d] = date.split('-').map(Number); return `${m}/${d} (${'일월화수목금토'[new Date(`${date}T00:00:00`).getDay()]})`; };
 const stamp = (v) => { const [y, m, d] = String(v).slice(0, 10).split('-'); return `${y}.${Number(m)}.${Number(d)}`; };
@@ -38,6 +39,7 @@ export async function render() {
   const tabs = el('div', { class: 'segs', role: 'group', 'aria-label': '날짜' });
   const count = el('h2');
   const box = el('input', { type: 'search', placeholder: '낱말로 찾기 (예: AI, robot, Hyundai)', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', 'aria-label': '세션 찾기' });
+  const recs = recommend(data.items, getTopics());
 
   function row(s, withDate) {
     const mine = isIn(s, getEvents());
@@ -83,6 +85,10 @@ export async function render() {
       el('label', { class: 'field' }, el('span', { class: 'label', text: '찾기' }), box),
       tabs,
       status),
+    recs.length ? el('section', { class: 'panel' },
+      el('h2', { text: '내 주제와 맞는 세션' }),
+      el('p', { class: 'note', text: '주제 판의 이름과 분야로 공식 세션을 거른 뒤, 먼저 오는 열 곳을 보인다.' }),
+      el('ul', { class: 'stack' }, recs.map((s) => row(s, true)))) : null,
     el('section', { class: 'panel' }, count, list),
     el('section', { class: 'foot' }, el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: '#/plan', text: '동선 보기' }), el('a', { class: 'btn ghost', href: '#/days', text: '시간과 일정' }))));
 }

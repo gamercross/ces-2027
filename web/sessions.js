@@ -39,5 +39,22 @@ export function search(items, query) {
   return items.filter((s) => { const h = haystack(s); return words.every((w) => h.includes(w)); });
 }
 
+// 내 주제 이름과 분야를 세션 제목 · 트랙 · 주제와 맞춘다. 아직 자료 밖의 관심은 만들지 않는다.
+export function recommend(items, topics) {
+  const words = [...new Set((topics || []).flatMap((topic) => [
+    ...String(topic.name || '').toLowerCase().split(/\s+/),
+    ...(topic.cats || []).map((cat) => String(cat).toLowerCase()),
+  ]).map((word) => word.trim()).filter((word) => word.length >= 2))];
+  if (!words.length) return [];
+  return items.map((session) => {
+    const hay = haystack(session);
+    const score = words.reduce((sum, word) => sum + (hay.includes(word) ? 1 : 0), 0);
+    return { session, score };
+  }).filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score || a.session.date.localeCompare(b.session.date) || a.session.from.localeCompare(b.session.from))
+    .slice(0, 10)
+    .map((item) => item.session);
+}
+
 // 기조연설 먼저 보려면: 제목이 "Keynote"로 시작하는 것 (공식 제목 규칙).
 export const isKeynote = (s) => /^keynote\b/i.test(s.title);

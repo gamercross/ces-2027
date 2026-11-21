@@ -602,6 +602,7 @@ check(cats.groups.length === 7 && ['stu', 'job', 'ret', 'mid'].every((k) => cats
   check(cleaned?.items.length === 4 && ses.clean(null) === null && ses.clean({ v: fake.v, items: [] }) === null && ses.clean({ items: fake.items }) === null, '세션 일정: 공식 주소가 아닌 줄은 빼고, 비었거나 꼴이 틀린 자료는 받지 못한 것으로 본다');
   check(ses.daysOf(cleaned.items).join(' ') === '2027-01-06 2027-01-07' && ses.onDay(cleaned.items, '2027-01-06').map((s) => s.id).join(' ') === 'a0000002 a0000001', '세션 일정: 날짜별로 시간 차례로 보인다');
   check(ses.search(cleaned.items, 'robotics').length === 1 && ses.search(cleaned.items, 'robotics research').length === 1 && ses.search(cleaned.items, 'west retail').length === 0 && ses.search(cleaned.items, 'ARIA').length === 1 && ses.search(cleaned.items, '  ').length === 4, '세션 일정: 낱말로 찾는다 (제목 · 곳 · 트랙 · 주제, 낱말이 모두 들어 있는 것)');
+  check(ses.recommend(cleaned.items, [{ name: '로봇', cats: ['Robotics'] }]).map((s) => s.id).join('') === 'a0000001' && ses.recommend(cleaned.items, []).length === 0, '세션 일정: 주제 판의 이름과 분야로 공식 세션을 추천한다');
   const a = cleaned.items.find((s) => s.id === 'a0000001');
   const base = capacity(hoursFor('2027-01-06', {}, info), [], 30);
   const put = ses.toggle(a, []);
