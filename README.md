@@ -64,14 +64,14 @@ cargo run -p ces-data -- sort-diary --in <폴더나 파일> --out 한장.md   # 
 - **다른 곳에서 가져온 것 · 가져올 것:** [docs/가져올것.md](docs/가져올것.md). **남은 일의 준비:** 정식 배치도([docs/정식배치도_넣는법.md](docs/정식배치도_넣는법.md)) · 모으는 곳([docs/모으는곳_준비.md](docs/모으는곳_준비.md)) · 현장 하루([docs/현장_하루.md](docs/현장_하루.md)) · 비공개([docs/비공개_차례.md](docs/비공개_차례.md)). **정할 것:** [docs/물어볼것.md](docs/물어볼것.md).
 - 참고: [`reference/미리보기판/`](reference/미리보기판/)은 11/19에 만든 3D 미리 보기 판(JS)의 본문과 자료 스크립트다.
 
-### 아직 정하지 않은 것
+### 정하는 것
 
-`config/settings.json`의 값은 임시다. 이재엽이 정하면 이 파일만 고친다.
+이재엽이 정하는 것은 `config/settings.json`에 있다. 바꾸려면 이 파일만 고친다. 물음과 답은 [docs/물어볼것.md](docs/물어볼것.md).
 
 | 칸 | 지금 값 | 고를 수 있는 값 |
 |---|---|---|
-| `companyIntro` 공개 판의 회사 소개 | `link-only` (소개 글은 싣지 않고 공식 링크만) | `first-sentence` (공식 소개 첫 문장 + 출처 링크) |
-| `collector` 일기를 모으는 곳 | `undecided` | 정하면 적는다 (구글 시트 한 장 / 파일로 받기) |
+| `companyIntro` 공개 판의 회사 소개 | `link-only` (소개 글은 싣지 않고 공식 링크만). **11/21에 정함** | `first-sentence` (공식 소개 첫 문장 + 출처 링크) |
+| `collector` 일기를 모으는 곳 | `file` (파일로 받기: 보내기를 누르면 파일이 내려온다). **11/21에 정함** | `sheet` (구글 시트 한 장. `collectorUrl`도 넣는다) |
 | `collectorUrl` 보내기가 가는 주소 | `""` (비어 있으면 꺼짐: 보내기가 파일로 내려온다) | `https://`로 시작하는 주소. 넣으면 보내기가 그 주소로 일기 묶음을 POST한다 |
 | `codysseyIcon` 코디세이 아이콘 | `false` (글자만) | `true` (운영팀 확인 뒤) |
 | `privateOn` 비공개로 돌리는 날 | `null` | 날짜 |

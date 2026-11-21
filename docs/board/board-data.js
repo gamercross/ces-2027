@@ -45,7 +45,7 @@ window.BOARD = {
     {f: 'v_big', id: 'v_a_collect', t: 'aservice', n: '일기 모으기', sub: '네 태그로', s: 'part', col: 3},
     {f: 'v_big', id: 'v_app', t: 'acomp', n: '폰 앱 (웹)', sub: '오프라인으로도', s: 'part', col: 0, span: 2, see: 'data'},
     {f: 'v_big', id: 'v_build', t: 'acomp', n: '자료 짓는 도구', sub: 'Rust · Actions에서 돈다', s: 'done', col: 2},
-    {f: 'v_big', id: 'v_hub', t: 'acomp', n: '[제안] 모으는 곳', sub: '구글 시트 한 장', s: 'cand', col: 3},
+    {f: 'v_big', id: 'v_hub', t: 'acomp', n: '모으는 곳', sub: '파일로 받기 (11/21 정함)', s: 'done', col: 3},
     {f: 'v_big', id: 'v_d_me', t: 'dobject', n: '나 · 관심 · 동선', sub: '내 폰에', s: 'part', col: 0},
     {f: 'v_big', id: 'v_d_diary', t: 'dobject', n: '회사 일기', sub: '내 폰에', s: 'done', col: 1},
     {f: 'v_big', id: 'v_d_ces', t: 'dobject', n: 'CES 전시사 자료', sub: '공식 검색에서 · 받은 날짜', s: 'done', col: 2},
@@ -69,9 +69,9 @@ window.BOARD = {
     // ── 내 것은 어디로 ──
     {f: 'v_data', id: 'd_me', t: 'bactor', n: '나', s: 'todo', col: 0},
     {f: 'v_data', id: 'd_lead', t: 'bactor', n: '정리하는 사람', s: 'todo', col: 2},
-    {f: 'v_data', id: 'd_send', t: 'bevent', n: '보내기를 누름', s: 'part', col: 1},
+    {f: 'v_data', id: 'd_send', t: 'bevent', n: '보내기를 누름', s: 'done', col: 1},
     {f: 'v_data', id: 'd_app', t: 'acomp', n: '내 폰의 앱', s: 'part', col: 0},
-    {f: 'v_data', id: 'd_hub', t: 'acomp', n: '[제안] 모으는 곳', sub: '구글 시트 한 장', s: 'cand', col: 1.5},
+    {f: 'v_data', id: 'd_hub', t: 'acomp', n: '모으는 곳', sub: '건넨 파일을 한 폴더에', s: 'done', col: 1.5},
     {f: 'v_data', id: 'd_local', t: 'dobject', n: '명함 · 관심 · 동선 · 일기', sub: '내 폰에만', s: 'part', col: 0},
     {f: 'v_data', id: 'd_pool', t: 'dobject', n: '모인 일기', sub: '보낸 것만', s: 'todo', col: 1},
     {f: 'v_data', id: 'd_four', t: 'dobject', n: '네 태그 정리 한 장', sub: '학생 · 취준생 · 정년 · 장년', s: 'part', col: 2},
@@ -94,7 +94,7 @@ window.BOARD = {
     {f: 'plan', id: 'wp_offline', t: 'wp', n: '오프라인 · 배포', s: 'part', col: 1, when: '11/20 (Pages 켜기 남음)', who: 'Orca'},
     {f: 'plan', id: 'wp_locate', t: 'wp', n: '내 위치 · 다음 곳', s: 'part', col: 2, when: '11/21 (GPS는 캠퍼스까지)', who: 'Orca'},
     {f: 'plan', id: 'wp_maps', t: 'wp', n: '구글맵 길찾기', s: 'done', col: 2, when: '11/21', who: 'Orca'},
-    {f: 'plan', id: 'wp_diary', t: 'wp', n: '회사 일기 · 보내기', s: 'part', col: 2, when: '11/21 (모으는 곳은 정할 것)', who: 'Orca'},
+    {f: 'plan', id: 'wp_diary', t: 'wp', n: '회사 일기 · 보내기', s: 'done', col: 2, when: '11/21 (파일로 받기로 정함)', who: 'Orca'},
     {f: 'plan', id: 'wp_test', t: 'wp', n: '팀 3 ~ 5명이 써 봄', s: 'todo', col: 2, when: '12/14 ~ 12/16', who: '나'},
     {f: 'plan', id: 'wp_floor', t: 'wp', n: '[제안] 정식 배치도', s: 'cand', col: 3, when: '열리면', who: 'Orca'},
     {f: 'plan', id: 'wp_public', t: 'wp', n: '공개 판 · 단톡방 안내', s: 'todo', col: 3, when: '~12/31', who: '나 · Aside'},
@@ -151,7 +151,7 @@ window.BOARD = {
     stores: [
       {id: 'phone', n: '내 폰', l: 'app', life: '앱을 지우거나 브라우저 기록을 지울 때까지', d: '나 · 관심 · 동선 · 일기 — 다른 사람에게 가지 않는다. 서비스 워커가 화면 · 코어 · 자료도 폰에 담아 인터넷 없이 연다'},
       {id: 'site', n: '웹 주소 (GitHub Pages)', l: 'tec', life: '공개 판 동안', d: '앱 화면 · 폰용 코어(WASM) · CES 전시사 자료 · 찾기 색인 · 장소 자료'},
-      {id: 'hub', n: '[제안] 모으는 곳', l: 'app', life: '정리가 끝날 때까지', d: '보내기를 누른 일기만. 방식은 정할 것(구글 시트 한 장 안)'}
+      {id: 'hub', n: '모으는 곳 (파일)', l: 'app', life: '정리가 끝날 때까지', d: '보내기를 누른 일기만. 내려온 파일을 정리하는 사람에게 건네고, 그 사람이 한 폴더에 모은다 (11/21 정함). 공개 레포에는 두지 않는다'}
     ],
     data: [
       {id: 'd_profile', st: 'phone', n: '내 온라인 명함', one: '별명 · 태그 하나 · 한 줄 소개 · 깃허브 · 디스코드', shape: ['별명', '태그(학생 · 취준생 · 정년 · 장년)', '한 줄', '깃허브 주소', '디스코드 주소', '고른 분야'], w: [[null, '처음 열 때 명함을 만든다']], r: [[null, '명함 화면의 QR 둘(폰에서 만든다) · 분야 추천 · 일기의 태그 기본값']], life: '내 폰에만 (localStorage ces2027.profile.v1)', never: '전화번호 · 주민번호 같은 민감한 것은 받지 않는다'},
@@ -171,5 +171,5 @@ window.BOARD = {
       {o: null, t: '모으기', d: '보내기를 누른 일기만 한곳에', dm: ['d_pool']}
     ]
   },
-  legend: ['**만드는 중이다.** 실선은 코드에 있는 것, 점선은 아직 없는 것이다. 세션이 끝날 때마다 코드에 맞춰 고친다.', '**[제안]** 붙은 것은 아직 정하지 않은 것이다.']
+  legend: ['**만드는 중이다.** 실선은 코드에 있는 것, 점선은 아직 없는 것이다. 세션이 끝날 때마다 코드에 맞춰 고친다.', '**[제안]** 붙은 것은 아직 정하지 않은 것이다. 정한 것과 남은 물음은 docs/물어볼것.md에 있다.']
 };
