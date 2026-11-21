@@ -251,7 +251,8 @@ export async function render() {
 
   const moving = section('오가는 법',
     el('ul', { class: 'stack' }, info.moving.map((m) => el('li', {}, el('b', { text: m.ko }), el('span', { text: m.what }), proof(m, info.movingSource)))),
-    el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: '#/transit', text: '셔틀 노선 · 시간표 보기' }), el('a', { class: 'btn ghost', href: '#/apply', text: '자율주행 이동 (Waymo · Zoox)' })));
+    // 셔틀 노선 · 자율주행 이동은 위 바로 가기("셔틀" · "따로 신청")에 한 번씩만 둔다.
+    el('p', { class: 'note', text: '셔틀 노선 · 시간표는 위 바로 가기 "셔틀", 자율주행 이동(Waymo · Zoox)은 "따로 신청"에 있다.' }));
 
   const badge = section('배지 받는 곳',
     el('p', {}, info.badge.rule, ' ', proof(null, info.badge.source)),
