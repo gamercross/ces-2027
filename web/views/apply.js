@@ -23,7 +23,8 @@ export async function render() {
     const on = !!applied[it.id];
     const when = it.date ? `${md(it.date)}${it.from ? ` ${it.from}${it.to ? ` ~ ${it.to}` : ''}` : ''}` : '';
     const link = it.place ? placeLink(places, it.place) : null;
-    const mark = MARK[it.group];
+    // 표시할 것이 없는 줄(운영팀이 해 주는 배지)은 단추를 두지 않는다.
+    const mark = it.mark === false ? null : MARK[it.group];
     return el('li', { class: 'entry' },
       el('div', { class: 'name' }, `${it.org} · ${it.what}`, el('span', { class: it.status === 'confirmed' ? 'tag mint' : 'tag', text: STATUS_KO[it.status] })),
       el('div', { class: 'where', text: [when, it.where].filter(Boolean).join(' · ') }),

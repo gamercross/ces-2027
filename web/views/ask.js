@@ -4,12 +4,12 @@
 
 import { el, out } from '../dom.js';
 import { getPhrases, getSettings } from '../data.js';
-import { capabilities, dictate, modeOf, speak, translate, translateLink } from '../speech.js';
-import { capRows, capText, MODE_KO, showBig } from '../talk-ui.js';
+import { capabilities, dictate, speak, translate, translateLink } from '../speech.js';
+import { capRows, capText, currentMode, modePicker, showBig } from '../talk-ui.js';
 
-export async function render({ rest }) {
+export async function render({ rest, go }) {
   const [phrases, settings] = await Promise.all([getPhrases(), getSettings()]);
-  const mode = modeOf(settings);
+  const mode = currentMode(settings);
   const caps = await capabilities(mode);
   const back = rest[0] ? `#/listen/${rest[0]}` : null;
   let pack = phrases.packs[0];
@@ -97,5 +97,5 @@ export async function render({ rest }) {
     el('section', { class: 'panel' },
       el('h2', { text: '이 폰에서 되는 것' }),
       capRows([['읽어 주기', caps.speak], ['글 옮기기', caps.translate], ['받아 적기', caps.dictate]]),
-      el('p', { class: 'note', text: `지금 길: ${MODE_KO[mode]}. ${mode === 'on-device' ? '소리와 글이 폰 밖으로 나가지 않는다.' : '받아 적을 때 소리가 폰 밖(구글 · 애플)으로 간다.'} 길은 설정(speech) 하나로 바꾼다. 아직 정하지 않아 기본값이다.` })));
+      modePicker(mode, () => go(location.hash))));
 }

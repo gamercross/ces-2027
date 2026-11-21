@@ -4,8 +4,8 @@
 import { el } from '../dom.js';
 import { getExhibitors, getPhrases, getSettings } from '../data.js';
 import { getDiary, load, save, setDiary } from '../store.js';
-import { capabilities, dictate, installDictation, makeDraft, modeOf, summarize, translate } from '../speech.js';
-import { capRows, MODE_KO, showBig } from '../talk-ui.js';
+import { capabilities, dictate, installDictation, makeDraft, summarize, translate } from '../speech.js';
+import { capRows, currentMode, modePicker, showBig } from '../talk-ui.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
@@ -25,7 +25,7 @@ export async function render({ rest, go }) {
   const [phrases, settings, data] = await Promise.all([getPhrases(), getSettings(), exId ? getExhibitors().catch(() => null) : null]);
   const row = data?.ex.find((r) => r[0] === exId);
   const company = row ? { id: row[0], name: row[1], booth: row[7][0] || '' } : { id: '', name: '', booth: '' };
-  const mode = modeOf(settings);
+  const mode = currentMode(settings);
   let caps = await capabilities(mode);
 
   const lines = [];
@@ -182,7 +182,7 @@ export async function render({ rest, go }) {
         drawCaps();
         drawDock();
       } })) : null,
-      el('p', { class: 'note', text: `지금 길: ${MODE_KO[mode]}. ${mode === 'on-device' ? '소리와 글이 폰 밖으로 나가지 않는다.' : '받아 적을 때 소리가 폰 밖(구글 · 애플)으로 간다.'} 길은 설정(speech) 하나로 바꾼다. 아직 정하지 않아 기본값이다.` })].filter(Boolean));
+      modePicker(mode, () => { if (running || lines.length) status.textContent = '길을 바꿨다. 지금 듣는 것을 초안으로 남긴 다음부터 쓴다.'; else go(location.hash); })].filter(Boolean));
   }
   keep.addEventListener('change', drawDock);
   const addTyped = () => { const t = typed.value.trim(); if (t) { addLine(t); typed.value = ''; } };

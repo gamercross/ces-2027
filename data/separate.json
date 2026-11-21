@@ -83,16 +83,16 @@
       "sources": [ { "ko": "CES 발표 · 레노버 기조연설", "url": "https://www.ces.tech/press-releases/lenovo-takes-ces-2027-keynote-to-new-heights-with-immersive-experience-at-sphere", "read": "2026-11-21" } ]
     },
     {
-      "id": "ces-badge", "group": "apply", "org": "CES", "what": "배지 등록",
-      "where": "온라인", "place": "", "date": null, "from": null, "to": null,
-      "apply": { "url": "https://www.ces.tech/attendee-guides/registration-information/", "ko": "CES 등록 안내" }, "deadline": null, "watchFrom": null,
-      "who": "CES는 업계 사람 · 18세 이상을 받는다고 적는다. 학생 기준은 공식 안내에 없다.",
+      "id": "ces-badge", "group": "badge", "mark": false, "org": "CES", "what": "배지 (연수단은 운영팀이 등록)",
+      "where": "받는 곳은 첫 화면의 \"배지 받는 곳\"", "place": "", "date": null, "from": null, "to": null,
+      "apply": { "url": null, "ko": "따로 할 일 없음. 연수단의 배지는 운영팀이 등록한다 (11/21에 확인)" }, "deadline": null, "watchFrom": null,
+      "who": "연수단 모두. 스스로 등록하지 않는다.",
       "status": "confirmed",
       "last": null,
-      "todo": "연수단의 배지는 운영팀 안내를 따른다. 스스로 등록하지 않는다. (참고: 공식 안내의 값은 11/30까지 149달러, 12/1부터 349달러다.)",
+      "todo": "배지를 받는 곳에서 여권을 보인다. CES는 받을 때 정부가 발급한 사진 신분증을 보라고 적는다.",
       "sources": [
         { "ko": "CES 등록 안내", "url": "https://www.ces.tech/attendee-guides/registration-information/", "read": "2026-11-21" },
-        { "ko": "CES 등록 가이드", "url": "https://www.ces.tech/attendee-guides/attendee-registration-guide/", "read": "2026-11-21" }
+        { "ko": "CES 배지 받는 곳", "url": "https://www.ces.tech/media/2bgnt0uj/ces-2027-badgepickup_929.pdf", "read": "2026-11-21" }
       ]
     },
     {

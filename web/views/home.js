@@ -57,7 +57,7 @@ function separateBoxes() {
         el('p', { text: `${s.watch.join(' · ')}: 2027 발표와 전시관 안내가 아직 없다. 배지와 따로 신청이나 초대가 있어야 할 수 있다. 작년에는 12월 초 ~ 중순에 안내가 나왔다.` }),
         el('ul', { class: 'dots' },
           s.apply.map((t) => el('li', { text: `따로 표가 있어야 한다: ${t} (안내 전)` })),
-          el('li', { text: '배지는 운영팀 안내를 따른다. 스스로 등록하지 않는다.' }),
+          el('li', { text: '배지는 운영팀이 등록한다. 따로 할 일 없음. 받는 곳에서 여권을 보인다.' }),
           s.rides.length ? el('li', { text: `가기 전에: ${s.rides[0]} 앱 받고 관심 등록 (초대까지 시간이 걸릴 수 있음)` }) : null),
         el('p', { class: 'note', text: `${md(s.read)}에 CES 공식 사이트와 회사 공식 사이트에서 확인했다. 짐작한 것은 없다.` }),
         el('div', { class: 'actions' },
