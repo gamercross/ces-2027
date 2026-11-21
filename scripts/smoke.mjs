@@ -252,8 +252,32 @@ const settings = await json('data/settings.json');
   check(WANT.every((k) => phrases.packs.some((p) => p.k === k && p.items.length >= 3)) && items.every((it) => it.ko && /^[\x20-\x7e]+$/.test(it.en)) && /record/i.test(phrases.notice.en) && phrases.notice.ko, `질문 묶음: ${phrases.packs.length}묶음 ${items.length}줄이 한국어 · 영어 짝으로 들어 있고(제품 · 가격 · 출시 · 한국 판매 · 채용 · 명함 교환 · 이벤트), 녹음을 알리는 말이 있다`);
   check(settings.speech === 'on-device' && speech.modeOf({}) === 'on-device' && speech.modeOf({ speech: 'x' }) === 'on-device' && speech.modeOf({ speech: 'device-service' }) === 'device-service' && speech.modeOf(settings, 'device-service') === 'device-service' && speech.modeOf(settings, 'nope') === 'on-device' && speech.modeOf({ speech: 'device-service' }, 'on-device') === 'on-device', '받아쓰기 · 번역을 어디서 하나: 두 길을 다 두고 쓰는 사람이 고른다. 고르기 전 기본값은 "폰 안에서만"이다');
   {
-    const translationModel = await json('data/speech-model.json');
-    check(settings.companyImage === true && settings.translationModel === 'off' && translationModel.translation?.enabled === false && translationModel.translation?.candidate?.license === 'CC-BY-4.0' && translationModel.translation?.candidate?.revision === 'aea67600956847d47609f96b364f33a734007d50', '회사 로고는 켬으로 기본한다. 영한 번역 모델은 기본 끔이고 후보 판 · 라이선스 · 받지 않는 상태가 고정돼 있다');
+    const tm = (await json('data/speech-model.json')).translation;
+    const tmod = await import('../web/translate-model.js');
+    const bytes = tm.files.reduce((n, f) => n + f.bytes, 0);
+    const hex64 = (s) => /^[0-9a-f]{64}$/.test(s);
+    check(settings.companyImage === true && settings.translationModel === 'off', '회사 로고는 켬으로, 영한 번역 모델은 기본 끔으로 둔다 (받기를 눌러야 받는다)');
+    check(tm.enabled === true && tm.lang === 'en-ko' && tm.license === 'CC-BY-4.0' && tm.id === 'TigreGotico/opus-mt-en-ko-onnx' && tm.revision.length === 40 && tm.baseRevision.length === 40 && tm.files.length === 4 && tm.files.every((f) => hex64(f.sha256) && f.bytes > 0)
+      && tm.tokenizer.from.every((f) => hex64(f.sha256) && f.url.includes(tm.baseRevision)) && tm.tokenizer.files.every((f) => hex64(f.sha256)),
+    `영한 번역 모델: 판 · 라이선스(CC-BY-4.0) · 파일마다 크기와 sha256이 고정돼 있다 (모델 ${(bytes / 1048576).toFixed(1)} MiB)`);
+    check(bytes < 300 * 1000 * 1000 && tmod.totalBytes(await json('data/speech-model.json')) < 300 * 1000 * 1000, '영한 번역 모델을 받는 크기가 300MB 아래다 (실행기와 단어 사전 포함)');
+    const { createHash } = await import('node:crypto');
+    let dictOk = true;
+    for (const f of tm.tokenizer.files) {
+      const bytesIn = await readFile(join(dist, tm.tokenizer.dir, f.name)).catch(() => null);
+      dictOk = dictOk && !!bytesIn && bytesIn.length === f.bytes && createHash('sha256').update(bytesIn).digest('hex') === f.sha256;
+    }
+    check(dictOk, '영한 번역 단어 사전 둘(원문 · 번역문)이 지은 곳에 있고 못 박아 둔 sha256과 같다');
+    const dict = JSON.parse(await readFile(join(dist, tm.tokenizer.dir, 'source-tokenizer.json'), 'utf8'));
+    check(dict.model.type === 'Unigram' && dict.model.vocab.length === 32001 && dict.model.vocab[32000][0] === '<pad>' && dict.model.vocab.some(([p]) => p === '▁Hello') && dict.post_processor?.single?.some((x) => x.SpecialToken?.id === '</s>'), '영한 번역 원문 사전: 조각 32001개(32000번은 <pad>)이고 문장 끝에 </s>를 붙인다');
+    const pieces = tmod.pieces('Hello there. How much is it? ' + 'word '.repeat(120));
+    check(pieces.length >= 2 && pieces.every((p) => p.length <= 400) && tmod.pieces('  ').length === 0 && /^약 \d+(초|분)$/.test(tmod.estimate(245e6, 50)) && tmod.estimate(245e6, 10) !== tmod.estimate(245e6, 50), '번역 모델: 긴 글은 토막으로 나누고, 받는 시간은 와이파이 · 4G로 계산해 보인다');
+    const noTr = { navigator: {} };
+    const withModel = await speech.capabilities('on-device', noTr, undefined, { ready: true, on: true, name: 'X' });
+    const modelOff = await speech.capabilities('on-device', noTr, undefined, { ready: true, on: false, name: 'X' });
+    const notReady = await speech.capabilities('on-device', noTr, undefined, { ready: false, on: true, name: 'X' });
+    const ownFirst = await speech.capabilities('on-device', { Translator: { availability: async () => 'available', create: async () => ({}) } }, undefined, { ready: true, on: true, name: 'X' });
+    check(withModel.translate.ok && withModel.translate.engine === 'model' && withModel.translate.only === 'ko' && !modelOff.translate.ok && !notReady.translate.ok && ownFirst.translate.ok && !ownFirst.translate.engine, '영한 번역: 받아 두고 켠 모델은 폰 자체 번역기가 없을 때만 쓰고(영어 → 한국어만), 꺼 두었거나 받지 않았으면 쓰지 않는다');
   }
   const talkUi = await readFile(join(dist, 'talk-ui.js'), 'utf8');
   check(speech.allowedMode('device-service', null) === 'on-device' && speech.allowedMode('device-service', '2026-11-21') === 'device-service' && speech.allowedMode('on-device', null) === 'on-device' && /인터넷이 필요하고 소리가 구글 · 애플로 간다/.test(speech.SERVICE_NOTE) && talkUi.includes('speechConsent.v1') && talkUi.includes('SERVICE_NOTE'), '폰의 음성 인식 서비스 길: "인터넷이 필요하고 소리가 구글 · 애플로 간다"를 보이고 한 번 확인받은 뒤에만 쓴다 (확인이 없으면 폰 안에서만)');

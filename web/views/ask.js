@@ -7,11 +7,12 @@ import { getPhrases, getSettings } from '../data.js';
 import { capabilities, speak, translate, translateLink } from '../speech.js';
 import { capRows, capText, currentMode, modelBox, modePicker, showBig, startDictation, translationModelPicker } from '../talk-ui.js';
 import { modelStatus } from '../speech-model.js';
+import { translateStatus, translateText } from '../translate-model.js';
 
 export async function render({ rest, go }) {
   const [phrases, settings] = await Promise.all([getPhrases(), getSettings()]);
   const mode = currentMode(settings);
-  const caps = await capabilities(mode, undefined, await modelStatus());
+  const caps = await capabilities(mode, undefined, await modelStatus(), await translateStatus());
   const back = rest[0] ? `#/listen/${rest[0]}` : null;
   let pack = phrases.packs[0];
 
@@ -42,11 +43,11 @@ export async function render({ rest, go }) {
       link.replaceChildren(...(text ? [out(translateLink(text, from, to), '번역 사이트에서 열기'), ' (적은 글이 폰 밖, 구글 번역으로 나간다)'] : []));
     };
     box.addEventListener('input', paintLink);
-    const turn = el('button', { class: 'btn', type: 'button', text: to === 'en' ? '영어로 바꾸기' : '한국어로 바꾸기', disabled: !caps.translate.ok, onclick: async () => {
+    const turn = el('button', { class: 'btn', type: 'button', text: to === 'en' ? '영어로 바꾸기' : '한국어로 바꾸기', disabled: !caps.translate.ok || (caps.translate.engine === 'model' && to !== 'ko'), onclick: async () => {
       const text = box.value.trim();
       if (!text) { status.textContent = '먼저 글을 적는다.'; return; }
       status.textContent = '옮기는 중이다. 처음에는 번역 꾸러미를 받느라 오래 걸릴 수 있다.';
-      const got = await translate(text, from, to);
+      const got = caps.translate.engine === 'model' ? await translateText(text) : await translate(text, from, to);
       if (!got) { status.textContent = '옮기지 못했다. 이 폰 안의 번역기가 이 말을 돕지 않는다.'; return; }
       status.textContent = '폰 안에서 옮긴 글이다. 틀릴 수 있다.';
       const en = to === 'en' ? got : text;
@@ -73,7 +74,7 @@ export async function render({ rest, go }) {
     return el('section', { class: 'panel' },
       el('h2', { text: title }),
       el('label', { class: 'field' }, el('span', { class: 'label', text: from === 'ko' ? '한국어로 적는다' : '영어를 적거나 받아 적는다' }), box),
-      caps.translate.ok ? null : el('p', { class: 'note', text: `글 옮기기: ${capText(caps.translate)}.${to === 'en' ? ' 위 묶음의 질문은 미리 옮겨 두어 그대로 쓸 수 있다.' : ''}` }),
+      caps.translate.ok && !(caps.translate.engine === 'model' && to === 'en') ? null : el('p', { class: 'note', text: caps.translate.ok ? '글 옮기기: 폰 안 번역 모델은 영어를 한국어로만 옮긴다. 위 묶음의 질문은 미리 옮겨 두어 그대로 쓸 수 있다.' : `글 옮기기: ${capText(caps.translate)}.${to === 'en' ? ' 위 묶음의 질문은 미리 옮겨 두어 그대로 쓸 수 있다.' : ''}` }),
       withDictation && !caps.dictate.ok ? el('p', { class: 'note', text: `받아 적기: ${capText(caps.dictate)}. 손으로 적어도 된다.` }) : null,
       el('div', { class: 'actions' }, turn, mic, big),
       link, status, result);
@@ -100,5 +101,5 @@ export async function render({ rest, go }) {
       capRows([['읽어 주기', caps.speak], ['글 옮기기', caps.translate], ['받아 적기', caps.dictate]]),
       caps.dictate.engine === 'model' ? modelBox(caps.dictate, () => go(location.hash)) : null,
       modePicker(mode, () => go(location.hash)),
-      translationModelPicker(settings)));
+      translationModelPicker(settings, () => go(location.hash))));
 }

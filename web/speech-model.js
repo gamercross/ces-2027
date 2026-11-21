@@ -6,7 +6,7 @@ import { resample, RATE, Segmenter } from './pcm.js';
 
 // 앱의 판이 바뀌어도 지워지지 않게, 서비스 워커가 지우는 이름(ces2027-…)과 다르게 짓는다.
 export const KEEP = 'ces2027keep-speech-v1';
-const MODEL_CACHE = 'transformers-cache';
+export const MODEL_CACHE = 'transformers-cache';
 
 let infoOnce = null;
 export function getModelInfo() {
@@ -14,8 +14,8 @@ export function getModelInfo() {
   return infoOnce;
 }
 
-const runtimeFiles = (info) => info.runtime.files.filter((f) => !f.notice);
-const runtimeUrl = (info, f) => new URL(info.runtime.dir + f.name, document.baseURI).href;
+export const runtimeFiles = (info) => info.runtime.files.filter((f) => !f.notice);
+export const runtimeUrl = (info, f) => new URL(info.runtime.dir + f.name, document.baseURI).href;
 const modelUrl = (info, f) => `${info.dictation.host}${info.dictation.id}/resolve/${info.dictation.revision}/${f.name}`;
 export const totalBytes = (info) => [...runtimeFiles(info), ...info.dictation.files].reduce((a, f) => a + f.bytes, 0);
 export const toMB = (bytes) => Math.round(bytes / 1048576);
@@ -105,7 +105,10 @@ export async function removeModel() {
   worker = null;
   loading = null;
   const info = await getModelInfo();
-  await caches.delete(KEEP);
+  // 영한 번역 모델이 같은 실행기를 쓴다. 번역 모델이 폰에 있으면 실행기를 남긴다 (번역 모델을 지울 때 함께 지운다).
+  const models0 = (await caches.has(MODEL_CACHE)) ? await (await caches.open(MODEL_CACHE)).keys() : [];
+  const translationHeld = !!info.translation && models0.some((req) => req.url.includes(`/${info.translation.id}/`));
+  if (!translationHeld) await caches.delete(KEEP);
   if (!(await caches.has(MODEL_CACHE))) return;
   // 실행기가 스스로 담아 둔 것 가운데 이 모델의 것만 지운다 (판을 못 박지 않고 읽은 설정 한 장도 같이).
   const models = await caches.open(MODEL_CACHE);

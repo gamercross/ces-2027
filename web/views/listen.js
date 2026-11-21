@@ -7,6 +7,7 @@ import { getDiary, load, save, setDiary } from '../store.js';
 import { capabilities, installDictation, makeDraft, summarize, translate } from '../speech.js';
 import { capRows, currentMode, modelBox, modePicker, showBig, startDictation, translationModelPicker } from '../talk-ui.js';
 import { modelStatus } from '../speech-model.js';
+import { translateStatus, translateText } from '../translate-model.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
@@ -27,7 +28,10 @@ export async function render({ rest, go }) {
   const row = data?.ex.find((r) => r[0] === exId);
   const company = row ? { id: row[0], name: row[1], booth: row[7][0] || '' } : { id: '', name: '', booth: '' };
   const mode = currentMode(settings);
-  let caps = await capabilities(mode, undefined, await modelStatus());
+  const getCaps = async () => capabilities(mode, undefined, await modelStatus(), await translateStatus());
+  let caps = await getCaps();
+  // 폰 자체 번역기가 있으면 그것을, 없고 영한 번역 모델을 켜 두었으면 그것을 쓴다.
+  const toKo = (text) => (caps.translate.engine === 'model' ? translateText(text) : translate(text, 'en', 'ko'));
 
   const lines = [];
   const pending = [];
@@ -58,7 +62,7 @@ export async function render({ rest, go }) {
     const ko = el('small', { text: caps.translate.ok ? '옮기는 중' : '' });
     heard.append(el('li', {}, el('span', { lang: 'en', text }), ko));
     count.textContent = `받아 적은 글 ${lines.length}줄`;
-    if (caps.translate.ok) pending.push(translate(text, 'en', 'ko').then((got) => { line.ko = got || ''; ko.textContent = got || '(옮기지 못함)'; }));
+    if (caps.translate.ok) pending.push(toKo(text).then((got) => { line.ko = got || ''; ko.textContent = got || '(옮기지 못함)'; }));
     drawDock();
   }
 
@@ -127,9 +131,10 @@ export async function render({ rest, go }) {
     lock = null;
     if (!lines.length && !blob) { saved = false; status.textContent = '받아 적은 글도 녹음도 없다. 초안을 만들지 않았다.'; drawDock(); return; }
     status.textContent = '일기 초안을 만드는 중이다.';
-    await Promise.race([Promise.allSettled(pending), new Promise((r) => setTimeout(r, 4000))]);
+    // 폰 안 번역 모델은 한 줄에 몇 초 걸리니 더 기다린다.
+    await Promise.race([Promise.allSettled(pending), new Promise((r) => setTimeout(r, caps.translate.engine === 'model' ? 60000 : 4000))]);
     let summary = await summarize(lines.map((l) => l.en).join(' '));
-    if (summary && caps.translate.ok) summary = (await translate(summary, 'en', 'ko')) || summary;
+    if (summary && caps.translate.ok) summary = (await toKo(summary)) || summary;
     const who = company.id ? company : { id: '', name: nameBox.value.trim() || '회사 이름 없음', booth: '' };
     const entry = makeDraft(who, lines, today(), newId(), summary);
     if (blob) {
@@ -180,19 +185,19 @@ export async function render({ rest, go }) {
         ev.target.disabled = true;
         status.textContent = '말 꾸러미를 받는 중이다. 와이파이에서 받는다.';
         const ok = await installDictation();
-        caps = await capabilities(mode, undefined, await modelStatus());
+        caps = await getCaps();
         status.textContent = ok ? '말 꾸러미를 받았다.' : '말 꾸러미를 받지 못했다.';
         drawCaps();
         drawDock();
       } })) : null,
       caps.dictate.engine === 'model' ? modelBox(caps.dictate, async () => {
         if (running) return;
-        caps = await capabilities(mode, undefined, await modelStatus());
+        caps = await getCaps();
         drawCaps();
         drawDock();
       }) : null,
       modePicker(mode, () => { if (running || lines.length) status.textContent = '길을 바꿨다. 지금 듣는 것을 초안으로 남긴 다음부터 쓴다.'; else go(location.hash); }),
-      translationModelPicker(settings)].filter(Boolean));
+      translationModelPicker(settings, async () => { if (running) return; caps = await getCaps(); drawCaps(); drawDock(); })].filter(Boolean));
   }
   keep.addEventListener('change', drawDock);
   const addTyped = () => { const t = typed.value.trim(); if (t) { addLine(t); typed.value = ''; } };

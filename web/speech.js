@@ -15,8 +15,9 @@ const SR = (g) => g.SpeechRecognition || g.webkitSpeechRecognition || null;
 
 // 이 폰에서 무엇이 되는지. env는 시험할 때 넣는다 (기본은 지금 창).
 // model은 폰 안 받아쓰기 모델의 형편이다: { can(돌릴 수 있는 브라우저인가), ready(받아 두었나), mb(받을 크기), name }.
+// tmodel은 폰 안 영한 번역 모델의 형편이다: { ready(받아 두었나), on(쓰는 사람이 켰나), name }. 폰 자체 번역기가 없을 때만 쓴다.
 // 돌려주는 것마다 { ok, why }.
-export async function capabilities(mode, env, model) {
+export async function capabilities(mode, env, model, tmodel) {
   const g = env || globalThis;
   const out = {};
   out.speak = g.speechSynthesis && g.SpeechSynthesisUtterance ? { ok: true, why: '' } : { ok: false, why: '이 브라우저는 글을 읽어 주지 못한다' };
@@ -48,6 +49,10 @@ export async function capabilities(mode, env, model) {
     out.translate = state === 'available'
       ? { ok: true, why: '이미 준비된 폰 안 번역기를 쓴다' }
       : { ok: false, why: state === 'downloadable' || state === 'downloading' ? '폰 안 번역 꾸러미가 아직 준비되지 않았다. 받는 크기를 확인할 수 없어 자동으로 받지 않는다' : '폰 안에서 하는 번역이 이 폰에는 없다' };
+  }
+  // 폰 자체 번역기가 없으면, 받아 두고 켠 영한 번역 모델로 한다. 영어 → 한국어만 된다.
+  if (!out.translate.ok && tmodel?.ready && tmodel?.on) {
+    out.translate = { ok: true, engine: 'model', only: 'ko', why: `폰 안 번역 모델(${tmodel.name})로 영어를 한국어로만 옮긴다. 글이 폰 밖으로 나가지 않는다. 한 줄에 몇 초 걸리고 틀릴 수 있다` };
   }
   return out;
 }

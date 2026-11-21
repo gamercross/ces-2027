@@ -181,6 +181,15 @@ jobs:
           cp data/speech-model.json dist/data/
           node scripts/fetch-speech-runtime.mjs dist .cache/speech-runtime
 
+      - name: 영한 번역 원본 사전 캐시
+        uses: actions/cache@v6
+        with:
+          path: .cache/translate-spm
+          key: translate-spm-${{ hashFiles('data/speech-model.json') }}
+
+      - name: 영한 번역 단어 사전을 만든다 (원본 판 · sha256 확인)
+        run: node scripts/fetch-translate-tokenizers.mjs dist .cache/translate-spm
+
       - name: 판 이름 찍기 · 인터넷 없이 담아 둘 목록
         run: node scripts/stamp.mjs dist
 
