@@ -139,7 +139,9 @@ async function frontPage() {
   return el('div', { class: 'page' },
     el('section', { class: 'panel' },
       el('h1', { text: '회사' }),
-      note),
+      note,
+      // 주제 판은 아래 탭에서 빠지고 회사 탭 아래에 선다 (탭은 다섯까지).
+      el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: '#/topics', text: '주제 판' }))),
     results,
     fields,
     // 한 손으로 닿게 찾기 칸을 아래에 붙여 둔다.

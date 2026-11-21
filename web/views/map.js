@@ -19,10 +19,11 @@ import { getMarks, setMarks } from '../notify.js';
 import { getEvents } from '../store.js';
 import { placeLink } from './days.js';
 import { routeThroughAisle } from '../indoor-path.js';
+import { T, DAY_COLORS, withAlpha } from '../tokens.js';
 
 const NS = 'http://www.w3.org/2000/svg';
-const FILL = { hall: '#c9d6ee', room: '#e2dcef', out: '#d9e6dc', hotel: '#ecdccb' };
-const DAY_FILL = ['#b9c0cf', '#f4b9a7', '#a9c6ee', '#a8d8bf', '#f1d38a'];
+const FILL = { hall: T.hall, room: T.room, out: T.out, hotel: T.hotel };
+const DAY_FILL = DAY_COLORS;
 
 function svg(tag, attrs, ...kids) {
   const node = document.createElementNS(NS, tag);
@@ -60,14 +61,14 @@ export async function render({ rest = [] } = {}) {
   const all = pad(L.boxAll, 120);
   let view = [...all];
 
-  const roads = svg('g', { fill: 'none', stroke: '#cfd6e2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },
+  const roads = svg('g', { fill: 'none', stroke: T.road, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },
     ...places.roads.map((r) => svg('polyline', { points: pts(r.pts.map(([x, z]) => L.W(r.c, x, z))), 'stroke-width': r.w * (places.campuses.find((c) => c.k === r.c).toWorld.scale) })));
-  const decor = svg('g', { fill: '#dfe3ea' }, ...places.decor.map((d) => svg('polygon', { points: pts(d.poly.map(([x, z]) => L.W(d.c, x, z))) })));
-  const links = svg('g', { fill: 'none', stroke: '#8fa3c8', 'stroke-dasharray': '18 14', 'stroke-width': 5, opacity: 0.8 },
+  const decor = svg('g', { fill: T.decor }, ...places.decor.map((d) => svg('polygon', { points: pts(d.poly.map(([x, z]) => L.W(d.c, x, z))) })));
+  const links = svg('g', { fill: 'none', stroke: T.link, 'stroke-dasharray': '18 14', 'stroke-width': 5, opacity: 0.8 },
     ...places.links.map((k) => { const a = L.W(k.from.c, ...k.from.at), b = L.W(k.to.c, ...k.to.at); return svg('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1] }); }));
-  const shapes = svg('g', { stroke: '#56679a', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke' });
-  const labels = svg('g', { 'text-anchor': 'middle', fill: '#1f2a44', 'font-weight': 700 });
-  const campusLabels = svg('g', { 'text-anchor': 'middle', fill: '#4b5878', 'font-weight': 700 });
+  const shapes = svg('g', { stroke: T.accent, 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke' });
+  const labels = svg('g', { 'text-anchor': 'middle', fill: T.ink, 'font-weight': 700 });
+  const campusLabels = svg('g', { 'text-anchor': 'middle', fill: T.ink2, 'font-weight': 700 });
   const marks = svg('g', {});
   const pinLayer = svg('g', {});
   const me = svg('g', { id: 'me-layer' });
@@ -133,7 +134,7 @@ export async function render({ rest = [] } = {}) {
     if (scroll) detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
   for (const p of L.list) {
-    const shape = svg('polygon', { points: pts(p.world), fill: FILL[p.kind] || '#dde3ee', tabindex: 0, role: 'button', 'aria-label': p.ko });
+    const shape = svg('polygon', { points: pts(p.world), fill: FILL[p.kind] || T.place, tabindex: 0, role: 'button', 'aria-label': p.ko });
     shape.dataset.k = p.k;
     shape.addEventListener('click', () => pick(p));
     shape.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pick(p); } });
@@ -152,18 +153,18 @@ export async function render({ rest = [] } = {}) {
   for (const m of places.landmarks) {
     const at = m.at ? L.W(m.c, ...m.at) : (() => { const s = spots.get(`${m.place}|${m.booth}`); return s ? [s.x, s.z] : null; })();
     if (!at) continue;
-    const g = svg('g', {}, svg('circle', { cx: at[0], cy: at[1], fill: m.kind === 'badge' ? '#8a6fb3' : m.kind === 'shuttle' ? '#3f8f86' : '#6b7896' }), svg('title', {}));
+    const g = svg('g', {}, svg('circle', { cx: at[0], cy: at[1], fill: m.kind === 'badge' ? T.badge : m.kind === 'shuttle' ? T.shuttle : T.transit }), svg('title', {}));
     g.lastChild.textContent = m.ko;
-    const text = svg('text', { x: at[0], y: at[1], fill: '#1f2a44', 'pointer-events': 'none' });
+    const text = svg('text', { x: at[0], y: at[1], fill: T.ink, 'pointer-events': 'none' });
     text.textContent = m.ko;
     g.append(text);
     marks.append(g);
   }
   for (const c of L.city) {
-    const g = svg('g', { tabindex: 0, role: 'button', 'aria-label': `${c.ko} (전시장 밖, 자리는 어림)` }, svg('circle', { cx: c.center[0], cy: c.center[1], fill: '#f0b08a', stroke: '#1f2a44', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke' }), svg('title', {}));
+    const g = svg('g', { tabindex: 0, role: 'button', 'aria-label': `${c.ko} (전시장 밖, 자리는 어림)` }, svg('circle', { cx: c.center[0], cy: c.center[1], fill: T.city, stroke: T.ink, 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke' }), svg('title', {}));
     g.dataset.city = c.k;
     g.querySelector('title').textContent = c.ko;
-    const text = svg('text', { x: c.center[0], y: c.center[1], fill: '#1f2a44', 'font-weight': 700, 'pointer-events': 'none' });
+    const text = svg('text', { x: c.center[0], y: c.center[1], fill: T.ink, 'font-weight': 700, 'pointer-events': 'none' });
     text.textContent = c.ko;
     g.append(text);
     g.style.cursor = 'pointer';
@@ -172,9 +173,9 @@ export async function render({ rest = [] } = {}) {
     marks.append(g);
   }
   for (const pin of pins) {
-    const g = svg('g', {}, svg('circle', { cx: pin.x, cy: pin.z, fill: DAY_FILL[pin.day], stroke: '#1f2a44', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke', opacity: pin.seen ? 0.45 : 1 }), svg('title', {}));
+    const g = svg('g', {}, svg('circle', { cx: pin.x, cy: pin.z, fill: DAY_FILL[pin.day], stroke: T.ink, 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke', opacity: pin.seen ? 0.45 : 1 }), svg('title', {}));
     g.querySelector('title').textContent = `${pin.no}. ${pin.name}`;
-    const text = svg('text', { x: pin.x, y: pin.z, 'text-anchor': 'middle', 'dominant-baseline': 'central', fill: '#1f2a44', 'font-weight': 700, 'pointer-events': 'none' });
+    const text = svg('text', { x: pin.x, y: pin.z, 'text-anchor': 'middle', 'dominant-baseline': 'central', fill: T.ink, 'font-weight': 700, 'pointer-events': 'none' });
     text.textContent = String(pin.no);
     g.append(text);
     pinLayer.append(g);
@@ -190,7 +191,7 @@ export async function render({ rest = [] } = {}) {
   // 부스 점을 무엇으로 칠할까: 한 색 · 분야 묶음 · 한국 · 혁신상. 고른 것은 폰에 남는다.
   let colorMode = MODES.some((m) => m.k === load('mapColor.v1', 'plain')) ? load('mapColor.v1', 'plain') : 'plain';
   const noRows = [];
-  let colorOf = data ? boothColorer(colorMode, data, table, (key) => boothEx.get(key) || noRows) : () => '#9aa9cc';
+  let colorOf = data ? boothColorer(colorMode, data, table, (key) => boothEx.get(key) || noRows) : () => T.plain;
   const legendBox = el('div', { class: 'legend', 'aria-label': '부스 점의 색' });
   function paintLegend() {
     legendBox.replaceChildren(...legend(colorMode, table).map((l) => el('span', { class: 'swatch' }, el('i', { style: `background:${l.color}` }), l.ko)));
@@ -296,7 +297,7 @@ export async function render({ rest = [] } = {}) {
       const on1 = b.key === chosenBooth;
       // 명함 이벤트로 표시한 부스는 붉은 테두리로 두른다.
       const marked = !!marks[b.key];
-      const dot = svg('circle', { cx: b.x.toFixed(1), cy: b.z.toFixed(1), r: marked ? (Number(r) * 1.35).toFixed(2) : r, fill: colorOf(b.key), stroke: on1 ? '#1f2a44' : marked ? '#8a3b2f' : '#f4f1ea', 'stroke-width': on1 || marked ? 3 : 1, 'vector-effect': 'non-scaling-stroke' });
+      const dot = svg('circle', { cx: b.x.toFixed(1), cy: b.z.toFixed(1), r: marked ? (Number(r) * 1.35).toFixed(2) : r, fill: colorOf(b.key), stroke: on1 ? T.ink : marked ? T.warn : T.panel, 'stroke-width': on1 || marked ? 3 : 1, 'vector-effect': 'non-scaling-stroke' });
       dot.dataset.key = b.key;
       nodes.push(dot);
       if (nodes.length >= 900) break;
@@ -438,19 +439,19 @@ export async function render({ rest = [] } = {}) {
         const title = svg('title');
         title.textContent = `홀 안 짐작 길 · ${indoorPaths.read} 확인`;
         me.append(
-          svg('polyline', { points: pts(path), fill: 'none', stroke: '#8a3b2f', 'stroke-width': 4, 'stroke-dasharray': '7 5', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none', 'aria-label': '홀 안 짐작 길' }, title),
-          svg('circle', { cx: entry[0], cy: entry[1], r: 7, fill: '#f4f1ea', stroke: '#8a3b2f', 'stroke-width': 2, 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' }));
+          svg('polyline', { points: pts(path), fill: 'none', stroke: T.warn, 'stroke-width': 4, 'stroke-dasharray': '7 5', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none', 'aria-label': '홀 안 짐작 길' }, title),
+          svg('circle', { cx: entry[0], cy: entry[1], r: 7, fill: T.panel, stroke: T.warn, 'stroke-width': 2, 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' }));
       }
     } else if (at && chosenSpot) {
-      me.append(svg('line', { x1: at[0], y1: at[1], x2: chosenSpot.x, y2: chosenSpot.z, stroke: '#8a3b2f', 'stroke-width': 3, 'stroke-linecap': 'round', 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' }));
+      me.append(svg('line', { x1: at[0], y1: at[1], x2: chosenSpot.x, y2: chosenSpot.z, stroke: T.warn, 'stroke-width': 3, 'stroke-linecap': 'round', 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' }));
     }
-    if (at && nextPin) me.append(svg('line', { x1: at[0], y1: at[1], x2: nextPin.x, y2: nextPin.z, stroke: '#1f2a44', 'stroke-width': 2, 'stroke-dasharray': '6 5', 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' }));
+    if (at && nextPin) me.append(svg('line', { x1: at[0], y1: at[1], x2: nextPin.x, y2: nextPin.z, stroke: T.ink, 'stroke-width': 2, 'stroke-dasharray': '6 5', 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' }));
     if (at) {
       // 부스로 맞췄으면 작은 점, GPS(캠퍼스까지)면 넓은 고리로 보인다.
       const wide = where.by === 'gps';
       me.append(
-        svg('circle', { cx: at[0], cy: at[1], r: (unit * (wide ? (where.area ? 34 : 60) : 16)).toFixed(1), fill: 'rgba(86,103,154,0.18)', stroke: '#56679a', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' }),
-        svg('circle', { cx: at[0], cy: at[1], r: (unit * 6).toFixed(1), fill: '#56679a', stroke: '#f4f1ea', 'stroke-width': 2, 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' }));
+        svg('circle', { cx: at[0], cy: at[1], r: (unit * (wide ? (where.area ? 34 : 60) : 16)).toFixed(1), fill: withAlpha(T.accent, 0.18), stroke: T.accent, 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' }),
+        svg('circle', { cx: at[0], cy: at[1], r: (unit * 6).toFixed(1), fill: T.accent, stroke: T.panel, 'stroke-width': 2, 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' }));
     }
     if (!where) whereText.textContent = '아직 내 위치를 모른다.';
     else if (where.by === 'booth') whereText.textContent = `${placeBy.get(where.place)?.ko || '장소 모름'} · 부스 ${where.code} 근처`;

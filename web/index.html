@@ -11,6 +11,7 @@
 <link rel="apple-touch-icon" href="icon/apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="CES 준비 지도">
+<link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="app.css">
 <!-- 첫 화면에 쓰는 조각을 한꺼번에 받는다 (하나씩 이어 받느라 늦어지지 않게). 3D · 찾기 자료는 여기 없다. -->
 <link rel="modulepreload" href="app.js">
@@ -20,17 +21,20 @@
 <link rel="modulepreload" href="notify.js">
 <link rel="modulepreload" href="alerts.js">
 <link rel="modulepreload" href="dom.js">
+<link rel="modulepreload" href="frame.js">
 <link rel="modulepreload" href="views/home.js">
 <link rel="modulepreload" href="views/card.js">
 </head>
 <body>
 <header class="bar">
+  <button class="back" id="back" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg><span>뒤로</span></button>
   <a class="brand" href="#/" aria-label="첫 화면">
     <span class="brand-icon" id="brand-icon" hidden></span>
     <span class="brand-name">글로벌 어학연수</span>
     <span class="tag">비공식</span>
   </a>
   <a class="chip" id="me-chip" href="#/card">내 명함</a>
+  <p class="net" id="net" role="status" hidden>인터넷 없음 · 담아 둔 화면은 그대로 열린다</p>
 </header>
 
 <main id="view" tabindex="-1">
@@ -51,12 +55,11 @@
 </div>
 
 <nav class="tabs" aria-label="화면">
-  <a href="#/" data-tab="home">홈</a>
-  <a href="#/topics" data-tab="topics">주제</a>
-  <a href="#/find" data-tab="find">회사</a>
-  <a href="#/plan" data-tab="plan">동선</a>
-  <a href="#/map" data-tab="map">지도</a>
-  <a href="#/diary" data-tab="diary">일기</a>
+  <a href="#/" data-tab="home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5"/><path d="M6.5 10v9h11v-9"/></svg><span>홈</span></a>
+  <a href="#/find" data-tab="find"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg><span>회사</span></a>
+  <a href="#/plan" data-tab="plan"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h6a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h6"/></svg><span>동선</span></a>
+  <a href="#/map" data-tab="map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10Z"/><circle cx="12" cy="10" r="2"/></svg><span>지도</span></a>
+  <a href="#/diary" data-tab="diary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h10a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2V4Z"/><path d="M9 9h6M9 13h6"/></svg><span>일기</span></a>
 </nav>
 
 <noscript><p class="panel">이 안내는 자바스크립트가 켜져 있어야 열린다.</p></noscript>

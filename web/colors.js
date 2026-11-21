@@ -2,13 +2,15 @@
 // 분야 묶음 · 한국 회사 · 혁신상 가운데 하나를 골라 칠한다. 색은 눈이 편한 파스텔로 바꿨다.
 // 화면과 따로 두어 Node에서도 시험한다.
 
-export const PLAIN = '#9aa9cc';
-const NONE = '#c5cad3';
-// 분야 묶음 일곱 (data/categories.json의 groups 차례와 같은 기호).
-export const GROUP_COLORS = { ai: '#8fa8e6', mob: '#f0b08a', rob: '#e79a9a', hea: '#9ed3ab', hom: '#e9cf7c', ent: '#c3a2df', biz: '#93cdd3' };
-const KOREA = '#e88f8f';
-const BEST = '#dfa544';
-const HONOREE = '#f0d98c';
+// 색의 원본은 tokens.css(--map-* · --group-*)다. 여기서는 이름만 붙여 쓴다.
+import { T, GROUP_COLORS } from './tokens.js';
+
+export { GROUP_COLORS };
+export const PLAIN = T.plain;
+const NONE = T.none;
+const KOREA = T.korea;
+const BEST = T.best;
+const HONOREE = T.honoree;
 
 export const MODES = [
   { k: 'plain', ko: '한 색' },

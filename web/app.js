@@ -4,6 +4,7 @@ import { getProfile } from './store.js';
 import { getInfo, getMeta, getSettings } from './data.js';
 import { offline, startOffline } from './offline.js';
 import { alerts, checkAlerts, startAlerts } from './notify.js';
+import { failed, frame, loading, missing } from './frame.js';
 
 const VIEWS = {
   '': () => import('./views/home.js'),
@@ -24,6 +25,12 @@ const VIEWS = {
 };
 const TAB_OF = { '': 'home', find: 'find', plan: 'plan', map: 'map', diary: 'diary', topics: 'topics', days: 'plan', ask: 'find', listen: 'diary', apply: 'home', transit: 'home', sessions: 'plan' };
 
+// 메인 틀: 아래 탭은 다섯(홈 · 회사 · 동선 · 지도 · 일기). 주제 판은 회사 탭 아래에 선다.
+// 탭이 아닌 화면(명함 · 시간과 일정 · 물어볼 말 …)은 위에 "뒤로"가 생기고, 돌아갈 곳은 TAB_OF의 탭이다.
+TAB_OF.topics = 'find';
+const ROOTS = new Set(['', 'find', 'plan', 'map', 'diary']);
+for (const k of Object.keys(VIEWS)) frame.views.add(k);
+
 // 명함이 있으면 첫 화면이 쓸 자료를 화면 조각과 같이 받기 시작한다.
 if (getProfile()) { getInfo().catch(() => {}); getMeta(); }
 
@@ -32,7 +39,34 @@ let turn = 0;
 
 function route() {
   const [name = '', ...rest] = location.hash.replace(/^#\/?/, '').split('/');
-  return { name: name in VIEWS ? name : '', rest };
+  return name in VIEWS ? { name, rest } : { name: '', rest, lost: name };
+}
+
+// 뒤로: 앱 안에서 넘어온 화면이면 브라우저의 뒤로와 같고(스크롤 · 적던 것이 그대로), 주소로 바로 들어왔으면 그 탭의 첫 화면으로 간다.
+// 몇 번째 화면인지(d)를 기록에 붙여 둔다. 주소를 바꿔 끼운 것(replace)은 같은 자리로 센다.
+let depth = 0;
+let replacing = false;
+function stamp() {
+  const d = history.state?.d;
+  if (typeof d === 'number') depth = d;
+  else { depth = replacing ? depth : depth + (show.ran ? 1 : 0); history.replaceState({ ...(history.state || {}), d: depth }, ''); }
+  replacing = false;
+  show.ran = true;
+}
+function replaceTo(hash) { replacing = true; location.replace(hash); }
+const backButton = document.getElementById('back');
+let parent = '#/';
+backButton.addEventListener('click', () => { if (depth > 0) history.back(); else go(parent); });
+
+function frameFor(name, rest) {
+  const root = ROOTS.has(name) && !rest.length;
+  const tab = TAB_OF[name] || 'home';
+  parent = document.querySelector(`.tabs a[data-tab="${tab}"]`)?.getAttribute('href') || '#/';
+  backButton.hidden = root;
+  document.body.classList.toggle('sub', !root);
+  for (const a of document.querySelectorAll('.tabs a')) {
+    if (a.dataset.tab === tab) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+  }
 }
 
 async function show() {
@@ -40,23 +74,23 @@ async function show() {
   // 나눈 링크(#plan=<코드>)로 들어왔으면 동선 화면에서 받은 목록을 보인다.
   if (location.hash.startsWith('#plan=')) {
     sessionStorage.setItem('ces2027.incoming', location.hash.slice(1));
-    location.replace('#/plan');
+    replaceTo('#/plan');
     return;
   }
-  let { name, rest } = route();
+  const { name, rest, lost } = route();
   // 처음 들어오면 명함부터 만든다. "나중에"를 누르면 이번에는 묻지 않는다.
-  if (name === '' && !getProfile() && !sessionStorage.getItem('ces2027.introLater')) {
-    location.replace('#/card');
+  if (name === '' && !lost && !getProfile() && !sessionStorage.getItem('ces2027.introLater')) {
+    replaceTo('#/card');
     return;
   }
-  for (const a of document.querySelectorAll('.tabs a')) {
-    if (a.dataset.tab === TAB_OF[name]) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
-  }
+  stamp();
+  frameFor(lost ? 'lost' : name, lost ? [] : rest);
   refreshChip();
+  const first = !view.dataset.shown;
+  // 느린 망: 0.25초 넘게 걸리면 "불러오는 중"을 보인다 (앞 화면이 그대로 남아 헷갈리지 않게).
+  const wait = setTimeout(() => { if (mine === turn) view.replaceChildren(loading()); }, 250);
   try {
-    const mod = await VIEWS[name]();
-    if (mine !== turn) return;
-    const node = await mod.render({ rest, go });
+    const node = lost ? missing(lost) : await (await VIEWS[name]()).render({ rest, go });
     if (mine !== turn) return;
     view.replaceChildren(node);
     startOffline();
@@ -64,15 +98,24 @@ async function show() {
     if (!startAlerts()) checkAlerts();
   } catch (e) {
     if (mine !== turn) return;
-    const p = document.createElement('p');
-    p.className = 'panel';
-    p.textContent = '화면을 불러오지 못했다. 인터넷을 확인하고 다시 열어 본다.';
-    view.replaceChildren(p);
+    view.replaceChildren(failed({ retry: show }));
     startOffline();
     console.error(e);
+  } finally {
+    clearTimeout(wait);
   }
+  view.dataset.shown = '1';
   window.scrollTo(0, 0);
+  // 화면을 바꾸면 읽는 자리를 본문으로 옮긴다 (화면 읽기 도구). 첫 화면은 그대로 둔다.
+  if (!first) view.focus({ preventScroll: true });
 }
+
+// 인터넷이 끊기면 위에 한 줄로 알린다. 폰에 담아 둔 화면 · 동선 · 지도는 그대로 열린다.
+const net = document.getElementById('net');
+function paintNet() { net.hidden = navigator.onLine !== false; }
+window.addEventListener('online', paintNet);
+window.addEventListener('offline', paintNet);
+paintNet();
 
 export function go(hash) {
   if (location.hash === hash) show(); else location.hash = hash;
