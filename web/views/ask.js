@@ -4,13 +4,14 @@
 
 import { el, out } from '../dom.js';
 import { getPhrases, getSettings } from '../data.js';
-import { capabilities, dictate, speak, translate, translateLink } from '../speech.js';
-import { capRows, capText, currentMode, modePicker, showBig } from '../talk-ui.js';
+import { capabilities, speak, translate, translateLink } from '../speech.js';
+import { capRows, capText, currentMode, modelBox, modePicker, showBig, startDictation } from '../talk-ui.js';
+import { modelStatus } from '../speech-model.js';
 
 export async function render({ rest, go }) {
   const [phrases, settings] = await Promise.all([getPhrases(), getSettings()]);
   const mode = currentMode(settings);
-  const caps = await capabilities(mode);
+  const caps = await capabilities(mode, undefined, await modelStatus());
   const back = rest[0] ? `#/listen/${rest[0]}` : null;
   let pack = phrases.packs[0];
 
@@ -56,9 +57,9 @@ export async function render({ rest, go }) {
 
     let session = null;
     const mic = withDictation ? el('button', { class: 'btn ghost', type: 'button', text: '받아 적기', disabled: !caps.dictate.ok }) : null;
-    mic?.addEventListener('click', () => {
-      if (session) { session.stop(); session = null; mic.textContent = '받아 적기'; status.textContent = '받아 적기를 멈췄다.'; return; }
-      session = dictate(mode, caps.dictate.local, {
+    mic?.addEventListener('click', async () => {
+      if (session) { const s = session; session = null; mic.textContent = '받아 적기'; status.textContent = '받아 적기를 멈추는 중이다.'; await s.stop(); status.textContent = '받아 적기를 멈췄다.'; return; }
+      session = await startDictation(mode, caps.dictate, {
         onLine: (text) => { box.value = `${box.value}${box.value ? ' ' : ''}${text}`.slice(0, 600); paintLink(); },
         onInterim: (text) => { status.textContent = text ? `듣는 중: ${text}` : '듣는 중이다.'; },
         onEnd: (why) => { session = null; mic.textContent = '받아 적기'; status.textContent = `받아 적기가 멈췄다 (${why}). 마이크 허락과 인터넷을 본다.`; },
@@ -97,5 +98,6 @@ export async function render({ rest, go }) {
     el('section', { class: 'panel' },
       el('h2', { text: '이 폰에서 되는 것' }),
       capRows([['읽어 주기', caps.speak], ['글 옮기기', caps.translate], ['받아 적기', caps.dictate]]),
+      caps.dictate.engine === 'model' ? modelBox(caps.dictate, () => go(location.hash)) : null,
       modePicker(mode, () => go(location.hash))));
 }

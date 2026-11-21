@@ -22,7 +22,9 @@ const sha = (process.env.GITHUB_SHA || '').slice(0, 7) || `local${Date.now().toS
 const version = `${meta?.v || 'nodata'}-${sha}`;
 await writeFile(join(dist, 'version.json'), JSON.stringify({ v: version, data: meta?.v || null, built: new Date().toISOString().replace(/\.\d+Z$/, 'Z') }));
 
-const files = (await walk(dist)).filter((f) => f !== 'sw.js' && !f.startsWith('.')).sort();
+// 누를 때만 받는 것(폰 안 받아쓰기 모델의 실행기, 15MB쯤)은 미리 담지 않는다 (web/sw.js의 LAZY와 같은 곳).
+const LAZY = ['vendor/'];
+const files = (await walk(dist)).filter((f) => f !== 'sw.js' && !f.startsWith('.') && !LAZY.some((dir) => f.startsWith(dir))).sort();
 const list = ['./', ...files];
 const swPath = join(dist, 'sw.js');
 const sw = await readFile(swPath, 'utf8');
