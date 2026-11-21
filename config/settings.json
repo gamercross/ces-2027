@@ -1,8 +1,8 @@
 {
-  "about": "이재엽이 정하는 것을 적는 자리다. 정한 것: companyIntro(링크만, 2026-11-21) · collector(파일로 받기, 2026-11-21). 아직 정하지 않은 것: codysseyIcon · privateOn. 값의 뜻은 README의 '정하는 것'에 있다.",
+  "about": "이재엽이 정하는 것을 적는 자리다. 정한 것: companyIntro(링크만, 2026-11-21) · collector(파일로 받기, 2026-11-21) · codysseyIcon(써도 된다는 답을 받아 넣음, 2026-11-21). 아직 정하지 않은 것: privateOn. 값의 뜻은 README의 '정하는 것'에 있다.",
   "companyIntro": "link-only",
   "collector": "file",
   "collectorUrl": "",
-  "codysseyIcon": false,
+  "codysseyIcon": "icon/codyssey.png",
   "privateOn": null
 }
