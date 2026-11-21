@@ -12,7 +12,7 @@ const HELP: &str = "\
 ces-data: CES 공식 전시사 검색에서 자료를 받아 줄이고 찾기 색인을 만든다
 
 쓰는 법:
-  ces-data build [고름]         받아서 exhibitors.json · search-index.txt · meta.json · places.json을 쓴다
+  ces-data build [고름]         받아서 exhibitors.json · logos.json · search-index.txt · meta.json · places.json을 쓴다
   ces-data check-places [고름]  장소 자료만 살핀다
   ces-data sessions [고름]      CES 공식 일정(ces.tech/schedule)에서 기조연설 · 세션을 받아 sessions.json을 쓴다 (--out · --from · --save-raw)
   ces-data sort-diary --in <폴더나 파일> [--in ...] [--out <파일>]
@@ -129,6 +129,7 @@ fn run_build(a: &Args) -> Result<(), String> {
     let out = build(&raw, &places, intro, &tables, &fetched_at);
     std::fs::create_dir_all(&a.out).map_err(|e| format!("{}: {e}", a.out.display()))?;
     write(&a.out.join("exhibitors.json"), &out.exhibitors.to_string())?;
+    write(&a.out.join("logos.json"), &out.logos.to_string())?;
     write(&a.out.join("search-index.txt"), &out.index)?;
     write(&a.out.join("meta.json"), &serde_json::to_string_pretty(&out.meta).map_err(|e| e.to_string())?)?;
     write(&a.out.join("places.json"), &places.json.to_string())?;

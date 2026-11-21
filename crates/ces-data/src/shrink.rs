@@ -60,6 +60,8 @@ impl Tables {
 /// 만든 것.
 pub struct Output {
     pub exhibitors: Value,
+    /// 회사 로고 파일 이름(data/logos.json). 사진을 켠 설정에서만 쓴다.
+    pub logos: Value,
     pub index: String,
     pub meta: Value,
     /// 사람이 볼 것 (장소를 못 정한 부스, 한글 이름이 없는 분야).
@@ -135,6 +137,59 @@ struct Row {
     featured: u8,
     /// (부스 글, 장소 기호)
     booths: Vec<(String, String)>,
+    /// 공식 로고 파일 이름(없으면 빈 글).
+    logo: String,
+}
+
+/// 공식 로고가 놓인 곳. 그림은 우리 레포에 담지 않고 이 주소 그대로 보인다.
+pub const LOGO_BASE: &str = "https://exhibitors.ces.tech/mys_shared/CES27/logos/";
+const KIND_CHARS: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+/// 로고 파일 이름으로 쓸 수 있는 글자만 받는다 (주소에 그대로 붙이므로).
+fn safe_logo(file: &str) -> bool {
+    !file.is_empty() && file.len() <= 80 && file.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'-' || b == b'_') && file.contains('.')
+}
+
+/// 로고 파일 이름을 줄여 적는다. 전시사 줄(`ex`)과 같은 차례로 글자 하나씩 쓴다: `-`은 로고 없음, 나머지는 `kinds`의 번호.
+/// 파일 이름이 전시사 id에 확장자를 붙인 것이면 확장자만(`png`), id를 소문자로 한 것이면 `~png`로 적는다. 그 밖의 이름은 `extra`에 줄 번호로 둔다.
+pub fn logos_json<'a>(rows: impl Iterator<Item = (&'a str, &'a str)>, version: &str) -> Value {
+    let mut kinds: Vec<String> = Vec::new();
+    let mut map = String::new();
+    let mut extra = serde_json::Map::new();
+    let mut n = 0;
+    for (i, (id, file)) in rows.enumerate() {
+        if !safe_logo(file) {
+            map.push('-');
+            continue;
+        }
+        n += 1;
+        let (stem, ext) = file.rsplit_once('.').unwrap_or((file, ""));
+        let kind = if stem == id { Some(ext.to_string()) } else if stem == id.to_lowercase() { Some(format!("~{ext}")) } else { None };
+        let slot = kind.and_then(|k| match kinds.iter().position(|x| *x == k) {
+            Some(p) => Some(p),
+            None if kinds.len() < KIND_CHARS.len() => {
+                kinds.push(k);
+                Some(kinds.len() - 1)
+            }
+            None => None,
+        });
+        match slot {
+            Some(p) => map.push(KIND_CHARS[p] as char),
+            None => {
+                map.push('-');
+                extra.insert(i.to_string(), Value::String(file.to_string()));
+            }
+        }
+    }
+    json!({
+        "v": version,
+        "base": LOGO_BASE,
+        "n": n,
+        "how": "map은 data/exhibitors.json의 ex와 같은 차례로 줄마다 한 글자다. - 는 로고 없음. 그 밖의 글자는 kinds의 번호(0-9 a-z A-Z). kinds의 png는 파일 이름이 전시사 id.png, ~png는 id를 소문자로 한 이름.png. extra는 줄 번호 → 파일 이름. 주소는 base + 파일 이름.",
+        "kinds": kinds,
+        "map": map,
+        "extra": extra,
+    })
 }
 
 /// 줄이고 색인을 만든다. `fetched_at`은 받은 시각(ISO)이다.
@@ -190,6 +245,7 @@ pub fn build(raw: &Raw, places: &Places, intro: Intro, tables: &Tables, fetched_
             cats,
             award: award_of(f),
             featured: truthy(f.get("exhfeatured_t")) as u8,
+            logo: f.get("exhlogo_t").and_then(text_of).unwrap_or_default(),
             booths,
             id,
             name,
@@ -269,6 +325,7 @@ pub fn build(raw: &Raw, places: &Places, intro: Intro, tables: &Tables, fetched_
         "fields": FIELDS,
         "ex": ex,
     });
+    let logos = logos_json(rows.iter().map(|r| (r.id.as_str(), r.logo.as_str())), version);
     let (place_count, guess_count) = places.counts();
     let meta = json!({
         "v": version,
@@ -282,15 +339,27 @@ pub fn build(raw: &Raw, places: &Places, intro: Intro, tables: &Tables, fetched_
         "booths": all_booths.len(),
         "unplacedBooths": unplaced.len(),
         "indexWords": words,
+        "logos": logos["n"],
         "companyIntro": intro.as_str(),
         "places": { "edition": places.json["edition"], "count": place_count, "boothSpotsGuess": guess_count },
     });
-    Output { exhibitors, index, meta, warnings }
+    Output { exhibitors, logos, index, meta, warnings }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn 로고_이름을_줄여_적는다() {
+        let rows = [("0013A1", "0013A1.png"), ("0013A2", "0013a2.png"), ("0013A3", ""), ("0013A4", "other.jpg"), ("0013A5", "../x.png"), ("0013A6", "0013A6.JPG")];
+        let j = logos_json(rows.iter().copied(), "2026-11-21");
+        assert_eq!(j["map"], "01--" .to_string() + "-2");
+        assert_eq!(j["kinds"], json!(["png", "~png", "JPG"]));
+        assert_eq!(j["extra"], json!({ "3": "other.jpg" }));
+        assert_eq!(j["n"], 4);
+        assert_eq!(j["base"], LOGO_BASE);
+    }
 
     #[test]
     fn 첫_문장만() {

@@ -177,7 +177,8 @@ export async function render() {
       el('ul', { class: 'rows' }, c.halls.map((h) => el('li', {}, el('b', { text: h.ko }), el('span', {}, h.what, ' ', proof(h, c.source))))))));
 
   const moving = section('오가는 법',
-    el('ul', { class: 'stack' }, info.moving.map((m) => el('li', {}, el('b', { text: m.ko }), el('span', { text: m.what }), proof(m, info.movingSource)))));
+    el('ul', { class: 'stack' }, info.moving.map((m) => el('li', {}, el('b', { text: m.ko }), el('span', { text: m.what }), proof(m, info.movingSource)))),
+    el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: '#/transit', text: '셔틀 노선 · 시간표 보기' }), el('a', { class: 'btn ghost', href: '#/apply', text: '자율주행 이동 (Waymo · Zoox)' })));
 
   const badge = section('배지 받는 곳',
     el('p', {}, info.badge.rule, ' ', proof(null, info.badge.source)),

@@ -24,4 +24,4 @@ jobs:
           rustup default stable
 
       - name: 링크를 하나씩 열어 본다
-        run: cargo run --release -p ces-data -- check-links --in data/separate.json --in data/info.json
+        run: cargo run --release -p ces-data -- check-links --in data/separate.json --in data/info.json --in data/transit.json

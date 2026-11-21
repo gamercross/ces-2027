@@ -74,6 +74,70 @@ const settings = await json('data/settings.json');
   check(waymo.date === '2027-01-05' && waymo.from === '18:30' && waymo.to === '19:45' && /Palazzo/.test(waymo.where), 'Waymo 기조연설은 1/5 18:30 ~ 19:45 베네시안 Palazzo Ballroom이다 (CES 일정표)');
   const badge = sepData.items.find((it) => it.id === 'ces-badge');
   check(badge.what.includes('운영팀이 등록') && badge.apply.url === null && badge.apply.ko.includes('따로 할 일 없음') && badge.todo.includes('여권') && badge.deadline === null && !/달러|\$\d/.test(JSON.stringify(badge)), '배지: 연수단은 운영팀이 등록 · 따로 할 일 없음 · 받는 곳에서 여권 보이기로 적고, 값과 마감은 넣지 않았다');
+
+// 오가는 법(교통): 줄마다 CES 공식 출처와 확인 날짜, 2027 안내가 없거나 어긋나는 줄은 "확인 필요".
+{
+  const transit = await json('data/transit.json');
+  const places = await json('data/places.json');
+  const tr = await import('../web/transit.js');
+  const isDate = (s) => /^\d{4}-\d\d-\d\d$/.test(s);
+  const kinds = new Set(['hotel', 'cspace', 'express', 'airport', 'media', 'monorail', 'loop', 'rideshare', 'hub']);
+  const ids = new Set(transit.lines.map((l) => l.id));
+  const shapeOk = transit.lines.every((l) => l.id && kinds.has(l.kind) && l.ko && ['confirmed', 'check'].includes(l.status) && Array.isArray(l.stops) && l.stops.every((s) => s.ko && s.board && s.query) && (l.schedule === null || transit.schedules[l.schedule]));
+  check(shapeOk && ids.size === transit.lines.length && isDate(transit.read), `교통 자료: ${transit.lines.length}줄의 꼴이 맞다 (종류 · 상태 · 타는 곳 · 시간표)`);
+  const srcs = transit.lines.flatMap((l) => l.sources);
+  const CES = /^https:\/\/www\.ces\.tech\//;
+  check(transit.lines.every((l) => l.sources.length > 0) && srcs.every((s) => CES.test(s.url) && isDate(s.read) && s.ko) && CES.test(transit.guide.url) && CES.test(transit.flyer.url), `교통 자료: 줄마다 출처와 확인 날짜가 있고 출처 ${srcs.length}개가 모두 CES 공식 사이트(ces.tech)다`);
+  const parts = Object.values(transit.schedules).flat().flatMap((d) => d.parts);
+  check(parts.every((p) => transit.parts[p.part] && /^\d\d:\d\d$/.test(p.from) && /^\d\d:\d\d$/.test(p.to) && p.from < p.to && Number.isInteger(p.every) && p.every > 0), `교통 자료: 시간표 ${parts.length}토막의 시각 · 간격이 맞다`);
+  const checks = transit.lines.filter((l) => l.status === 'check');
+  check(checks.length > 0 && checks.every((l) => l.todo && l.note), `교통 자료: "확인 필요" 줄은 ${checks.length}개이고 모두 무엇을 확인할지(할 일)를 적었다`);
+  const text = JSON.stringify(transit);
+  check([...text.matchAll(/작년/g)].every((m) => text.slice(m.index, m.index + 12).startsWith('작년(CES 2026)')) && !/@[a-z]+\.[a-z]/i.test(text), '교통 자료: 작년 것을 적을 때는 "작년(CES 2026)"이라고 밝혔고, 메일 주소는 없다');
+  const link = tr.stopLink(places, transit.lines.find((l) => l.id === 'r9').stops[1]);
+  const link2 = tr.stopLink(places, transit.lines.find((l) => l.id === 'r2').stops[0]);
+  check(link.startsWith('https://www.google.com/maps/search/?api=1&query=') && link.includes(encodeURIComponent('201 Sands Ave')) && link2.includes(encodeURIComponent('Treasure Island Las Vegas, Las Vegas, NV')) && !/[?&]key=/.test(link + link2), '교통 자료: 타는 곳의 구글맵 주소는 Maps URLs(키 없음)이고, 장소 자료의 주소를 쓴다');
+  const tt = tr.timetable(transit, transit.lines.find((l) => l.id === 'r9'));
+  check(tt.length === 3 && tt[1].parts[0] === '하루 내내 7:30 ~ 18:30 · 10분마다', '교통 자료: Tech Express 시간표가 전단대로 읽힌다 (수 ~ 금 7:30 ~ 18:30, 10분마다)');
+  const n = tr.counts(transit);
+  const root = (p) => readFile(new URL(`../${p}`, import.meta.url), 'utf8');
+  const [app, homeJs, pagesYml, linksYml] = await Promise.all([root('web/app.js'), root('web/views/home.js'), root('.github/workflows/pages.yml'), root('.github/workflows/links.yml')]);
+  check(/transit: \(\) => import\('\.\/views\/transit\.js'\)/.test(app) && !/from '\.\/transit\.js'/.test(app + homeJs) && homeJs.includes("#/transit") && homeJs.includes("#/apply"), '교통 화면은 누를 때 불러온다 (첫 화면 조각에 고정 import 없음). 첫 화면에는 링크만 있다');
+  check(pagesYml.includes('data/transit.json') && linksYml.includes('--in data/transit.json'), '교통 자료는 배포에 담기고, 출처 링크 살피기(check-links)가 이 파일도 본다');
+  lines.push(`교통 | 줄 ${n.total}개: 2027 확인됨 ${n.confirmed} · 확인 필요 ${n.check} · 읽은 날짜 ${transit.read}`);
+}
+
+// 회사 사진 · 로고: 공식 자료에 있는 로고 파일 이름만 싣고, 설정이 꺼져 있으면 그림 주소로 아무것도 묻지 않는다.
+{
+  const lg = await import('../web/logos.js');
+  const fake = { v: '2026-11-21', ex: [['A1'], ['B2'], ['C3'], ['D4'], ['E5']] };
+  const logos = { v: '2026-11-21', base: 'https://exhibitors.ces.tech/mys_shared/CES27/logos/', kinds: ['png', '~jpg'], map: '01---', extra: { 4: 'odd-name.PNG' } };
+  const open = lg.openLogos(logos, fake);
+  check(lg.logoUrl(open, 'A1') === `${logos.base}A1.png` && lg.logoUrl(open, 'B2') === `${logos.base}b2.jpg` && lg.logoUrl(open, 'C3') === null && lg.logoUrl(open, 'E5') === `${logos.base}odd-name.PNG` && lg.logoUrl(open, 'ZZ') === null, '로고 주소: 전시사 id에서 공식 주소를 셈한다 (id.png · 소문자 id.jpg · 따로 적은 이름 · 없음)');
+  check(lg.openLogos({ ...logos, v: 'old' }, fake) === null && lg.openLogos({ ...logos, base: 'https://example.com/' }, fake) === null && lg.openLogos({ ...logos, map: '0' }, fake) === null && lg.logoUrl(lg.openLogos({ ...logos, extra: { 4: '../x.png' } }, fake), 'E5') === null, '로고 주소: 판이 다르거나 · 공식 사이트 주소가 아니거나 · 줄 수가 다르거나 · 파일 이름이 이상하면 쓰지 않는다');
+  check(typeof settings.companyImage === 'boolean', `설정 companyImage(회사 카드의 로고 단추)가 있다 (지금 ${settings.companyImage ? '켬' : '끔'})`);
+  // 꺼져 있으면: 설정 하나만 묻고 로고 자료도 그림 주소도 묻지 않으며, 줄에 아무것도 더하지 않는다.
+  const asked = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => { asked.push(String(url)); return { ok: true, status: 200, json: async () => ({ companyImage: false }) }; };
+  const { attachImage } = await import('../web/company-image.js');
+  let touched = 0;
+  const li = { querySelector: () => { touched += 1; return null; } };
+  attachImage(li, 'A1', '이름', fake);
+  await new Promise((r) => setTimeout(r, 30));
+  globalThis.fetch = realFetch;
+  check(asked.length === 1 && asked[0] === 'data/settings.json' && touched === 0, `로고: 설정이 꺼져 있으면 설정 말고는 아무것도 묻지 않고 줄도 그대로다 (물은 것 ${asked.join() || '없음'})`);
+  if (await exists('data/logos.json') && await exists('data/exhibitors.json')) {
+    const real = await json('data/logos.json');
+    const ex = await json('data/exhibitors.json');
+    const opened = lg.openLogos(real, ex);
+    const urls = ex.ex.map((row) => lg.logoUrl(opened, row[0]));
+    const got = urls.filter(Boolean);
+    check(opened && real.base === 'https://exhibitors.ces.tech/mys_shared/CES27/logos/' && got.length === real.n && got.every((u) => /^https:\/\/exhibitors\.ces\.tech\/mys_shared\/CES27\/logos\/[A-Za-z0-9_-]+\.(png|jpe?g)$/i.test(u)), `로고 자료: 전시사 ${ex.ex.length}곳 가운데 ${got.length}곳에 공식 로고 주소가 있고, 모두 exhibitors.ces.tech의 로고 폴더다`);
+    const size = (await stat(join(dist, 'data/logos.json'))).size;
+    lines.push(`로고 | 공식 자료에 로고 ${got.length}곳 (${((got.length / ex.ex.length) * 100).toFixed(0)}%) · data/logos.json ${(size / 1024).toFixed(1)} KB`);
+  }
+}
   // 띠와 일정으로 바꾸는 셈 (지어낸 값으로 본다).
   const fake = [
     { id: 'a', org: '가', what: '표', status: 'check', deadline: '2027-01-03', watchFrom: '2026-12-01', date: '2027-01-06', from: '17:00', to: '18:30', where: '어디', place: '' },
