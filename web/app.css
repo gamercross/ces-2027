@@ -265,3 +265,7 @@ details.more[open] > summary { margin-bottom: 8px; }
 .live { min-height: 1.6em; color: var(--ink-2); font-size: 14px; }
 .entry summary { display: flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 700; color: var(--ink-2); cursor: pointer; }
 .entry audio { width: 100%; margin-top: 6px; }
+
+/* 따로 신청하는 곳: 출처가 여럿이라 줄을 바꾼다 */
+.proof.wrap { display: block; white-space: normal; overflow-wrap: anywhere; line-height: 2; }
+.entry .where { font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere; }

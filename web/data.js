@@ -27,6 +27,8 @@ export const getCategories = () => cached('categories', () => getJson('data/cate
 export const getOfficialSpots = () => cached('officialSpots', () => getJson('data/booth-spots.json').catch(() => ({ places: {} })));
 // 부스에서 쓸 질문 묶음 (미리 번역해 둔 것). 물어볼 말 · 듣기 화면에서만 읽는다.
 export const getPhrases = () => cached('phrases', () => getJson('data/phrases.json'));
+// CES 배지와 따로 신청하는 곳 · 자율주행 이동 (공식 출처만). 첫 화면을 그린 뒤에 읽는다.
+export const getSeparate = () => cached('separate', () => getJson('data/separate.json'));
 // 팀이 같이 쓰는 주제. 없거나 비어 있으면 각자 만든다.
 export const getTeamTopics = () => cached('teamTopics', () => getJson('data/topics.json').catch(() => ({ topics: [] })));
 

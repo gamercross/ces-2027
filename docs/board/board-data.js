@@ -4,7 +4,7 @@
 window.BOARD = {
   format: 1,
   title: '글로벌 어학연수 · CES 2027 준비 지도',
-  sub: '우리 팀이 CES에서 정보와 위치를 헷갈리지 않게 · 만드는 중 · 세션 1 ~ 6 + 깊게 6 (물어볼 말 · 듣기 → 일기 초안)',
+  sub: '우리 팀이 CES에서 정보와 위치를 헷갈리지 않게 · 만드는 중 · 세션 1 ~ 6 + 깊게 7 (따로 신청하는 곳 · 자율주행 이동)',
   start: 'v_big',
   frames: [
     {id: 'v_big', kicker: '처음 보는 사람에게', title: '준비 지도는 이렇게 돈다', layout: 'view', w: 1700, cols: 4, weight: 5,
@@ -59,7 +59,7 @@ window.BOARD = {
     {f: 'v_flow', id: 'f_1', t: 'bprocess', n: '온라인 명함 만들기', sub: '태그 · 한 줄 · QR 둘', s: 'done'},
     {f: 'v_flow', id: 'f_2', t: 'bprocess', n: '주제 · 분야 고르기', sub: '주제 판(10개까지) · 나뉜 분야', s: 'done'},
     {f: 'v_flow', id: 'f_3', t: 'bprocess', n: '회사 보고 관심 등록', s: 'done'},
-    {f: 'v_flow', id: 'f_4', t: 'bprocess', n: '동선 짜기', sub: '날짜 · 캠퍼스', s: 'done'},
+    {f: 'v_flow', id: 'f_4', t: 'bprocess', n: '동선 짜기', sub: '날짜 · 캠퍼스 · 따로 신청한 것', s: 'done'},
     {f: 'v_flow', id: 'f_5', t: 'bprocess', n: '현장: 내 위치 · 다음 곳', s: 'part'},
     {f: 'v_flow', id: 'f_6', t: 'bprocess', n: '회사 일기 · 보내기', sub: '물어볼 말 · 듣기 → 초안', s: 'part'},
     {f: 'v_flow', id: 'f_a1', t: 'aservice', n: '분야로 회사 찾기', s: 'done', col: 1},
@@ -93,6 +93,7 @@ window.BOARD = {
     {f: 'plan', id: 'wp_days', t: 'wp', n: '날마다 쓸 시간 · 내 일정 · 추천', s: 'done', col: 2, when: '11/21', who: 'Orca'},
     {f: 'plan', id: 'wp_cards', t: 'wp', n: '종이 명함 · 이벤트 부스 · 알림', s: 'part', col: 2, when: '11/21 (실제 폰 확인 남음)', who: 'Orca'},
     {f: 'plan', id: 'wp_talk', t: 'wp', n: '물어볼 말 · 듣기 → 일기 초안', s: 'part', col: 2, when: '11/21 (실제 폰 확인 · 길 정하기 남음)', who: 'Orca'},
+    {f: 'plan', id: 'wp_separate', t: 'wp', n: '따로 신청하는 곳 · 이동', s: 'part', col: 2, when: '11/21 (12월에 2027 안내를 다시 본다)', who: 'Orca'},
     {f: 'plan', id: 'wp_guide', t: 'wp', n: '부스 누르기 → 길 안내', s: 'part', col: 2, when: '11/21 (홀 안 길은 배치도 뒤)', who: 'Orca'},
     {f: 'plan', id: 'wp_route', t: 'wp', n: '동선 · 2D · 3D', s: 'part', col: 1, when: '11/20 (3D는 단순한 모양)', who: 'Orca'},
     {f: 'plan', id: 'wp_offline', t: 'wp', n: '오프라인 · 배포', s: 'part', col: 1, when: '11/20 (Pages 켜기 남음)', who: 'Orca'},
@@ -167,13 +168,14 @@ window.BOARD = {
       {id: 'd_diary', st: 'phone', n: '회사 일기', one: '본 것 · 느낀 점 · 네 태그', shape: ['날짜', '회사', '본 것', '느낀 점', '누구에게(네 태그, 여럿)', '보낸 때', '초안 표시(듣기에서 만든 것)'], w: [[null, '본 회사마다 쓴다'], [null, '듣기를 멈추면 초안이 생긴다']], r: [[null, '보내기 · 파일로 내보내기 · 글로 복사']], life: '내 폰에만 (localStorage ces2027.diary.v1). 보내기를 누른 것만 밖으로 나간다'},
       {id: 'd_heard', st: 'phone', n: '들은 글 · 녹음', one: '부스에서 받아 적은 말과 그 소리', shape: ['줄마다 때 · 원문(영어) · 번역(한국어)', '녹음(소리 파일)'], w: [[null, '듣기 화면에서 폰이 받아 적거나 손으로 적는다. 먼저 상대에게 알린다']], r: [[null, '일기 초안의 "본 것" · 일기 목록의 들은 글과 녹음 듣기']], life: '내 폰에만 (일기와 같이 diary.v1, 소리는 IndexedDB). 일기나 녹음을 지우면 같이 없어진다', never: '보내기를 눌러도 나가지 않는다. 키 · 서버 없음'},
       {id: 'd_phrases', st: 'site', n: '질문 묶음', one: '부스에서 쓸 질문의 한국어 · 영어 짝', shape: ['묶음 여덟(인사 · 제품 · 가격 · 출시 · 한국 판매 · 채용 · 명함 교환 · 이벤트)', '녹음을 알리는 말'], w: [[null, 'data/phrases.json을 손으로 고친다 (영어는 Orca가 쓴 초안)']], r: [[null, '물어볼 말 화면 · 듣기 화면의 알리는 말']], life: '누를 때 불러오고, 한 번 열면 인터넷 없이도 된다'},
+      {id: 'd_separate', st: 'site', n: '따로 신청하는 곳', one: '배지와 따로 신청 · 표 · 초대가 있어야 하는 곳과 자율주행 이동', shape: ['회사 · 무엇 · 어디 · 언제', '신청 링크 · 마감 · 누가', '2027 확인됨 / 확인 필요 · 작년에 한 것', '줄마다 출처와 확인 날짜'], w: [[null, 'data/separate.json을 손으로 고친다 (CES 공식 · 회사 공식 사이트만)']], r: [[null, '첫 화면의 카드와 띠 · 따로 신청하는 곳 화면'], [null, '자료 도구(ces-data check-links)가 링크를 다시 살핀다']], life: '12월에 2027 안내가 나오면 고친다. "신청함" 표시는 내 폰에만 (applied.v1) 남고 내 일정에 들어간다', never: '언론 기사만 있는 것 · 짐작 · 확인되지 않은 "무료"'},
       {id: 'd_ces', st: 'site', n: 'CES 전시사 자료', one: '공식 검색에서 받아 줄인 것', shape: ['이름', '부스@장소', '분야', '나라', '혁신상', '공식 링크', '받은 날짜'], w: [[null, 'Rust 자료 도구(ces-data)가 지을 때 공식 전시사 검색에서 받는다']], r: [[null, '찾기 · 동선 · 지도']], life: '자료를 새로 받을 때 판 이름(받은 날짜)이 바뀐다', never: '회사 소개 글은 설정(companyIntro)이 링크만이면 싣지 않는다'},
       {id: 'd_index', st: 'site', n: '찾기 색인', one: '낱말 → 전시사 줄 번호', shape: ['이름 낱말', '부스 · 장소 · 분야 · 나라 낱말', '한글 별칭'], w: [[null, '자료 도구가 줄이면서 만든다']], r: [[null, '폰의 코어(ces-core, WASM)가 읽고 찾는다']]},
       {id: 'd_places', st: 'site', n: '장소 자료', one: '홀 · 캠퍼스 모양과 구글맵 이름 · 주소', shape: ['캠퍼스 셋', '장소 31곳의 모양', '부스 → 장소 규칙', '구글맵 이름 · 주소', '부스 자리 짐작 표시', 'GPS 어림 자리(캠퍼스 · 홀 근처)'], w: [[null, 'data/places.json을 손으로 고친다 (공식 캠퍼스 지도 2026-09-29판)']], r: [[null, '자료 도구(부스에 장소 붙이기) · 지도 · 길찾기']], life: '정식 배치도가 열리면 홀마다 짐작 표시를 고친다'},
       {id: 'd_pool', st: 'hub', n: '모인 일기', one: '보내기를 누른 일기만', never: '보내지 않은 일기', w: [[null, '보내기를 누를 때. 지금은 파일(ces-2027-diary 1판)로 내려오고, 설정 collectorUrl에 주소가 있으면 그리로 간다']], r: [[null, '정리하는 사람이 자료 도구(ces-data sort-diary)로 네 태그 한 장 초안을 만든다']], shape: ['별명 · 태그', '일기(날짜 · 회사 · 부스 · 본 것 · 느낀 점 · 누구에게)']}
     ],
     flow: [
-      {o: null, t: '받기', d: 'Rust 도구가 공식 자료를 받아 줄인다', dm: ['d_ces', 'd_index', 'd_places']},
+      {o: null, t: '받기', d: 'Rust 도구가 공식 자료를 받아 줄인다', dm: ['d_ces', 'd_index', 'd_places', 'd_separate']},
       {o: null, t: '고르기', d: '나 · 분야 · 관심 · 동선이 폰에 쌓인다', dm: ['d_profile', 'd_topics', 'd_days', 'd_marks', 'd_interest', 'd_route']},
       {o: null, t: '쓰기', d: '현장에서 묻고 듣고 회사 일기', dm: ['d_phrases', 'd_heard', 'd_diary']},
       {o: null, t: '모으기', d: '보내기를 누른 일기만 한곳에', dm: ['d_pool']}

@@ -44,6 +44,46 @@ const isCes = (s) => s && /^https:\/\/www\.ces\.tech\//.test(s.url) && /^\d{4}-\
 check(isCes(info.show.source) && isCes(info.movingSource) && isCes(info.badge.source) && info.campuses.every((c) => isCes(c.source)) && info.recheck.includes('다시 확인'), '알아둘 것: 묶음마다 CES 공식 출처와 확인한 날짜가 있고 "가기 전에 다시 확인" 안내가 있다');
 const settings = await json('data/settings.json');
 
+// 따로 신청하는 곳 (깊게 7): 공식 출처만, 줄마다 출처와 확인 날짜, 2027 안내가 없는 줄은 "확인 필요"와 작년 것.
+{
+  const sepData = await json('data/separate.json');
+  const sep = await import('../web/separate.js');
+  const OFFICIAL = /^https:\/\/(www\.ces\.tech|www\.samsung\.com|news\.samsung\.com|www\.nvidia\.com|www\.hyundai\.com|www\.lg\.com|www\.qualcomm\.com|waymo\.com|zoox\.com|www\.vegasmeansbusiness\.com)\//;
+  const isDate = (s) => /^\d{4}-\d\d-\d\d$/.test(s);
+  const groups = new Set(sepData.groups.map((g) => g.k));
+  const ids = new Set(sepData.items.map((it) => it.id));
+  const shapeOk = sepData.items.every((it) => it.id && groups.has(it.group) && it.org && it.what && it.who && ['confirmed', 'check'].includes(it.status) && it.apply && (it.apply.url === null || OFFICIAL.test(it.apply.url)) && it.apply.ko && (it.date === null || isDate(it.date)) && (it.deadline === null || isDate(it.deadline)) && (it.watchFrom === null || isDate(it.watchFrom)));
+  check(shapeOk && ids.size === sepData.items.length && isDate(sepData.read), `따로 신청 자료: ${sepData.items.length}줄의 꼴이 맞다 (모둠 · 상태 · 날짜 · 신청 링크)`);
+  const sources = sepData.items.flatMap((it) => it.sources);
+  check(sepData.items.every((it) => it.sources.length > 0) && sources.every((s) => OFFICIAL.test(s.url) && isDate(s.read) && s.ko), `따로 신청 자료: 줄마다 출처와 확인 날짜가 있고, 출처 ${sources.length}개가 모두 CES 공식 · 회사 공식 사이트다`);
+  const waiting = sepData.items.filter((it) => it.status === 'check');
+  check(['삼성', '엔비디아', '현대차그룹'].every((org) => sepData.items.some((it) => it.org === org && it.group === 'watch' && it.status === 'check' && it.last && it.last.startsWith('작년(CES 2026)') && it.apply.url === null && it.watchFrom)), `삼성 · 엔비디아 · 현대차그룹: 2027 안내가 없어 "확인 필요"로 두고 작년에 한 것과 다시 볼 날을 적었다 (확인 필요 ${waiting.length}줄 · 확인됨 ${sepData.items.length - waiting.length}줄)`);
+  const allText = JSON.stringify(sepData.items);
+  const rides = sepData.items.filter((it) => it.group === 'ride');
+  check(rides.length >= 3 && !/무료/.test(JSON.stringify(rides.filter((it) => it.id !== 'ride-loop')).replace(/무료라는 말은 없다|무료라고 적지 않는다/g, '')) && rides.find((it) => it.id === 'ride-loop').what.includes('자율주행 아님') && !/@[a-z]+\.[a-z]/i.test(allText), '이동: 자율주행 택시 줄에는 확인되지 않은 "무료"가 없고, 베가스 루프는 자율주행 아님으로 적었다. 자료에 메일 주소가 없다');
+  const waymo = sepData.items.find((it) => it.id === 'key-waymo');
+  check(waymo.date === '2027-01-05' && waymo.from === '18:30' && waymo.to === '19:45' && /Palazzo/.test(waymo.where), 'Waymo 기조연설은 1/5 18:30 ~ 19:45 베네시안 Palazzo Ballroom이다 (CES 일정표)');
+  const badge = sepData.items.find((it) => it.id === 'ces-badge');
+  check(badge.todo.includes('운영팀 안내를 따른다') && badge.deadline === null, '배지 등록: 연수단은 운영팀 안내를 따른다고 적고, 값은 참고로만 둔다 (마감 띠 없음)');
+  // 띠와 일정으로 바꾸는 셈 (지어낸 값으로 본다).
+  const fake = [
+    { id: 'a', org: '가', what: '표', status: 'check', deadline: '2027-01-03', watchFrom: '2026-12-01', date: '2027-01-06', from: '17:00', to: '18:30', where: '어디', place: '' },
+    { id: 'b', org: '나', what: '안내', status: 'check', deadline: null, watchFrom: '2026-12-20', date: null, from: null, to: null, where: '', place: '' },
+    { id: 'c', org: '다', what: '끝난 것', status: 'confirmed', deadline: '2026-12-01', watchFrom: '2026-11-01', date: '2027-01-06', from: '11:00', to: null, where: '', place: '' },
+  ];
+  const due = sep.dueSoon(fake, {}, '2026-12-28');
+  check(due.length === 1 && due[0].item.id === 'a' && due[0].left === 6 && sep.dueSoon(fake, {}, '2026-12-26').length === 0 && sep.dueSoon(fake, { a: 'x' }, '2026-12-28').length === 0 && sep.dueSoon(fake, {}, '2027-01-04').length === 0, '마감 띠: 7일 안일 때만 보이고, 신청했다고 표시했거나 지난 것은 뺀다');
+  check(sep.toWatch(fake, '2026-12-05').map((it) => it.id).join() === 'a' && sep.toWatch(fake, '2026-12-25').map((it) => it.id).join() === 'a,b' && sep.toWatch(fake, '2026-11-20').length === 0, '다시 볼 띠: 적어 둔 날이 된 "확인 필요" 줄만 보인다');
+  const on = sep.toggleApplied(fake[0], {}, [{ id: 'mine', date: '2027-01-06', from: '19:00', to: '20:00', name: '내 일정', place: '' }], '2026-12-28');
+  const off = sep.toggleApplied(fake[0], on.applied, on.events, '2026-12-29');
+  const noTime = sep.toggleApplied(fake[2], {}, [], '2026-12-28');
+  check(on.applied.a === '2026-12-28' && on.events.length === 2 && on.events[1].id === 'sep-a' && on.events[1].from === '17:00' && off.events.length === 1 && off.events[0].id === 'mine' && !off.applied.a && noTime.applied.c && noTime.events.length === 0, '신청함 표시: 날짜와 시간이 정해진 것은 내 일정에 들어가고, 풀면 빠진다. 내가 넣은 일정은 건드리지 않는다');
+  const sum = sep.summary(sepData);
+  check(sum.watch.slice(0, 3).join() === '삼성,엔비디아,현대차그룹' && sum.rides[0] === 'Waymo' && sum.apply.some((t) => t.includes('레노버')), `첫 화면 카드: ${sum.watch.join(' · ')} · 따로 표 ${sum.apply.length}곳 · 가기 전에 ${sum.rides[0]} 앱`);
+  const homeJs = await readFile(join(dist, 'views/home.js'), 'utf8');
+  check(homeJs.includes("import('../separate.js')") && !/^import [^;]*separate\.js/m.test(homeJs) && homeJs.includes('separateSeen.v1') && homeJs.includes('CES 배지와 따로 신청해야 하는 곳'), '첫 화면: 따로 신청 카드는 처음 한 번 크게 보이고(닫은 것을 폰에 적는다), 그 셈과 자료는 첫 화면을 그린 뒤에 읽는다');
+}
+
 // 물어볼 말 · 듣기 (깊게 6): 질문 묶음, 두 길의 자리, 폰이 못 하는 것은 안 된다고 돌려주는지, 일기 초안의 꼴.
 {
   const speech = await import('../web/speech.js');
@@ -309,7 +349,7 @@ const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 const version = await json('version.json').catch(() => null);
 const swFiles = JSON.parse(`[${(sw.match(/const FILES = \[(.*)\];/) || [])[1] || ''}]`);
 check(!!version && sw.includes(JSON.stringify(version.v)) && !sw.includes('__VERSION__'), `판 이름이 찍혔다 (${version?.v})`);
-const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'views/map.js', 'views/diary.js', 'views/topics.js', 'views/days.js', 'views/ask.js', 'views/listen.js', 'speech.js', 'talk-ui.js', 'audio-store.js', 'data/phrases.json', 'topics.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'alerts.js', 'notify.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/topics.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
+const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'views/map.js', 'views/diary.js', 'views/topics.js', 'views/days.js', 'views/ask.js', 'views/listen.js', 'views/apply.js', 'separate.js', 'data/separate.json', 'speech.js', 'talk-ui.js', 'audio-store.js', 'data/phrases.json', 'topics.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'alerts.js', 'notify.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/topics.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
 const missing = mustCache.filter((f) => !swFiles.includes(f));
 const gone = [];
 for (const f of swFiles) if (f !== './' && !(await exists(f))) gone.push(f);

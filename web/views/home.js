@@ -1,8 +1,8 @@
 // 첫 화면: 이름 · 며칠 남았나 · CES 2027 알아둘 것(날짜 · 캠퍼스 셋 · 오가는 법 · 배지) · 전시사 자료.
 
 import { el, num, out } from '../dom.js';
-import { getInfo, getMeta } from '../data.js';
-import { getProfile, tagKo } from '../store.js';
+import { getInfo, getMeta, getSeparate } from '../data.js';
+import { getProfile, load, save, tagKo } from '../store.js';
 import { offline } from '../offline.js';
 import { dateOf, defaultRemind } from '../alerts.js';
 import { alerts, askPermission, checkAlerts, getPaper, setPaper } from '../notify.js';
@@ -35,6 +35,51 @@ function alertBands(showFrom) {
   paint();
   window.addEventListener('ces-alerts', paint);
   return box;
+}
+
+// 따로 신청하는 곳: 처음 한 번은 위에 크게 보이고, 닫으면 "알아둘 것" 아래에 작게 남는다.
+// 마감이 7일 안이거나 2027 안내를 다시 볼 때가 되면 위에 띠로 보인다. 자료는 첫 화면을 그린 뒤에 읽는다.
+function separateBoxes() {
+  const top = el('div', { class: 'page' });
+  const kept = el('div', { class: 'page' });
+  const md = (date) => { const [, m, d] = date.split('-').map(Number); return `${m}/${d}`; };
+  async function paint() {
+    let data, sep;
+    try { [data, sep] = await Promise.all([getSeparate(), import('../separate.js')]); } catch { return; }
+    const s = sep.summary(data);
+    const today = dateOf(new Date());
+    const due = sep.dueSoon(data.items, load('applied.v1', {}), today);
+    const watch = sep.toWatch(data.items, today);
+    const first = !load('separateSeen.v1', null);
+    top.replaceChildren(...[
+      first ? el('section', { class: 'panel band ask' },
+        el('h2', { text: 'CES 배지와 따로 신청해야 하는 곳' }),
+        el('p', { text: `${s.watch.join(' · ')}: 2027 발표와 전시관 안내가 아직 없다. 배지와 따로 신청이나 초대가 있어야 할 수 있다. 작년에는 12월 초 ~ 중순에 안내가 나왔다.` }),
+        el('ul', { class: 'dots' },
+          s.apply.map((t) => el('li', { text: `따로 표가 있어야 한다: ${t} (안내 전)` })),
+          el('li', { text: '배지는 운영팀 안내를 따른다. 스스로 등록하지 않는다.' }),
+          s.rides.length ? el('li', { text: `가기 전에: ${s.rides[0]} 앱 받고 관심 등록 (초대까지 시간이 걸릴 수 있음)` }) : null),
+        el('p', { class: 'note', text: `${md(s.read)}에 CES 공식 사이트와 회사 공식 사이트에서 확인했다. 짐작한 것은 없다.` }),
+        el('div', { class: 'actions' },
+          el('a', { class: 'btn', href: '#/apply', text: '자세히 보기' }),
+          el('button', { class: 'btn ghost', type: 'button', text: '알겠다 · 닫기', onclick: () => { save('separateSeen.v1', today); paint(); } }))) : null,
+      due.length ? el('section', { class: 'panel band ask' },
+        el('h2', { text: '따로 신청: 마감이 가깝다' }),
+        el('ul', { class: 'dots' }, due.map((x) => el('li', { text: `${x.item.org} ${x.item.what}: ${x.left === 0 ? '오늘까지' : `${x.left}일 남음`}` }))),
+        el('div', { class: 'actions' }, el('a', { class: 'btn', href: '#/apply', text: '보기' }))) : null,
+      !first && watch.length ? el('section', { class: 'panel band' },
+        el('h2', { text: '2027 안내가 나왔는지 볼 때다' }),
+        el('p', { text: `${watch.map((it) => it.org).join(' · ')}: 작년에는 이맘때 안내가 나왔다. 공식 페이지를 다시 본다.` }),
+        el('div', { class: 'actions' }, el('a', { class: 'btn', href: '#/apply', text: '보기' }))) : null,
+    ].filter(Boolean));
+    kept.replaceChildren(el('section', { class: 'panel' },
+      el('h2', { text: '따로 신청하는 곳' }),
+      el('p', { text: `CES 배지와 따로 신청 · 표 · 초대가 있어야 하는 곳 ${data.items.filter((it) => it.group === 'watch' || it.group === 'apply').length}곳, 배지만 있으면 되는 큰 일정, 자율주행 이동을 모았다.` }),
+      el('small', { class: 'proof', text: `${md(s.read)} 확인 · 줄마다 출처가 있다` }),
+      el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: '#/apply', text: '따로 신청하는 곳 보기' }))));
+  }
+  paint();
+  return { top, kept };
 }
 
 // 알림: 켜기 단추와, 이 폰에서 되는 것 · 안 되는 것.
@@ -158,5 +203,6 @@ export async function render() {
     el('p', {}, info.sources.flatMap((s, i) => [i ? ' · ' : '', out(s.url, s.ko)])),
     el('p', { text: '연수에 가는 참가자가 만든 비공식 안내다. CES(CTA)나 코디세이 운영 측의 공식 자료가 아니다.' }));
 
-  return el('div', { class: 'page' }, hero, alertBands(show.from), recheck, talk, days, campuses, moving, badge, data, notifyBox(), offlineBox(), sources);
+  const separate = separateBoxes();
+  return el('div', { class: 'page' }, hero, separate.top, alertBands(show.from), recheck, separate.kept, talk, days, campuses, moving, badge, data, notifyBox(), offlineBox(), sources);
 }
