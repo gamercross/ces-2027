@@ -1,5 +1,5 @@
 {
-  "about": "폰 안 받아쓰기 모델과 그것을 돌리는 실행기의 목록이다. 누를 때만 받는다. 실행기 파일은 지을 때 아래 주소에서 받아 sha256과 크기가 맞는지 본 뒤 같은 주소(vendor/speech/) 아래에 놓는다 (scripts/fetch-speech-runtime.mjs). 모델 파일은 폰이 huggingface.co에서 바로 받는다(판을 못 박았다). 영한 번역 후보의 판 · CC-BY-4.0 · 작은 ONNX 두 파일과 sha256은 적었지만 package_check와 회귀 시험이 끝나기 전에는 기본 끔으로 받지 않는다.",
+  "about": "폰 안 받아쓰기 · 영한 번역 모델과 그것을 돌리는 실행기의 목록이다. 누를 때만 받는다. 실행기 파일은 지을 때 아래 주소에서 받아 sha256과 크기가 맞는지 본 뒤 같은 주소(vendor/speech/) 아래에 놓는다 (scripts/fetch-speech-runtime.mjs). 받아쓰기 모델 파일은 폰이 huggingface.co에서 바로 받는다(판을 못 박았다). 영한 번역 모델도 폰이 huggingface.co에서 받으며, 받는 즉시 크기와 sha256을 맞춘다. 번역 모델의 단어 사전은 원본의 고정한 판에서 지을 때 만든다 (scripts/fetch-translate-tokenizers.mjs).",
   "checked": "2026-11-21",
   "runtime": {
     "dir": "vendor/speech/",
@@ -39,25 +39,76 @@
     ]
   },
   "translation": {
-    "enabled": false,
+    "enabled": true,
     "lang": "en-ko",
-    "kind": "폰 안 영한 번역 모델 후보",
-    "status": "원본 토크나이저와 ONNX 변환본을 짝지어 package_check · 회귀 시험을 끝내지 못해 받지 않음",
-    "candidate": {
-      "id": "noticemkjung/opus-mt-tc-big-en-ko-ONNX",
-      "base": "Helsinki-NLP/opus-mt-tc-big-en-ko",
-      "revision": "aea67600956847d47609f96b364f33a734007d50",
-      "license": "CC-BY-4.0",
-      "source": "https://huggingface.co/noticemkjung/opus-mt-tc-big-en-ko-ONNX",
-      "baseSource": "https://huggingface.co/Helsinki-NLP/opus-mt-tc-big-en-ko",
-      "baseRevision": "ae8606b7b29a495f31ce679cee2007f536a3a5ce",
-      "tokenizer": "source.spm · target.spm · vocab.json · tokenizer_config.json",
-      "tokenizerSha256": "source.spm: 3d0591e65c49541d82f48df33d7b322c3d4ee7aa0ee8747f9a7f9355dbf22c95 · target.spm: 3d2aa641a0890d8966ab8703b109895a4e522713ce99b4a0192bfacb495bc97c · vocab.json: 9e03014979d240f6a6d1c5dc53cd14f4841351326d345d437d48d115eff67b5f",
-      "checked": "2026-11-21",
-      "smallest": "encoder_model_q4f16.onnx + decoder_with_past_model_q4f16.onnx",
-      "expectedBytes": 246521277,
-      "sha256": "encoder_model_q4f16.onnx: 47f49baad7127cfd90171a6256da1d90d38ad3ef6ff0eea5d010ab30c2f4f0e4 · decoder_with_past_model_q4f16.onnx: 2eb5c722f60bd083b226c446a753a2a4ec119257edf94e99348438842e6c9b3a",
-      "packageCheck": "없음"
+    "kind": "폰 안 영한 번역 모델 (영어 → 한국어만)",
+    "ko": "OPUS-MT 영한 tc-big (int8)",
+    "id": "TigreGotico/opus-mt-en-ko-onnx",
+    "revision": "3f82b3877eaca8785be0f5b4ffcb08e6ec1cff59",
+    "license": "CC-BY-4.0",
+    "by": "Helsinki-NLP · OPUS-MT 프로젝트(Tatoeba Challenge, 모델) · TigreGotico(ONNX 변환 · int8)",
+    "source": "https://huggingface.co/TigreGotico/opus-mt-en-ko-onnx",
+    "baseSource": "https://huggingface.co/Helsinki-NLP/opus-mt-tc-big-en-ko",
+    "baseRevision": "ae8606b7b29a495f31ce679cee2007f536a3a5ce",
+    "licenseSource": "https://creativecommons.org/licenses/by/4.0/",
+    "host": "https://huggingface.co/",
+    "note": "실행기가 찾는 이름(as)과 저장소의 이름이 다른 파일이 있다. 디코더는 캐시 없는 한 장짜리(decoder_model.onnx)를 쓰고, 해독 반복은 worker가 직접 돈다(Transformers.js의 translation 파이프라인은 영어 · 한국어 사전이 따로인 이 모델을 풀지 못한다).",
+    "files": [
+      {
+        "name": "config.json",
+        "bytes": 1014,
+        "sha256": "03d0221ed994b4d3b7592476cb8cb5de27b002cce6e4697cab5c3a4a7ddc608f"
+      },
+      {
+        "name": "generation_config.json",
+        "bytes": 288,
+        "sha256": "8af5f2dc6ff1a555a22fd99d92b0b85407185a01640e4a4ea638a10fd2a976c6"
+      },
+      {
+        "name": "int8/encoder_model.onnx",
+        "as": "int8/encoder_model.onnx",
+        "bytes": 109777901,
+        "sha256": "baf75b5905a3f7144577b7edeb45ff46501e0bd467c2d7fc5ba2b981a001e766"
+      },
+      {
+        "name": "int8/decoder_model.onnx",
+        "as": "int8/decoder_model_merged.onnx",
+        "bytes": 135429581,
+        "sha256": "3fb7c72c5604d1510fb46b7000b0bd5434fecd5090f68dc893627945d904c0ab"
+      }
+    ],
+    "tokenizer": {
+      "dir": "vendor/translate/",
+      "from": [
+        {
+          "name": "source.spm",
+          "url": "https://huggingface.co/Helsinki-NLP/opus-mt-tc-big-en-ko/resolve/ae8606b7b29a495f31ce679cee2007f536a3a5ce/source.spm",
+          "bytes": 789870,
+          "sha256": "3d0591e65c49541d82f48df33d7b322c3d4ee7aa0ee8747f9a7f9355dbf22c95"
+        },
+        {
+          "name": "target.spm",
+          "url": "https://huggingface.co/Helsinki-NLP/opus-mt-tc-big-en-ko/resolve/ae8606b7b29a495f31ce679cee2007f536a3a5ce/target.spm",
+          "bytes": 815483,
+          "sha256": "3d2aa641a0890d8966ab8703b109895a4e522713ce99b4a0192bfacb495bc97c"
+        }
+      ],
+      "files": [
+        {
+          "name": "source-tokenizer.json",
+          "from": "source.spm",
+          "eos": true,
+          "bytes": 1056140,
+          "sha256": "d2fbe38a7e5703165b7737c843811b1fa0cd12fd92a18c3bccc85aa56a648012"
+        },
+        {
+          "name": "target-tokenizer.json",
+          "from": "target.spm",
+          "eos": false,
+          "bytes": 1080792,
+          "sha256": "db8e960a376724d7155f1a59b6ee3c8f20b8db99e500cf6baf39088ac7bea809"
+        }
+      ]
     }
   }
 }
