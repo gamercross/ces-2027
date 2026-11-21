@@ -251,6 +251,7 @@ export async function render() {
     el('section', { class: 'panel' },
       el('h1', { text: '동선' }),
       el('p', { class: 'lead', text: '관심 회사를 날짜와 캠퍼스로 묶고 걷는 차례로 세운다.' }),
+      el('p', { class: 'note', text: '일정은 바뀔 수 있다 — 운영팀 안내가 먼저다. 시간과 내 일정은 내가 적어 둔 것이다.' }),
       el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: '#/days', text: '시간과 일정 고치기' })),
       el('label', { class: 'field' }, el('span', { class: 'label', text: '하루에 볼 곳 (내가 정한다)' }), limitSelect),
       status,

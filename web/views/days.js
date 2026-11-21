@@ -149,6 +149,8 @@ export async function render() {
       el('section', { class: 'panel' },
         el('h1', { text: '시간과 일정' }),
         el('p', { class: 'lead', text: '날마다 전시를 볼 시간과 전시 밖 일정을 넣는다. 동선이 그 시간 안에 들어가게 날을 나눈다.' }),
+        el('p', { class: 'tag', text: '일정은 바뀔 수 있다 — 운영팀 안내가 먼저' }),
+        el('p', { class: 'note', text: '연수 일정은 아직 초안이다. 여기 넣은 시간과 일정은 내가 적어 둔 것일 뿐이니, 운영팀 안내가 바뀌면 그쪽을 따르고 여기를 고친다.' }),
         status),
       hoursPanel(),
       eventsPanel(),

@@ -35,9 +35,15 @@ self.addEventListener('notificationclick', (event) => {
   })());
 });
 
+// 앱 밖의 곳(보드 · 테스터 안내)은 담아 두지 않고, 앱 화면으로 돌려주지도 않는다. 그대로 인터넷에서 받는다.
+const OUTSIDE = ['board/', 'testers/'];
+
 self.addEventListener('fetch', (event) => {
   const request = event.request;
-  if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin || !FILES.length) return;
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || url.origin !== self.location.origin || !FILES.length) return;
+  const inside = url.pathname.slice(new URL(self.registration.scope).pathname.length);
+  if (OUTSIDE.some((dir) => inside === dir.slice(0, -1) || inside.startsWith(dir))) return;
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const hit = (await cache.match(request, { ignoreSearch: true })) || (request.mode === 'navigate' ? await cache.match('./') : undefined);
