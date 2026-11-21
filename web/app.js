@@ -15,6 +15,7 @@ const VIEWS = {
   topics: () => import('./views/topics.js'),
   days: () => import('./views/days.js'),
   ask: () => import('./views/ask.js'),
+  q: () => import('./views/askall.js'),
   listen: () => import('./views/listen.js'),
   apply: () => import('./views/apply.js'),
   sessions: () => import('./views/sessions.js'),
