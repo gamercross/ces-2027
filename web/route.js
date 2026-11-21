@@ -76,13 +76,19 @@ export function fillDays(items, firstBooth, table, limit = 0) {
     .sort((a, b) => a.base - b.base || compareKeys(a.key, b.key) || a.n - b.n);
   const dayOf = new Map();
   let moved = 0, over = 0;
+  // 첫 바퀴: 제 날에 자리가 있는 만큼 넣는다. (넘친 곳이 다른 날의 제 자리를 먼저 차지하지 않게.)
+  const left = [];
   for (const q of queue) {
+    if (count[q.base] < limitOf(q.base)) { dayOf.set(q.it.id, q.base); count[q.base] += 1; } else left.push(q);
+  }
+  // 둘째 바퀴: 넘친 곳을 자리가 있는 다음 날로 넘긴다.
+  for (const q of left) {
     const open = DAYS_OPEN[q.campus] || ALL_DAYS;
     const at = open.indexOf(q.base);
-    const tryOrder = [...open.slice(at), ...open.slice(0, at)];
+    const tryOrder = [...open.slice(at + 1), ...open.slice(0, at)];
     const day = tryOrder.find((d) => count[d] < limitOf(d));
     if (day === undefined) { over += 1; dayOf.set(q.it.id, q.base); count[q.base] += 1; continue; }
-    if (day !== q.base) moved += 1;
+    moved += 1;
     dayOf.set(q.it.id, day);
     count[day] += 1;
   }

@@ -238,3 +238,7 @@ details.more[open] > summary { margin-bottom: 8px; }
 .note.warn { color: var(--warn); font-weight: 700; }
 .field input[type="file"] { padding: 10px; }
 .why { font-size: 13px; font-weight: 700; color: var(--ink-2); }
+
+/* 부스 카드의 길 안내 */
+.guide { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.guide > * + * { margin-top: 6px; }

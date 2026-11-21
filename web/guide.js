@@ -21,16 +21,16 @@ export function guideTo(where, target, placeOf) {
     if (a != null && b != null) {
       const aisleA = Math.floor(a / 100), aisleB = Math.floor(b / 100);
       if (aisleA === aisleB) lines.push(`같은 통로다(${aisleB}번대). 부스 번호가 ${b > a ? '커지는' : '작아지는'} 쪽으로 ${a} → ${b}.`);
-      else lines.push(`부스 번호가 ${b > a ? '커지는' : '작아지는'} 쪽으로 통로 ${Math.abs(aisleB - aisleA)}개를 건넌다: ${aisleA}번대 → ${aisleB}번대, 그 통로에서 ${b}를 찾는다.`);
+      else lines.push(`부스 번호가 ${b > a ? '커지는' : '작아지는'} 쪽으로 간다: ${aisleA}번대 통로 → ${aisleB}번대 통로 (통로 ${Math.abs(aisleB - aisleA)}개쯤). 찾을 부스: ${target.code}.`);
     } else {
-      lines.push(`부스 ${target.code}를 찾는다. 지도에 그은 줄을 따라간다.`);
+      lines.push(`찾을 부스: ${target.code}. 지도에 그은 줄을 따라간다.`);
     }
     lines.push('통로와 자리는 부스 번호로 짐작한 것이다. 홀 안의 안내판을 같이 본다.');
     return { kind: 'same-place', maps: false, lines };
   }
   if (to && myCampus && to.c === myCampus) {
     const from = myPlaces.map((k) => placeOf(k)?.ko).filter(Boolean)[0];
-    return { kind: 'same-campus', maps: true, lines: [`같은 캠퍼스의 다른 곳이다: ${from ? `${from} → ` : ''}${toName}.`, '지도에 그은 줄 쪽으로 걸어가거나, 구글맵 길찾기를 쓴다.', `도착하면 부스 ${target.code}를 찾는다.`] };
+    return { kind: 'same-campus', maps: true, lines: [`같은 캠퍼스의 다른 곳이다: ${from ? `${from} → ` : ''}${toName}.`, '지도에 그은 줄 쪽으로 걸어가거나, 구글맵 길찾기를 쓴다.', `도착하면 찾을 부스: ${target.code}.`] };
   }
-  return { kind: 'other-campus', maps: true, lines: [`다른 캠퍼스에 있다: ${toName}.`, '걸어가기에는 멀다. 구글맵 길찾기를 쓰거나 첫 화면 "오가는 법"의 셔틀을 본다.', `도착하면 부스 ${target.code}를 찾는다.`] };
+  return { kind: 'other-campus', maps: true, lines: [`다른 캠퍼스에 있다: ${toName}.`, '걸어가기에는 멀다. 구글맵 길찾기를 쓰거나 첫 화면 "오가는 법"의 셔틀을 본다.', `도착하면 찾을 부스: ${target.code}.`] };
 }

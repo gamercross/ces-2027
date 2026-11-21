@@ -4,7 +4,7 @@
 window.BOARD = {
   format: 1,
   title: '글로벌 어학연수 · CES 2027 준비 지도',
-  sub: '우리 팀이 CES에서 정보와 위치를 헷갈리지 않게 · 만드는 중 · 세션 1 ~ 6 + 깊게 3 + 주제 판',
+  sub: '우리 팀이 CES에서 정보와 위치를 헷갈리지 않게 · 만드는 중 · 세션 1 ~ 6 + 깊게 4 (시간 · 일정 · 추천 · 길 안내)',
   start: 'v_big',
   frames: [
     {id: 'v_big', kicker: '처음 보는 사람에게', title: '준비 지도는 이렇게 돈다', layout: 'view', w: 1700, cols: 4, weight: 5,
@@ -90,6 +90,8 @@ window.BOARD = {
     {f: 'plan', id: 'wp_home', t: 'wp', n: '첫 화면 · 알아둘 것', s: 'part', col: 1, when: '11/20 (아이콘은 정할 것)', who: 'Orca'},
     {f: 'plan', id: 'wp_onboard', t: 'wp', n: '명함 · 분야 · 관심', s: 'done', col: 1, when: '11/20', who: 'Orca'},
     {f: 'plan', id: 'wp_topics', t: 'wp', n: '주제 판 (출발 전 판)', s: 'done', col: 1, when: '11/21', who: 'Orca'},
+    {f: 'plan', id: 'wp_days', t: 'wp', n: '날마다 쓸 시간 · 내 일정 · 추천', s: 'done', col: 2, when: '11/21', who: 'Orca'},
+    {f: 'plan', id: 'wp_guide', t: 'wp', n: '부스 누르기 → 길 안내', s: 'part', col: 2, when: '11/21 (홀 안 길은 배치도 뒤)', who: 'Orca'},
     {f: 'plan', id: 'wp_route', t: 'wp', n: '동선 · 2D · 3D', s: 'part', col: 1, when: '11/20 (3D는 단순한 모양)', who: 'Orca'},
     {f: 'plan', id: 'wp_offline', t: 'wp', n: '오프라인 · 배포', s: 'part', col: 1, when: '11/20 (Pages 켜기 남음)', who: 'Orca'},
     {f: 'plan', id: 'wp_locate', t: 'wp', n: '내 위치 · 다음 곳', s: 'part', col: 2, when: '11/21 (GPS는 캠퍼스까지)', who: 'Orca'},
@@ -156,6 +158,7 @@ window.BOARD = {
     data: [
       {id: 'd_profile', st: 'phone', n: '내 온라인 명함', one: '별명 · 태그 하나 · 한 줄 소개 · 깃허브 · 디스코드', shape: ['별명', '태그(학생 · 취준생 · 정년 · 장년)', '한 줄', '깃허브 주소', '디스코드 주소', '고른 분야'], w: [[null, '처음 열 때 명함을 만든다']], r: [[null, '명함 화면의 QR 둘(폰에서 만든다) · 분야 추천 · 일기의 태그 기본값']], life: '내 폰에만 (localStorage ces2027.profile.v1)', never: '전화번호 · 주민번호 같은 민감한 것은 받지 않는다'},
       {id: 'd_topics', st: 'phone', n: '주제 판', one: '주제 10개까지, 주제마다 볼 회사와 네 태그 칸', shape: ['주제 이름', '공식 분야', '볼 회사', '학생 · 취준생 · 정년 · 장년 칸'], w: [[null, '주제 화면에서 후보(공식 분야 · 혁신상)를 고르거나 직접 적는다']], r: [[null, '출발 전 판 한 장(마크다운)으로 복사 · 파일. 넣은 회사는 관심과 동선으로 이어진다']], life: '내 폰에만 (localStorage ces2027.topics.v1)'},
+      {id: 'd_days', st: 'phone', n: '날마다 쓸 시간 · 내 일정', one: '날마다 전시를 볼 시간과 전시 밖 일정', shape: ['날짜마다 시작 · 끝(또는 보지 않음)', '일정: 날짜 · 시작 · 끝 · 이름 · 장소', '한 곳에 쓰는 시간'], w: [[null, '시간과 일정 화면에서 넣거나, 단톡방으로 받은 파일을 불러온다']], r: [[null, '동선의 날짜 채우기와 "몇 시쯤", 지도의 내 일정']], life: '내 폰에만 (hours.v1 · events.v1 · pace.v1). 파일로 폰에서 폰으로만 건넨다', never: '우리 일정표는 공개 레포에 넣지 않는다'},
       {id: 'd_interest', st: 'phone', n: '관심 회사', one: '등록한 회사와 날짜', shape: ['회사 id', '날짜(미정 또는 첫날 ~ 넷째 날)'], w: [[null, '회사 목록 · 찾기에서 관심 단추']], r: [[null, '동선 짜기']], life: '내 폰에만 (localStorage ces2027.interests.v1). 목록의 차례가 걷는 차례다'},
       {id: 'd_route', st: 'phone', n: '동선', one: '날짜별 걷는 차례', shape: ['날짜', '캠퍼스', '걷는 차례(부스 번호로 짐작)'], w: [[null, '앱이 관심 회사를 날짜 · 캠퍼스 · 홀 · 통로 차례로 세우고 내가 날짜를 바꾼다']], r: [[null, '현장에서 다음 갈 곳']]},
       {id: 'd_diary', st: 'phone', n: '회사 일기', one: '본 것 · 느낀 점 · 네 태그', shape: ['날짜', '회사', '본 것', '느낀 점', '누구에게(네 태그, 여럿)', '보낸 때'], w: [[null, '본 회사마다 쓴다']], r: [[null, '보내기 · 파일로 내보내기 · 글로 복사']], life: '내 폰에만 (localStorage ces2027.diary.v1). 보내기를 누른 것만 밖으로 나간다'},
@@ -166,7 +169,7 @@ window.BOARD = {
     ],
     flow: [
       {o: null, t: '받기', d: 'Rust 도구가 공식 자료를 받아 줄인다', dm: ['d_ces', 'd_index', 'd_places']},
-      {o: null, t: '고르기', d: '나 · 분야 · 관심 · 동선이 폰에 쌓인다', dm: ['d_profile', 'd_topics', 'd_interest', 'd_route']},
+      {o: null, t: '고르기', d: '나 · 분야 · 관심 · 동선이 폰에 쌓인다', dm: ['d_profile', 'd_topics', 'd_days', 'd_interest', 'd_route']},
       {o: null, t: '쓰기', d: '현장에서 회사 일기', dm: ['d_diary']},
       {o: null, t: '모으기', d: '보내기를 누른 일기만 한곳에', dm: ['d_pool']}
     ]

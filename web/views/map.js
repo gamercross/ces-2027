@@ -13,6 +13,9 @@ import { findBooth, nearBooth, nearestArea, nearestCampus } from '../locate.js';
 import { nextStop } from '../route.js';
 import { getWhere, setWhere } from '../store.js';
 import { companyRow } from '../company.js';
+import { guideTo } from '../guide.js';
+import { getEvents } from '../store.js';
+import { placeLink } from './days.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const FILL = { hall: '#c9d6ee', room: '#e2dcef', out: '#d9e6dc', hotel: '#ecdccb' };
@@ -51,7 +54,7 @@ export async function render({ rest = [] } = {}) {
   const pins = data ? interestPins(data, spots) : [];
   const placeKo = new Map(places.places.map((p) => [p.k, p.ko]));
   const pad = (b, m) => [b[0] - m, b[1] - m, b[2] + m, b[3] + m];
-  const all = pad(L.box, 120);
+  const all = pad(L.boxAll, 120);
   let view = [...all];
 
   const roads = svg('g', { fill: 'none', stroke: '#cfd6e2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },
@@ -153,6 +156,18 @@ export async function render({ rest = [] } = {}) {
     g.append(text);
     marks.append(g);
   }
+  for (const c of L.city) {
+    const g = svg('g', { tabindex: 0, role: 'button', 'aria-label': `${c.ko} (전시장 밖, 자리는 어림)` }, svg('circle', { cx: c.center[0], cy: c.center[1], fill: '#f0b08a', stroke: '#1f2a44', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke' }), svg('title', {}));
+    g.dataset.city = c.k;
+    g.querySelector('title').textContent = c.ko;
+    const text = svg('text', { x: c.center[0], y: c.center[1], fill: '#1f2a44', 'font-weight': 700, 'pointer-events': 'none' });
+    text.textContent = c.ko;
+    g.append(text);
+    g.style.cursor = 'pointer';
+    g.addEventListener('click', () => pickCity(c));
+    g.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pickCity(c); } });
+    marks.append(g);
+  }
   for (const pin of pins) {
     const g = svg('g', {}, svg('circle', { cx: pin.x, cy: pin.z, fill: DAY_FILL[pin.day], stroke: '#1f2a44', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke', opacity: pin.seen ? 0.45 : 1 }), svg('title', {}));
     g.querySelector('title').textContent = `${pin.no}. ${pin.name}`;
@@ -194,8 +209,46 @@ export async function render({ rest = [] } = {}) {
       el('p', { class: 'note', text: `${place ? place.ko : '장소 모름'} · ${spot?.official ? '자리는 공식 배치도다' : '자리는 짐작이다'}` }),
       in3d() && spot ? el('div', { class: 'actions' }, el('button', { class: 'btn ghost', type: 'button', text: '2D 지도에서 보기', onclick: () => to2d([spot.x - 110, spot.z - 110, spot.x + 110, spot.z + 110]) })) : null,
       el('ol', { class: 'hits' }, rows.map((r) => companyRow(r, data, placeKo))),
+      guideBlock(key, place, spot),
     ].filter(Boolean));
+    drawMe();
     if (scroll) detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  // 여기서 가는 길: 내 자리에서 고른 부스까지. 같은 곳이면 부스 번호 쪽으로, 다른 캠퍼스면 구글맵 길찾기.
+  function guideBlock(key, place, spot) {
+    const bar = key.indexOf('|');
+    const where = getWhere();
+    const g = guideTo(where, { place: key.slice(0, bar), code: key.slice(bar + 1) }, (k) => placeBy.get(k));
+    const open = mapsLink(places, place);
+    const route = mapsLink(places, place, 'directions');
+    const at = myPoint(where);
+    return el('div', { class: 'block guide' },
+      el('h3', { text: '여기서 가는 길' }),
+      ...g.lines.map((line) => el('p', { class: 'note', text: line })),
+      el('div', { class: 'actions' },
+        g.kind !== 'other-campus' && at && spot ? el('button', { class: 'btn', type: 'button', text: '지도에서 길 보기', onclick: () => {
+          const box = pad([Math.min(at[0], spot.x), Math.min(at[1], spot.z), Math.max(at[0], spot.x), Math.max(at[1], spot.z)], 60);
+          if (in3d()) to2d(box); else { focus = null; fit(box); }
+          frame.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        } }) : null,
+        g.kind === 'unknown' ? el('button', { class: 'btn', type: 'button', text: '내 자리 넣기', onclick: () => { boothInput.scrollIntoView({ block: 'center', behavior: 'smooth' }); boothInput.focus({ preventScroll: true }); } }) : null,
+        g.maps && route ? out(route, '구글맵 길찾기', g.kind === 'other-campus' ? 'btn' : 'btn ghost') : null,
+        open ? out(open, '구글맵에서 열기', 'btn ghost') : null));
+  }
+  // 전시장 밖의 공개 장소를 누르면: 이름 · 내 일정 · 구글맵.
+  function pickCity(c) {
+    three?.choose(null);
+    const mine = getEvents().filter((e) => e.place === c.ko || e.place === c.en);
+    const query = encodeURIComponent(`${c.maps.query}, ${c.maps.address}`);
+    detail.replaceChildren(...[
+      el('h2', { text: c.ko }),
+      el('p', { class: 'note', text: `${c.en}. 전시장 밖의 공개 장소다. 캠퍼스 지도에 없는 곳이라 지도 위 자리는 어림이다.${c.maps.addressChecked ? '' : ' 주소는 아직 확인하지 못했다.'}` }),
+      mine.length ? el('ul', { class: 'stack' }, mine.map((e) => el('li', {}, el('b', { text: e.name }), el('span', { text: `${e.date.slice(5).replace('-', '/')} ${e.from} ~ ${e.to}` })))) : el('p', { class: 'note', text: '여기서 하는 내 일정은 없다.' }),
+      el('div', { class: 'actions' },
+        out(places.mapsUrls.search.replace('{query}', query), '구글맵에서 열기', 'btn'),
+        out(places.mapsUrls.directions.replace('{query}', query), '구글맵 길찾기', 'btn ghost')),
+    ]);
+    detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
   function drawBooths() {
     boothFrame = 0;
@@ -230,12 +283,14 @@ export async function render({ rest = [] } = {}) {
     for (const t of labels.children) t.style.display = t.dataset.big === '1' ? (w < 2600 ? '' : 'none') : (w < 1100 ? '' : 'none');
     campusLabels.style.display = w >= 1500 ? '' : 'none';
     for (const g of marks.children) {
-      g.querySelector('circle').setAttribute('r', (unit * 4).toFixed(1));
+      const city = !!g.dataset.city;
+      g.querySelector('circle').setAttribute('r', (unit * (city ? 7 : 4)).toFixed(1));
       const t = g.querySelector('text');
-      t.setAttribute('font-size', (unit * 9).toFixed(1));
-      t.setAttribute('dx', (unit * 6).toFixed(1));
+      t.setAttribute('font-size', (unit * (city ? 10 : 9)).toFixed(1));
+      t.setAttribute('dx', (unit * (city ? 10 : 6)).toFixed(1));
       t.setAttribute('dy', (unit * 3).toFixed(1));
-      t.style.display = w < 900 ? '' : 'none';
+      // 공개 장소는 멀리서도 이름이 보인다.
+      t.style.display = city || w < 900 ? '' : 'none';
     }
     for (const g of pinLayer.children) {
       g.querySelector('circle').setAttribute('r', (unit * 9).toFixed(1));
@@ -335,6 +390,8 @@ export async function render({ rest = [] } = {}) {
     const at = myPoint(where);
     const unit = (view[2] - view[0]) / 360;
     me.replaceChildren();
+    const chosenSpot = chosenBooth ? spots.get(chosenBooth) : null;
+    if (at && chosenSpot) me.append(svg('line', { x1: at[0], y1: at[1], x2: chosenSpot.x, y2: chosenSpot.z, stroke: '#8a3b2f', 'stroke-width': 3, 'stroke-linecap': 'round', 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' }));
     if (at && nextPin) me.append(svg('line', { x1: at[0], y1: at[1], x2: nextPin.x, y2: nextPin.z, stroke: '#1f2a44', 'stroke-width': 2, 'stroke-dasharray': '6 5', 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' }));
     if (at) {
       // 부스로 맞췄으면 작은 점, GPS(캠퍼스까지)면 넓은 고리로 보인다.
@@ -463,6 +520,23 @@ export async function render({ rest = [] } = {}) {
   } }));
   paintLegend();
 
+  // 내 일정(전시 밖): 장소가 있으면 구글맵으로 연다. 고치는 곳은 "시간과 일정" 화면이다.
+  function eventsPanel() {
+    const events = [...getEvents()].sort((a, b) => a.date.localeCompare(b.date) || a.from.localeCompare(b.from));
+    return el('section', { class: 'panel' },
+      el('h2', { text: `내 일정 ${events.length}개` }),
+      events.length
+        ? el('ul', { class: 'stack' }, events.map((e) => {
+          const link = placeLink(places, e.place);
+          return el('li', { class: 'entry' },
+            el('div', { class: 'name', text: e.name }),
+            el('div', { class: 'where', text: `${e.date.slice(5).replace('-', '/')} ${e.from} ~ ${e.to}${e.place ? ` · ${e.place}` : ''}` }),
+            link ? el('div', { class: 'row-actions' }, out(link, '구글맵에서 열기')) : null);
+        }))
+        : el('p', { class: 'note', text: '전시 밖 일정(모임 · 공연 · 거리 구경 같은 것)을 넣으면 여기에도 보인다.' }),
+      el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: '#/days', text: '시간과 일정 고치기' })));
+  }
+
   const page = el('div', { class: 'page' },
     el('section', { class: 'panel' },
       el('h1', { text: '지도' }),
@@ -480,7 +554,8 @@ export async function render({ rest = [] } = {}) {
         ? el('p', { class: 'note', text: `번호는 내 동선의 차례다. 색은 날짜다: ${info.show.days.map((d, i) => `${d.ko.split(' ')[0]} ${['분홍', '파랑', '초록', '노랑'][i]}`).join(' · ')} · 미정 회색.` })
         : el('p', { class: 'note' }, '관심 회사를 넣으면 지도에 번호로 찍힌다. ', el('a', { href: '#/find', text: '회사 고르러 가기' }))),
     detail,
-    mePanel);
+    mePanel,
+    eventsPanel());
   // 화면에 붙은 뒤에야 크기를 알 수 있다.
   requestAnimationFrame(() => {
     fit(all);
