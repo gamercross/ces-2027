@@ -528,7 +528,28 @@ const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 const version = await json('version.json').catch(() => null);
 const swFiles = JSON.parse(`[${(sw.match(/const FILES = \[(.*)\];/) || [])[1] || ''}]`);
 check(!!version && sw.includes(JSON.stringify(version.v)) && !sw.includes('__VERSION__'), `판 이름이 찍혔다 (${version?.v})`);
-const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'views/map.js', 'views/diary.js', 'views/topics.js', 'views/days.js', 'views/ask.js', 'views/listen.js', 'views/apply.js', 'separate.js', 'data/separate.json', 'speech.js', 'talk-ui.js', 'audio-store.js', 'data/phrases.json', 'topics.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'alerts.js', 'notify.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/topics.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
+const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'tokens.js', 'frame.js', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'views/map.js', 'views/diary.js', 'views/topics.js', 'views/days.js', 'views/ask.js', 'views/listen.js', 'views/apply.js', 'separate.js', 'data/separate.json', 'speech.js', 'talk-ui.js', 'audio-store.js', 'data/phrases.json', 'topics.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'alerts.js', 'notify.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/topics.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
+// 디자인 토큰: tokens.css가 값의 원본이고, 지도 코드가 쓰는 tokens.js의 기본값이 한 글자도 다르지 않아야 한다.
+// 화면 파일(app.css · views · 지도 코드)이 색을 직접 적지 않는 것도 본다 (design.md).
+{
+  const css = await readFile(join(dist, 'tokens.css'), 'utf8');
+  const { DEFAULTS } = await import('../web/tokens.js');
+  const bad = Object.entries(DEFAULTS).filter(([, [name, value]]) => !new RegExp(`${name}:\\s*${value};`, 'i').test(css)).map(([k]) => k);
+  check(bad.length === 0, `디자인 토큰: tokens.js의 기본값 ${Object.keys(DEFAULTS).length}개가 tokens.css와 같다 (다른 것 ${bad.join(' ') || '없음'})`);
+  const hexIn = async (f) => (await readFile(join(dist, f), 'utf8')).match(/#[0-9a-fA-F]{6}\b/g) || [];
+  const strays = [];
+  for (const f of ['app.css', 'colors.js', 'map3d.js', 'views/map.js', 'qr.js']) if ((await hexIn(f)).length) strays.push(f);
+  check(strays.length === 0, `색 값을 화면 파일에 직접 적지 않는다 (tokens.css 한 곳): 어긴 파일 ${strays.join(' ') || '없음'}`);
+  const shadow = [];
+  for (const f of ['app.css']) if (/box-shadow|text-shadow|filter:\s*drop-shadow|gradient\(/.test(await readFile(join(dist, f), 'utf8'))) shadow.push(f);
+  check(shadow.length === 0, '그림자 · 그라데이션이 없다 (design.md: 하지 않는 것)');
+  // 메인 틀 (design.md "메인 틀"): 아래 탭 다섯, 뒤로 · 인터넷 없음 자리, 불러오는 중 · 오류 · 없는 화면은 frame.js 한 곳.
+  const html = await readFile(join(dist, 'index.html'), 'utf8');
+  const app = await readFile(join(dist, 'app.js'), 'utf8');
+  const tabs = (html.match(/data-tab="/g) || []).length;
+  check(tabs === 5 && html.includes('id="back"') && html.includes('id="net"') && html.includes('href="frame.js"'), `메인 틀: 아래 탭 ${tabs}개(다섯까지) · 뒤로 · 인터넷 없음 줄이 있고 frame.js를 첫 화면과 같이 받는다`);
+  check(['loading()', 'failed(', 'missing(', 'history.back()'].every((w) => app.includes(w)) && !/p\.textContent = '화면을 불러오지 못했다/.test(app), '메인 틀: 느린 망엔 "불러오는 중", 못 불러오면 "다시 열기", 없는 주소는 첫 화면으로 말없이 보내지 않고 알린다, 뒤로는 앱 안 기록을 따른다');
+}
 const missing = mustCache.filter((f) => !swFiles.includes(f));
 const gone = [];
 for (const f of swFiles) if (f !== './' && !(await exists(f))) gone.push(f);

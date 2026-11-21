@@ -1,0 +1,79 @@
+/* 디자인 토큰: 색 · 글꼴 · 간격 · 모양이 사는 단 한 곳. 기준 문서는 ../design.md.
+   화면(app.css · views)은 이 이름만 쓴다. 지도를 캔버스 · SVG로 그리는 코드는 tokens.js로 같은 값을 읽는다.
+   값을 바꾸면 tokens.js의 기본값과 design.md의 색 표도 같이 고친다(scripts/smoke.mjs가 맞춰 본다). */
+:root {
+  /* 색: 눈이 편한 파스텔 바탕 + 남색 글씨. 순백 · 검정 면 · 쨍한 파랑 없음 */
+  --bg: #e9edf4;
+  --panel: #f4f1ea;
+  --panel-2: #dfe7f1;
+  --ink: #1f2a44;
+  --ink-2: #4b5878;
+  --line: #c9d3e2;
+  --accent: #56679a;
+  --on-accent: #f4f1ea;
+  --mint: #cfe6dc;
+  --peach: #f4dccb;
+  --lilac: #e2dcef;
+  --warn: #8a3b2f;
+
+  /* 글꼴: 시스템 한글 고딕 하나 */
+  --font: system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  --fs-title: 26px;
+  --fs-now: 22px;
+  --fs-h2: 18px;
+  --fs-body: 16px;
+  --fs-small: 14px;
+  --fs-note: 13px;
+  --fs-fine: 12px;
+  --lh: 1.55;
+
+  /* 간격: 4 단위 */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+
+  /* 모양 */
+  --radius: 16px;
+  --radius-ctl: 12px;
+  --radius-tag: 8px;
+  --tap: 48px;
+  --tap-min: 44px;
+  --tabs: 64px;
+  --column: 560px;
+
+  /* 지도 바탕 (장소 종류 · 길 · 장식) */
+  --map-hall: #c9d6ee;
+  --map-room: #e2dcef;
+  --map-out: #d9e6dc;
+  --map-hotel: #ecdccb;
+  --map-place: #dde3ee;
+  --map-road: #cfd6e2;
+  --map-decor: #dfe3ea;
+  --map-link: #8fa3c8;
+  --map-plain: #9aa9cc;
+  --map-none: #c5cad3;
+  --map-badge: #8a6fb3;
+  --map-shuttle: #3f8f86;
+  --map-transit: #6b7896;
+  --map-city: #f0b08a;
+  --map-korea: #e88f8f;
+  --map-best: #dfa544;
+  --map-honoree: #f0d98c;
+  /* 날짜별 색: 미정 · 1/6 · 1/7 · 1/8 · 1/9 */
+  --day-0: #b9c0cf;
+  --day-1: #f4b9a7;
+  --day-2: #a9c6ee;
+  --day-3: #a8d8bf;
+  --day-4: #f1d38a;
+  /* 분야 묶음 일곱 (data/categories.json의 groups 기호) */
+  --group-ai: #8fa8e6;
+  --group-mob: #f0b08a;
+  --group-rob: #e79a9a;
+  --group-hea: #9ed3ab;
+  --group-hom: #e9cf7c;
+  --group-ent: #c3a2df;
+  --group-biz: #93cdd3;
+}

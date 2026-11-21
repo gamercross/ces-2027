@@ -1,6 +1,9 @@
 // QR 코드를 폰에서 만든다 (인터넷 없이, 바깥 라이브러리 없이).
 // 바이트 방식(UTF-8) · 오류 정정 M · 판 1 ~ 10 (213바이트까지). 명함의 주소 한 줄에는 넉넉하다.
 
+// QR의 바탕과 칸 색은 디자인 토큰(순백 대신 카드색, 검정 대신 남색 글자색). 대비는 13:1 안팎이라 읽힌다.
+import { T } from './tokens.js';
+
 // 판마다 [블록 하나의 오류 정정 낱말 수, [블록 수, 블록의 자료 낱말 수] ...] (오류 정정 M)
 const BLOCKS = [
   null,
@@ -241,10 +244,10 @@ export function qrSvg(text, label) {
   const bg = document.createElementNS(ns, 'rect');
   bg.setAttribute('width', size);
   bg.setAttribute('height', size);
-  bg.setAttribute('fill', '#ffffff');
+  bg.setAttribute('fill', T.panel);
   const fg = document.createElementNS(ns, 'path');
   fg.setAttribute('d', path);
-  fg.setAttribute('fill', '#1f2a44');
+  fg.setAttribute('fill', T.ink);
   svg.append(bg, fg);
   return svg;
 }

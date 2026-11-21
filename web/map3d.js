@@ -3,8 +3,10 @@
 // 장소를 톡 누르면 그 장소가, 장소가 없는 캠퍼스 바닥을 누르면 캠퍼스가 골라진다.
 // 가까이 보면 부스가 점으로 찍히고, 점을 누르면 그 부스가 골라진다.
 
-const FILL = { hall: [201, 214, 238], room: [226, 220, 239], out: [217, 230, 220], hotel: [236, 220, 203] };
-const DAY = ['#b9c0cf', '#f4b9a7', '#a9c6ee', '#a8d8bf', '#f1d38a'];
+import { T, DAY_COLORS, rgbOf, withAlpha } from './tokens.js';
+
+const FILL = { hall: rgbOf(T.hall), room: rgbOf(T.room), out: rgbOf(T.out), hotel: rgbOf(T.hotel) };
+const DAY = DAY_COLORS;
 const shade = ([r, g, b], k) => `rgb(${Math.round(r * k)},${Math.round(g * k)},${Math.round(b * k)})`;
 
 // 장소 하나의 바닥 높이와 꼭대기 높이.
@@ -54,7 +56,7 @@ export function create(L, places, pins, on = {}) {
     const w = canvas.clientWidth || 328, h = canvas.clientHeight || 420;
     if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = '#e9edf4';
+    ctx.fillStyle = T.bg;
     ctx.fillRect(0, 0, w, h);
     const k = Math.min(w, h) / cam.span;
     const cos = Math.cos(cam.yaw), sin = Math.sin(cam.yaw), sp = Math.sin(cam.pitch), cp = Math.cos(cam.pitch);
@@ -74,7 +76,7 @@ export function create(L, places, pins, on = {}) {
     };
 
     ctx.lineCap = 'round';
-    ctx.strokeStyle = '#cfd6e2';
+    ctx.strokeStyle = T.road;
     for (const r of places.roads) {
       ctx.lineWidth = Math.max(1, r.w * k * 0.8);
       ctx.beginPath();
@@ -86,7 +88,7 @@ export function create(L, places, pins, on = {}) {
     hitCampuses = L.campuses.map((c) => {
       const [x0, z0, x1, z1] = [c.box[0] - 40, c.box[1] - 40, c.box[2] + 40, c.box[3] + 40];
       const poly = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]].map(([x, z]) => project(x, 0, z));
-      face(poly, 'rgba(223,231,241,0.55)');
+      face(poly, withAlpha(T.panel2, 0.55));
       return { c, polys: [poly] };
     });
     hitShapes = [];
@@ -109,8 +111,8 @@ export function create(L, places, pins, on = {}) {
         polys.push(quad);
       }
       const top = p.world.map(([x, z]) => project(x, y1, z));
-      face(top, p.k === chosen ? '#cfe6dc' : shade(base, 1), '#56679a');
-      if (p.k === chosen) { ctx.lineWidth = 3; ctx.strokeStyle = '#1f2a44'; ctx.stroke(); }
+      face(top, p.k === chosen ? T.mint : shade(base, 1), T.accent);
+      if (p.k === chosen) { ctx.lineWidth = 3; ctx.strokeStyle = T.ink; ctx.stroke(); }
       polys.push(top);
       hitShapes.push({ p, polys });
       if (p.kind === 'hall' || p.kind === 'hotel' || cam.span < 1100) labels.push({ text: p.ko.replace('LVCC ', '').replace('베네시안 엑스포 ', '').replace(/ \(.*\)$/, ''), at: project(p.center[0], y1, p.center[1]) });
@@ -129,12 +131,12 @@ export function create(L, places, pins, on = {}) {
         const on1 = b.key === chosenBooth;
         ctx.beginPath();
         ctx.arc(b.sx, b.sy, on1 ? 6 : 3.5, 0, Math.PI * 2);
-        ctx.fillStyle = on.colorOf ? on.colorOf(b.key) : '#9aa9cc';
+        ctx.fillStyle = on.colorOf ? on.colorOf(b.key) : T.plain;
         ctx.fill();
         // 명함 이벤트로 표시한 부스는 붉은 테두리.
         const marked = on.isMarked ? on.isMarked(b.key) : false;
         ctx.lineWidth = on1 || marked ? 3 : 1;
-        ctx.strokeStyle = on1 ? '#1f2a44' : marked ? '#8a3b2f' : '#f4f1ea';
+        ctx.strokeStyle = on1 ? T.ink : marked ? T.warn : T.panel;
         ctx.stroke();
       }
     }
@@ -144,11 +146,11 @@ export function create(L, places, pins, on = {}) {
       const top = place ? heights(place)[1] : 0;
       const [sx, sy] = project(pin.x, top, pin.z);
       const [, ty] = project(pin.x, top + 26, pin.z);
-      ctx.strokeStyle = '#1f2a44';
+      ctx.strokeStyle = T.ink;
       ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx, ty); ctx.stroke();
       ctx.beginPath(); ctx.arc(sx, ty, 9, 0, Math.PI * 2); ctx.fillStyle = DAY[pin.day]; ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#1f2a44';
+      ctx.fillStyle = T.ink;
       ctx.font = '700 10px system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -161,9 +163,9 @@ export function create(L, places, pins, on = {}) {
       ctx.textBaseline = 'bottom';
       for (const l of labels) {
         ctx.lineWidth = 3;
-        ctx.strokeStyle = 'rgba(244,241,234,0.9)';
+        ctx.strokeStyle = withAlpha(T.panel, 0.9);
         ctx.strokeText(l.text, l.at[0], l.at[1] - 3);
-        ctx.fillStyle = '#1f2a44';
+        ctx.fillStyle = T.ink;
         ctx.fillText(l.text, l.at[0], l.at[1] - 3);
       }
     }

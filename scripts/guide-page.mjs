@@ -76,6 +76,7 @@ export function page({ title, body }) {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
 <title>${esc(title)} · 글로벌 어학연수 (비공식)</title>
+<link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../app.css">
 <style>
 main { max-width: 720px; margin: 0 auto; padding: 16px 12px 48px; display: grid; gap: 12px; }
