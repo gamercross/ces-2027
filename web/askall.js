@@ -2,6 +2,8 @@
 // 화면과 따로 두어 Node에서도 시험한다 (scripts/smoke.mjs). 서버도 열쇠도 없다.
 // 낱말을 나누고, 자료의 글과 견줘 점수를 매길 뿐이다. 자료에 없는 말은 없다고 돌려준다.
 
+import { askRows } from './onsite.js';
+
 // 물음에 늘 붙는 말. 찾는 데 쓰지 않는다.
 const STOP = new Set(['어떻게', '어떤', '뭐야', '어디', '언제', '누가', '무엇', '뭐', '몇', '있나', '있는', '있어', '하나', '해야', '된다', '되나', '할까', '인가', '이런', '그냥', '알려', '알려줘', '주세요', '좀', '대해', '내가', '것은', '것이', '시에', '적은']);
 // 낱말 끝에 붙는 말(조사 · 어미). 한 번만 뗀다. 긴 것부터.
@@ -18,6 +20,9 @@ export const GROUPS = [
   { k: 'info', ko: '알아둘 것' },
   { k: 'separate', ko: '따로 신청하는 곳 · 이동' },
   { k: 'sessions', ko: '세션 일정' },
+  { k: 'places', ko: '장소 (지도에서 보기)' },
+  { k: 'transit', ko: '셔틀 · 오가는 법' },
+  { k: 'onsite', ko: '현장 안내 · 급할 때' },
   { k: 'phrases', ko: '부스에서 쓸 질문' },
 ];
 
@@ -98,7 +103,7 @@ export function resolveBasis(b, docs) {
 
 function entry(kind, o) { return { kind, ...o, t: lower(o.title), x: lower(o.text) }; }
 
-export function buildEntries({ info, separate, phrases, sessions }) {
+export function buildEntries({ info, separate, phrases, sessions, transit, onsite, places }) {
   const out = [];
   const where = (spot, to, toKo) => ({ spot, to, toKo });
   if (info) {
@@ -131,7 +136,52 @@ export function buildEntries({ info, separate, phrases, sessions }) {
     for (const pack of phrases.packs) for (const it of pack.items) out.push(entry('phrases', { title: it.ko, text: `${pack.ko} ${it.en}`, show: it.en, en: true, src: null, note: '앱에 담아 둔 질문 · 영어는 미리 번역한 초안', ...where(`물어볼 말 · ${pack.ko}`, '#/ask', '물어볼 말에서 보기') }));
   }
   if (sessions) out.push(...sessionEntries(sessions));
+  if (places) out.push(...placeEntries(places));
+  if (transit) out.push(...transitEntries(transit));
+  if (onsite) out.push(...onsiteEntries(onsite));
   return out;
+}
+
+// 장소(data/places.json): 홀 · 호텔 · 회의실 · 야외와 라스베이거스의 갈 만한 곳. 장소 하나가 한 항목이다. 누르면 지도로, 구글맵 링크는 화면이 붙인다.
+const PLACE_KIND = { hall: '전시 홀', hotel: '호텔', out: '야외', room: '회의실' };
+export function placeEntries(data) {
+  const out = [];
+  for (const p of [...(data?.places || []), ...(data?.cityPlaces || [])]) {
+    if (!p?.ko) continue;
+    const kind = PLACE_KIND[p.kind] || (p.kind ? '' : '도시');
+    out.push(entry('places', {
+      title: `장소 · ${p.ko}`,
+      text: [p.en, p.theme, kind, p.sub].filter(Boolean).join(' '),
+      show: [kind, p.en, p.theme].filter(Boolean).join(' · '),
+      src: null, note: '앱에 담아 둔 장소 자료 (공식 캠퍼스 지도에서 옮김)',
+      place: p, spot: '장소', to: '#/map', toKo: '지도에서 보기',
+    }));
+  }
+  return out;
+}
+
+// 셔틀 · 오가는 법(data/transit.json): 노선 한 줄이 한 항목. 출처와 읽은 날짜는 줄의 첫 출처다.
+export function transitEntries(data) {
+  const out = [];
+  for (const l of data?.lines || []) {
+    const s = l.sources?.[0];
+    if (!l.ko || !s?.url || !s.read) continue;
+    const stops = (l.stops || []).map((x) => `${x.ko} ${x.board || ''}`).join(' ');
+    const route = [l.from, l.to].filter(Boolean).join(' → ');
+    out.push(entry('transit', {
+      title: `셔틀 · ${l.ko}`,
+      text: [route, stops, l.arrive, l.when, l.fare, l.note].filter(Boolean).join(' '),
+      show: [route, l.when, l.fare].filter(Boolean).join(' · ') || l.note || '',
+      status: l.status, src: { ko: s.ko, url: s.url, read: s.read }, more: Math.max(0, l.sources.length - 1),
+      spot: '오가는 법', to: '#/transit', toKo: '오가는 법에서 보기',
+    }));
+  }
+  return out;
+}
+
+// 현장 안내(data/onsite.json): 줄 하나가 한 항목. 번호도 글에 넣어 번호로 찾을 수 있다.
+export function onsiteEntries(data) {
+  return askRows(data).map((r) => entry('onsite', { ...r, spot: '현장 안내', to: '#/onsite', toKo: '현장 안내에서 보기' }));
 }
 
 // 세션 일정(data/sessions.json). 꼴에 기대지 않는다: 제목 · 때 · 곳으로 보이는 글만 쓴다. 읽을 수 없으면 건너뛴다.

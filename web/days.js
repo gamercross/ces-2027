@@ -88,6 +88,14 @@ export function cleanEvent(e) {
   return { id: text(e.id, 20) || newId(), date, from: toHHMM(toMin(from)), to: toHHMM(toMin(to)), name, place: text(e.place, 80) };
 }
 
+// 일정 하나를 제자리에서 고친다(이름표는 그대로). { events, ok } — 없는 일정이거나 꼴이 맞지 않으면 그대로 돌려주고 ok는 false.
+export function updateEvent(events, id, fields) {
+  const old = (events || []).find((e) => e.id === id);
+  const next = old && cleanEvent({ ...old, ...fields, id });
+  if (!next) return { events, ok: false };
+  return { events: events.map((e) => (e.id === id ? next : e)), ok: true };
+}
+
 // 받은 파일(글)을 읽는다. { hours, events, pace, problems } — 꼴이 맞지 않는 줄은 빼고 problems에 적는다.
 export function readFile(raw) {
   let json;

@@ -22,8 +22,9 @@ const VIEWS = {
   people: () => import('./views/people.js'),
   transit: () => import('./views/transit.js'),
   sessions: () => import('./views/sessions.js'),
+  onsite: () => import('./views/onsite.js'),
 };
-const TAB_OF = { '': 'home', find: 'find', plan: 'plan', map: 'map', diary: 'diary', topics: 'topics', days: 'plan', ask: 'find', listen: 'diary', apply: 'home', transit: 'home', sessions: 'plan' };
+const TAB_OF = { '': 'home', find: 'find', plan: 'plan', map: 'map', diary: 'diary', topics: 'topics', days: 'plan', ask: 'find', listen: 'diary', apply: 'home', transit: 'home', sessions: 'plan', onsite: 'home' };
 
 // 메인 틀: 아래 탭은 다섯(홈 · 회사 · 동선 · 지도 · 일기). 주제 판은 회사 탭 아래에 선다.
 // 탭이 아닌 화면(명함 · 시간과 일정 · 물어볼 말 …)은 위에 "뒤로"가 생기고, 돌아갈 곳은 TAB_OF의 탭이다.

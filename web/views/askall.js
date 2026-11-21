@@ -3,7 +3,8 @@
 // 영어로 부스에서 묻는 화면 "물어볼 말"(#/ask)과는 다르다. 이 화면(#/q)은 앱 안 자료를 찾는다.
 
 import { el, num, out } from '../dom.js';
-import { getFinder, getInfo, getPhrases, getSeparate } from '../data.js';
+import { getFinder, getInfo, getOnsite, getPhrases, getPlaces, getSeparate, getTransit } from '../data.js';
+import { mapsLink } from '../maps.js';
 import { buildEntries, companyHits, resolveBasis, searchAll } from '../askall.js';
 import { companyRow } from '../company.js';
 import { getInterests } from '../store.js';
@@ -27,13 +28,13 @@ function proofLine(src, extra) {
   return el('small', { class: 'proof wrap' }, `${mdOf(src.read)} 확인 · `, out(src.url, src.ko || '출처'), extra ? ` · ${extra}` : '');
 }
 
-function hitCard(h) {
+function hitCard(h, places) {
   return el('li', { class: 'entry' },
     el('div', { class: 'name' }, h.title, h.status ? el('span', { class: h.status === 'confirmed' ? 'tag mint' : 'tag', text: STATUS_KO[h.status] }) : null, h.live ? el('span', { class: 'tag', text: '라이브 표시' }) : null),
     h.show && el('p', { lang: h.en ? 'en' : null, text: h.show }),
     el('small', { class: 'proof wrap' }, `${h.spot}`),
     h.src ? proofLine(h.src, h.more ? `출처 ${h.more + 1}개` : '') : el('small', { class: 'proof wrap', text: h.note || '' }),
-    el('div', { class: 'row-actions' }, el('a', { href: h.to, text: h.toKo })));
+    el('div', { class: 'row-actions' }, el('a', { href: h.to, text: h.toKo }), (h.place && places && mapsLink(places, h.place)) ? out(mapsLink(places, h.place), '구글맵에서 열기') : null));
 }
 
 // 자주 묻는 것 한 장: 물음 · 답 · 근거(어느 자료의 어느 줄, 출처, 확인한 날짜) · 가는 링크.
@@ -69,9 +70,9 @@ function cap(list, make) {
 }
 
 export async function render({ rest }) {
-  const [info, separate, phrases, sessions, faq] = await Promise.all([getInfo(), getSeparate(), getPhrases(), getSessions(), getFaq().catch(() => ({ items: [] }))]);
+  const [info, separate, phrases, sessions, faq, transit, onsite, places] = await Promise.all([getInfo(), getSeparate(), getPhrases(), getSessions(), getFaq().catch(() => ({ items: [] })), getTransit().catch(() => null), getOnsite().catch(() => null), getPlaces().catch(() => null)]);
   const docs = { info, separate, phrases };
-  const entries = buildEntries({ info, separate, phrases, sessions });
+  const entries = buildEntries({ info, separate, phrases, sessions, transit, onsite, places });
 
   const input = el('input', { type: 'search', inputmode: 'search', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', placeholder: '배지, 셔틀, 삼성, 가격', 'aria-label': '앱 안 자료에서 찾을 말' });
   const results = el('div', { class: 'page' });
@@ -115,7 +116,7 @@ export async function render({ rest }) {
         later.length ? el('details', {}, el('summary', { text: `더 보기 (${later.length}개)` }), later.map((it) => faqCard(it, docs))) : null));
     }
     for (const g of found.groups) {
-      parts.push(el('section', { class: 'panel' }, el('h2', { text: `${g.ko} ${g.hits.length}` }), ...cap(g.hits, hitCard)));
+      parts.push(el('section', { class: 'panel' }, el('h2', { text: `${g.ko} ${g.hits.length}` }), ...cap(g.hits, (h) => hitCard(h, places))));
     }
     parts.push(companyBox, empty);
     results.replaceChildren(...parts);
