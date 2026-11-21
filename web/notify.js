@@ -15,8 +15,8 @@ export function setMarks(marks) {
   return ok;
 }
 
-// 지금 화면에 띠로 보일 것. { paper: 'first' | 'again' | null, needs: [{ name, key, by }], near: [key…], state }
-export const alerts = { paper: null, needs: [], near: [], state: 'unsupported' };
+// 지금 화면에 띠로 보일 것. { paper, needs, near, state, fallback, error }
+export const alerts = { paper: null, needs: [], near: [], state: 'unsupported', fallback: false, error: '' };
 const changed = () => window.dispatchEvent(new Event('ces-alerts'));
 
 export async function askPermission() {
@@ -51,11 +51,13 @@ async function exhibitors() {
 
 // 확인한다: 종이 명함을 물을 때인지, 오늘 동선에 명함 이벤트 부스가 있는지, 내 자리 가까이에 있는지.
 // 전시사 자료는 표시한 부스가 있을 때만 읽는다 (첫 화면을 무겁게 하지 않으려고).
-export async function checkAlerts() {
+async function checkAlertsNow() {
   const today = dateOf(new Date());
   const marks = getMarks();
   const sent = load('alerts.v1', {});
   alerts.state = notifyState();
+  alerts.fallback = false;
+  alerts.error = '';
   alerts.paper = getProfile() ? shouldAskPaper(getPaper(), today) : null;
   alerts.needs = [];
   alerts.near = [];
@@ -69,16 +71,43 @@ export async function checkAlerts() {
       const tail = noPaper ? ' 종이 명함이 없으면 앱의 QR 명함을 보여 준다.' : '';
       if (alerts.needs.length && fresh(sent, 'morning', today)) {
         const names = alerts.needs.slice(0, 3).map((n) => n.name).join(' · ') + (alerts.needs.length > 3 ? ' …' : '');
-        if (await notify(`오늘 명함 ${alerts.needs.length}장 필요`, `오늘 동선에 명함 넣는 이벤트 부스가 있다: ${names}.${tail}`, 'ces-cards-today', noPaper ? '#/card' : '#/plan')) { sent.morning = today; save('alerts.v1', sent); }
+        if (await notify(`오늘 명함 ${alerts.needs.length}장 필요`, `오늘 동선에 명함 넣는 이벤트 부스가 있다: ${names}.${tail}`, 'ces-cards-today', noPaper ? '#/card' : '#/plan')) {
+          sent.morning = today;
+          if (!save('alerts.v1', sent)) {
+            alerts.fallback = true;
+            alerts.error = '알림은 보냈지만 되풀이 방지 기록을 이 폰에 저장하지 못했다.';
+          }
+        } else if (alerts.state === 'granted') {
+          alerts.fallback = true;
+          alerts.error = '알림을 띄우지 못해 화면의 띠로 알린다.';
+        }
       }
       for (const key of alerts.near) {
         if (!fresh(sent, `near:${key}`, today)) continue;
-        if (await notify('명함 넣는 이벤트 부스', `가까이에 있다: 부스 ${key.slice(key.indexOf('|') + 1)} (사람이 표시한 것, 자리는 짐작).${tail}`, `ces-near-${key}`, noPaper ? '#/card' : '#/map')) { sent[`near:${key}`] = today; save('alerts.v1', sent); }
+        if (await notify('명함 넣는 이벤트 부스', `가까이에 있다: 부스 ${key.slice(key.indexOf('|') + 1)} (사람이 표시한 것, 자리는 짐작).${tail}`, `ces-near-${key}`, noPaper ? '#/card' : '#/map')) {
+          sent[`near:${key}`] = today;
+          if (!save('alerts.v1', sent)) {
+            alerts.fallback = true;
+            alerts.error = '알림은 보냈지만 되풀이 방지 기록을 이 폰에 저장하지 못했다.';
+          }
+        } else if (alerts.state === 'granted') {
+          alerts.fallback = true;
+          alerts.error = '알림을 띄우지 못해 화면의 띠로 알린다.';
+        }
       }
-    } catch { /* 자료를 못 읽으면 띠도 알림도 없다 */ }
+    } catch {
+      alerts.fallback = true;
+      alerts.error = '이벤트 알림 자료를 읽지 못했다. 연결이나 받은 자료를 확인한다.';
+    }
   }
   changed();
   return alerts;
+}
+
+let checking = null;
+export function checkAlerts() {
+  if (!checking) checking = checkAlertsNow().finally(() => { checking = null; });
+  return checking;
 }
 
 // 열 때 · 화면으로 돌아올 때 · 내 자리가 바뀔 때 · 표시가 바뀔 때 확인한다.
@@ -88,6 +117,7 @@ export function startAlerts() {
   if (wired) return false;
   wired = true;
   document.addEventListener('visibilitychange', () => { if (!document.hidden) checkAlerts(); });
+  window.addEventListener('pageshow', () => checkAlerts());
   window.addEventListener('ces-where', () => checkAlerts());
   checkAlerts();
   return true;

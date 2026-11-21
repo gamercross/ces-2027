@@ -85,9 +85,11 @@ function separateBoxes() {
 // 알림: 켜기 단추와, 이 폰에서 되는 것 · 안 되는 것.
 function notifyBox() {
   const state = el('p', { class: 'big' });
+  const error = el('p', { class: 'note', role: 'status' });
   const button = el('button', { class: 'btn', type: 'button', text: '알림 켜기', hidden: true, onclick: async () => { await askPermission(); checkAlerts(); } });
   function paint() {
     state.textContent = { granted: '알림이 켜져 있다.', default: '알림을 켤 수 있다.', denied: '알림을 막아 두었다. 대신 이 화면의 띠로 보인다.', unsupported: '이 브라우저에서는 알림을 쓸 수 없다. 대신 이 화면의 띠로 보인다.' }[alerts.state];
+    error.textContent = alerts.error;
     button.hidden = alerts.state !== 'default';
   }
   paint();
@@ -95,6 +97,7 @@ function notifyBox() {
   return el('section', { class: 'panel' }, el('h2', { text: '알림' }), state,
     el('p', { class: 'note', text: '알리는 것: 오늘 동선에 명함 넣는 이벤트 부스가 있을 때, 그 부스 가까이 갔을 때. 서버가 없어서 앱을 열 때와 내 자리가 바뀔 때만 확인한다. 앱이 닫혀 있으면 정해진 시각에 울리지 않는다.' }),
     el('p', { class: 'note', text: '아이폰은 홈 화면에 추가한 뒤에야 알림을 켤 수 있다. 막아 두었으면 폰의 설정에서 이 앱의 알림을 다시 켠다.' }),
+    error,
     el('div', { class: 'actions' }, button));
 }
 

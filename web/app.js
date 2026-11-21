@@ -97,12 +97,12 @@ document.getElementById('update-go').addEventListener('click', () => location.re
 
 // 알림을 누르고 들어오면 그 화면으로 간다.
 navigator.serviceWorker?.addEventListener('message', (ev) => { if (typeof ev.data?.go === 'string' && ev.data.go.startsWith('#/')) go(ev.data.go); });
-// 가까이에 명함 이벤트 부스가 있는데 알림을 못 쓰는 폰이면, 탭 위에 띠로 보인다.
+// 가까이에 명함 이벤트 부스가 있는데 알림을 못 쓰거나 띄우지 못하면, 탭 위에 띠로 보인다.
 window.addEventListener('ces-alerts', () => {
   const bar = document.getElementById('notice');
-  const show = alerts.near.length > 0 && alerts.state !== 'granted';
+  const show = alerts.near.length > 0 && (alerts.state !== 'granted' || alerts.fallback);
   bar.hidden = !show;
-  if (show) document.getElementById('notice-text').textContent = `가까이에 명함 넣는 이벤트 부스 ${alerts.near.length}곳 (사람이 표시한 것)`;
+  if (show) document.getElementById('notice-text').textContent = `${alerts.error ? `${alerts.error} ` : ''}가까이에 명함 넣는 이벤트 부스 ${alerts.near.length}곳 (사람이 표시한 것)`;
 });
 document.getElementById('notice-go').addEventListener('click', () => go('#/card'));
 

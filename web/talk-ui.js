@@ -2,7 +2,7 @@
 
 import { el } from './dom.js';
 import { load, save } from './store.js';
-import { allowedMode, modeOf, SERVICE_NOTE, speak } from './speech.js';
+import { allowedMode, dictate, modeOf, SERVICE_NOTE, speak } from './speech.js';
 
 export const MODE_KO = { 'on-device': '폰 안에서만', 'device-service': '폰의 음성 인식 서비스' };
 
@@ -28,6 +28,52 @@ export function modePicker(mode, onChange) {
           el('button', { class: 'btn', type: 'button', text: '알겠다 · 이 길로 한다', onclick: () => { save('speechConsent.v1', new Date().toISOString().slice(0, 10)); set('device-service'); } }),
           el('button', { class: 'btn ghost', type: 'button', text: '그만둔다', onclick: () => draw(false) }))) : null,
       el('p', { class: 'note', text: mode === 'on-device' ? '지금: 폰 안에서만. 소리와 글이 폰 밖으로 나가지 않는다. 안 되는 폰이 많다.' : `지금: 폰의 음성 인식 서비스. ${SERVICE_NOTE} 글 옮기기는 폰 안의 번역기가 없으면 번역 사이트 링크로 한다.` }),
+    ].filter(Boolean));
+    if (asking) box.querySelector('[role=alertdialog] button')?.focus();
+  }
+  draw(false);
+  return box;
+}
+
+// 받아쓰기를 시작한다: 폰이 가진 것으로, 아니면 받아 둔 폰 안 모델로. 돌려주는 것: { stop() } 또는 null.
+export async function startDictation(mode, cap, handlers, stream) {
+  if (cap.engine === 'model') {
+    try { const m = await import('./speech-model.js'); return await m.startModelDictation(handlers, stream); } catch { return null; }
+  }
+  return dictate(mode, cap.local, handlers, undefined, stream?.getAudioTracks()[0]);
+}
+
+// 폰 안 받아쓰기 모델을 받는 칸. 받기 전에 크기와 받는 곳을 보이고 확인받는다. 끝나면 onDone()을 부른다.
+export function modelBox(cap, onDone) {
+  const box = el('div', { class: 'block' });
+  const status = el('p', { class: 'note', role: 'status' });
+  async function download(button) {
+    button.disabled = true;
+    try {
+      const m = await import('./speech-model.js');
+      await m.downloadModel(({ loaded, total }) => { status.textContent = `받는 중이다: ${m.toMB(loaded)} / ${m.toMB(total)}MB. 이 화면을 열어 둔다.`; });
+      status.textContent = '다 받았다. 이제 인터넷 없이도 받아 적는다.';
+      onDone();
+    } catch (e) {
+      button.disabled = false;
+      status.textContent = `받지 못했다 (${String(e.message || e).slice(0, 80)}). 인터넷을 보고 다시 누른다. 받다 만 것은 이어서 받는다.`;
+    }
+  }
+  function draw(asking) {
+    box.replaceChildren(...[
+      cap.downloadable && !asking ? el('div', { class: 'actions' }, el('button', { class: 'btn ghost', type: 'button', text: `폰 안 받아쓰기 모델 받기 (약 ${cap.mb}MB)`, onclick: () => draw(true) })) : null,
+      cap.downloadable && asking ? el('div', { class: 'panel band ask', role: 'alertdialog', 'aria-label': '폰 안 받아쓰기 모델 받기' },
+        el('p', {}, el('b', { text: `약 ${cap.mb}MB를 받는다. 와이파이에서 받기를 권한다.` }), ' 한 번 받으면 이 폰에 남아 인터넷 없이도 된다. 영어만 받아 적는다.'),
+        el('p', { class: 'note', text: '모델 파일은 huggingface.co에서 받는다. 내 소리와 글은 어디로도 보내지 않는다. 받은 것은 이 화면에서 지울 수 있다.' }),
+        el('div', { class: 'actions' },
+          el('button', { class: 'btn', type: 'button', text: '받는다', onclick: (ev) => download(ev.target) }),
+          el('button', { class: 'btn ghost', type: 'button', text: '그만둔다', onclick: () => draw(false) }))) : null,
+      cap.engine === 'model' && cap.ok ? el('div', { class: 'row-actions' }, el('span', { class: 'note', text: '폰 안 받아쓰기 모델이 이 폰에 있다.' }), el('button', { class: 'linkish', type: 'button', text: '모델 지우기', onclick: async () => {
+        const m = await import('./speech-model.js');
+        await m.removeModel();
+        onDone();
+      } })) : null,
+      status,
     ].filter(Boolean));
     if (asking) box.querySelector('[role=alertdialog] button')?.focus();
   }

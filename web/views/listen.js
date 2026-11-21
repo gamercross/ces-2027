@@ -4,8 +4,9 @@
 import { el } from '../dom.js';
 import { getExhibitors, getPhrases, getSettings } from '../data.js';
 import { getDiary, load, save, setDiary } from '../store.js';
-import { capabilities, dictate, installDictation, makeDraft, summarize, translate } from '../speech.js';
-import { capRows, currentMode, modePicker, showBig } from '../talk-ui.js';
+import { capabilities, installDictation, makeDraft, summarize, translate } from '../speech.js';
+import { capRows, currentMode, modelBox, modePicker, showBig, startDictation } from '../talk-ui.js';
+import { modelStatus } from '../speech-model.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
@@ -26,7 +27,7 @@ export async function render({ rest, go }) {
   const row = data?.ex.find((r) => r[0] === exId);
   const company = row ? { id: row[0], name: row[1], booth: row[7][0] || '' } : { id: '', name: '', booth: '' };
   const mode = currentMode(settings);
-  let caps = await capabilities(mode);
+  let caps = await capabilities(mode, undefined, await modelStatus());
 
   const lines = [];
   const pending = [];
@@ -80,7 +81,7 @@ export async function render({ rest, go }) {
       }
     }
     if (caps.dictate.ok) {
-      session = dictate(mode, caps.dictate.local, {
+      session = await startDictation(mode, caps.dictate, {
         onLine: addLine,
         onInterim: (text) => { live.textContent = text; },
         onEnd: (why) => {
@@ -89,7 +90,7 @@ export async function render({ rest, go }) {
           if (!running) return;
           status.textContent = `받아쓰기가 멈췄다: ${WHY[why] || why}.${recorder ? ' 녹음은 계속한다. 녹음과 받아쓰기를 같이 못 하는 폰이면 "소리도 남기기"를 끄고 다시 한다.' : ''} 아래에 손으로 적어도 된다.`;
         },
-      }, undefined, stream?.getAudioTracks()[0]);
+      }, stream);
       if (!session) status.textContent = '받아쓰기를 시작하지 못했다. 아래에 손으로 적는다.';
     }
     if (!recorder && !session) { running = false; startAt = 0; drawDock(); return; }
@@ -109,7 +110,9 @@ export async function render({ rest, go }) {
     clearInterval(timer);
     time.hidden = true;
     live.textContent = '';
-    session?.stop();
+    // 폰 안 모델은 마지막 토막을 다 받아 적을 때까지 기다린다.
+    if (session && caps.dictate.engine === 'model') status.textContent = '마지막 말을 받아 적는 중이다.';
+    await session?.stop();
     session = null;
     let blob = null;
     if (recorder) {
@@ -177,11 +180,17 @@ export async function render({ rest, go }) {
         ev.target.disabled = true;
         status.textContent = '말 꾸러미를 받는 중이다. 와이파이에서 받는다.';
         const ok = await installDictation();
-        caps = await capabilities(mode);
+        caps = await capabilities(mode, undefined, await modelStatus());
         status.textContent = ok ? '말 꾸러미를 받았다.' : '말 꾸러미를 받지 못했다.';
         drawCaps();
         drawDock();
       } })) : null,
+      caps.dictate.engine === 'model' ? modelBox(caps.dictate, async () => {
+        if (running) return;
+        caps = await capabilities(mode, undefined, await modelStatus());
+        drawCaps();
+        drawDock();
+      }) : null,
       modePicker(mode, () => { if (running || lines.length) status.textContent = '길을 바꿨다. 지금 듣는 것을 초안으로 남긴 다음부터 쓴다.'; else go(location.hash); })].filter(Boolean));
   }
   keep.addEventListener('change', drawDock);
