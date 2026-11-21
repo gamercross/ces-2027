@@ -1,0 +1,172 @@
+{
+  "v": 1,
+  "edition": "2026-09-29",
+  "sources": [
+    { "what": "LVCC 캠퍼스 지도 (홀 배치 · 홀별 부스 번호 대 · 주제)", "url": "https://www.ces.tech/media/1kqatmqa/lvcc-map-ces-2027.pdf", "edition": "2026-09-29" },
+    { "what": "베네시안 캠퍼스 지도 (홀 A-D · 홀 G · 회의실 층)", "url": "https://www.ces.tech/media/nc4b3iqn/venetian-map-ces2027.pdf", "edition": "2026-09-29" },
+    { "what": "C Space 캠퍼스 지도", "url": "https://www.ces.tech/media/brxhbspe/c-space-map-ces2027.pdf", "edition": "2026-09-29" },
+    { "what": "홀마다 이야기 · 오가는 법", "url": "https://www.ces.tech/explore-ces/maps-and-locations/", "edition": "2026-11-20 읽음" }
+  ],
+  "notes": {
+    "coords": "좌표는 공식 캠퍼스 지도(PDF) 위에서 손으로 딴 것이다. 캠퍼스마다 따로 딴 [x, z]이고, toWorld로 한 장에 놓는다: (점 - origin) × scale + offset.",
+    "boothSpots": "홀 안 부스 하나하나의 자리는 짐작이다. 정식 배치도가 열리기 전이라 부스 번호로 통로와 순서를 읽어 홀 칸(reg)에 고르게 펼친다. 장소마다 boothSpots가 guess면 화면에 '짐작'이라고 보인다. 정식 배치도를 넣은 곳만 official로 바꾼다.",
+    "boothRules": "부스가 어느 장소인지는 공식 지도의 부스 번호 대(numbers)와 방 이름(text), 전시사 검색이 주는 홀 기호(halls)로 정한다. 번호 대는 공식 지도에 적힌 것이고, 사우스 홀 1과 2를 가르는 번호(32999 · 35000)와 방 이름 · 홀 기호 짝은 우리가 읽은 것이다.",
+    "distance": "캠퍼스 사이 거리는 줄여서 그렸다. 실제로 C Space(아리아)는 베네시안에서 약 3km 남쪽이다.",
+    "addresses": "CES 공식 페이지와 지도에는 거리 주소가 없다. 주소는 장소가 스스로 밝힌 것을 적었고, 그 장소 사이트에서 확인한 날을 addressChecked에 적었다. null은 아직 확인하지 못한 주소다.",
+    "shapeGuess": "shapeGuess가 true인 장소는 공식 캠퍼스 지도에 그려져 있지 않아 모양과 자리를 어림으로 놓은 곳이다 (벨라지오: 공식 안내가 C Space 캠퍼스에 든다고만 적는다).",
+    "geo": "캠퍼스의 geo(위도 · 경도 · 반지름)는 어림값이다. 폰의 GPS가 어느 캠퍼스에 가까운지 고르는 데 쓴다. 캠퍼스 그림은 실제 좌표에 맞춘 것이 아니다.",
+    "gpsAreas": "gpsAreas는 GPS로 캠퍼스 다음에 어느 홀 · 건물 근처인지 짐작할 때 쓰는 어림 자리다. 어디서 재거나 받아 온 값이 아니라 지도를 보고 어림한 것이라 100m 넘게 틀릴 수 있다. 그래서 화면에는 늘 짐작이라고 보이고, 홀 안 자리는 부스 번호로 맞춘다. 현장에서 재면 고친다."
+  },
+  "mapsUrls": {
+    "search": "https://www.google.com/maps/search/?api=1&query={query}",
+    "directions": "https://www.google.com/maps/dir/?api=1&destination={query}&travelmode=walking",
+    "how": "{query}에는 장소의 maps.query와 venues의 address를 쉼표로 이어 URL로 싸서 넣는다. API 키는 쓰지 않는다."
+  },
+  "venues": {
+    "LVCC": { "name": "Las Vegas Convention Center", "address": "3150 Paradise Rd, Las Vegas, NV 89109", "addressChecked": "2026-11-20", "addressSource": "https://www.lvcva.com/contact-us/" },
+    "LVCC_WEST": { "name": "Las Vegas Convention Center West Hall", "address": "300 Convention Center Dr, Las Vegas, NV 89109", "addressChecked": null, "addressSource": null },
+    "FONT": { "name": "Fontainebleau Las Vegas", "address": "2777 S Las Vegas Blvd, Las Vegas, NV 89109", "addressChecked": "2026-11-21", "addressSource": "https://www.fontainebleaulasvegas.com/contact" },
+    "WESTGATE": { "name": "Westgate Las Vegas Resort & Casino", "address": "3000 Paradise Rd, Las Vegas, NV 89109", "addressChecked": "2026-11-20", "addressSource": "https://www.westgateresorts.com/hotels/nevada/las-vegas/westgate-las-vegas-resort-casino/" },
+    "RW": { "name": "Resorts World Las Vegas", "address": "3000 S Las Vegas Blvd, Las Vegas, NV 89109", "addressChecked": "2026-11-20", "addressSource": "https://www.rwlasvegas.com/contact-us/" },
+    "VEN_EXPO": { "name": "Venetian Expo", "address": "201 Sands Ave, Las Vegas, NV 89169", "addressChecked": "2026-11-21", "addressSource": "https://www.venetianlasvegas.com/meetings.html" },
+    "VENETIAN": { "name": "The Venetian Resort Las Vegas", "address": "3355 S Las Vegas Blvd, Las Vegas, NV 89109", "addressChecked": "2026-11-20", "addressSource": "https://www.venetianlasvegas.com/" },
+    "WYNN": { "name": "Wynn Las Vegas", "address": "3131 S Las Vegas Blvd, Las Vegas, NV 89109", "addressChecked": "2026-11-20", "addressSource": "https://www.wynnlasvegas.com/" },
+    "ARIA": { "name": "ARIA Resort & Casino", "address": "3730 S Las Vegas Blvd, Las Vegas, NV 89158", "addressChecked": null, "addressSource": null },
+    "VDARA": { "name": "Vdara Hotel & Spa", "address": "2600 W Harmon Ave, Las Vegas, NV 89158", "addressChecked": null, "addressSource": null },
+    "COSMO": { "name": "The Cosmopolitan of Las Vegas", "address": "3708 S Las Vegas Blvd, Las Vegas, NV 89109", "addressChecked": null, "addressSource": null },
+    "BELLAGIO": { "name": "Bellagio Hotel & Casino", "address": "3600 S Las Vegas Blvd, Las Vegas, NV 89109", "addressChecked": null, "addressSource": null }
+  },
+  "campuses": [
+    { "k": "lvcc", "ko": "LVCC 캠퍼스", "en": "LVCC Campus", "sub": "Tech East · 컨벤션 센터", "toWorld": { "origin": [780, 1000], "scale": 1, "offset": [0, 0] }, "venue": "LVCC", "geo": { "lat": 36.1313, "lng": -115.1525, "radiusM": 900, "approx": true } },
+    { "k": "ven", "ko": "베네시안 캠퍼스", "en": "Venetian Campus", "sub": "Tech West · 베네시안 엑스포", "toWorld": { "origin": [700, 1300], "scale": 0.85, "offset": [-1650, 1450] }, "venue": "VEN_EXPO", "geo": { "lat": 36.1216, "lng": -115.1658, "radiusM": 650, "approx": true } },
+    { "k": "cs", "ko": "C Space 캠퍼스", "en": "C Space Campus", "sub": "Tech South · 아리아 일대 (실제로는 약 3km 남쪽)", "toWorld": { "origin": [0, 0], "scale": 1, "offset": [0, 0] }, "venue": "ARIA", "geo": { "lat": 36.1072, "lng": -115.1766, "radiusM": 600, "approx": true } }
+  ],
+  "places": [
+    { "k": "LVCC_W", "c": "lvcc", "ko": "LVCC 웨스트 홀", "en": "West Hall", "kind": "hall", "theme": "모빌리티·자동차", "poly": [[250, 560], [398, 560], [487, 826], [250, 826]], "reg": [262, 574, 478, 814], "trap": true, "floorY": 0, "boothSpots": "guess", "maps": { "venue": "LVCC_WEST", "query": "Las Vegas Convention Center West Hall" } },
+    { "k": "LVCC_DIAMOND", "c": "lvcc", "ko": "LVCC 다이아몬드 랏 (야외)", "en": "Diamond Lot", "kind": "out", "theme": "야외 전시", "poly": [[248, 600], [248, 826], [122, 795]], "reg": [200, 740, 242, 805], "floorY": 0, "boothSpots": "guess", "maps": { "venue": "LVCC_WEST", "query": "Las Vegas Convention Center Diamond Lot" } },
+    { "k": "LVCC_W_MTG", "c": "lvcc", "ko": "LVCC 웨스트 홀 회의실", "en": "West Hall Meeting Rooms", "kind": "room", "theme": "회의실 (2·3층)", "poly": [[272, 600], [372, 600], [372, 690], [272, 690]], "floorY": 26, "boothSpots": "guess", "maps": { "venue": "LVCC_WEST", "query": "Las Vegas Convention Center West Hall" } },
+    { "k": "FONT", "c": "lvcc", "ko": "퐁텐블로 · CES Foundry", "en": "Fontainebleau", "kind": "hotel", "theme": "AI·양자 (CES Foundry)", "poly": [[120, 330], [305, 330], [305, 480], [60, 480]], "reg": [132, 345, 295, 468], "height": 46, "boothSpots": "guess", "maps": { "venue": "FONT", "query": "Fontainebleau Las Vegas" } },
+    { "k": "WESTGATE", "c": "lvcc", "ko": "웨스트게이트", "en": "Westgate", "kind": "hotel", "theme": "호텔 스위트", "poly": [[590, 482], [1015, 482], [1015, 676], [590, 676]], "height": 30, "boothSpots": "guess", "maps": { "venue": "WESTGATE", "query": "Westgate Las Vegas Resort & Casino" } },
+    { "k": "RW", "c": "lvcc", "ko": "리조트 월드", "en": "Resorts World", "kind": "hotel", "theme": "호텔 스위트", "poly": [[-150, 520], [-10, 520], [-10, 700], [-150, 700]], "height": 50, "boothSpots": "guess", "maps": { "venue": "RW", "query": "Resorts World Las Vegas" } },
+    { "k": "LVCC_N", "c": "lvcc", "ko": "LVCC 노스 홀", "en": "North Hall", "kind": "hall", "theme": "AI·에너지·IoT·기업", "poly": [[535, 690], [1105, 690], [1105, 840], [535, 840]], "reg": [545, 698, 1097, 834], "floorY": 0, "boothSpots": "guess", "maps": { "venue": "LVCC", "query": "Las Vegas Convention Center North Hall" } },
+    { "k": "LVCC_N_MTG", "c": "lvcc", "ko": "LVCC 노스 홀 회의실", "en": "North Hall Meeting Rooms", "kind": "room", "theme": "회의실", "poly": [[958, 742], [1078, 742], [1078, 800], [958, 800]], "floorY": 26, "boothSpots": "guess", "maps": { "venue": "LVCC", "query": "Las Vegas Convention Center North Hall" } },
+    { "k": "LVCC_GL", "c": "lvcc", "ko": "LVCC 그랜드 로비", "en": "Grand Lobby", "kind": "out", "theme": "CTA 무대·먹거리", "poly": [[785, 842], [905, 842], [905, 888], [785, 888]], "floorY": 0, "boothSpots": "guess", "maps": { "venue": "LVCC", "query": "Las Vegas Convention Center Grand Lobby" } },
+    { "k": "LVCC_C", "c": "lvcc", "ko": "LVCC 센트럴 홀", "en": "Central Hall", "kind": "hall", "theme": "큰 브랜드·게임·XR·AV", "poly": [[765, 890], [1220, 890], [1220, 1022], [765, 1022]], "reg": [775, 897, 1212, 1015], "floorY": 0, "boothSpots": "guess", "maps": { "venue": "LVCC", "query": "Las Vegas Convention Center Central Hall" } },
+    { "k": "LVCC_C_MTG", "c": "lvcc", "ko": "LVCC 센트럴 홀 회의실", "en": "Central Hall Meeting Rooms", "kind": "room", "theme": "회의실", "poly": [[790, 1030], [880, 1030], [880, 1092], [790, 1092]], "floorY": 12, "boothSpots": "guess", "maps": { "venue": "LVCC", "query": "Las Vegas Convention Center Central Hall" } },
+    { "k": "LVCC_CP", "c": "lvcc", "ko": "LVCC 센트럴 플라자 (야외)", "en": "Central Plaza", "kind": "out", "theme": "야외 전시·라운지", "poly": [[540, 875], [695, 875], [695, 1160], [540, 1160]], "reg": [560, 905, 675, 985], "floorY": 0, "boothSpots": "guess", "maps": { "venue": "LVCC", "query": "Las Vegas Convention Center Central Plaza" } },
+    { "k": "LVCC_SILVER3", "c": "lvcc", "ko": "LVCC 실버 3 (야외)", "en": "Silver 3", "kind": "out", "theme": "야외 전시", "poly": [[540, 1190], [655, 1190], [540, 1320]], "reg": [548, 1198, 590, 1235], "floorY": 0, "boothSpots": "guess", "maps": { "venue": "LVCC", "query": "Las Vegas Convention Center Silver Lot" } },
+    { "k": "LVCC_S_MTG", "c": "lvcc", "ko": "LVCC 사우스 회의실", "en": "South Meeting Rooms", "kind": "room", "theme": "회의실", "poly": [[770, 1100], [880, 1100], [880, 1195], [770, 1195]], "floorY": 12, "boothSpots": "guess", "maps": { "venue": "LVCC", "query": "Las Vegas Convention Center South Hall" } },
+    { "k": "LVCC_S3", "c": "lvcc", "ko": "LVCC 사우스 홀 3", "en": "South Hall 3", "kind": "hall", "theme": "로봇·부품", "poly": [[715, 1200], [1355, 1200], [1355, 1312], [715, 1312]], "reg": [725, 1206, 1345, 1306], "floorY": 0, "boothSpots": "guess", "maps": { "venue": "LVCC", "query": "Las Vegas Convention Center South Hall" } },
+    { "k": "LVCC_S1", "c": "lvcc", "ko": "LVCC 사우스 홀 1", "en": "South Hall 1", "kind": "hall", "theme": "액세서리·디자인&소싱·국가관", "poly": [[690, 1316], [1010, 1316], [1010, 1416], [690, 1416]], "reg": [698, 1322, 1004, 1410], "floorY": 0, "boothSpots": "guess", "maps": { "venue": "LVCC", "query": "Las Vegas Convention Center South Hall" } },
+    { "k": "LVCC_S2", "c": "lvcc", "ko": "LVCC 사우스 홀 2", "en": "South Hall 2", "kind": "hall", "theme": "액세서리·디자인&소싱·국가관", "poly": [[1014, 1316], [1335, 1316], [1335, 1416], [1014, 1416]], "reg": [1020, 1322, 1329, 1410], "floorY": 0, "boothSpots": "guess", "maps": { "venue": "LVCC", "query": "Las Vegas Convention Center South Hall" } },
+    { "k": "VEN_AD", "c": "ven", "ko": "베네시안 엑스포 홀 A-D (2층)", "en": "Venetian Expo Halls A-D", "kind": "hall", "theme": "국가관·스마트홈·라이프스타일·디지털 헬스·푸드테크", "poly": [[90, 1020], [428, 1020], [428, 1230], [590, 1280], [450, 1530], [450, 1700], [90, 1700]], "reg": [102, 1034, 420, 1690], "floorY": 26, "boothSpots": "guess", "maps": { "venue": "VEN_EXPO", "query": "Venetian Expo" } },
+    { "k": "VEN_G", "c": "ven", "ko": "베네시안 엑스포 홀 G · 유레카 파크 (1층)", "en": "Hall G · Eureka Park", "kind": "hall", "theme": "스타트업 (유레카 파크)", "poly": [[185, 1712], [745, 1712], [745, 1905], [185, 1905]], "reg": [195, 1720, 735, 1897], "floorY": 0, "boothSpots": "guess", "maps": { "venue": "VEN_EXPO", "query": "Venetian Expo" } },
+    { "k": "VEN_BALL", "c": "ven", "ko": "베네시안 볼룸 (2층)", "en": "Venetian Ballroom", "kind": "room", "theme": "전시·라운지", "poly": [[432, 965], [555, 965], [555, 1225], [432, 1225]], "floorY": 26, "boothSpots": "guess", "maps": { "venue": "VENETIAN", "query": "The Venetian Convention & Expo Center" } },
+    { "k": "VEN_L1", "c": "ven", "ko": "베네시안 1층 회의실", "en": "Venetian Level 1", "kind": "room", "theme": "회의실 (갈릴레오·마르코 폴로·카사노바)", "poly": [[685, 1350], [828, 1350], [828, 1570], [685, 1570]], "floorY": 2, "boothSpots": "guess", "maps": { "venue": "VENETIAN", "query": "The Venetian Convention & Expo Center" } },
+    { "k": "VEN_L2", "c": "ven", "ko": "베네시안 2층 회의실", "en": "Venetian Level 2", "kind": "room", "theme": "회의실 (벨리니·티치아노·베로네세·바사노)", "poly": [[630, 990], [750, 990], [750, 1240], [630, 1240]], "floorY": 26, "boothSpots": "guess", "maps": { "venue": "VENETIAN", "query": "The Venetian Convention & Expo Center" } },
+    { "k": "VEN_L3", "c": "ven", "ko": "베네시안 3층 회의실", "en": "Venetian Level 3", "kind": "room", "theme": "회의실 (리도·무라노·산 폴로)", "poly": [[808, 910], [952, 910], [952, 1210], [808, 1210]], "floorY": 48, "boothSpots": "guess", "maps": { "venue": "VENETIAN", "query": "The Venetian Convention & Expo Center" } },
+    { "k": "VEN_L4", "c": "ven", "ko": "베네시안 4층 회의실", "en": "Venetian Level 4", "kind": "room", "theme": "회의실 (델피노·란도·마르첼로·제노)", "poly": [[1005, 910], [1148, 910], [1148, 1210], [1005, 1210]], "floorY": 70, "boothSpots": "guess", "maps": { "venue": "VENETIAN", "query": "The Venetian Convention & Expo Center" } },
+    { "k": "VEN_TOWER", "c": "ven", "ko": "베네시안·팔라초 타워 스위트", "en": "Venetian / Palazzo Tower", "kind": "hotel", "theme": "호텔 스위트", "poly": [[130, 650], [300, 650], [300, 800], [130, 800]], "height": 120, "boothSpots": "guess", "maps": { "venue": "VENETIAN", "query": "The Venetian Resort Las Vegas" } },
+    { "k": "WYNN", "c": "ven", "ko": "윈 · 앙코르", "en": "Wynn / Encore", "kind": "hotel", "theme": "호텔 스위트·회의실", "poly": [[1450, 420], [1700, 420], [1700, 700], [1450, 700]], "height": 70, "boothSpots": "guess", "maps": { "venue": "WYNN", "query": "Wynn Las Vegas" } },
+    { "k": "ARIA", "c": "cs", "ko": "아리아 · C Space", "en": "ARIA", "kind": "hotel", "theme": "광고·미디어·엔터 (C Space)", "poly": [[-2450, 2160], [-2200, 2160], [-2200, 2380], [-2450, 2380]], "height": 55, "boothSpots": "guess", "maps": { "venue": "ARIA", "query": "ARIA Resort & Casino" } },
+    { "k": "VDARA", "c": "cs", "ko": "브다라", "en": "Vdara", "kind": "hotel", "theme": "호텔 스위트", "poly": [[-2590, 2020], [-2485, 2020], [-2485, 2130], [-2590, 2130]], "height": 45, "boothSpots": "guess", "maps": { "venue": "VDARA", "query": "Vdara Hotel & Spa" } },
+    { "k": "COSMO", "c": "cs", "ko": "코스모폴리탄", "en": "Cosmopolitan", "kind": "hotel", "theme": "호텔 스위트·회의실", "poly": [[-2670, 2200], [-2510, 2200], [-2510, 2340], [-2670, 2340]], "height": 50, "boothSpots": "guess", "maps": { "venue": "COSMO", "query": "The Cosmopolitan of Las Vegas" } },
+    { "k": "BELLAGIO", "c": "cs", "ko": "벨라지오", "en": "Bellagio", "kind": "hotel", "theme": "호텔 스위트", "poly": [[-2700, 2050], [-2605, 2050], [-2605, 2180], [-2700, 2180]], "height": 50, "shapeGuess": true, "boothSpots": "guess", "maps": { "venue": "BELLAGIO", "query": "Bellagio Hotel & Casino" } },
+    { "k": "BEACH", "c": "cs", "ko": "비치 랏", "en": "Beach Lot", "kind": "out", "theme": "야외", "poly": [[-2490, 2490], [-2430, 2490], [-2430, 2550], [-2490, 2550]], "floorY": 0, "boothSpots": "guess", "maps": null }
+  ],
+  "decor": [
+    { "c": "lvcc", "ko": "센트럴 콘코스", "poly": [[905, 842], [1220, 842], [1220, 888], [905, 888]], "floorY": 0 },
+    { "c": "ven", "ko": "베네시안 호텔·카지노", "poly": [[90, 330], [750, 330], [750, 940], [90, 940]], "height": 14 },
+    { "c": "ven", "ko": "기조연설장 (팔라초 볼룸 5층)", "poly": [[1200, 910], [1360, 910], [1360, 1210], [1200, 1210]], "floorY": 92 }
+  ],
+  "roads": [
+    { "c": "lvcc", "w": 20, "pts": [[28, 190], [28, 1900]], "name": "Las Vegas Blvd" },
+    { "c": "lvcc", "w": 18, "pts": [[510, 190], [510, 1700]], "name": "Paradise Rd" },
+    { "c": "lvcc", "w": 14, "pts": [[40, 852], [700, 852]] },
+    { "c": "lvcc", "w": 16, "pts": [[0, 1170], [700, 1170], [1250, 1150], [1546, 1118]], "name": "Desert Inn Rd" },
+    { "c": "lvcc", "w": 14, "pts": [[520, 1542], [1546, 1542]] },
+    { "c": "lvcc", "w": 12, "pts": [[40, 512], [500, 512]] },
+    { "c": "lvcc", "w": 12, "pts": [[520, 672], [1050, 672]] },
+    { "c": "lvcc", "w": 14, "pts": [[935, 195], [1115, 470], [1230, 690], [1280, 880], [1420, 1120], [1400, 1700]] },
+    { "c": "ven", "w": 30, "pts": [[440, 190], [760, 370]], "name": "Las Vegas Blvd" },
+    { "c": "ven", "w": 24, "pts": [[760, 1905], [840, 1760], [910, 1640], [960, 1450], [965, 1340]], "name": "Sands Ave" }
+  ],
+  "landmarks": [
+    { "c": "lvcc", "kind": "shuttle", "at": [596, 1103], "ko": "Tech Express (베네시안행 무료 셔틀)" },
+    { "c": "lvcc", "kind": "shuttle", "at": [607, 1397], "ko": "C Space 셔틀" },
+    { "c": "lvcc", "kind": "badge", "at": [664, 1133], "ko": "배지 받는 곳" },
+    { "c": "lvcc", "kind": "transit", "at": [523, 1060], "ko": "모노레일 LVCC역" },
+    { "c": "lvcc", "kind": "badge", "at": [168, 447], "ko": "배지 받는 곳" },
+    { "c": "ven", "kind": "shuttle", "at": [765, 1790], "ko": "Tech Express (LVCC행 무료 셔틀)" },
+    { "c": "ven", "kind": "shuttle", "at": [973, 1385], "ko": "C Space 셔틀" },
+    { "c": "ven", "kind": "badge", "at": [475, 948], "ko": "배지 받는 곳" },
+    { "c": "ven", "kind": "stairs", "at": [322, 1545], "ko": "홀 G ↔ 홀 A-D 에스컬레이터" },
+    { "c": "ven", "kind": "showcase", "booth": "50243", "place": "VEN_AD", "ko": "혁신상 쇼케이스 (부스 50243)" }
+  ],
+  "links": [
+    { "from": { "c": "lvcc", "at": [596, 1103] }, "to": { "c": "ven", "at": [765, 1790] }, "ko": "Tech Express" },
+    { "from": { "c": "lvcc", "at": [607, 1397] }, "to": { "c": "cs", "at": [-2325, 2270] }, "ko": "C Space 셔틀 (7번)" },
+    { "from": { "c": "ven", "at": [973, 1385] }, "to": { "c": "cs", "at": [-2325, 2270] }, "ko": "C Space 셔틀 (7번)" }
+  ],
+  "gpsAreas": [
+    { "c": "lvcc", "ko": "LVCC 웨스트 홀", "places": ["LVCC_W", "LVCC_W_MTG", "LVCC_DIAMOND"], "lat": 36.1338, "lng": -115.1577, "approx": true },
+    { "c": "lvcc", "ko": "LVCC 노스 홀", "places": ["LVCC_N", "LVCC_N_MTG", "LVCC_GL"], "lat": 36.1324, "lng": -115.1523, "approx": true },
+    { "c": "lvcc", "ko": "LVCC 센트럴 홀", "places": ["LVCC_C", "LVCC_C_MTG", "LVCC_CP"], "lat": 36.1309, "lng": -115.1512, "approx": true },
+    { "c": "lvcc", "ko": "LVCC 사우스 홀", "places": ["LVCC_S3", "LVCC_S1", "LVCC_S2", "LVCC_S_MTG", "LVCC_SILVER3"], "lat": 36.1285, "lng": -115.1496, "approx": true },
+    { "c": "lvcc", "ko": "퐁텐블로", "places": ["FONT"], "lat": 36.1374, "lng": -115.1590, "approx": true },
+    { "c": "lvcc", "ko": "웨스트게이트", "places": ["WESTGATE"], "lat": 36.1357, "lng": -115.1518, "approx": true },
+    { "c": "lvcc", "ko": "리조트 월드", "places": ["RW"], "lat": 36.1342, "lng": -115.1666, "approx": true },
+    { "c": "ven", "ko": "베네시안 엑스포 (홀 A-D · 홀 G는 층이 달라 GPS로 가르지 못한다)", "places": ["VEN_AD", "VEN_G"], "lat": 36.1217, "lng": -115.1654, "approx": true },
+    { "c": "ven", "ko": "베네시안 회의실 · 타워", "places": ["VEN_BALL", "VEN_L1", "VEN_L2", "VEN_L3", "VEN_L4", "VEN_TOWER"], "lat": 36.1216, "lng": -115.1692, "approx": true },
+    { "c": "ven", "ko": "윈 · 앙코르", "places": ["WYNN"], "lat": 36.1265, "lng": -115.1657, "approx": true },
+    { "c": "cs", "ko": "아리아", "places": ["ARIA"], "lat": 36.1072, "lng": -115.1766, "approx": true },
+    { "c": "cs", "ko": "브다라", "places": ["VDARA"], "lat": 36.1092, "lng": -115.1784, "approx": true },
+    { "c": "cs", "ko": "코스모폴리탄", "places": ["COSMO"], "lat": 36.1098, "lng": -115.1741, "approx": true },
+    { "c": "cs", "ko": "벨라지오", "places": ["BELLAGIO"], "lat": 36.1126, "lng": -115.1767, "approx": true }
+  ],
+  "boothRules": {
+    "numbers": [
+      { "from": 3000, "to": 7999, "place": "LVCC_W" },
+      { "from": 10000, "to": 16999, "place": "LVCC_N" },
+      { "from": 20000, "to": 28999, "place": "LVCC_C" },
+      { "from": 30000, "to": 32999, "place": "LVCC_S1" },
+      { "from": 35000, "to": 36999, "place": "LVCC_S2" },
+      { "from": 40000, "to": 41999, "place": "LVCC_S3" },
+      { "from": 50000, "to": 56999, "place": "VEN_AD" },
+      { "from": 60000, "to": 63999, "place": "VEN_G" }
+    ],
+    "text": [
+      { "starts": "CP", "then": "digit", "place": "LVCC_CP" },
+      { "starts": "Silver 3", "place": "LVCC_SILVER3" },
+      { "starts": "DL-", "place": "LVCC_DIAMOND" },
+      { "starts": "GL-", "place": "LVCC_GL" },
+      { "starts": "N", "then": "3digits", "place": "LVCC_N_MTG" },
+      { "starts": "W", "then": "3digits", "place": "LVCC_W_MTG" },
+      { "starts": "C", "then": "3digits", "place": "LVCC_C_MTG" },
+      { "starts": "S", "then": "3digits", "place": "LVCC_S_MTG" },
+      { "starts": ["Galileo", "Marco Polo", "Casanova"], "place": "VEN_L1" },
+      { "starts": ["Bellini", "Titian", "Veronese", "Bassano"], "place": "VEN_L2" },
+      { "starts": "Venetian ", "then": "upper", "without": "Palazzo", "place": "VEN_BALL" },
+      { "starts": ["Lido", "Murano", "San Polo"], "place": "VEN_L3" },
+      { "starts": ["Delfino", "Lando", "Marcello", "Zeno"], "place": "VEN_L4" },
+      { "starts": "Suite ", "then": "digit", "place": "VEN_TOWER" },
+      { "contains": "Venetian Palazzo Hospitality", "place": "VEN_TOWER" },
+      { "starts": "Wynn Encore", "place": "WYNN" },
+      { "starts": ["Fontainebleau", "FT-", "FL-", "FR-"], "place": "FONT" },
+      { "starts": "Westgate", "place": "WESTGATE" },
+      { "starts": "Resorts World", "place": "RW" },
+      { "starts": ["Aria Hospitality", "ARIA Hospitality"], "place": "ARIA" },
+      { "starts": ["Vdara", "Silk"], "place": "VDARA" },
+      { "starts": ["Cosmopolitan", "Condesa"], "place": "COSMO" },
+      { "starts": "Bellagio", "place": "BELLAGIO" },
+      { "starts": "Beach Lot", "place": "BEACH" }
+    ],
+    "halls": {
+      "A": "LVCC_N", "E": "LVCC_N_MTG", "B": "LVCC_C", "D": "LVCC_S_MTG", "C": "LVCC_S3", "NN": "LVCC_W", "RR": "LVCC_W_MTG", "EE": "LVCC_W_MTG", "L": "LVCC_CP",
+      "M": "VEN_G", "X": "VEN_AD", "H": "VEN_L3", "Y": "VEN_L4", "J": "VEN_TOWER", "U": "VEN_TOWER",
+      "P": "WYNN", "QQ": "WYNN", "PP": "WYNN", "O": "FONT", "AAA": "FONT", "N": "WESTGATE", "TT": "RW",
+      "AA": "ARIA", "GG": "ARIA", "Z": "ARIA", "CC": "ARIA", "UU": "ARIA", "DD": "ARIA", "SS": "ARIA", "II": "ARIA",
+      "BB": "VDARA", "JJ": "VDARA", "YY": "COSMO", "ZZ": "COSMO", "MM": "BELLAGIO", "HH": "BEACH"
+    }
+  }
+}

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e9edf4">
+<meta name="description" content="CES 2027에서 정보와 위치를 헷갈리지 않게 하는 폰 준비 지도. 참가자가 만든 비공식 안내다.">
+<title>글로벌 어학연수 · CES 2027 준비 지도 (비공식)</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon/icon-192.png">
+<link rel="apple-touch-icon" href="icon/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CES 준비 지도">
+<link rel="stylesheet" href="app.css">
+<!-- 첫 화면에 쓰는 조각을 한꺼번에 받는다 (하나씩 이어 받느라 늦어지지 않게). 3D · 찾기 자료는 여기 없다. -->
+<link rel="modulepreload" href="app.js">
+<link rel="modulepreload" href="store.js">
+<link rel="modulepreload" href="data.js">
+<link rel="modulepreload" href="offline.js">
+<link rel="modulepreload" href="dom.js">
+<link rel="modulepreload" href="views/home.js">
+<link rel="modulepreload" href="views/card.js">
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="#/" aria-label="첫 화면">
+    <span class="brand-icon" id="brand-icon" hidden></span>
+    <span class="brand-name">글로벌 어학연수</span>
+    <span class="tag">비공식</span>
+  </a>
+  <a class="chip" id="me-chip" href="#/card">내 명함</a>
+</header>
+
+<main id="view" tabindex="-1">
+  <section class="panel">
+    <h1>CES 2027 준비 지도</h1>
+    <p class="lead">라스베이거스, 2027년 1월 6일 ~ 9일. 불러오는 중이다.</p>
+  </section>
+</main>
+
+<div class="update" id="update" role="status" hidden>
+  <span>새 판이 있다.</span>
+  <button class="btn" type="button" id="update-go">다시 열기</button>
+</div>
+
+<nav class="tabs" aria-label="화면">
+  <a href="#/" data-tab="home">홈</a>
+  <a href="#/topics" data-tab="topics">주제</a>
+  <a href="#/find" data-tab="find">회사</a>
+  <a href="#/plan" data-tab="plan">동선</a>
+  <a href="#/map" data-tab="map">지도</a>
+  <a href="#/diary" data-tab="diary">일기</a>
+</nav>
+
+<noscript><p class="panel">이 안내는 자바스크립트가 켜져 있어야 열린다.</p></noscript>
+<script type="module" src="app.js"></script>
+</body>
+</html>

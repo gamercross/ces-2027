@@ -1,0 +1,36 @@
+{
+  "app": "ces-2027-diary",
+  "v": 1,
+  "exportedAt": "2027-01-09T04:00:00Z",
+  "author": {
+    "nick": "가짜 나",
+    "tag": "job"
+  },
+  "entries": [
+    {
+      "id": "b1",
+      "date": "2027-01-06",
+      "company": "alpha robotics (지어낸 회사)",
+      "exhibitorId": "",
+      "booth": "",
+      "saw": "같은 팔을 공장 줄에 세 대 세워 두었다.",
+      "felt": "로봇을 다루는 일자리가 늘 것 같다.",
+      "for": [
+        "job"
+      ]
+    },
+    {
+      "id": "b2",
+      "date": "2027-01-08",
+      "company": "Beta Cloud (지어낸 회사)",
+      "exhibitorId": "",
+      "booth": "N253@LVCC_N_MTG",
+      "saw": "작은 회사도 쓰는 AI 서버 빌려 쓰기.",
+      "felt": "",
+      "for": [
+        "job",
+        "mid"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,142 @@
+# 짓기 → GitHub Pages 배포.
+#   짓기: 시험 → Rust 자료 도구 · 폰용 WASM 코어를 짓는다 → 자료 도구가 CES 공식 전시사 검색에서 받아 줄인다 → 지은 것을 살핀다
+#   배포: main에서만
+# 공식 사이트에는 하루에 한 번만 묻는다. 그날 받은 답은 Actions 캐시에 두고 다시 쓴다.
+name: 짓기와 배포
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      fresh:
+        description: 오늘 받은 것이 있어도 공식 사이트에서 새로 받는다
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: 짓기
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Rust 준비 (WASM 대상)
+        run: |
+          rustup toolchain install stable --profile minimal --no-self-update
+          rustup default stable
+          rustup target add wasm32-unknown-unknown
+          rustc --version
+
+      - name: cargo 캐시
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-${{ runner.os }}-
+
+      - name: 시험
+        run: cargo test --workspace --locked
+
+      - name: 자료 도구와 폰용 코어 짓기
+        run: |
+          cargo build --release --locked -p ces-data
+          cargo build --release --locked -p ces-core --target wasm32-unknown-unknown
+
+      - name: 장소 자료 살피기
+        run: target/release/ces-data check-places
+
+      - name: 날짜
+        id: day
+        run: echo "day=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+
+      - name: 받아 둔 답 꺼내기
+        id: raw
+        uses: actions/cache/restore@v6
+        with:
+          path: .cache/ces-raw
+          key: ces-raw-${{ steps.day.outputs.day }}-none
+          restore-keys: |
+            ces-raw-${{ steps.day.outputs.day }}-
+            ces-raw-
+
+      - name: 자료 받기 · 줄이기 · 찾기 색인 (Rust 자료 도구)
+        id: data
+        env:
+          MATCHED: ${{ steps.raw.outputs.cache-matched-key }}
+          DAY: ${{ steps.day.outputs.day }}
+          FRESH: ${{ inputs.fresh }}
+        run: |
+          tool=target/release/ces-data
+          today=false
+          case "$MATCHED" in "ces-raw-$DAY-"*) today=true ;; esac
+          fresh=false
+          if [ "$today" = false ] || [ "$FRESH" = true ]; then
+            if "$tool" build --out dist/data --save-raw .cache/ces-raw.new; then
+              rm -rf .cache/ces-raw
+              mv .cache/ces-raw.new .cache/ces-raw
+              fresh=true
+            else
+              echo "::warning::공식 사이트에서 받지 못했다. 받아 둔 답이 있으면 그것으로 짓는다."
+              rm -rf .cache/ces-raw.new dist/data
+            fi
+          fi
+          if [ "$fresh" = false ] && [ -f .cache/ces-raw/fetched-at.txt ]; then
+            echo "받아 둔 답으로 짓는다 (받은 때 $(cat .cache/ces-raw/fetched-at.txt))"
+            "$tool" build --out dist/data --from .cache/ces-raw
+          fi
+          if [ ! -f dist/data/meta.json ]; then
+            echo "::warning::전시사 자료 없이 짓는다. 첫 화면은 열리고, 자료 칸에는 받지 못했다고 보인다."
+          fi
+          echo "fresh=$fresh" >> "$GITHUB_OUTPUT"
+
+      - name: 받은 답 넣어 두기
+        if: steps.data.outputs.fresh == 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: .cache/ces-raw
+          key: ces-raw-${{ steps.day.outputs.day }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: 화면과 코어를 모은다
+        run: |
+          mkdir -p dist/data
+          cp -R web/. dist/
+          cp data/info.json data/categories.json data/places.json data/topics.json data/booth-spots.json config/settings.json dist/data/
+          cp target/wasm32-unknown-unknown/release/ces_core.wasm dist/core.wasm
+          ls -la dist dist/data 2>/dev/null || true
+
+      - name: 판 이름 찍기 · 인터넷 없이 담아 둘 목록
+        run: node scripts/stamp.mjs dist
+
+      - name: 지은 것 살피기
+        run: node scripts/smoke.mjs dist
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    name: Pages 배포
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

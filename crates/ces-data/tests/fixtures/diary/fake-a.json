@@ -1,0 +1,37 @@
+{
+  "app": "ces-2027-diary",
+  "v": 1,
+  "exportedAt": "2027-01-09T04:00:00Z",
+  "author": {
+    "nick": "가짜 가",
+    "tag": "stu"
+  },
+  "entries": [
+    {
+      "id": "a1",
+      "date": "2027-01-06",
+      "company": "Alpha Robotics (지어낸 회사)",
+      "exhibitorId": "",
+      "booth": "14731@LVCC_N",
+      "saw": "로봇 팔이 컵을 집어 옮긴다. 사람이 손으로 가르치면 따라 한다.",
+      "felt": "코드를 몰라도 가르칠 수 있다면 배워 볼 만하다.",
+      "for": [
+        "stu",
+        "job"
+      ]
+    },
+    {
+      "id": "a2",
+      "date": "2027-01-07",
+      "company": "Zeta Home (지어낸 회사)",
+      "exhibitorId": "",
+      "booth": "52011A@VEN_AD",
+      "saw": "말로 켜고 끄는 주방 도우미.",
+      "felt": "부모님 집에 놓으면 좋겠다.",
+      "for": [
+        "ret",
+        "mid"
+      ]
+    }
+  ]
+}

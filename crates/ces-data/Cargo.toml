@@ -1,0 +1,11 @@
+[package]
+name = "ces-data"
+description = "빌드 때 도는 자료 도구: CES 공식 전시사 검색에서 받아 줄이고 찾기 색인을 만든다"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+ces-core = { path = "../ces-core" }
+serde_json = "1"
+ureq = "3"
