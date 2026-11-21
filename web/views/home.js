@@ -162,7 +162,8 @@ export async function render() {
       : '우리 팀이 정보와 위치를 헷갈리지 않게 하는 준비 지도다. 명함부터 만든다.' }),
     el('div', { class: 'actions' },
       el('a', { class: 'btn', href: '#/card', text: profile ? '내 명함 보기' : '명함 만들기' }),
-      el('a', { class: 'btn ghost', href: '#/find', text: '회사 찾기' })),
+      el('a', { class: 'btn ghost', href: '#/find', text: '회사 찾기' }),
+      el('a', { class: 'btn ghost', href: '#/q', text: '물어보기' })),
   );
 
   const days = section('날짜와 시간',
