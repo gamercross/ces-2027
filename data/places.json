@@ -15,6 +15,7 @@
     "addresses": "CES 공식 페이지와 지도에는 거리 주소가 없다. 주소는 장소가 스스로 밝힌 것을 적었고, 그 장소 사이트에서 확인한 날을 addressChecked에 적었다. null은 아직 확인하지 못한 주소다.",
     "shapeGuess": "shapeGuess가 true인 장소는 공식 캠퍼스 지도에 그려져 있지 않아 모양과 자리를 어림으로 놓은 곳이다 (벨라지오: 공식 안내가 C Space 캠퍼스에 든다고만 적는다).",
     "geo": "캠퍼스의 geo(위도 · 경도 · 반지름)는 어림값이다. 폰의 GPS가 어느 캠퍼스에 가까운지 고르는 데 쓴다. 캠퍼스 그림은 실제 좌표에 맞춘 것이 아니다.",
+    "cityPlaces": "cityPlaces는 전시장 밖의, 누구나 아는 공개 장소다. 내 일정의 장소로 고르고 구글맵으로 연다. 캠퍼스 지도에 없는 곳이라 at(지도 위 자리)은 모두 어림이고(shapeGuess), 먼 곳은 지도 가장자리에 그렸다. 주소는 그 장소 사이트에서 확인한 날을 addressChecked에 적었고, null은 확인하지 못한 것이다. 우리 일정은 여기에 적지 않는다.",
     "gpsAreas": "gpsAreas는 GPS로 캠퍼스 다음에 어느 홀 · 건물 근처인지 짐작할 때 쓰는 어림 자리다. 어디서 재거나 받아 온 값이 아니라 지도를 보고 어림한 것이라 100m 넘게 틀릴 수 있다. 그래서 화면에는 늘 짐작이라고 보이고, 홀 안 자리는 부스 번호로 맞춘다. 현장에서 재면 고친다."
   },
   "mapsUrls": {
@@ -107,6 +108,11 @@
     { "from": { "c": "lvcc", "at": [596, 1103] }, "to": { "c": "ven", "at": [765, 1790] }, "ko": "Tech Express" },
     { "from": { "c": "lvcc", "at": [607, 1397] }, "to": { "c": "cs", "at": [-2325, 2270] }, "ko": "C Space 셔틀 (7번)" },
     { "from": { "c": "ven", "at": [973, 1385] }, "to": { "c": "cs", "at": [-2325, 2270] }, "ko": "C Space 셔틀 (7번)" }
+  ],
+  "cityPlaces": [
+    { "k": "SPHERE", "ko": "스피어", "en": "Sphere", "c": "ven", "at": [1060, 1720], "shapeGuess": true, "maps": { "query": "Sphere Las Vegas", "address": "255 Sands Ave, Las Vegas, NV 89169", "addressChecked": "2026-11-21", "addressSource": "https://www.thesphere.com/" } },
+    { "k": "FREMONT", "ko": "프리몬트 스트리트", "en": "Fremont Street Experience", "c": "lvcc", "at": [300, 140], "shapeGuess": true, "maps": { "query": "Fremont Street Experience", "address": "425 Fremont St, Las Vegas, NV 89101", "addressChecked": "2026-11-21", "addressSource": "https://vegasexperience.com/" } },
+    { "k": "LUXOR", "ko": "룩소르", "en": "Luxor", "c": "cs", "at": [-2330, 2760], "shapeGuess": true, "maps": { "query": "Luxor Hotel & Casino", "address": "3900 S Las Vegas Blvd, Las Vegas, NV 89119", "addressChecked": null, "addressSource": null } }
   ],
   "gpsAreas": [
     { "c": "lvcc", "ko": "LVCC 웨스트 홀", "places": ["LVCC_W", "LVCC_W_MTG", "LVCC_DIAMOND"], "lat": 36.1338, "lng": -115.1577, "approx": true },

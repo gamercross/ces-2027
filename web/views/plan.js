@@ -2,7 +2,9 @@
 
 import { el, out } from '../dom.js';
 import { getExhibitors, getInfo, getMeta, getPlaces } from '../data.js';
-import { getDayLimit, getInterests, setDayLimit, setInterests } from '../store.js';
+import { getDayLimit, getEvents, getHours, getInterests, getPace, setDayLimit, setInterests } from '../store.js';
+import { capacity, clock, dayLimits, eventsOn, hoursFor, timeline } from '../days.js';
+import { placeLink } from './days.js';
 import { fillDays, nextStop, placeTable, sortRoute, splitBooth } from '../route.js';
 import { mapsLink } from '../maps.js';
 import { mergeItems, planCode, planCsv, planMd, planText, readCode, shareLink } from '../share.js';
@@ -28,12 +30,13 @@ export async function render() {
   const placeBy = new Map(places.places.map((p) => [p.k, p]));
   const placeOf = (id) => { const b = byId.get(id)?.[7]?.[0]; return b ? placeBy.get(splitBooth(b).place) : null; };
   const firstBooth = (id) => byId.get(id)?.[7]?.[0] || null;
-  const days = [...info.show.days.map((d, i) => ({ key: i + 1, ko: d.ko, hours: d.hours })), { key: 0, ko: '날짜 미정', hours: '' }];
+  const days = [...info.show.days.map((d, i) => ({ key: i + 1, ko: d.ko, hours: d.hours, date: d.date })), { key: 0, ko: '날짜 미정', hours: '', date: null }];
 
   const holder = el('div', { class: 'page' });
   const status = el('p', { class: 'note', role: 'status' });
 
-  function item(it, no) {
+  // at: 그 곳을 볼 때쯤(분). null이면 그 날 쓸 시간 밖이다. undefined면 시간을 보이지 않는다(날짜 미정).
+  function item(it, no, at) {
     const row = byId.get(it.id);
     const booth = firstBooth(it.id);
     const place = booth ? table.get(splitBooth(booth).place) : null;
@@ -73,21 +76,22 @@ export async function render() {
       el('span', { class: 'no', text: String(no) }),
       el('div', { class: 'stop-main' },
         el('div', { class: 'name', text: row ? row[1] : '자료에서 빠진 회사' }),
-        el('div', { class: 'where', text: booth ? `${place ? place.ko : '장소 모름'} ${splitBooth(booth).code}${row[7].length > 1 ? ` 밖에 ${row[7].length - 1}곳` : ''}` : (row ? '부스 미정' : '새로 받은 자료에 없다') })),
+        el('div', { class: 'where', text: (at === undefined ? '' : at === null ? '시간 밖 · ' : `${clock(at)}쯤 · `) + (booth ? `${place ? place.ko : '장소 모름'} ${splitBooth(booth).code}${row[7].length > 1 ? ` 밖에 ${row[7].length - 1}곳` : ''}` : (row ? '부스 미정' : '새로 받은 자료에 없다')) })),
       el('div', { class: 'stop-side' }, seen, select, up, down, remove, route ? out(route, '길찾기') : null, row ? el('a', { href: `#/diary/new/${it.id}`, text: '일기' }) : null));
   }
 
   function draw() {
     const list = getInterests();
-    if (!list.length) {
-      holder.replaceChildren(el('section', { class: 'panel' },
-        el('p', { text: '아직 관심 회사가 없다. 회사 화면에서 분야를 고르고 "관심"을 누르면 여기에 동선이 생긴다.' }),
-        el('div', { class: 'actions' }, el('a', { class: 'btn', href: '#/find', text: '회사 고르러 가기' }))));
-      return;
-    }
     const sections = [];
+    if (!list.length) {
+      sections.push(el('section', { class: 'panel' },
+        el('p', { text: '아직 관심 회사가 없다. 회사 화면에서 추천이나 분야를 보고 "관심"을 누르면 여기에 동선이 생긴다.' }),
+        el('div', { class: 'actions' }, el('a', { class: 'btn', href: '#/find', text: '회사 고르러 가기' }))));
+    }
     const next = nextStop(list);
-    if (next) {
+    if (!list.length) {
+      // 관심이 없어도 내 일정은 아래에 보인다.
+    } else if (next) {
       const row = byId.get(next.id);
       const booth = firstBooth(next.id);
       const place = placeOf(next.id);
@@ -108,10 +112,27 @@ export async function render() {
     } else {
       sections.push(el('section', { class: 'panel next' }, el('h2', { text: '다음 갈 곳' }), el('p', { text: '동선의 회사를 다 봤다.' })));
     }
+    // 내 일정 한 줄.
+    const eventRow = (e) => {
+      const link = placeLink(places, e.place);
+      return el('li', { class: 'stop event' },
+        el('span', { class: 'no', text: '일' }),
+        el('div', { class: 'stop-main' },
+          el('div', { class: 'name', text: e.name }),
+          el('div', { class: 'where', text: `${e.from} ~ ${e.to}${e.place ? ` · ${e.place}` : ''} · 이 시간에는 동선을 짜지 않는다` })),
+        el('div', { class: 'stop-side' }, link ? out(link, '구글맵') : null));
+    };
+    const events = getEvents();
+    const savedHours = getHours();
+    const pace = getPace();
+    const limits = dayLimits(info, savedHours, events, pace, getDayLimit());
     for (const d of days) {
       const items = list.filter((it) => (it.day || 0) === d.key);
-      if (!items.length) continue;
-      const kids = [];
+      const evs = d.date ? eventsOn(events, d.date) : [];
+      if (!items.length && !evs.length) continue;
+      const hours = d.date ? hoursFor(d.date, savedHours, info) : null;
+      const when = hours ? timeline(items.length, hours, evs, pace) : [];
+      const kids = evs.map(eventRow);
       let lastCampus = null;
       items.forEach((it, i) => {
         const booth = firstBooth(it.id);
@@ -120,13 +141,25 @@ export async function render() {
           kids.push(el('li', { class: 'campus', text: campus ? campusKo.get(campus) : '장소를 모르는 곳' }));
           lastCampus = campus;
         }
-        kids.push(item(it, i + 1));
+        kids.push(item(it, i + 1, hours ? when[i] : undefined));
       });
+      const room = hours ? limits[d.key] : null;
       sections.push(el('section', { class: 'panel' },
-        el('h2', { text: `${d.ko}${d.hours ? ` · ${d.hours}` : ''} · ${items.length}곳` }),
-        // 내가 정한 하루의 수를 넘으면 알려 준다 (막지는 않는다).
-        d.key && getDayLimit() && items.length > getDayLimit() ? el('p', { class: 'note', text: `내가 정한 하루 ${getDayLimit()}곳보다 ${items.length - getDayLimit()}곳 많다. 날짜를 옮기거나 그대로 둔다.` }) : null,
+        el('h2', { text: `${d.ko} · ${items.length}곳` }),
+        hours ? el('p', { class: 'note', text: hours.off
+          ? '이 날은 전시를 보지 않는 날로 정했다.'
+          : `쓸 시간 ${clock(hours.from)} ~ ${clock(hours.to)}${hours.mine ? ' (내가 고침)' : ' (공식 전시 시간)'} · 한 곳 ${pace}분 · ${room}곳까지 들어간다.` }) : null,
+        // 그 날에 들어가는 수를 넘으면 알려 준다 (막지는 않는다).
+        hours && items.length > room ? el('p', { class: 'note warn', text: `${items.length - room}곳이 넘친다. 날짜를 옮기거나, 시간을 늘리거나, 그대로 둔다.` }) : null,
         el('ol', { class: 'stops' }, kids)));
+    }
+    // 전시 기간 밖의 내 일정 (공항 이동 같은 것).
+    const showDates = new Set(info.show.days.map((d) => d.date));
+    const others = events.filter((e) => !showDates.has(e.date)).sort((a, b) => a.date.localeCompare(b.date) || a.from.localeCompare(b.from));
+    if (others.length) {
+      sections.push(el('section', { class: 'panel' },
+        el('h2', { text: `전시 기간 밖의 일정 ${others.length}개` }),
+        el('ol', { class: 'stops' }, others.map((e) => eventRow({ ...e, name: `${e.date.slice(5).replace('-', '/')} ${e.name}` })))));
     }
     holder.replaceChildren(...sections);
   }
@@ -144,10 +177,11 @@ export async function render() {
   });
   const fill = el('button', { class: 'btn', type: 'button', text: '날짜 채우기', onclick: () => {
     const limit = getDayLimit();
-    const { items, filled, moved, over } = fillDays(getInterests(), firstBooth, table, limit);
+    // 날마다 들어가는 수: 쓸 시간(내 일정을 뺀 것)으로 셈한 수와 내가 정한 수 가운데 작은 것.
+    const { items, filled, moved, over } = fillDays(getInterests(), firstBooth, table, dayLimits(info, getHours(), getEvents(), getPace(), limit));
     setInterests(items);
     status.textContent = !filled ? '날짜 미정인 곳이 없다. 걷는 차례로 다시 세웠다.'
-      : `날짜 미정 ${filled}곳을 캠퍼스로 채웠다 (LVCC 첫날, 베네시안 둘째 날, C Space와 그 밖은 셋째 날).${limit ? ` 하루 ${limit}곳을 넘는 ${moved}곳은 자리가 있는 다음 날로 넘겼다.${over ? ` ${over}곳은 넘길 날이 없어 그대로 두었다.` : ''}` : ''} 바꿔도 된다.`;
+      : `날짜 미정 ${filled}곳을 캠퍼스로 채웠다 (LVCC 첫날, 베네시안 둘째 날, C Space와 그 밖은 셋째 날).${moved || over || limit ? ` 그 날의 시간${limit ? `과 하루 ${limit}곳` : ''}에 들어가지 않는 ${moved}곳은 자리가 있는 다음 날로 넘겼다.${over ? ` ${over}곳은 넘길 날이 없어 그대로 두었다.` : ''}` : ''} 바꿔도 된다.`;
     draw();
   } });
   const sort = el('button', { class: 'btn ghost', type: 'button', text: '걷는 차례로', onclick: () => {
@@ -205,6 +239,7 @@ export async function render() {
     el('section', { class: 'panel' },
       el('h1', { text: '동선' }),
       el('p', { class: 'lead', text: '관심 회사를 날짜와 캠퍼스로 묶고 걷는 차례로 세운다.' }),
+      el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: '#/days', text: '시간과 일정 고치기' })),
       el('label', { class: 'field' }, el('span', { class: 'label', text: '하루에 볼 곳 (내가 정한다)' }), limitSelect),
       status,
       el('p', { class: 'note', text: '걷는 차례는 부스 번호로 짐작한 것이다 (정식 배치도 전). 이 목록은 이 폰에만 남는다.' })),

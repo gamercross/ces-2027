@@ -60,6 +60,16 @@ export const setDiary = (list) => save('diary.v1', list);
 export const getDayLimit = () => { const n = Number(load('dayLimit.v1', 0)); return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0; };
 export const setDayLimit = (n) => save('dayLimit.v1', n);
 
+// 날마다 쓸 시간: { '2027-01-06': { from: '10:00', to: '17:00' } | { off: true } } — 고친 날만 들어 있다. 없으면 공식 전시 시간.
+export const getHours = () => load('hours.v1', {});
+export const setHours = (hours) => save('hours.v1', hours);
+// 내 일정(전시 밖): [{ id, date, from, to, name, place }]. 우리 일정은 폰에만 둔다.
+export const getEvents = () => load('events.v1', []);
+export const setEvents = (events) => save('events.v1', events);
+// 한 곳에 쓰는 시간(분). 동선을 시간 안에 넣을 때 쓴다.
+export const getPace = () => { const n = Number(load('pace.v1', 30)); return [15, 20, 30, 45, 60].includes(n) ? n : 30; };
+export const setPace = (n) => save('pace.v1', n);
+
 // 주제 판: [{ id, name, cats: [공식 분야 이름], notes: { stu, job, ret, mid }, ex: [회사 id] }] — 폰에만 남는다.
 export const getTopics = () => load('topics.v1', []);
 export const setTopics = (list) => save('topics.v1', list);

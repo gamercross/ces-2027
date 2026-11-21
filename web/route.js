@@ -57,11 +57,14 @@ const ALL_DAYS = [1, 2, 3, 4];
 // limit(하루에 볼 곳, 사람마다 정한다. 0이면 없음)를 주면, 하루가 그 수를 넘을 때 걷는 차례의 뒤쪽부터 자리가 있는
 // 다음 날로 넘긴다. 내가 이미 날짜를 정한 곳은 옮기지 않는다. 어느 날에도 자리가 없으면 제 날에 그대로 둔다.
 // { items(걷는 차례로 다시 선 목록), filled(채운 수), moved(다른 날로 넘긴 수), over(자리가 없어 넘친 수) }
+// limit은 수 하나(모든 날 같음)이거나, 날마다의 한도 [0, 첫날, 둘째 날, …]다 (쓸 시간으로 셈한 것, web/days.js).
 export function fillDays(items, firstBooth, table, limit = 0) {
+  const limitOf = (d) => (Array.isArray(limit) ? (limit[d] ?? 0) : limit);
+  const anyLimit = Array.isArray(limit) ? true : limit >= 1;
   const campusOf = (it) => { const booth = firstBooth(it.id); return booth ? table.get(splitBooth(booth).place)?.campus || null : null; };
   const baseDay = (campus) => (campus === 'lvcc' ? 1 : campus === 'ven' ? 2 : 3);
   const fresh = items.filter((it) => !it.day);
-  if (!limit || limit < 1) {
+  if (!anyLimit) {
     const next = items.map((it) => (it.day ? it : { ...it, day: baseDay(campusOf(it)) }));
     return { items: sortRoute(next, firstBooth, table), filled: fresh.length, moved: 0, over: 0 };
   }
@@ -77,7 +80,7 @@ export function fillDays(items, firstBooth, table, limit = 0) {
     const open = DAYS_OPEN[q.campus] || ALL_DAYS;
     const at = open.indexOf(q.base);
     const tryOrder = [...open.slice(at), ...open.slice(0, at)];
-    const day = tryOrder.find((d) => count[d] < limit);
+    const day = tryOrder.find((d) => count[d] < limitOf(d));
     if (day === undefined) { over += 1; dayOf.set(q.it.id, q.base); count[q.base] += 1; continue; }
     if (day !== q.base) moved += 1;
     dayOf.set(q.it.id, day);
