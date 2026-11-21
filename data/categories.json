@@ -22,8 +22,8 @@
     { "k": "ent", "ko": "엔터·콘텐츠", "cats": ["Gaming & Esports", "XR & Spatial Computing", "Audio", "Video & Display", "Streaming", "Content & Entertainment", "Home Entertainment & Office Hardware", "Imaging", "Sports"] },
     { "k": "biz", "ko": "비즈니스·교육", "cats": ["Fintech", "Investment & Venture Capital", "Marketing & Advertising", "Retail/E-Commerce", "EdTech", "Startups"] }
   ],
-  "audiencesAbout": "네 태그마다 먼저 보여 줄 분야다. data/네태그_규칙.md의 초안을 옮긴 것이고 이재엽이 확정하기 전이다. 화면에는 '초안'이라고 보인다.",
-  "audiencesDraft": true,
+  "audiencesAbout": "네 태그마다 먼저 보여 줄 분야다. data/네태그_규칙.md에서 옮겼고, 이재엽이 2026-11-21에 그대로 확정했다. 고치려면 그 문서와 이 목록을 같이 고친다.",
+  "audiencesDraft": false,
   "audiences": {
     "stu": ["EdTech", "Gaming & Esports", "XR & Spatial Computing", "Artificial Intelligence", "Robotics", "Content & Entertainment", "Audio", "Accessories", "Startups", "Drones", "Space Tech", "Sports"],
     "job": ["Artificial Intelligence", "Enterprise", "Cloud Computing", "Cybersecurity", "Computing", "Robotics", "Vehicle Tech & Advanced Mobility", "Next G & Wireless", "Quantum", "IoT/Sensors", "Startups", "Supply & Logistics", "Marketing & Advertising", "Fintech", "Construction & Industrial Tech", "Sourcing & Manufacturing", "Additive Manufacturing & 3D Printing"],
