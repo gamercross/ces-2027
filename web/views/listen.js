@@ -5,7 +5,7 @@ import { el } from '../dom.js';
 import { getExhibitors, getPhrases, getSettings } from '../data.js';
 import { getDiary, load, save, setDiary } from '../store.js';
 import { capabilities, installDictation, makeDraft, summarize, translate } from '../speech.js';
-import { capRows, currentMode, modelBox, modePicker, showBig, startDictation } from '../talk-ui.js';
+import { capRows, currentMode, modelBox, modePicker, showBig, startDictation, translationModelPicker } from '../talk-ui.js';
 import { modelStatus } from '../speech-model.js';
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -191,7 +191,8 @@ export async function render({ rest, go }) {
         drawCaps();
         drawDock();
       }) : null,
-      modePicker(mode, () => { if (running || lines.length) status.textContent = '길을 바꿨다. 지금 듣는 것을 초안으로 남긴 다음부터 쓴다.'; else go(location.hash); })].filter(Boolean));
+      modePicker(mode, () => { if (running || lines.length) status.textContent = '길을 바꿨다. 지금 듣는 것을 초안으로 남긴 다음부터 쓴다.'; else go(location.hash); }),
+      translationModelPicker(settings)].filter(Boolean));
   }
   keep.addEventListener('change', drawDock);
   const addTyped = () => { const t = typed.value.trim(); if (t) { addLine(t); typed.value = ''; } };

@@ -30,6 +30,7 @@ export async function render() {
       el('div', { class: 'where', text: [when, it.where].filter(Boolean).join(' · ') }),
       el('p', {}, el('b', { text: '누가 ' }), it.who),
       el('p', {}, el('b', { text: '신청 ' }), it.apply.url ? out(it.apply.url, it.apply.ko) : it.apply.ko),
+      it.group === 'reference' ? el('p', { class: 'note', text: '공식 확인 아님 · 기사만 근거한 참고 자료다.' }) : null,
       it.last ? el('p', {}, el('b', { text: '작년 ' }), it.last) : null,
       it.todo ? el('p', {}, el('b', { text: '할 일 ' }), it.todo) : null,
       it.watchFrom && it.status === 'check' ? el('p', { class: 'note', text: `${md(it.watchFrom)}부터 다시 본다.` }) : null,
