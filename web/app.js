@@ -18,6 +18,7 @@ const VIEWS = {
   q: () => import('./views/askall.js'),
   listen: () => import('./views/listen.js'),
   apply: () => import('./views/apply.js'),
+  people: () => import('./views/people.js'),
   transit: () => import('./views/transit.js'),
   sessions: () => import('./views/sessions.js'),
 };

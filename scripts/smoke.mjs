@@ -679,6 +679,75 @@ if (await exists('data/meta.json')) {
   check(rows === 2 && String(core.search('al', 5)) === '0,1', '코어가 지어낸 색인으로 찾는다');
 }
 
+// 남의 명함 받기 · 만난 사람: 읽은 글 살피기 · 사람 만들기 · 같은 사람 합치기 · 카메라 읽기(꾸민 폰). 지어낸 값만 쓴다.
+{
+  const P = await import('../web/people.js');
+  const S = await import('../web/scan.js');
+  const ok = (t, h) => { const r = P.parseScan(t, h); return r.ok ? r.link : null; };
+  const no = (t, h) => !P.parseScan(t, h).ok;
+  const gh = ok('https://github.com/octocat/');
+  const li = ok('https://kr.linkedin.com/in/jane-doe?trk=x');
+  const dc = ok('https://discord.gg/AbC123');
+  const web = ok('https://example.com/a/b/');
+  check(gh?.kind === 'github' && gh.url === 'https://github.com/octocat' && ok('github.com/octocat')?.key === gh.key && ok('@octocat', 'github')?.key === gh.key && li?.kind === 'linkedin' && li.url === 'https://www.linkedin.com/in/jane-doe' && dc?.kind === 'discord' && web?.kind === 'web' && web.url === 'https://example.com/a/b', '남의 QR 살피기: 깃허브 · 링크드인 · 디스코드 · 웹 주소(https)를 받고, 주소를 가지런히 한다');
+  check(ok('seal.bot', 'auto')?.kind === 'discord' && ok('seal.bot', 'discord')?.kind === 'discord' && ok('octocat', 'github')?.kind === 'github' && ok('my-name-1', 'auto')?.kind === 'github', '우리 앱의 QR 꼴(깃허브는 주소, 디스코드는 아이디 글자)을 그대로 받는다');
+  check(['http://github.com/octocat', 'javascript:alert(1)', 'mailto:a@example.com', 'BEGIN:VCARD', 'https://user:pw@example.com/', 'https://localhost/', 'https://10.0.0.1/', 'data:text/html,hi', '', '   ', `https://example.com/${'a'.repeat(300)}`, 'a b c'].every((t) => no(t)), '받지 않는 글: http · javascript · mailto · 연락처 카드 · 비밀번호가 든 주소 · 짐작 못 할 주소 · 너무 긴 글 · 빈 글');
+  check(ok('https://github.com.evil.example/octocat')?.kind === 'web' && ok('https://evilgithub.com/octocat')?.kind === 'web' && P.safeHref('http://example.com') === '' && P.safeHref('javascript:alert(1)') === '' && P.safeHref('https://example.com/x') === 'https://example.com/x', '이름만 닮은 주소(github.com.evil…)는 깃허브로 보지 않고, 저장된 주소도 열 때 https만 연다');
+  const made = P.personFromScan('https://github.com/octocat', { nick: '  시험  ', met: '2027-01-06', company: '가짜회사', hint: 'auto' });
+  check(made.ok && made.person.nick === '시험' && made.person.links.length === 1 && made.person.company === '가짜회사' && !P.personFromScan('http://x.example/', {}).ok, '읽은 글에서 사람 만들기');
+  // 같은 사람 합치기
+  const a = P.upsert([], { id: 'a1', nick: '가', links: [gh], met: '2027-01-07', note: '' });
+  const b = P.upsert(a.list, { nick: '', links: [gh, dc], met: '2027-01-06', note: '로봇 이야기', company: '가짜회사', exId: 'x1' });
+  const c = P.upsert(b.list, { nick: '다른 사람', links: [web], met: '2027-01-08' });
+  check(a.merged === 0 && b.merged === 1 && b.list.length === 1 && b.person.id === 'a1' && b.person.nick === '가' && b.person.links.length === 2 && b.person.met === '2027-01-06' && b.person.note === '로봇 이야기' && b.person.exId === 'x1' && c.list.length === 2 && c.merged === 0, '같은 주소를 다시 읽으면 새 사람을 만들지 않고 먼저 있던 사람에 합친다 (주소는 겹치지 않게 늘고, 빈 칸은 채운다)');
+  const edit = P.upsert(c.list, { ...c.list[1], links: [web, gh], nick: '합친 사람' });
+  check(edit.list.length === 1 && edit.merged === 1 && edit.person.links.length === 3 && edit.person.nick === '합친 사람' && P.removePerson(edit.list, edit.person.id).length === 0, '고치다가 다른 사람의 주소를 넣으면 한 사람으로 합치고, 지우면 빠진다');
+  check(P.cleanPeople('x').length === 0 && P.cleanPeople([null, 1, { id: 'q', links: [{ kind: 'web', key: 'k', url: 'javascript:alert(1)' }, { kind: 'web', key: 'k2', url: 'https://example.com/' }], met: 'bad' }]).map((p) => p.links.length + p.met).join() === '1', '폰에 남은 값이 망가져 있어도 걸러 낸다 (https가 아닌 주소 · 틀린 날짜)');
+  const people = [{ company: '가짜회사', exId: 'x1' }, { company: ' 가짜회사 ', exId: '' }, { company: '다른회사', exId: 'x2' }, { company: '', exId: '' }];
+  check(P.countAt(people, { exId: 'x1', company: '가짜회사' }) === 2 && P.countAt(people, { exId: 'x2', company: '이름이 다름' }) === 1 && P.countAt(people, { exId: '', company: '가짜회사' }) === 2 && P.countAt(people, { exId: '', company: '' }) === 0, '일기 목록의 "이 회사에서 만난 사람 수": 양쪽에 회사 번호가 있으면 번호로, 아니면 이름으로 센다');
+
+  // 카메라 읽기: 꾸민 폰 셋 (BarcodeDetector 없음 · 권한 거부 · 있는 폰)
+  const track = () => ({ stopped: 0, stop() { this.stopped += 1; } });
+  const fakeWin = (extra) => ({ isSecureContext: true, document: { hidden: false, addEventListener() {}, removeEventListener() {} }, addEventListener() {}, removeEventListener() {}, navigator: { mediaDevices: { getUserMedia: async () => { throw new Error('부르면 안 된다'); } } }, ...extra });
+  const fakeVideo = () => ({ srcObject: null, isConnected: true, muted: false, setAttribute() {}, play: async () => {} });
+  let asked = 0;
+  const noDet = fakeWin({ navigator: { mediaDevices: { getUserMedia: async () => { asked += 1; return { getTracks: () => [] }; } } } });
+  const r1 = await S.startScan(fakeVideo(), () => {}, noDet);
+  check(!r1.ok && /BarcodeDetector/.test(r1.why) && asked === 0 && !S.cameraSupport(S.envOf(noDet)).ok, '카메라 읽기(꾸민 폰 1 · 지원 안 함): 이 폰에서는 안 됨과 까닭을 말하고, 카메라는 켜지 않는다');
+  const denied = fakeWin({ BarcodeDetector: class { async detect() { return []; } }, navigator: { mediaDevices: { getUserMedia: async () => { const e = new Error('x'); e.name = 'NotAllowedError'; throw e; } } } });
+  const r2 = await S.startScan(fakeVideo(), () => {}, denied);
+  check(!r2.ok && /거부/.test(r2.why) && /허용/.test(r2.why) && /찾지 못/.test(S.explainCameraError({ name: 'NotFoundError' })) && /다른 앱/.test(S.explainCameraError({ name: 'NotReadableError' })), '카메라 읽기(꾸민 폰 2 · 권한 거부): 까닭(거부 · 허용하는 법)을 보인다');
+  const tr = track();
+  const seen = [];
+  let calls = 0;
+  const has = fakeWin({
+    BarcodeDetector: class { constructor(o) { this.o = o; } async detect() { calls += 1; return calls >= 2 ? [{ rawValue: 'https://github.com/octocat' }] : []; } },
+    navigator: { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [tr] }) } },
+  });
+  const v = fakeVideo();
+  const r3 = await S.startScan(v, (t) => seen.push(t), has);
+  await new Promise((res) => setTimeout(res, 900));
+  check(r3.ok && seen.length === 1 && seen[0] === 'https://github.com/octocat' && v.srcObject !== null, '카메라 읽기(꾸민 폰 3 · BarcodeDetector 있음): 읽은 주소가 들어오고, 같은 QR을 계속 비춰도 한 번만 들어온다');
+  r3.stop();
+  check(tr.stopped === 1 && v.srcObject === null, '그만 읽기: 카메라 트랙을 끄고 화면에서 뗀다');
+  const tr2 = track();
+  const gone = fakeVideo();
+  const r4 = await S.startScan(gone, () => {}, fakeWin({ BarcodeDetector: class { async detect() { return []; } }, navigator: { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [tr2] }) } } }));
+  gone.isConnected = false;
+  await new Promise((res) => setTimeout(res, 600));
+  check(r4.ok && tr2.stopped === 1, '화면을 떠나 카메라 화면이 사라지면 저절로 카메라를 끈다');
+
+  // 지키는 선: 첫 화면 조각은 새 화면을 미리 읽지 않고, 일기 보내기 묶음에는 만난 사람이 없다.
+  const first = ['app.js', 'store.js', 'data.js', 'offline.js', 'notify.js', 'alerts.js', 'dom.js', 'views/home.js', 'views/card.js'];
+  const bad = [];
+  for (const f of first) if (/^\s*import[^\n]*from\s+'[^']*\/(people|people-store|scan)\.js'/m.test(await readFile(new URL(`../web/${f}`, import.meta.url), 'utf8'))) bad.push(f);
+  const appText = await readFile(new URL('../web/app.js', import.meta.url), 'utf8');
+  const diaryText = await readFile(new URL('../web/diary.js', import.meta.url), 'utf8');
+  const D = await import('../web/diary.js');
+  const sent = JSON.stringify(D.bundle([{ id: 'e1', date: '2027-01-06', company: '가짜회사' }], { nick: '나', tag: 'stu' })) + D.asText([{ id: 'e1', date: '2027-01-06', company: '가짜회사' }], { nick: '나' }, () => '');
+  check(bad.length === 0 && /people: \(\) => import\('\.\/views\/people\.js'\)/.test(appText) && !/people/.test(diaryText) && !/people|links|githubUrl/.test(sent), '첫 화면 조각은 새 화면을 미리 읽지 않고(누를 때 불러온다), 일기 보내기 묶음에는 만난 사람이 들어가지 않는다');
+}
+
 const table = ['무엇 | 본 것', '--- | ---', ...lines].join('\n');
 console.log(table);
 if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `### 지은 것 살피기\n\n${table}\n`);
