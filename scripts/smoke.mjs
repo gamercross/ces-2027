@@ -429,6 +429,47 @@ check(iconsOk, '홈 화면에 추가: 매니페스트와 아이콘이 있다');
 const cats = await json('data/categories.json');
 check(cats.groups.length === 7 && ['stu', 'job', 'ret', 'mid'].every((k) => cats.audiences[k].length > 0), `분야 묶음 ${cats.groups.length}개 · 네 태그마다 먼저 보일 분야가 있다${cats.audiencesDraft ? ' (초안)' : ''}`);
 
+// 세션 일정 (R32): 공식 일정을 날짜별로 보고 · 낱말로 찾고 · 내 일정에 넣고 뺀다. 넣으면 동선이 그 시간을 비운다. 값은 지어낸 것이다.
+{
+  const ses = await import('../web/sessions.js');
+  const { capacity, eventsOn, hoursFor } = await import('../web/days.js');
+  const mk = (id, date, from, to, title, place, topics, track, live) => ({ id, date, from, to, title, place, topics, track, live, url: `https://www.ces.tech/schedule/sample-${id}/` });
+  const fake = {
+    v: '2026-11-21T00:00:00Z', source: { ko: 'CES 공식 일정', url: 'https://www.ces.tech/schedule/' }, zone: '라스베이거스 시각', days: ['2027-01-06', '2027-01-07'], skipped: 0,
+    items: [
+      mk('a0000001', '2027-01-06', '11:00', '11:40', 'Keynote - Sample Mobility', 'LVCC, West Hall, Level 2, W232', ['Artificial Intelligence', 'Robotics'], 'Research Summit', true),
+      mk('a0000002', '2027-01-06', '09:00', '09:40', 'Sample Health Talk', '', ['Health'], 'Health Stage', false),
+      mk('a0000003', '2027-01-07', '14:00', '14:40', 'Sample Retail Panel', 'ARIA, Level 2', ['Retail'], 'Retail', false),
+      { ...mk('a0000004', '2027-01-07', '15:00', '14:00', 'Backwards', '', [], '', false) },
+      { ...mk('a0000005', '2027-01-07', '10:00', '10:30', 'Not official', '', [], '', false), url: 'https://example.com/x' },
+    ],
+  };
+  const cleaned = ses.clean(fake);
+  check(cleaned?.items.length === 4 && ses.clean(null) === null && ses.clean({ v: fake.v, items: [] }) === null && ses.clean({ items: fake.items }) === null, '세션 일정: 공식 주소가 아닌 줄은 빼고, 비었거나 꼴이 틀린 자료는 받지 못한 것으로 본다');
+  check(ses.daysOf(cleaned.items).join(' ') === '2027-01-06 2027-01-07' && ses.onDay(cleaned.items, '2027-01-06').map((s) => s.id).join(' ') === 'a0000002 a0000001', '세션 일정: 날짜별로 시간 차례로 보인다');
+  check(ses.search(cleaned.items, 'robotics').length === 1 && ses.search(cleaned.items, 'robotics research').length === 1 && ses.search(cleaned.items, 'west retail').length === 0 && ses.search(cleaned.items, 'ARIA').length === 1 && ses.search(cleaned.items, '  ').length === 4, '세션 일정: 낱말로 찾는다 (제목 · 곳 · 트랙 · 주제, 낱말이 모두 들어 있는 것)');
+  const a = cleaned.items.find((s) => s.id === 'a0000001');
+  const base = capacity(hoursFor('2027-01-06', {}, info), [], 30);
+  const put = ses.toggle(a, []);
+  const withIt = capacity(hoursFor('2027-01-06', {}, info), eventsOn(put.events, '2027-01-06'), 30);
+  const twice = ses.toggle(a, put.events);
+  const again = ses.toggle(a, ses.toggle(a, put.events).events);
+  const bad = ses.toggle({ ...a, id: 'bad', to: '10:00' }, []);
+  check(put.added === true && put.events.length === 1 && put.events[0].id === 'ses-a0000001' && put.events[0].name === a.title && put.events[0].place === a.place && eventsOn(put.events, '2027-01-06').length === 1 && withIt < base && twice.added === false && twice.events.length === 0 && again.events.length === 1 && bad.added === null, `세션 일정: 내 일정에 넣으면 동선이 그 시간을 비우고(들어가는 곳 ${base} → ${withIt}), 다시 누르면 빠지고, 시간이 틀린 줄은 넣지 않는다`);
+  const firstScreen = ['app.js', 'store.js', 'data.js', 'offline.js', 'notify.js', 'alerts.js', 'dom.js', 'views/home.js', 'views/card.js'];
+  let leaked = [];
+  for (const f of firstScreen) if (/^\s*import[^(\n]*sessions/m.test(await readFile(join(dist, f), 'utf8'))) leaked.push(f);
+  check(leaked.length === 0 && /sessions: \(\) => import\('\.\/views\/sessions\.js'\)/.test(await readFile(join(dist, 'app.js'), 'utf8')), '세션 일정: 누를 때 불러온다 (첫 화면 조각에 고정 import가 없다)');
+  if (await exists('data/sessions.json')) {
+    const real = ses.clean(await json('data/sessions.json'));
+    const ds = real ? ses.daysOf(real.items) : [];
+    check(!!real && real.items.length > 0 && ds.every((d) => /^2027-01-/.test(d)) && real.items.every((s) => /^https:\/\/www\.ces\.tech\/schedule\//.test(s.url) && ses.asEvent(s)) && /^https:\/\/www\.ces\.tech\//.test(real.source.url), `세션 일정 자료: ${real?.items.length}개 · 날짜 ${ds.length}일 · 모두 공식 주소 · 내 일정으로 바꿀 수 있다 (받은 날짜 ${real?.v})`);
+  } else {
+    check(true, '세션 일정 자료(data/sessions.json)가 이번 판에는 없다: 공식 일정을 받지 못한 날이다. 화면은 "받지 못했다"를 보이고 앱은 그대로 열린다');
+  }
+  check(/받아 두지 못했다/.test(await readFile(join(dist, 'views/sessions.js'), 'utf8')), '세션 일정: 받지 못한 날에는 못 받았다고 보인다 (짐작해서 채우지 않는다)');
+}
+
 if (await exists('data/meta.json')) {
   const meta = await json('data/meta.json');
   const data = await json('data/exhibitors.json');

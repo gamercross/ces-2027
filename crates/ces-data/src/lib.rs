@@ -8,6 +8,7 @@ pub mod diary;
 pub mod fetch;
 pub mod links;
 pub mod places;
+pub mod sessions;
 pub mod shrink;
 pub mod source;
 pub mod time;
