@@ -74,7 +74,7 @@ async function listPage(go) {
       el('section', { class: 'panel' },
         el('h2', { text: '주제 더하기' }),
         own,
-        el('p', { class: 'note', text: `아래는 후보다: CES 공식 분야를${profile?.tag ? ` ${tagKo(profile.tag)}에게 맞는 것 먼저(초안), 그다음` : ''} 혁신상이 많은 차례로 세웠다. 누르면 그 분야가 주제가 되고, 이름과 분야는 안에서 고칠 수 있다.` }),
+        el('p', { class: 'note', text: `아래는 후보다: CES 공식 분야를${profile?.tag ? ` ${tagKo(profile.tag)}에게 맞는 것 먼저${table.audiencesDraft ? '(초안)' : ''}, 그다음` : ''} 혁신상이 많은 차례로 세웠다. 누르면 그 분야가 주제가 되고, 이름과 분야는 안에서 고칠 수 있다.` }),
         el('div', { class: 'fields' }, cands.slice(0, 16).map((c) => el('button', { class: c.mine ? 'field-link mine' : 'field-link', type: 'button', onclick: () => {
           const topic = newTopic(c.ko, [c.cat]);
           if (add(topic)) { status.textContent = `"${c.ko}"를 주제로 넣었다.`; draw(); }
