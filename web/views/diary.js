@@ -6,6 +6,8 @@ import { el } from '../dom.js';
 import { getExhibitors, getSettings } from '../data.js';
 import { getDiary, getInterests, getProfile, setDiary, TAGS, tagKo } from '../store.js';
 import { asText, bundle, collectorUrl, fileName } from '../diary.js';
+import { countAt } from '../people.js';
+import { getPeople } from '../people-store.js';
 
 const today = () => { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
 const newId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -43,7 +45,10 @@ function audioBox(e, onDrop) {
 }
 
 function form(entry, preset, companies, done) {
-  const e = entry || { date: today(), exId: preset || '', company: '', saw: '', felt: '', for: getProfile()?.tag ? [getProfile().tag] : [] };
+  // 만난 사람에서 온 링크: 회사 번호(관심 목록에 없어도 그 회사)나 "n:이름"(목록에 없는 회사 이름)
+  let byName = '';
+  try { byName = preset?.startsWith('n:') ? decodeURIComponent(preset.slice(2)) : ''; } catch { /* 깨진 주소면 비워 둔다 */ }
+  const e = entry || { date: today(), exId: byName ? '' : preset || '', company: byName, saw: '', felt: '', for: getProfile()?.tag ? [getProfile().tag] : [] };
   const known = companies.find((c) => c.id === e.exId);
   const pick = el('select', { name: 'company' },
     el('option', { value: '', text: companies.length ? '관심 회사에서 고른다' : '관심 회사가 없다' }),
@@ -120,6 +125,8 @@ export async function render({ rest, go }) {
   const companies = getInterests().map((it) => byId.get(it.id)).filter(Boolean).map((r) => ({ id: r[0], name: r[1], booth: r[7][0] || '' }));
   const holder = el('div');
   const sendTo = collectorUrl(settings);
+  // 이 회사에서 만난 사람 수. 만난 사람은 폰에만 남고 일기 파일에는 들어가지 않는다.
+  const met = (e) => { const n = countAt(getPeople(), e); return n ? el('p', { class: 'note' }, `이 회사에서 만난 사람 ${n}명 · `, el('a', { href: '#/people', text: '보기' })) : null; };
 
   function list(message) {
     const all = getDiary().sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
@@ -181,6 +188,7 @@ export async function render({ rest, go }) {
           el('div', { class: 'name' }, e.company, e.draft ? el('span', { class: 'tag', text: '초안' }) : null, (e.for || []).map((k) => el('span', { class: 'tag mint', text: tagKo(k) }))),
           e.saw && el('p', {}, el('b', { text: '본 것 ' }), e.saw),
           e.felt && el('p', {}, el('b', { text: '느낀 점 ' }), e.felt),
+          met(e),
           heardBox(e),
           audioBox(e, () => { setDiary(getDiary().map((x) => { if (x.id !== e.id) return x; const { audio, ...restOf } = x; return restOf; })); show('녹음을 지웠다. 글은 그대로다.'); }),
           el('div', { class: 'row-actions' },
@@ -202,6 +210,9 @@ export async function render({ rest, go }) {
   if (rest[0] === 'new' || rest[0] === 'edit') {
     const entry = rest[0] === 'edit' ? getDiary().find((e) => e.id === rest[1]) : null;
     if (rest[0] === 'edit' && !entry) { go('#/diary'); return holder; }
+    // 만난 사람에서 온 회사가 관심 목록에 없으면 이번 일기에서만 고를 수 있게 더한다.
+    const want = rest[0] === 'new' && rest[1] && !rest[1].startsWith('n:') ? rest[1] : '';
+    if (want && byId.has(want) && !companies.some((c) => c.id === want)) { const r = byId.get(want); companies.push({ id: r[0], name: r[1], booth: r[7][0] || '' }); }
     holder.replaceChildren(form(entry, rest[0] === 'new' ? rest[1] : null, companies, show));
   } else {
     const note = sessionStorage.getItem('ces2027.diaryNote');

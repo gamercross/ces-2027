@@ -3,6 +3,7 @@
 import { el, out } from './dom.js';
 import { hasInterest, toggleInterest } from './store.js';
 import { splitBooth } from './route.js';
+import { attachImage } from './company-image.js';
 
 // 같은 장소의 부스는 한 줄로 모은다.
 export function whereText(booths, placeKo) {
@@ -27,7 +28,7 @@ export function companyRow(row, data, placeKo, onChange) {
   button.addEventListener('click', () => { toggleInterest(id); paint(); onChange?.(); });
   paint();
   const catKo = cats ? cats.split('.').map((c) => data.catsKo[c] || data.cats[c]).slice(0, 4).join(' · ') : '';
-  return el('li', {},
+  const li = el('li', {},
     el('div', { class: 'name' }, name, award ? el('span', { class: 'tag mint', text: award & 2 ? '최고 혁신상' : '혁신상' }) : null),
     el('div', { class: 'where', text: [booths.length ? whereText(booths, placeKo) : '부스 미정', country >= 0 ? data.countries[country] : null].filter(Boolean).join(' / ') }),
     catKo && el('div', { class: 'where', text: catKo }),
@@ -36,4 +37,6 @@ export function companyRow(row, data, placeKo, onChange) {
       booths.some((b) => placeKo.has(splitBooth(b).place)) ? el('a', { href: `#/map/at/${encodeURIComponent(id)}`, text: '지도' }) : null,
       el('a', { href: `#/listen/${encodeURIComponent(id)}`, text: '듣기' }),
       out(data.link.replace('{id}', encodeURIComponent(id)), '공식 전시사 페이지')));
+  attachImage(li, id, name, data);
+  return li;
 }

@@ -146,6 +146,7 @@ async function card(profile, edit, showFrom) {
       el('p', { class: 'note', text: '이 명함은 이 폰에만 남는다. QR은 폰에서 만들어서 인터넷이 없어도 보인다.' }),
       el('div', { class: 'actions' },
         el('a', { class: 'btn', href: '#/find', text: '회사 찾으러 가기' }),
+        el('a', { class: 'btn', href: '#/people', text: '남의 명함 받기' }),
         el('button', { class: 'btn ghost', type: 'button', text: '명함 고치기', onclick: edit }))));
 }
 

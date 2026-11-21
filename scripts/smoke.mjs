@@ -74,6 +74,70 @@ const settings = await json('data/settings.json');
   check(waymo.date === '2027-01-05' && waymo.from === '18:30' && waymo.to === '19:45' && /Palazzo/.test(waymo.where), 'Waymo 기조연설은 1/5 18:30 ~ 19:45 베네시안 Palazzo Ballroom이다 (CES 일정표)');
   const badge = sepData.items.find((it) => it.id === 'ces-badge');
   check(badge.what.includes('운영팀이 등록') && badge.apply.url === null && badge.apply.ko.includes('따로 할 일 없음') && badge.todo.includes('여권') && badge.deadline === null && !/달러|\$\d/.test(JSON.stringify(badge)), '배지: 연수단은 운영팀이 등록 · 따로 할 일 없음 · 받는 곳에서 여권 보이기로 적고, 값과 마감은 넣지 않았다');
+
+// 오가는 법(교통): 줄마다 CES 공식 출처와 확인 날짜, 2027 안내가 없거나 어긋나는 줄은 "확인 필요".
+{
+  const transit = await json('data/transit.json');
+  const places = await json('data/places.json');
+  const tr = await import('../web/transit.js');
+  const isDate = (s) => /^\d{4}-\d\d-\d\d$/.test(s);
+  const kinds = new Set(['hotel', 'cspace', 'express', 'airport', 'media', 'monorail', 'loop', 'rideshare', 'hub']);
+  const ids = new Set(transit.lines.map((l) => l.id));
+  const shapeOk = transit.lines.every((l) => l.id && kinds.has(l.kind) && l.ko && ['confirmed', 'check'].includes(l.status) && Array.isArray(l.stops) && l.stops.every((s) => s.ko && s.board && s.query) && (l.schedule === null || transit.schedules[l.schedule]));
+  check(shapeOk && ids.size === transit.lines.length && isDate(transit.read), `교통 자료: ${transit.lines.length}줄의 꼴이 맞다 (종류 · 상태 · 타는 곳 · 시간표)`);
+  const srcs = transit.lines.flatMap((l) => l.sources);
+  const CES = /^https:\/\/www\.ces\.tech\//;
+  check(transit.lines.every((l) => l.sources.length > 0) && srcs.every((s) => CES.test(s.url) && isDate(s.read) && s.ko) && CES.test(transit.guide.url) && CES.test(transit.flyer.url), `교통 자료: 줄마다 출처와 확인 날짜가 있고 출처 ${srcs.length}개가 모두 CES 공식 사이트(ces.tech)다`);
+  const parts = Object.values(transit.schedules).flat().flatMap((d) => d.parts);
+  check(parts.every((p) => transit.parts[p.part] && /^\d\d:\d\d$/.test(p.from) && /^\d\d:\d\d$/.test(p.to) && p.from < p.to && Number.isInteger(p.every) && p.every > 0), `교통 자료: 시간표 ${parts.length}토막의 시각 · 간격이 맞다`);
+  const checks = transit.lines.filter((l) => l.status === 'check');
+  check(checks.length > 0 && checks.every((l) => l.todo && l.note), `교통 자료: "확인 필요" 줄은 ${checks.length}개이고 모두 무엇을 확인할지(할 일)를 적었다`);
+  const text = JSON.stringify(transit);
+  check([...text.matchAll(/작년/g)].every((m) => text.slice(m.index, m.index + 12).startsWith('작년(CES 2026)')) && !/@[a-z]+\.[a-z]/i.test(text), '교통 자료: 작년 것을 적을 때는 "작년(CES 2026)"이라고 밝혔고, 메일 주소는 없다');
+  const link = tr.stopLink(places, transit.lines.find((l) => l.id === 'r9').stops[1]);
+  const link2 = tr.stopLink(places, transit.lines.find((l) => l.id === 'r2').stops[0]);
+  check(link.startsWith('https://www.google.com/maps/search/?api=1&query=') && link.includes(encodeURIComponent('201 Sands Ave')) && link2.includes(encodeURIComponent('Treasure Island Las Vegas, Las Vegas, NV')) && !/[?&]key=/.test(link + link2), '교통 자료: 타는 곳의 구글맵 주소는 Maps URLs(키 없음)이고, 장소 자료의 주소를 쓴다');
+  const tt = tr.timetable(transit, transit.lines.find((l) => l.id === 'r9'));
+  check(tt.length === 3 && tt[1].parts[0] === '하루 내내 7:30 ~ 18:30 · 10분마다', '교통 자료: Tech Express 시간표가 전단대로 읽힌다 (수 ~ 금 7:30 ~ 18:30, 10분마다)');
+  const n = tr.counts(transit);
+  const root = (p) => readFile(new URL(`../${p}`, import.meta.url), 'utf8');
+  const [app, homeJs, pagesYml, linksYml] = await Promise.all([root('web/app.js'), root('web/views/home.js'), root('.github/workflows/pages.yml'), root('.github/workflows/links.yml')]);
+  check(/transit: \(\) => import\('\.\/views\/transit\.js'\)/.test(app) && !/from '\.\/transit\.js'/.test(app + homeJs) && homeJs.includes("#/transit") && homeJs.includes("#/apply"), '교통 화면은 누를 때 불러온다 (첫 화면 조각에 고정 import 없음). 첫 화면에는 링크만 있다');
+  check(pagesYml.includes('data/transit.json') && linksYml.includes('--in data/transit.json'), '교통 자료는 배포에 담기고, 출처 링크 살피기(check-links)가 이 파일도 본다');
+  lines.push(`교통 | 줄 ${n.total}개: 2027 확인됨 ${n.confirmed} · 확인 필요 ${n.check} · 읽은 날짜 ${transit.read}`);
+}
+
+// 회사 사진 · 로고: 공식 자료에 있는 로고 파일 이름만 싣고, 설정이 꺼져 있으면 그림 주소로 아무것도 묻지 않는다.
+{
+  const lg = await import('../web/logos.js');
+  const fake = { v: '2026-11-21', ex: [['A1'], ['B2'], ['C3'], ['D4'], ['E5']] };
+  const logos = { v: '2026-11-21', base: 'https://exhibitors.ces.tech/mys_shared/CES27/logos/', kinds: ['png', '~jpg'], map: '01---', extra: { 4: 'odd-name.PNG' } };
+  const open = lg.openLogos(logos, fake);
+  check(lg.logoUrl(open, 'A1') === `${logos.base}A1.png` && lg.logoUrl(open, 'B2') === `${logos.base}b2.jpg` && lg.logoUrl(open, 'C3') === null && lg.logoUrl(open, 'E5') === `${logos.base}odd-name.PNG` && lg.logoUrl(open, 'ZZ') === null, '로고 주소: 전시사 id에서 공식 주소를 셈한다 (id.png · 소문자 id.jpg · 따로 적은 이름 · 없음)');
+  check(lg.openLogos({ ...logos, v: 'old' }, fake) === null && lg.openLogos({ ...logos, base: 'https://example.com/' }, fake) === null && lg.openLogos({ ...logos, map: '0' }, fake) === null && lg.logoUrl(lg.openLogos({ ...logos, extra: { 4: '../x.png' } }, fake), 'E5') === null, '로고 주소: 판이 다르거나 · 공식 사이트 주소가 아니거나 · 줄 수가 다르거나 · 파일 이름이 이상하면 쓰지 않는다');
+  check(typeof settings.companyImage === 'boolean', `설정 companyImage(회사 카드의 로고 단추)가 있다 (지금 ${settings.companyImage ? '켬' : '끔'})`);
+  // 꺼져 있으면: 설정 하나만 묻고 로고 자료도 그림 주소도 묻지 않으며, 줄에 아무것도 더하지 않는다.
+  const asked = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => { asked.push(String(url)); return { ok: true, status: 200, json: async () => ({ companyImage: false }) }; };
+  const { attachImage } = await import('../web/company-image.js');
+  let touched = 0;
+  const li = { querySelector: () => { touched += 1; return null; } };
+  attachImage(li, 'A1', '이름', fake);
+  await new Promise((r) => setTimeout(r, 30));
+  globalThis.fetch = realFetch;
+  check(asked.length === 1 && asked[0] === 'data/settings.json' && touched === 0, `로고: 설정이 꺼져 있으면 설정 말고는 아무것도 묻지 않고 줄도 그대로다 (물은 것 ${asked.join() || '없음'})`);
+  if (await exists('data/logos.json') && await exists('data/exhibitors.json')) {
+    const real = await json('data/logos.json');
+    const ex = await json('data/exhibitors.json');
+    const opened = lg.openLogos(real, ex);
+    const urls = ex.ex.map((row) => lg.logoUrl(opened, row[0]));
+    const got = urls.filter(Boolean);
+    check(opened && real.base === 'https://exhibitors.ces.tech/mys_shared/CES27/logos/' && got.length === real.n && got.every((u) => /^https:\/\/exhibitors\.ces\.tech\/mys_shared\/CES27\/logos\/[A-Za-z0-9_-]+\.(png|jpe?g)$/i.test(u)), `로고 자료: 전시사 ${ex.ex.length}곳 가운데 ${got.length}곳에 공식 로고 주소가 있고, 모두 exhibitors.ces.tech의 로고 폴더다`);
+    const size = (await stat(join(dist, 'data/logos.json'))).size;
+    lines.push(`로고 | 공식 자료에 로고 ${got.length}곳 (${((got.length / ex.ex.length) * 100).toFixed(0)}%) · data/logos.json ${(size / 1024).toFixed(1)} KB`);
+  }
+}
   // 띠와 일정으로 바꾸는 셈 (지어낸 값으로 본다).
   const fake = [
     { id: 'a', org: '가', what: '표', status: 'check', deadline: '2027-01-03', watchFrom: '2026-12-01', date: '2027-01-06', from: '17:00', to: '18:30', where: '어디', place: '' },
@@ -613,6 +677,75 @@ if (await exists('data/meta.json')) {
   lines.push('주의 | 전시사 자료가 없다 (공식 사이트에서 받지 못했다). 코어만 본다');
   const rows = core.loadIndex(new TextEncoder().encode('CESIDX 1 2\nalpha\t0\t1\nbeta\t1\t\n'));
   check(rows === 2 && String(core.search('al', 5)) === '0,1', '코어가 지어낸 색인으로 찾는다');
+}
+
+// 남의 명함 받기 · 만난 사람: 읽은 글 살피기 · 사람 만들기 · 같은 사람 합치기 · 카메라 읽기(꾸민 폰). 지어낸 값만 쓴다.
+{
+  const P = await import('../web/people.js');
+  const S = await import('../web/scan.js');
+  const ok = (t, h) => { const r = P.parseScan(t, h); return r.ok ? r.link : null; };
+  const no = (t, h) => !P.parseScan(t, h).ok;
+  const gh = ok('https://github.com/octocat/');
+  const li = ok('https://kr.linkedin.com/in/jane-doe?trk=x');
+  const dc = ok('https://discord.gg/AbC123');
+  const web = ok('https://example.com/a/b/');
+  check(gh?.kind === 'github' && gh.url === 'https://github.com/octocat' && ok('github.com/octocat')?.key === gh.key && ok('@octocat', 'github')?.key === gh.key && li?.kind === 'linkedin' && li.url === 'https://www.linkedin.com/in/jane-doe' && dc?.kind === 'discord' && web?.kind === 'web' && web.url === 'https://example.com/a/b', '남의 QR 살피기: 깃허브 · 링크드인 · 디스코드 · 웹 주소(https)를 받고, 주소를 가지런히 한다');
+  check(ok('seal.bot', 'auto')?.kind === 'discord' && ok('seal.bot', 'discord')?.kind === 'discord' && ok('octocat', 'github')?.kind === 'github' && ok('my-name-1', 'auto')?.kind === 'github', '우리 앱의 QR 꼴(깃허브는 주소, 디스코드는 아이디 글자)을 그대로 받는다');
+  check(['http://github.com/octocat', 'javascript:alert(1)', 'mailto:a@example.com', 'BEGIN:VCARD', 'https://user:pw@example.com/', 'https://localhost/', 'https://10.0.0.1/', 'data:text/html,hi', '', '   ', `https://example.com/${'a'.repeat(300)}`, 'a b c'].every((t) => no(t)), '받지 않는 글: http · javascript · mailto · 연락처 카드 · 비밀번호가 든 주소 · 짐작 못 할 주소 · 너무 긴 글 · 빈 글');
+  check(ok('https://github.com.evil.example/octocat')?.kind === 'web' && ok('https://evilgithub.com/octocat')?.kind === 'web' && P.safeHref('http://example.com') === '' && P.safeHref('javascript:alert(1)') === '' && P.safeHref('https://example.com/x') === 'https://example.com/x', '이름만 닮은 주소(github.com.evil…)는 깃허브로 보지 않고, 저장된 주소도 열 때 https만 연다');
+  const made = P.personFromScan('https://github.com/octocat', { nick: '  시험  ', met: '2027-01-06', company: '가짜회사', hint: 'auto' });
+  check(made.ok && made.person.nick === '시험' && made.person.links.length === 1 && made.person.company === '가짜회사' && !P.personFromScan('http://x.example/', {}).ok, '읽은 글에서 사람 만들기');
+  // 같은 사람 합치기
+  const a = P.upsert([], { id: 'a1', nick: '가', links: [gh], met: '2027-01-07', note: '' });
+  const b = P.upsert(a.list, { nick: '', links: [gh, dc], met: '2027-01-06', note: '로봇 이야기', company: '가짜회사', exId: 'x1' });
+  const c = P.upsert(b.list, { nick: '다른 사람', links: [web], met: '2027-01-08' });
+  check(a.merged === 0 && b.merged === 1 && b.list.length === 1 && b.person.id === 'a1' && b.person.nick === '가' && b.person.links.length === 2 && b.person.met === '2027-01-06' && b.person.note === '로봇 이야기' && b.person.exId === 'x1' && c.list.length === 2 && c.merged === 0, '같은 주소를 다시 읽으면 새 사람을 만들지 않고 먼저 있던 사람에 합친다 (주소는 겹치지 않게 늘고, 빈 칸은 채운다)');
+  const edit = P.upsert(c.list, { ...c.list[1], links: [web, gh], nick: '합친 사람' });
+  check(edit.list.length === 1 && edit.merged === 1 && edit.person.links.length === 3 && edit.person.nick === '합친 사람' && P.removePerson(edit.list, edit.person.id).length === 0, '고치다가 다른 사람의 주소를 넣으면 한 사람으로 합치고, 지우면 빠진다');
+  check(P.cleanPeople('x').length === 0 && P.cleanPeople([null, 1, { id: 'q', links: [{ kind: 'web', key: 'k', url: 'javascript:alert(1)' }, { kind: 'web', key: 'k2', url: 'https://example.com/' }], met: 'bad' }]).map((p) => p.links.length + p.met).join() === '1', '폰에 남은 값이 망가져 있어도 걸러 낸다 (https가 아닌 주소 · 틀린 날짜)');
+  const people = [{ company: '가짜회사', exId: 'x1' }, { company: ' 가짜회사 ', exId: '' }, { company: '다른회사', exId: 'x2' }, { company: '', exId: '' }];
+  check(P.countAt(people, { exId: 'x1', company: '가짜회사' }) === 2 && P.countAt(people, { exId: 'x2', company: '이름이 다름' }) === 1 && P.countAt(people, { exId: '', company: '가짜회사' }) === 2 && P.countAt(people, { exId: '', company: '' }) === 0, '일기 목록의 "이 회사에서 만난 사람 수": 양쪽에 회사 번호가 있으면 번호로, 아니면 이름으로 센다');
+
+  // 카메라 읽기: 꾸민 폰 셋 (BarcodeDetector 없음 · 권한 거부 · 있는 폰)
+  const track = () => ({ stopped: 0, stop() { this.stopped += 1; } });
+  const fakeWin = (extra) => ({ isSecureContext: true, document: { hidden: false, addEventListener() {}, removeEventListener() {} }, addEventListener() {}, removeEventListener() {}, navigator: { mediaDevices: { getUserMedia: async () => { throw new Error('부르면 안 된다'); } } }, ...extra });
+  const fakeVideo = () => ({ srcObject: null, isConnected: true, muted: false, setAttribute() {}, play: async () => {} });
+  let asked = 0;
+  const noDet = fakeWin({ navigator: { mediaDevices: { getUserMedia: async () => { asked += 1; return { getTracks: () => [] }; } } } });
+  const r1 = await S.startScan(fakeVideo(), () => {}, noDet);
+  check(!r1.ok && /BarcodeDetector/.test(r1.why) && asked === 0 && !S.cameraSupport(S.envOf(noDet)).ok, '카메라 읽기(꾸민 폰 1 · 지원 안 함): 이 폰에서는 안 됨과 까닭을 말하고, 카메라는 켜지 않는다');
+  const denied = fakeWin({ BarcodeDetector: class { async detect() { return []; } }, navigator: { mediaDevices: { getUserMedia: async () => { const e = new Error('x'); e.name = 'NotAllowedError'; throw e; } } } });
+  const r2 = await S.startScan(fakeVideo(), () => {}, denied);
+  check(!r2.ok && /거부/.test(r2.why) && /허용/.test(r2.why) && /찾지 못/.test(S.explainCameraError({ name: 'NotFoundError' })) && /다른 앱/.test(S.explainCameraError({ name: 'NotReadableError' })), '카메라 읽기(꾸민 폰 2 · 권한 거부): 까닭(거부 · 허용하는 법)을 보인다');
+  const tr = track();
+  const seen = [];
+  let calls = 0;
+  const has = fakeWin({
+    BarcodeDetector: class { constructor(o) { this.o = o; } async detect() { calls += 1; return calls >= 2 ? [{ rawValue: 'https://github.com/octocat' }] : []; } },
+    navigator: { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [tr] }) } },
+  });
+  const v = fakeVideo();
+  const r3 = await S.startScan(v, (t) => seen.push(t), has);
+  await new Promise((res) => setTimeout(res, 900));
+  check(r3.ok && seen.length === 1 && seen[0] === 'https://github.com/octocat' && v.srcObject !== null, '카메라 읽기(꾸민 폰 3 · BarcodeDetector 있음): 읽은 주소가 들어오고, 같은 QR을 계속 비춰도 한 번만 들어온다');
+  r3.stop();
+  check(tr.stopped === 1 && v.srcObject === null, '그만 읽기: 카메라 트랙을 끄고 화면에서 뗀다');
+  const tr2 = track();
+  const gone = fakeVideo();
+  const r4 = await S.startScan(gone, () => {}, fakeWin({ BarcodeDetector: class { async detect() { return []; } }, navigator: { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [tr2] }) } } }));
+  gone.isConnected = false;
+  await new Promise((res) => setTimeout(res, 600));
+  check(r4.ok && tr2.stopped === 1, '화면을 떠나 카메라 화면이 사라지면 저절로 카메라를 끈다');
+
+  // 지키는 선: 첫 화면 조각은 새 화면을 미리 읽지 않고, 일기 보내기 묶음에는 만난 사람이 없다.
+  const first = ['app.js', 'store.js', 'data.js', 'offline.js', 'notify.js', 'alerts.js', 'dom.js', 'views/home.js', 'views/card.js'];
+  const bad = [];
+  for (const f of first) if (/^\s*import[^\n]*from\s+'[^']*\/(people|people-store|scan)\.js'/m.test(await readFile(new URL(`../web/${f}`, import.meta.url), 'utf8'))) bad.push(f);
+  const appText = await readFile(new URL('../web/app.js', import.meta.url), 'utf8');
+  const diaryText = await readFile(new URL('../web/diary.js', import.meta.url), 'utf8');
+  const D = await import('../web/diary.js');
+  const sent = JSON.stringify(D.bundle([{ id: 'e1', date: '2027-01-06', company: '가짜회사' }], { nick: '나', tag: 'stu' })) + D.asText([{ id: 'e1', date: '2027-01-06', company: '가짜회사' }], { nick: '나' }, () => '');
+  check(bad.length === 0 && /people: \(\) => import\('\.\/views\/people\.js'\)/.test(appText) && !/people/.test(diaryText) && !/people|links|githubUrl/.test(sent), '첫 화면 조각은 새 화면을 미리 읽지 않고(누를 때 불러온다), 일기 보내기 묶음에는 만난 사람이 들어가지 않는다');
 }
 
 const table = ['무엇 | 본 것', '--- | ---', ...lines].join('\n');
