@@ -1,11 +1,15 @@
 // 말과 글: 읽어 주기 · 받아쓰기 · 번역 · 녹음. 키도 서버도 쓰지 않고 폰(브라우저)이 가진 기능만 쓴다.
-// 두 길이 있다 (config/settings.json의 speech, 정하는 것은 이재엽):
+// 두 길이 있고, 쓰는 사람이 화면에서 고른다 (2026-11-21 정함). 고르기 전의 기본값은 config/settings.json의 speech다:
 //   on-device      폰 안에서만. 소리와 글이 폰 밖으로 나가지 않는다. 안 되는 폰이 많다.
 //   device-service 폰의 음성 인식 서비스를 쓴다. 인터넷이 있어야 하고 소리가 구글 · 애플로 간다.
 // 안 되는 기능은 숨기지 않고 "이 폰에서는 안 됨"과 까닭을 돌려준다.
 
 export const MODES = ['on-device', 'device-service'];
-export const modeOf = (settings) => (MODES.includes(settings?.speech) ? settings.speech : 'on-device');
+// 쓰는 사람이 고른 길(chosen)이 있으면 그것, 없으면 설정의 기본값, 그것도 없으면 폰 안에서만.
+export const modeOf = (settings, chosen) => (MODES.includes(chosen) ? chosen : MODES.includes(settings?.speech) ? settings.speech : 'on-device');
+// 폰 밖 길은 한 번 확인을 받은 뒤에만 쓴다. 확인이 없으면 폰 안에서만으로 돌아간다.
+export const allowedMode = (mode, consent) => (mode === 'device-service' && !consent ? 'on-device' : mode);
+export const SERVICE_NOTE = '인터넷이 필요하고 소리가 구글 · 애플로 간다.';
 
 const SR = (g) => g.SpeechRecognition || g.webkitSpeechRecognition || null;
 
