@@ -14,6 +14,8 @@ import { nextStop } from '../route.js';
 import { getWhere, setWhere } from '../store.js';
 import { companyRow } from '../company.js';
 import { guideTo } from '../guide.js';
+import { markLabel, toggleMark } from '../alerts.js';
+import { getMarks, setMarks } from '../notify.js';
 import { getEvents } from '../store.js';
 import { placeLink } from './days.js';
 
@@ -209,10 +211,25 @@ export async function render({ rest = [] } = {}) {
       el('p', { class: 'note', text: `${place ? place.ko : '장소 모름'} · ${spot?.official ? '자리는 공식 배치도다' : '자리는 짐작이다'}` }),
       in3d() && spot ? el('div', { class: 'actions' }, el('button', { class: 'btn ghost', type: 'button', text: '2D 지도에서 보기', onclick: () => to2d([spot.x - 110, spot.z - 110, spot.x + 110, spot.z + 110]) })) : null,
       el('ol', { class: 'hits' }, rows.map((r) => companyRow(r, data, placeKo))),
+      markBlock(key),
       guideBlock(key, place, spot),
     ].filter(Boolean));
     drawMe();
     if (scroll) detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  // 명함 넣는 이벤트가 있는 부스인지 사람이 표시한다. 공식 자료에는 없다.
+  function markBlock(key) {
+    const mark = getMarks()[key];
+    return el('div', { class: 'block guide' },
+      el('h3', { text: '명함 넣는 이벤트' }),
+      el('div', { class: 'actions' },
+        el('button', { class: 'pick', type: 'button', text: mark ? `이벤트 있음 (${markLabel(mark)})` : '이벤트 있음으로 표시', 'aria-pressed': mark ? 'true' : 'false', onclick: () => {
+          setMarks(toggleMark(getMarks(), key));
+          drawBooths();
+          three?.redraw();
+          pickBooth(key);
+        } })),
+      el('p', { class: 'note', text: '공식 자료에는 이벤트가 없다. 현장에서 본 사람이 표시하고, "시간과 일정"의 파일로 팀과 주고받는다. 표시한 부스가 그날 동선에 있으면 명함이 몇 장 필요한지 알린다.' }));
   }
   // 여기서 가는 길: 내 자리에서 고른 부스까지. 같은 곳이면 부스 번호 쪽으로, 다른 캠퍼스면 구글맵 길찾기.
   function guideBlock(key, place, spot) {
@@ -257,12 +274,15 @@ export async function render({ rest = [] } = {}) {
     if (w > BOOTH_ZOOM) { boothLayer.replaceChildren(); return; }
     // 화면에서 반지름 5px쯤 되게 (손가락으로 누를 수 있게).
     const r = ((w / 360) * 5).toFixed(2);
+    const marks = getMarks();
     const nodes = [];
     for (const b of boothList) {
       if (b.x < x0 || b.x > x1 || b.z < z0 || b.z > z1) continue;
       // 고른 부스는 짙은 테두리로 보인다 (색은 칠하기에 쓰고 있어서).
       const on1 = b.key === chosenBooth;
-      const dot = svg('circle', { cx: b.x.toFixed(1), cy: b.z.toFixed(1), r, fill: colorOf(b.key), stroke: on1 ? '#1f2a44' : '#f4f1ea', 'stroke-width': on1 ? 3 : 1, 'vector-effect': 'non-scaling-stroke' });
+      // 명함 이벤트로 표시한 부스는 붉은 테두리로 두른다.
+      const marked = !!marks[b.key];
+      const dot = svg('circle', { cx: b.x.toFixed(1), cy: b.z.toFixed(1), r: marked ? (Number(r) * 1.35).toFixed(2) : r, fill: colorOf(b.key), stroke: on1 ? '#1f2a44' : marked ? '#8a3b2f' : '#f4f1ea', 'stroke-width': on1 || marked ? 3 : 1, 'vector-effect': 'non-scaling-stroke' });
       dot.dataset.key = b.key;
       nodes.push(dot);
       if (nodes.length >= 900) break;
@@ -357,7 +377,7 @@ export async function render({ rest = [] } = {}) {
     frame.replaceChildren(el('p', { class: 'note map-wait', text: '3D를 불러오는 중이다.' }));
     try {
       // 3D는 여기서 처음 불러온다. 첫 화면에는 싣지 않는다.
-      three ??= (await import('../map3d.js')).create(L, places, pins, { onPlace: (p) => pick(p, true), onCampus: (c) => pickCampus(c, true), onBooth: (key) => pickBooth(key, true), booths: boothList, colorOf: (key) => colorOf(key) });
+      three ??= (await import('../map3d.js')).create(L, places, pins, { onPlace: (p) => pick(p, true), onCampus: (c) => pickCampus(c, true), onBooth: (key) => pickBooth(key, true), booths: boothList, colorOf: (key) => colorOf(key), isMarked: (key) => !!getMarks()[key] });
       page.three = three;
       frame.replaceChildren(three.node);
       three.look(focus);
@@ -549,6 +569,7 @@ export async function render({ rest = [] } = {}) {
         el('button', { class: 'seg', type: 'button', text: '작게', 'aria-label': '지도 작게', onclick: () => (solid.getAttribute('aria-pressed') === 'true' ? three?.zoom(1.25) : zoom(1.4)) })),
       el('div', { class: 'segs', role: 'group', 'aria-label': '부스 점 칠하기' }, colorButtons),
       legendBox,
+      el('p', { class: 'note', text: '붉은 테두리의 점은 사람이 "명함 넣는 이벤트 있음"으로 표시한 부스다.' }),
       el('p', { class: 'note', text: `홀 안 부스 자리는 짐작이다 (공식 캠퍼스 지도 ${places.edition}판, 정식 배치도 전). 캠퍼스 사이 거리는 줄여서 그렸다.` }),
       pins.length
         ? el('p', { class: 'note', text: `번호는 내 동선의 차례다. 색은 날짜다: ${info.show.days.map((d, i) => `${d.ko.split(' ')[0]} ${['분홍', '파랑', '초록', '노랑'][i]}`).join(' · ')} · 미정 회색.` })

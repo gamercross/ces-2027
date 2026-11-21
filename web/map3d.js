@@ -131,8 +131,10 @@ export function create(L, places, pins, on = {}) {
         ctx.arc(b.sx, b.sy, on1 ? 6 : 3.5, 0, Math.PI * 2);
         ctx.fillStyle = on.colorOf ? on.colorOf(b.key) : '#9aa9cc';
         ctx.fill();
-        ctx.lineWidth = on1 ? 3 : 1;
-        ctx.strokeStyle = on1 ? '#1f2a44' : '#f4f1ea';
+        // 명함 이벤트로 표시한 부스는 붉은 테두리.
+        const marked = on.isMarked ? on.isMarked(b.key) : false;
+        ctx.lineWidth = on1 || marked ? 3 : 1;
+        ctx.strokeStyle = on1 ? '#1f2a44' : marked ? '#8a3b2f' : '#f4f1ea';
         ctx.stroke();
       }
     }

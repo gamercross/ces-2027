@@ -6,6 +6,8 @@ import { getInfo, getPlaces } from '../data.js';
 import { getDayLimit, getEvents, getHours, getPace, setEvents, setHours, setPace } from '../store.js';
 import { capacity, cleanEvent, eventsOn, hoursFor, makeFile, mergeIn, PACES, readFile, toHHMM } from '../days.js';
 import { mapsLink } from '../maps.js';
+import { mergeMarks } from '../alerts.js';
+import { getMarks, setMarks } from '../notify.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
@@ -120,21 +122,24 @@ export async function render() {
       if (!file) return;
       const got = readFile(await file.text());
       pick.value = '';
-      if (!got.events.length && !Object.keys(got.hours).length && got.pace == null) { status.textContent = `불러오지 못했다: ${got.problems.join(' · ') || '파일에 시간도 일정도 없다'}.`; return; }
+      if (!got.events.length && !Object.keys(got.hours).length && got.pace == null && !got.eventBooths.length) { status.textContent = `불러오지 못했다: ${got.problems.join(' · ') || '파일에 시간도 일정도 없다'}.`; return; }
       const merged = mergeIn({ hours: getHours(), events: getEvents() }, got);
+      const marked = mergeMarks(getMarks(), got.eventBooths);
+      if (marked.added) setMarks(marked.marks);
       setHours(merged.hours);
       setEvents(merged.events);
       if (got.pace) setPace(got.pace);
-      status.textContent = `파일에서 시간 ${merged.hoursSet}일 · 일정 ${merged.added}개를 넣었다${got.events.length - merged.added ? ` (이미 있는 ${got.events.length - merged.added}개는 건너뜀)` : ''}.${got.problems.length ? ` 뺀 것: ${got.problems.join(' · ')}.` : ''}`;
+      status.textContent = `파일에서 시간 ${merged.hoursSet}일 · 일정 ${merged.added}개${marked.added ? ` · 명함 이벤트 부스 ${marked.added}곳(팀이 표시)` : ''}를 넣었다${got.events.length - merged.added ? ` (이미 있는 ${got.events.length - merged.added}개는 건너뜀)` : ''}.${got.problems.length ? ` 뺀 것: ${got.problems.join(' · ')}.` : ''}`;
       draw();
     });
     return el('section', { class: 'panel' },
       el('h2', { text: '파일로 주고받기' }),
       el('p', { class: 'note', text: '한 사람이 시간과 일정을 넣고 파일로 내보내 단톡방에 올리면, 나머지는 그 파일을 불러와 넣는다. 파일은 폰에서 폰으로만 건넨다.' }),
+      el('p', { class: 'note', text: `"명함 넣는 이벤트 있음"으로 표시한 부스(지금 ${Object.keys(getMarks()).length}곳)도 같은 파일에 실린다. 받은 것은 "팀이 표시"로 보인다.` }),
       el('label', { class: 'field' }, el('span', { class: 'label', text: '받은 파일 불러오기 (.json)' }), pick),
       el('div', { class: 'actions' },
         el('button', { class: 'btn ghost', type: 'button', text: '내 것을 파일로 내보내기', onclick: () => {
-          download(`ces2027-시간과일정-${today()}.json`, JSON.stringify(makeFile(getHours(), getEvents(), getPace()), null, 2));
+          download(`ces2027-시간과일정-${today()}.json`, JSON.stringify(makeFile(getHours(), getEvents(), getPace(), getMarks()), null, 2));
           status.textContent = '시간과 일정을 파일로 내려받았다. 단톡방으로 건넬 수 있다.';
         } })));
   }

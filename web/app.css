@@ -242,3 +242,10 @@ details.more[open] > summary { margin-bottom: 8px; }
 /* 부스 카드의 길 안내 */
 .guide { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .guide > * + * { margin-top: 6px; }
+
+/* 알림을 못 쓰는 폰에서 대신 보이는 띠 (새 판 안내 위에 놓인다) */
+.notice-bar { background: var(--mint); bottom: calc(var(--tabs) + env(safe-area-inset-bottom) + 80px); }
+.band { background: var(--mint); }
+.band.ask { background: var(--peach); }
+
+.dots { display: grid; gap: 6px; padding-left: 18px; list-style: disc; font-size: 14px; }

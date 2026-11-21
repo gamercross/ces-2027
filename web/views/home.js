@@ -4,6 +4,54 @@ import { el, num, out } from '../dom.js';
 import { getInfo, getMeta } from '../data.js';
 import { getProfile, tagKo } from '../store.js';
 import { offline } from '../offline.js';
+import { dateOf, defaultRemind } from '../alerts.js';
+import { alerts, askPermission, checkAlerts, getPaper, setPaper } from '../notify.js';
+
+// 알림을 못 쓰는 폰에서도 같은 내용을 보이는 띠: 종이 명함 물음 · 오늘 명함 몇 장.
+function alertBands(showFrom) {
+  const box = el('div', { class: 'page' });
+  function paint() {
+    // 화면에 붙었다가 떨어진 뒤에는 더 그리지 않는다.
+    if (box.isConnected) box.dataset.seen = '1';
+    else if (box.dataset.seen) { window.removeEventListener('ces-alerts', paint); return; }
+    const paper = getPaper();
+    const answer = (has) => { setPaper({ remindOn: defaultRemind(showFrom), ...(paper || {}), has, asked: dateOf(new Date()) }); checkAlerts(); };
+    box.replaceChildren(...[
+      alerts.paper ? el('section', { class: 'panel band ask' },
+        el('h2', { text: alerts.paper === 'again' ? '출발이 가깝다: 종이 명함은 준비됐나요?' : '종이 명함이 있나요?' }),
+        el('p', { class: 'note', text: '이벤트 부스에는 명함을 넣어야 응모가 되는 곳이 있다. 없으면 준비할 것을 알려 준다.' }),
+        el('div', { class: 'actions' },
+          el('button', { class: 'btn', type: 'button', text: '있다', onclick: () => answer(true) }),
+          el('button', { class: 'btn ghost', type: 'button', text: '없다', onclick: () => { answer(false); location.hash = '#/card'; } }))) : null,
+      alerts.needs.length ? el('section', { class: 'panel band' },
+        el('h2', { text: `오늘 명함 ${alerts.needs.length}장 필요` }),
+        el('p', { text: `오늘 동선에 명함 넣는 이벤트 부스가 있다: ${alerts.needs.slice(0, 4).map((n) => n.name).join(' · ')}${alerts.needs.length > 4 ? ' …' : ''}.` }),
+        el('p', { class: 'note', text: '이벤트 부스는 공식 자료가 아니라 사람이 표시한 것이다.' }),
+        el('div', { class: 'actions' },
+          el('a', { class: 'btn', href: '#/plan', text: '동선 보기' }),
+          paper?.has === false ? el('a', { class: 'btn ghost', href: '#/card', text: 'QR 명함 열기' }) : null)) : null,
+    ].filter(Boolean));
+  }
+  paint();
+  window.addEventListener('ces-alerts', paint);
+  return box;
+}
+
+// 알림: 켜기 단추와, 이 폰에서 되는 것 · 안 되는 것.
+function notifyBox() {
+  const state = el('p', { class: 'big' });
+  const button = el('button', { class: 'btn', type: 'button', text: '알림 켜기', hidden: true, onclick: async () => { await askPermission(); checkAlerts(); } });
+  function paint() {
+    state.textContent = { granted: '알림이 켜져 있다.', default: '알림을 켤 수 있다.', denied: '알림을 막아 두었다. 대신 이 화면의 띠로 보인다.', unsupported: '이 브라우저에서는 알림을 쓸 수 없다. 대신 이 화면의 띠로 보인다.' }[alerts.state];
+    button.hidden = alerts.state !== 'default';
+  }
+  paint();
+  window.addEventListener('ces-alerts', paint);
+  return el('section', { class: 'panel' }, el('h2', { text: '알림' }), state,
+    el('p', { class: 'note', text: '알리는 것: 오늘 동선에 명함 넣는 이벤트 부스가 있을 때, 그 부스 가까이 갔을 때. 서버가 없어서 앱을 열 때와 내 자리가 바뀔 때만 확인한다. 앱이 닫혀 있으면 정해진 시각에 울리지 않는다.' }),
+    el('p', { class: 'note', text: '아이폰은 홈 화면에 추가한 뒤에야 알림을 켤 수 있다. 막아 두었으면 폰의 설정에서 이 앱의 알림을 다시 켠다.' }),
+    el('div', { class: 'actions' }, button));
+}
 
 // 인터넷 없이 쓰기: 담겼는지 · 판 이름 · 홈 화면에 추가.
 function offlineBox() {
@@ -104,5 +152,5 @@ export async function render() {
     el('p', {}, info.sources.flatMap((s, i) => [i ? ' · ' : '', out(s.url, s.ko)])),
     el('p', { text: '연수에 가는 참가자가 만든 비공식 안내다. CES(CTA)나 코디세이 운영 측의 공식 자료가 아니다.' }));
 
-  return el('div', { class: 'page' }, hero, recheck, days, campuses, moving, badge, data, offlineBox(), sources);
+  return el('div', { class: 'page' }, hero, alertBands(show.from), recheck, days, campuses, moving, badge, data, notifyBox(), offlineBox(), sources);
 }

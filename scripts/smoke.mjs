@@ -164,6 +164,23 @@ check(diary.fileName(who, new Date(2027, 0, 7)) === 'ces2027-일기-물개-20270
   check((placesAll.cityPlaces || []).length >= 3 && placesAll.cityPlaces.every((p) => p.shapeGuess === true && p.maps.query && p.maps.address && (p.maps.addressChecked === null || /^\d{4}-\d\d-\d\d$/.test(p.maps.addressChecked))), `전시장 밖 공개 장소 ${(placesAll.cityPlaces || []).length}곳: 자리는 어림으로 표시, 주소는 확인한 날 또는 미확인`);
 }
 
+// 종이 명함 · 명함 이벤트 부스 · 알림.
+{
+  const A = await import('../web/alerts.js');
+  check(A.shouldAskPaper(null, '2026-11-21') === 'first' && A.shouldAskPaper({ has: null }, '2026-11-21') === 'first' && A.shouldAskPaper({ has: false, asked: '2026-11-21', remindOn: '2026-12-29' }, '2026-12-28') === null && A.shouldAskPaper({ has: false, asked: '2026-11-21', remindOn: '2026-12-29' }, '2026-12-29') === 'again' && A.shouldAskPaper({ has: true, asked: '2026-12-30', remindOn: '2026-12-29' }, '2027-01-02') === null && A.defaultRemind('2027-01-06') === '2026-12-29', '종이 명함 묻기: 처음 한 번, 정해 둔 날(기본은 전시 8일 전)에 한 번 더, 그 뒤에는 묻지 않는다');
+  let marks = A.toggleMark({}, 'LVCC_N|14731');
+  marks = A.mergeMarks(marks, ['VEN_G|61300', 'LVCC_N|14731', 'nope', 7, 'LVCC_C|20145']).marks;
+  const boothsOf = (id) => ({ a: ['14731@LVCC_N'], b: ['9@LVCC_W', '61300@VEN_G'], c: ['20145@LVCC_C'], d: ['11111@LVCC_N'] }[id]);
+  const mine = [{ id: 'a', day: 1 }, { id: 'b', day: 1 }, { id: 'c', day: 2 }, { id: 'd', day: 1 }, { id: 'a2', day: 1 }];
+  const dayOf = (date) => ({ '2027-01-06': 1, '2027-01-07': 2 }[date] || null);
+  const day1 = A.cardsNeeded(mine, marks, '2027-01-06', dayOf, boothsOf);
+  check(Object.keys(marks).length === 3 && A.markLabel(marks['LVCC_N|14731']) === '내가 표시' && A.markLabel(marks['VEN_G|61300']) === '팀이 표시' && day1.map((n) => n.id + ':' + n.by).join(' ') === 'a:me b:team' && A.cardsNeeded(mine.map((it) => ({ ...it, seen: true })), marks, '2027-01-06', dayOf, boothsOf).length === 0 && A.cardsNeeded(mine, marks, '2026-12-01', dayOf, boothsOf).length === 0 && Object.keys(A.toggleMark(marks, 'LVCC_N|14731')).length === 2, '명함 이벤트 부스: 사람이 표시한 것만(내가 · 팀이), 그날 동선에서 아직 안 본 곳만 센다');
+  check(String(A.nearMarks({ by: 'booth', place: 'LVCC_N', code: '14706' }, marks)) === 'LVCC_N|14731' && A.nearMarks({ by: 'booth', place: 'LVCC_N', code: '10100' }, marks).length === 0 && String(A.nearMarks({ by: 'gps', campus: 'ven', area: { places: ['VEN_AD', 'VEN_G'] } }, marks)) === 'VEN_G|61300' && A.nearMarks({ by: 'gps', campus: 'lvcc', inside: true }, marks).length === 0 && A.nearMarks(null, marks).length === 0, '가까운 이벤트 부스: 부스 번호로 맞춘 자리면 통로가 가까운 것, GPS면 그 홀 안의 것, 캠퍼스만 알면 알리지 않는다');
+  check(A.fresh({}, 'morning', '2027-01-06') && !A.fresh({ morning: '2027-01-06' }, 'morning', '2027-01-06') && A.fresh({ morning: '2027-01-06' }, 'morning', '2027-01-07') && A.notifyState({}) === 'unsupported' && A.notifyState({ Notification: { permission: 'denied' }, navigator: { serviceWorker: {} } }) === 'denied', '알림: 같은 알림은 하루에 한 번, 알림을 못 쓰는 브라우저를 가려낸다');
+  const swText = await readFile(join(dist, 'sw.js'), 'utf8');
+  check(swText.includes('notificationclick') && html.includes('id="notice"') && !/PushManager|pushManager|subscribe\(/.test(swText + (await readFile(join(dist, 'app.js'), 'utf8')) + (await readFile(join(dist, 'notify.js'), 'utf8'))), '알림은 서버 없이: 서비스 워커가 알림 누르기를 받고, 푸시 구독은 쓰지 않는다. 못 쓰는 폰을 위한 띠 자리가 있다');
+}
+
 // 지도 색칠: 분야 묶음 · 한국 · 혁신상.
 {
   const C = await import('../web/colors.js');
@@ -249,7 +266,7 @@ const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 const version = await json('version.json').catch(() => null);
 const swFiles = JSON.parse(`[${(sw.match(/const FILES = \[(.*)\];/) || [])[1] || ''}]`);
 check(!!version && sw.includes(JSON.stringify(version.v)) && !sw.includes('__VERSION__'), `판 이름이 찍혔다 (${version?.v})`);
-const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'views/map.js', 'views/diary.js', 'views/topics.js', 'views/days.js', 'topics.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/topics.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
+const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'views/map.js', 'views/diary.js', 'views/topics.js', 'views/days.js', 'topics.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'alerts.js', 'notify.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/topics.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
 const missing = mustCache.filter((f) => !swFiles.includes(f));
 const gone = [];
 for (const f of swFiles) if (f !== './' && !(await exists(f))) gone.push(f);

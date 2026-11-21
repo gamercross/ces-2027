@@ -5,6 +5,8 @@ import { getExhibitors, getInfo, getMeta, getPlaces } from '../data.js';
 import { getDayLimit, getEvents, getHours, getInterests, getPace, setDayLimit, setInterests } from '../store.js';
 import { capacity, clock, dayLimits, eventsOn, hoursFor, timeline } from '../days.js';
 import { placeLink } from './days.js';
+import { markLabel, toggleMark } from '../alerts.js';
+import { getMarks, setMarks } from '../notify.js';
 import { fillDays, nextStop, placeTable, sortRoute, splitBooth } from '../route.js';
 import { mapsLink } from '../maps.js';
 import { mergeItems, planCode, planCsv, planMd, planText, readCode, shareLink } from '../share.js';
@@ -52,6 +54,14 @@ export async function render() {
       status.textContent = '관심에서 뺐다.';
       draw();
     } });
+    // 이 회사의 부스 가운데 "명함 넣는 이벤트 있음"으로 표시한 것 (없으면 첫 부스에 표시한다).
+    const keysOf = (row?.[7] || []).map((b) => { const at = b.lastIndexOf('@'); return `${b.slice(at + 1)}|${b.slice(0, at)}`; });
+    const markKey = keysOf.find((k) => getMarks()[k]) || null;
+    const eventButton = keysOf.length ? el('button', { class: 'pick', type: 'button', text: '명함 이벤트', 'aria-pressed': markKey ? 'true' : 'false', 'aria-label': `${row[1]} 명함 넣는 이벤트 ${markKey ? '표시 지우기' : '있음으로 표시'}`, onclick: () => {
+      setMarks(toggleMark(getMarks(), markKey || keysOf[0]));
+      status.textContent = markKey ? '명함 이벤트 표시를 지웠다.' : '명함 넣는 이벤트가 있는 부스로 표시했다. 공식 자료가 아니라 내가 표시한 것이다.';
+      draw();
+    } }) : null;
     const seen = el('button', { class: 'pick', type: 'button', text: it.seen ? '봤다' : '아직', 'aria-pressed': it.seen ? 'true' : 'false', 'aria-label': `${row ? row[1] : '회사'} 봤다고 표시`, onclick: () => {
       setInterests(getInterests().map((x) => (x.id === it.id ? { ...x, seen: !x.seen } : x)));
       status.textContent = it.seen ? '아직 보지 않은 곳으로 돌렸다.' : '봤다고 표시했다. 다음 갈 곳이 바뀐다.';
@@ -75,9 +85,9 @@ export async function render() {
     return el('li', { class: it.seen ? 'stop seen' : 'stop' },
       el('span', { class: 'no', text: String(no) }),
       el('div', { class: 'stop-main' },
-        el('div', { class: 'name', text: row ? row[1] : '자료에서 빠진 회사' }),
+        el('div', { class: 'name' }, row ? row[1] : '자료에서 빠진 회사', markKey ? el('span', { class: 'tag', text: `명함 이벤트 (${markLabel(getMarks()[markKey])})` }) : null),
         el('div', { class: 'where', text: (at === undefined ? '' : at === null ? '시간 밖 · ' : `${clock(at)}쯤 · `) + (booth ? `${place ? place.ko : '장소 모름'} ${splitBooth(booth).code}${row[7].length > 1 ? ` 밖에 ${row[7].length - 1}곳` : ''}` : (row ? '부스 미정' : '새로 받은 자료에 없다')) })),
-      el('div', { class: 'stop-side' }, seen, select, up, down, remove, route ? out(route, '길찾기') : null, row ? el('a', { href: `#/diary/new/${it.id}`, text: '일기' }) : null));
+      el('div', { class: 'stop-side' }, seen, eventButton, select, up, down, remove, route ? out(route, '길찾기') : null, row ? el('a', { href: `#/diary/new/${it.id}`, text: '일기' }) : null));
   }
 
   function draw() {
@@ -144,11 +154,13 @@ export async function render() {
         kids.push(item(it, i + 1, hours ? when[i] : undefined));
       });
       const room = hours ? limits[d.key] : null;
+      const allMarks = getMarks();
+      const cardCount = items.filter((it) => (byId.get(it.id)?.[7] || []).some((b) => { const at = b.lastIndexOf('@'); return allMarks[`${b.slice(at + 1)}|${b.slice(0, at)}`]; })).length;
       sections.push(el('section', { class: 'panel' },
         el('h2', { text: `${d.ko} · ${items.length}곳` }),
         hours ? el('p', { class: 'note', text: hours.off
           ? '이 날은 전시를 보지 않는 날로 정했다.'
-          : `쓸 시간 ${clock(hours.from)} ~ ${clock(hours.to)}${hours.mine ? ' (내가 고침)' : ' (공식 전시 시간)'} · 한 곳 ${pace}분 · ${room}곳까지 들어간다.` }) : null,
+          : `${cardCount ? `명함 ${cardCount}장 필요 (명함 이벤트 부스, 사람이 표시). ` : ''}쓸 시간 ${clock(hours.from)} ~ ${clock(hours.to)}${hours.mine ? ' (내가 고침)' : ' (공식 전시 시간)'} · 한 곳 ${pace}분 · ${room}곳까지 들어간다.` }) : null,
         // 그 날에 들어가는 수를 넘으면 알려 준다 (막지는 않는다).
         hours && items.length > room ? el('p', { class: 'note warn', text: `${items.length - room}곳이 넘친다. 날짜를 옮기거나, 시간을 늘리거나, 그대로 둔다.` }) : null,
         el('ol', { class: 'stops' }, kids)));

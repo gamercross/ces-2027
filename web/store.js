@@ -49,7 +49,12 @@ export function toggleInterest(id) {
 
 // 내 위치: { by: 'gps' | 'booth', campus, place?, code?, x?, z?, meters?, at } — 폰에만 남는다.
 export const getWhere = () => load('where.v1', null);
-export const setWhere = (where) => save('where.v1', where);
+export function setWhere(where) {
+  const ok = save('where.v1', where);
+  // 내 자리가 바뀌면 알린다 (가까운 명함 이벤트 부스를 확인하려고).
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('ces-where'));
+  return ok;
+}
 
 // 회사 일기: [{ id, date, exId, company, booth, saw, felt, for: [태그], sent }] — 폰에만 남는다.
 // sent는 보내기(또는 내보내기)를 누른 때다. 보내기를 누른 일기만 폰 밖으로 나간다.

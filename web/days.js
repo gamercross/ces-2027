@@ -91,8 +91,8 @@ export function cleanEvent(e) {
 // 받은 파일(글)을 읽는다. { hours, events, pace, problems } — 꼴이 맞지 않는 줄은 빼고 problems에 적는다.
 export function readFile(raw) {
   let json;
-  try { json = JSON.parse(raw); } catch { return { hours: {}, events: [], pace: null, problems: ['JSON이 아니다'] }; }
-  if (json?.app !== FORMAT || json?.v !== VERSION) return { hours: {}, events: [], pace: null, problems: [`이 앱의 일정 파일이 아니다 (app: ${FORMAT}, v: ${VERSION})`] };
+  try { json = JSON.parse(raw); } catch { return { hours: {}, events: [], pace: null, eventBooths: [], problems: ['JSON이 아니다'] }; }
+  if (json?.app !== FORMAT || json?.v !== VERSION) return { hours: {}, events: [], pace: null, eventBooths: [], problems: [`이 앱의 일정 파일이 아니다 (app: ${FORMAT}, v: ${VERSION})`] };
   const problems = [];
   const hours = {};
   for (const h of Array.isArray(json.hours) ? json.hours : []) {
@@ -109,17 +109,20 @@ export function readFile(raw) {
     if (ok) events.push(ok); else problems.push('꼴이 맞지 않는 일정 하나를 뺐다');
   }
   const pace = PACES.includes(json.perStopMinutes) ? json.perStopMinutes : null;
-  return { hours, events, pace, problems };
+  // 팀이 표시한 "명함 넣는 이벤트 부스" ('장소|부스 글'). 없어도 된다.
+  const eventBooths = (Array.isArray(json.eventBooths) ? json.eventBooths : []).filter((k) => typeof k === 'string' && /^[A-Z0-9_]+\|.{1,60}$/.test(k));
+  return { hours, events, pace, eventBooths, problems };
 }
 
 // 내 시간과 일정을 파일 꼴로. 단톡방으로 건네고 받는 사람이 불러온다. 레포에는 올리지 않는다.
-export function makeFile(savedHours, events, pace) {
+export function makeFile(savedHours, events, pace, marks) {
   return {
     app: FORMAT,
     v: VERSION,
     hours: Object.entries(savedHours || {}).sort().map(([date, h]) => (h.off ? { date, off: true } : { date, from: h.from, to: h.to })),
     events: (events || []).map((e) => ({ date: e.date, from: e.from, to: e.to, name: e.name, place: e.place || '' })),
     perStopMinutes: pace,
+    eventBooths: Object.keys(marks || {}).sort(),
   };
 }
 
