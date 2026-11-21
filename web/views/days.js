@@ -4,7 +4,7 @@
 import { el, out } from '../dom.js';
 import { getInfo, getPlaces } from '../data.js';
 import { getDayLimit, getEvents, getHours, getPace, setEvents, setHours, setPace } from '../store.js';
-import { capacity, cleanEvent, eventsOn, hoursFor, makeFile, mergeIn, PACES, readFile, toHHMM } from '../days.js';
+import { capacity, cleanEvent, eventsOn, hoursFor, makeFile, mergeIn, PACES, readFile, toHHMM, updateEvent } from '../days.js';
 import { mapsLink } from '../maps.js';
 import { mergeMarks } from '../alerts.js';
 import { getMarks, setMarks } from '../notify.js';
@@ -37,6 +37,7 @@ export async function render() {
   const holder = el('div', { class: 'page' });
   const status = el('p', { class: 'note', role: 'status' });
   const src = info.show.source;
+  let editing = null; // 지금 고치고 있는 일정의 이름표
   const [, sm, sd] = src.read.split('-');
 
   function hoursPanel() {
@@ -80,20 +81,33 @@ export async function render() {
 
   function eventsPanel() {
     const events = [...getEvents()].sort((a, b) => a.date.localeCompare(b.date) || a.from.localeCompare(b.from));
-    const date = el('input', { type: 'date', required: true, value: info.show.from, 'aria-label': '날짜' });
-    const from = el('input', { type: 'time', required: true, value: '19:00', 'aria-label': '시작' });
-    const to = el('input', { type: 'time', required: true, value: '21:00', 'aria-label': '끝' });
-    const name = el('input', { maxlength: 60, required: true, placeholder: '예: 저녁 모임', 'aria-label': '일정 이름' });
-    const place = el('input', { maxlength: 80, placeholder: '장소 (아래에서 골라도 된다)', list: 'known-places', 'aria-label': '장소' });
+    const target = editing && events.find((e) => e.id === editing);
+    if (editing && !target) editing = null;
+    const date = el('input', { type: 'date', required: true, value: target?.date || info.show.from, 'aria-label': '날짜' });
+    const from = el('input', { type: 'time', required: true, value: target?.from || '19:00', 'aria-label': '시작' });
+    const to = el('input', { type: 'time', required: true, value: target?.to || '21:00', 'aria-label': '끝' });
+    const name = el('input', { maxlength: 60, required: true, placeholder: '예: 저녁 모임', 'aria-label': '일정 이름', value: target?.name || '' });
+    const place = el('input', { maxlength: 80, placeholder: '장소 (아래에서 골라도 된다)', list: 'known-places', 'aria-label': '장소', value: target?.place || '' });
     const known = el('datalist', { id: 'known-places' }, [...(places.cityPlaces || []), ...places.places.filter((p) => p.kind === 'hall' || p.kind === 'hotel')].map((p) => el('option', { value: p.ko })));
-    const form = el('form', { class: 'form' },
+    const form = el('form', { class: 'form', id: 'event-form' },
       el('label', { class: 'field' }, el('span', { class: 'label', text: '날짜' }), date),
       el('div', { class: 'field' }, el('span', { class: 'label', text: '시작 ~ 끝' }), el('div', { class: 'times' }, from, el('span', { text: '~' }), to)),
       el('label', { class: 'field' }, el('span', { class: 'label', text: '이름' }), name),
       el('label', { class: 'field' }, el('span', { class: 'label', text: '장소' }), place, known),
-      el('div', { class: 'actions' }, el('button', { class: 'btn', type: 'submit', text: '일정 넣기' })));
+      el('div', { class: 'actions' },
+        el('button', { class: 'btn', type: 'submit', text: target ? '고친 것 남기기' : '일정 넣기' }),
+        target ? el('button', { class: 'btn ghost', type: 'button', text: '고치기 그만두기', onclick: () => { editing = null; status.textContent = '고치지 않았다.'; draw(); } }) : null));
     form.addEventListener('submit', (ev) => {
       ev.preventDefault();
+      if (target) {
+        const got = updateEvent(getEvents(), target.id, { date: date.value, from: from.value, to: to.value, name: name.value, place: place.value });
+        if (!got.ok) { status.textContent = '날짜 · 시작 · 끝 · 이름을 본다. 끝은 시작보다 늦어야 한다. 고치지 않았다.'; return; }
+        setEvents(got.events);
+        editing = null;
+        status.textContent = `"${name.value.trim()}"을(를) 고쳤다. 동선과 지도에도 바뀐 시간으로 보인다.`;
+        draw();
+        return;
+      }
       const e = cleanEvent({ date: date.value, from: from.value, to: to.value, name: name.value, place: place.value });
       if (!e) { status.textContent = '날짜 · 시작 · 끝 · 이름을 본다. 끝은 시작보다 늦어야 한다.'; return; }
       setEvents([...getEvents(), e]);
@@ -102,6 +116,7 @@ export async function render() {
     });
     return el('section', { class: 'panel' },
       el('h2', { text: `내 일정 ${events.length}개` }),
+      target ? el('p', { class: 'note', text: `"${target.name}"을(를) 고치는 중이다. 시간 · 이름 · 장소를 바꾸고 "고친 것 남기기"를 누른다.` }) : null,
       el('p', { class: 'note', text: '전시 밖 일정(모임 · 공연 · 거리 구경 · 공항 이동 같은 것)을 넣는다. 동선과 지도에 같이 보이고, 그 시간에는 동선을 짜지 않는다. 이 폰에만 남는다.' }),
       events.length ? el('ul', { class: 'stack' }, events.map((e) => {
         const link = placeLink(places, e.place);
@@ -110,6 +125,7 @@ export async function render() {
           el('div', { class: 'where', text: `${dayKo(e.date)} ${e.from} ~ ${e.to}${e.place ? ` · ${e.place}` : ''}` }),
           el('div', { class: 'row-actions' },
             link ? out(link, '구글맵에서 열기') : null,
+            el('button', { class: 'linkish', type: 'button', text: '고치기', onclick: () => { editing = e.id; status.textContent = `"${e.name}"을(를) 아래 칸에서 고친다.`; draw(); document.getElementById('event-form')?.scrollIntoView({ block: 'center' }); } }),
             el('button', { class: 'linkish', type: 'button', text: '지우기', onclick: () => { setEvents(getEvents().filter((x) => x.id !== e.id)); status.textContent = '일정을 지웠다.'; draw(); } })));
       })) : null,
       form);

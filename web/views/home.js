@@ -63,6 +63,7 @@ const QUICK = [
   { view: 'people', href: '#/people', ko: '만난 사람', icon: 'M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3.5 19a5.5 5.5 0 0 1 11 0M16 8h5M18.5 5.5v5' },
   { view: 'transit', href: '#/transit', ko: '셔틀', icon: 'M6 5h12v11H6zM6 11h12M8.5 19v-3M15.5 19v-3' },
   { view: 'apply', href: '#/apply', ko: '따로 신청', icon: 'M7 4h10v16H7zM10 9h4M10 13h4' },
+  { view: 'onsite', href: '#/onsite', ko: '현장 안내', icon: 'M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6zM12 8v5M12 15.5v.5' },
   { view: 'topics', href: '#/topics', ko: '주제 판', icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z' },
 ];
 function quickBox() {
@@ -96,6 +97,11 @@ function alertBands(showFrom) {
         el('div', { class: 'actions' },
           el('button', { class: 'btn', type: 'button', text: '있다', onclick: () => answer(true) }),
           el('button', { class: 'btn ghost', type: 'button', text: '없다', onclick: () => { answer(false); location.hash = '#/card'; } }))) : null,
+      alerts.soon.length ? el('section', { class: 'panel band' },
+        el('h2', { text: `곧 시작하는 일정 ${alerts.soon.length}개` }),
+        el('ul', { class: 'dots' }, alerts.soon.slice(0, 3).map((e) => el('li', { text: `${e.inMin}분 뒤 ${e.from} · ${e.name}${e.place ? ` (${e.place})` : ''}` }))),
+        el('p', { class: 'note', text: '라스베이거스 시각이다. 앱이 열려 있을 때만 알려 준다.' }),
+        el('div', { class: 'actions' }, el('a', { class: 'btn', href: '#/days', text: '일정 보기' }))) : null,
       alerts.needs.length ? el('section', { class: 'panel band' },
         el('h2', { text: `오늘 명함 ${alerts.needs.length}장 필요` }),
         el('p', { text: `오늘 동선에 명함 넣는 이벤트 부스가 있다: ${alerts.needs.slice(0, 4).map((n) => n.name).join(' · ')}${alerts.needs.length > 4 ? ' …' : ''}.` }),
@@ -168,7 +174,7 @@ function notifyBox() {
   paint();
   window.addEventListener('ces-alerts', paint);
   return el('section', { class: 'panel' }, el('h2', { text: '알림' }), state,
-    el('p', { class: 'note', text: '알리는 것: 오늘 동선에 명함 넣는 이벤트 부스가 있을 때, 그 부스 가까이 갔을 때. 서버가 없어서 앱을 열 때와 내 자리가 바뀔 때만 확인한다. 앱이 닫혀 있으면 정해진 시각에 울리지 않는다.' }),
+    el('p', { class: 'note', text: '알리는 것: 내 일정(세션 포함)이 30분 안에 시작할 때, 오늘 동선에 명함 넣는 이벤트 부스가 있을 때, 그 부스 가까이 갔을 때. 서버가 없어서 앱이 열려 있을 때(1분마다)와 앱을 열 때, 내 자리가 바뀔 때만 확인한다. 앱이 닫혀 있으면 정해진 시각에 울리지 않는다.' }),
     el('p', { class: 'note', text: '아이폰은 홈 화면에 추가한 뒤에야 알림을 켤 수 있다. 막아 두었으면 폰의 설정에서 이 앱의 알림을 다시 켠다.' }),
     error,
     el('div', { class: 'actions' }, button));

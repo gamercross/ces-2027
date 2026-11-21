@@ -30,6 +30,8 @@ export const getIndoorPaths = () => cached('indoorPaths', () => getJson('data/in
 export const getPhrases = () => cached('phrases', () => getJson('data/phrases.json'));
 // CES 배지와 따로 신청하는 곳 · 자율주행 이동 (공식 출처만). 첫 화면을 그린 뒤에 읽는다.
 export const getSeparate = () => cached('separate', () => getJson('data/separate.json'));
+export const getOnsite = () => cached('onsite', () => getJson('data/onsite.json'));
+export const getTransit = () => cached('transit', () => getJson('data/transit.json'));
 // 팀이 같이 쓰는 주제. 없거나 비어 있으면 각자 만든다.
 export const getTeamTopics = () => cached('teamTopics', () => getJson('data/topics.json').catch(() => ({ topics: [] })));
 

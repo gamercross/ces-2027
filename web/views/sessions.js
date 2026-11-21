@@ -4,7 +4,7 @@
 
 import { el, out } from '../dom.js';
 import { getEvents, setEvents } from '../store.js';
-import { clean, daysOf, isIn, isKeynote, onDay, recommend, search, toggle } from '../sessions.js';
+import { clean, daysOf, isIn, isKeynote, onDay, recommendWithSkips, search, shareText, toggle } from '../sessions.js';
 import { placeLink } from './days.js';
 import { getPlaces } from '../data.js';
 import { getTopics } from '../store.js';
@@ -39,7 +39,21 @@ export async function render() {
   const tabs = el('div', { class: 'segs', role: 'group', 'aria-label': '날짜' });
   const count = el('h2');
   const box = el('input', { type: 'search', placeholder: '낱말로 찾기 (예: AI, robot, Hyundai)', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', 'aria-label': '세션 찾기' });
-  const recs = recommend(data.items, getTopics());
+  const recBox = el('div', { class: 'page' });
+
+  // 세션을 남에게 건넨다: 폰의 나누기 창이 있으면 그것, 없으면 글을 복사한다. 우리 서버는 거치지 않는다.
+  async function share(s) {
+    const text = shareText(s);
+    try {
+      if (navigator.share) { await navigator.share({ title: s.title, text }); status.textContent = '나누기 창을 열었다.'; return; }
+    } catch (e) { if (e?.name === 'AbortError') return; }
+    try {
+      await navigator.clipboard.writeText(text);
+      status.textContent = '세션 글을 복사했다. 단톡방에 붙여 넣는다.';
+    } catch {
+      status.textContent = `복사하지 못했다. 아래 글을 손으로 복사한다: ${text.replace(/\n/g, ' / ')}`;
+    }
+  }
 
   function row(s, withDate) {
     const mine = isIn(s, getEvents());
@@ -58,6 +72,7 @@ export async function render() {
           status.textContent = next.added ? `"${s.title}"을(를) 내 일정에 넣었다. 동선과 지도에 같이 보인다.` : `"${s.title}"을(를) 내 일정에서 뺐다.`;
           draw();
         } }),
+        el('button', { class: 'linkish', type: 'button', text: '나누기', onclick: () => share(s) }),
         out(s.url, '공식 쪽'),
         link ? out(link, '구글맵') : null));
   }
@@ -70,6 +85,11 @@ export async function render() {
     }));
     const found = q ? search(data.items, q).sort((a, b) => a.date.localeCompare(b.date) || a.from.localeCompare(b.from)) : onDay(data.items, day);
     count.textContent = q ? `찾은 세션 ${found.length}개` : `${dayKo(day)} 세션 ${found.length}개 · 내 일정에 넣은 것 ${mineCount}개`;
+    const { picks, skipped } = recommendWithSkips(data.items, getTopics(), getEvents());
+    recBox.replaceChildren(...(picks.length ? [el('section', { class: 'panel' },
+      el('h2', { text: '내 주제와 맞는 세션' }),
+      el('p', { class: 'note', text: `주제 판의 이름과 분야로 공식 세션을 거른 뒤, 내 일정과 서로 겹치지 않게 날짜 · 시간 차례로 ${picks.length}곳을 보인다.${skipped ? ` 때가 겹쳐 건너뛴 것 ${skipped}곳.` : ''}` }),
+      el('ul', { class: 'stack' }, picks.map((s) => row(s, true))))] : []));
     list.replaceChildren(...(found.length ? found.map((s) => row(s, !!q)) : [el('li', { class: 'note', text: '맞는 세션이 없다. 다른 낱말로 찾아 본다.' })]));
   }
   box.addEventListener('input', () => { q = box.value.trim(); draw(); });
@@ -85,10 +105,7 @@ export async function render() {
       el('label', { class: 'field' }, el('span', { class: 'label', text: '찾기' }), box),
       tabs,
       status),
-    recs.length ? el('section', { class: 'panel' },
-      el('h2', { text: '내 주제와 맞는 세션' }),
-      el('p', { class: 'note', text: '주제 판의 이름과 분야로 공식 세션을 거른 뒤, 먼저 오는 열 곳을 보인다.' }),
-      el('ul', { class: 'stack' }, recs.map((s) => row(s, true)))) : null,
+    recBox,
     el('section', { class: 'panel' }, count, list),
     el('section', { class: 'foot' }, el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: '#/plan', text: '동선 보기' }), el('a', { class: 'btn ghost', href: '#/days', text: '시간과 일정' }))));
 }

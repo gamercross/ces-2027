@@ -777,6 +777,62 @@ if (await exists('data/meta.json')) {
   check(bad.length === 0 && /people: \(\) => import\('\.\/views\/people\.js'\)/.test(appText) && !/people/.test(diaryText) && !/people|links|githubUrl/.test(sent), '첫 화면 조각은 새 화면을 미리 읽지 않고(누를 때 불러온다), 일기 보내기 묶음에는 만난 사람이 들어가지 않는다');
 }
 
+// 기준표 채우기 (11/21): 현장 안내 · 일정 고치기 · 날짜와 시간에 맞춘 세션 추천 · 세션 나누기 · 시작 전 알림 · 물어보기의 장소 · 셔틀 · 현장 안내.
+{
+  const on = await import('../web/onsite.js');
+  const ask = await import('../web/askall.js');
+  const { updateEvent } = await import('../web/days.js');
+  const ses = await import('../web/sessions.js');
+  const al = await import('../web/alerts.js');
+  const isDate = (v) => /^\d{4}-\d\d-\d\d$/.test(v);
+  const onsite = await json('data/onsite.json');
+  const cleanOnsite = on.clean(onsite);
+  const lineN = onsite.sections.reduce((n, sec) => n + sec.lines.length, 0);
+  const srcOk = Object.values(onsite.sources).every((x) => /^https:\/\/www\.ces\.tech\/attendee-guides\//.test(x.url) && isDate(x.read) && x.ko);
+  const tels = onsite.sections.flatMap((sec) => sec.lines.flatMap((l) => on.telsOf(l)));
+  const rawTels = onsite.sections.flatMap((sec) => sec.lines.flatMap((l) => [l.tel, ...(l.tels || [])].filter(Boolean)));
+  check(!!cleanOnsite && srcOk && isDate(onsite.read) && lineN >= 20 && tels.length === rawTels.length && tels.every((t) => /^tel:\+1\d{10}$/.test(t.href)) && on.telHref('abc') === null && on.telHref('702-590-7911') === 'tel:+17025907911', `현장 안내 자료: ${onsite.sections.length}묶음 ${lineN}줄, 출처는 CES 공식 안내 쪽 · 읽은 날짜가 있고, 전화번호 ${tels.length}개가 모두 걸 수 있는 꼴이다`);
+  check(on.clean({ ...onsite, sections: [{ k: 'x', ko: 'x', src: 'nope', lines: [{ ko: 'a', text: 'b' }] }] }) === null && on.clean(null) === null, '현장 안내: 출처가 없는 줄이나 비어 있는 자료는 쓰지 않는다 (짐작해서 채우지 않는다)');
+  const appT = await readFile(join(dist, 'app.js'), 'utf8');
+  const homeT = await readFile(join(dist, 'views/home.js'), 'utf8');
+  const onsiteT = await readFile(join(dist, 'views/onsite.js'), 'utf8');
+  const pagesY = await readFile(new URL('../.github/workflows/pages.yml', import.meta.url), 'utf8');
+  const linksY = await readFile(new URL('../.github/workflows/links.yml', import.meta.url), 'utf8');
+  check(/onsite: \(\) => import\('\.\/views\/onsite\.js'\)/.test(appT) && !/from '\.\/onsite\.js'/.test(appT + homeT) && homeT.includes('#/onsite') && /신고를 받지 않는다/.test(onsiteT) && /\.notice/.test(onsiteT) && pagesY.includes('data/onsite.json') && linksY.includes('--in data/onsite.json'), '현장 안내: 누를 때 불러오고, 신고를 받지 않는다고 화면에 적혀 있고, 배포에 담기며 출처 링크 살피기가 이 파일도 본다');
+  // 물어보기: 현장 안내 · 셔틀 · 장소가 찾힌다.
+  const docs = { info: await json('data/info.json'), separate: await json('data/separate.json'), phrases: await json('data/phrases.json'), transit: await json('data/transit.json'), onsite, places: await json('data/places.json') };
+  const entries = ask.buildEntries({ ...docs, sessions: null });
+  const top = (q, kind) => ask.searchAll(q, entries, { items: [] }).groups.find((g) => g.k === kind)?.hits[0];
+  check(/현장/.test(top('분실물', 'onsite')?.title || '') && /휠체어/.test(top('휠체어', 'onsite')?.title || '') && top('가방 크기', 'onsite')?.to === '#/onsite' && top('스피어', 'places')?.to === '#/map' && top('모노레일', 'transit')?.to === '#/transit' && entries.filter((e) => e.kind === 'onsite').length === lineN, '물어보기: 분실물 · 휠체어 · 가방 크기는 현장 안내로, 장소(스피어)는 지도로, 모노레일은 오가는 법으로 이어진다');
+  check(entries.filter((e) => e.kind === 'onsite' || e.kind === 'transit').every((e) => e.src && /^https:\/\/www\.ces\.tech\//.test(e.src.url) && isDate(e.src.read)), '물어보기: 현장 안내와 셔틀 줄은 모두 공식 출처와 읽은 날짜가 이어진다');
+  // 일정 제자리 고치기.
+  const evs = [{ id: 'e1', date: '2027-01-06', from: '19:00', to: '21:00', name: '저녁 모임', place: '' }, { id: 'ses-x', date: '2027-01-07', from: '09:00', to: '09:40', name: '세션', place: 'LVCC' }];
+  const up = updateEvent(evs, 'e1', { from: '18:30', to: '20:00', name: '저녁 모임 (옮김)' });
+  const upBad = updateEvent(evs, 'e1', { from: '22:00', to: '20:00' });
+  const upNone = updateEvent(evs, 'nope', { name: 'x' });
+  check(up.ok && up.events.length === 2 && up.events[0].id === 'e1' && up.events[0].from === '18:30' && up.events[0].name === '저녁 모임 (옮김)' && up.events[1] === evs[1] && !upBad.ok && upBad.events === evs && !upNone.ok, '내 일정 고치기: 이름표는 그대로 두고 시간 · 이름 · 장소만 바꾼다 (끝이 시작보다 이르거나 없는 일정이면 그대로)');
+  const daysT = await readFile(join(dist, 'views/days.js'), 'utf8');
+  check(/고친 것 남기기/.test(daysT) && /고치기 그만두기/.test(daysT), '시간과 일정 화면에 "고치기" 단추가 있다');
+  // 날짜와 시간에 맞춘 세션 추천.
+  const mk = (id, date, from, to, title, topics) => ({ id, date, from, to, title, place: '', topics, track: '', live: false, url: `https://www.ces.tech/schedule/s-${id}/` });
+  const items = [mk('r1', '2027-01-06', '09:00', '10:00', 'Robotics One', ['Robotics']), mk('r2', '2027-01-06', '09:30', '10:30', 'Robotics Two', ['Robotics']), mk('r3', '2027-01-06', '10:00', '11:00', 'Robot Three', []), mk('r4', '2027-01-07', '09:00', '10:00', 'Robotics Four', ['Robotics'])];
+  const topics = [{ name: '로봇', cats: ['Robotics', 'Robot'] }];
+  const free = ses.recommendWithSkips(items, topics);
+  const busy = ses.recommendWithSkips(items, topics, [{ id: 'e1', date: '2027-01-06', from: '10:00', to: '12:00' }]);
+  const mine = ses.recommend(items, topics, [{ id: ses.eventId(items[0]), date: '2027-01-06', from: '09:00', to: '10:00' }]);
+  check(free.picks.map((s) => s.id).join(' ') === 'r1 r3 r4' && free.skipped === 1 && busy.picks.map((s) => s.id).join(' ') === 'r1 r4' && mine.some((s) => s.id === 'r1') && ses.overlaps(items[0], items[1]) && !ses.overlaps(items[0], mk('z', '2027-01-06', '10:00', '11:00', 'z', [])) && ses.recommend(items, []).length === 0, '세션 추천: 서로 · 내 일정과 때가 겹치는 것은 건너뛰고 날짜 · 시간 차례로 보인다 (맞닿는 것은 겹침이 아니고, 이미 넣은 세션은 자기와 겹치지 않는다)');
+  const st = ses.shareText(items[0]);
+  check(/^Robotics One\n1\/6 \(수\) 09:00 ~ 10:00 라스베이거스 시각\nhttps:\/\/www\.ces\.tech\/schedule\/s-r1\/$/.test(st), '세션 나누기: 제목 · 날짜와 때 · 공식 쪽 링크만 글로 건넨다 (서버를 거치지 않는다)');
+  const sesT = await readFile(join(dist, 'views/sessions.js'), 'utf8');
+  check(/navigator\.share/.test(sesT) && /clipboard/.test(sesT), '세션 일정: 나누기 단추가 폰의 나누기 창이나 복사를 쓴다');
+  // 곧 시작하는 일정 알림.
+  const vegas = al.vegasNow(new Date('2027-01-06T17:25:00Z'));
+  const soon = al.soonEvents([{ id: 'a', date: '2027-01-06', from: '09:40', to: '10:00', name: 'A' }, { id: 'b', date: '2027-01-06', from: '09:00', to: '09:20', name: 'B' }, { id: 'c', date: '2027-01-06', from: '11:00', to: '11:20', name: 'C' }, { id: 'd', date: '2027-01-07', from: '09:30', to: '10:00', name: 'D' }], vegas, 30);
+  const notifyT = await readFile(join(dist, 'notify.js'), 'utf8');
+  check(vegas.date === '2027-01-06' && vegas.min === 565 && soon.length === 1 && soon[0].id === 'a' && soon[0].inMin === 15 && /soon:/.test(notifyT) && /setInterval/.test(notifyT), '일정 시작 전 알림: 라스베이거스 시각으로 30분 안에 시작하는 것만 고르고(이미 시작했거나 다른 날은 뺀다), 앱이 열려 있을 때 1분마다 본다');
+  lines.push(`기준표 채우기 | 현장 안내 ${lineN}줄 · 물어보기 현장 ${entries.filter((e) => e.kind === 'onsite').length} · 셔틀 ${entries.filter((e) => e.kind === 'transit').length} · 장소 ${entries.filter((e) => e.kind === 'places').length}`);
+}
+
 const table = ['무엇 | 본 것', '--- | ---', ...lines].join('\n');
 console.log(table);
 if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `### 지은 것 살피기\n\n${table}\n`);
