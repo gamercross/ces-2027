@@ -58,7 +58,7 @@ function nowBox() {
 const QUICK = [
   { view: 'sessions', href: '#/sessions', ko: '세션 일정', icon: 'M5 6h14v13H5zM5 10h14M9 4v4M15 4v4' },
   { view: 'ask', href: '#/ask', ko: '물어볼 말', icon: 'M5 6h14v9H10l-4 3v-3H5z' },
-  { view: 'q', href: '#/q', ko: '물어보기', icon: 'M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.5' },
+  { view: 'q', href: '#/q', ko: '물어보기', icon: 'M12 20.5a8.5 8.5 0 1 0 0-17 8.5 8.5 0 0 0 0 17zM9.6 9.6a2.4 2.4 0 1 1 3.4 2.2c-.6.3-1 .8-1 1.5v.5M12 16.6v.4' },
   { view: 'listen', href: '#/listen', ko: '듣고 일기 초안', icon: 'M12 4a3 3 0 0 1 3 3v4a3 3 0 0 1-6 0V7a3 3 0 0 1 3-3zM6 11a6 6 0 0 0 12 0M12 17v3' },
   { view: 'people', href: '#/people', ko: '만난 사람', icon: 'M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3.5 19a5.5 5.5 0 0 1 11 0M16 8h5M18.5 5.5v5' },
   { view: 'transit', href: '#/transit', ko: '셔틀', icon: 'M6 5h12v11H6zM6 11h12M8.5 19v-3M15.5 19v-3' },

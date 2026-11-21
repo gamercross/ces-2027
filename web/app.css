@@ -258,6 +258,7 @@ details.more[open] > summary { margin-bottom: var(--s2); }
 /* 넓은 화면에서도 탭은 한 줄(가운데)에 선다 */
 @media (min-width: 600px) {
   .tabs { max-width: var(--column); margin: 0 auto; border-radius: var(--radius) var(--radius) 0 0; }
+  .bar { padding-left: max(var(--s4), calc((100% - var(--column)) / 2 + var(--s4))); padding-right: max(var(--s4), calc((100% - var(--column)) / 2 + var(--s4))); }
 }
 
 /* ---- 알림 띠: 탭 바로 위에 뜬다 ---- */
