@@ -1,0 +1,203 @@
+{
+  "about": "CES 공식 셔틀과 그 밖의 오가는 길을 한곳에 모은 자료다. 근거는 CES 공식 교통 안내(ces.tech)와 그 안내가 걸어 둔 CES 2027 무료 교통 전단(PDF)이다. 줄마다 출처와 확인한 날짜가 있다. 2027 안내에서 읽지 못했거나 안내끼리 어긋나는 줄은 status가 check이고, 짐작해서 채우지 않는다. 작년(CES 2026) 시간표는 쓰지 않았다. 시간은 라스베이거스 시간이다. 화면은 이 파일에서만 읽는다.",
+  "read": "2026-11-21",
+  "recheck": "가기 전에 다시 확인한다. 셔틀 시간표와 타는 곳은 바뀔 수 있다. 줄마다 확인한 날짜가 있으니, 오래됐으면 출처를 눌러 본다.",
+  "badge": "공식 CES 2027 배지가 있어야 CES 셔틀을 탄다 (전단의 안내).",
+  "service": { "from": "2027-01-05", "to": "2027-01-09", "ko": "1/5(화) ~ 1/9(토)" },
+  "guide": { "ko": "CES 공식 교통 안내", "url": "https://www.ces.tech/attendee-guides/transportation/", "read": "2026-11-21" },
+  "flyer": { "ko": "CES 2027 무료 교통 전단 (PDF)", "url": "https://www.ces.tech/media/ujcpm5xz/final-ces-2027-transportation-flyer_1022.pdf", "read": "2026-11-21" },
+  "parts": {
+    "inbound": "아침 (숙소 → 전시장)",
+    "midday": "낮",
+    "outbound": "저녁 (전시장 → 숙소)",
+    "all": "하루 내내"
+  },
+  "schedules": {
+    "split": [
+      { "days": "화 1/5", "parts": [{ "part": "midday", "from": "08:00", "to": "18:00", "every": 30 }] },
+      { "days": "수 ~ 금 1/6 ~ 1/8", "parts": [{ "part": "inbound", "from": "07:30", "to": "10:30", "every": 20 }, { "part": "outbound", "from": "16:00", "to": "18:30", "every": 20 }] },
+      { "days": "토 1/9", "parts": [{ "part": "inbound", "from": "07:30", "to": "10:30", "every": 20 }, { "part": "outbound", "from": "14:00", "to": "16:30", "every": 20 }] }
+    ],
+    "allday": [
+      { "days": "화 1/5", "parts": [{ "part": "midday", "from": "08:00", "to": "18:00", "every": 30 }] },
+      { "days": "수 ~ 금 1/6 ~ 1/8", "parts": [{ "part": "inbound", "from": "07:30", "to": "10:30", "every": 20 }, { "part": "midday", "from": "10:30", "to": "16:00", "every": 30 }, { "part": "outbound", "from": "16:00", "to": "18:30", "every": 20 }] },
+      { "days": "토 1/9", "parts": [{ "part": "inbound", "from": "07:30", "to": "10:30", "every": 20 }, { "part": "midday", "from": "10:30", "to": "14:00", "every": 30 }, { "part": "outbound", "from": "14:00", "to": "16:30", "every": 20 }] }
+    ],
+    "express": [
+      { "days": "화 1/5", "parts": [{ "part": "all", "from": "08:00", "to": "18:00", "every": 10 }] },
+      { "days": "수 ~ 금 1/6 ~ 1/8", "parts": [{ "part": "all", "from": "07:30", "to": "18:30", "every": 10 }] },
+      { "days": "토 1/9", "parts": [{ "part": "all", "from": "07:30", "to": "16:30", "every": 10 }] }
+    ],
+    "airport": [
+      { "days": "목 · 금 1/7 · 1/8", "parts": [{ "part": "all", "from": "12:00", "to": "19:00", "every": 30 }] },
+      { "days": "토 1/9", "parts": [{ "part": "all", "from": "12:00", "to": "17:00", "every": 30 }] }
+    ]
+  },
+  "lines": [
+    {
+      "id": "r1", "kind": "hotel", "no": 1, "ko": "1번 · Encore · Wynn",
+      "from": "Encore at Wynn · Wynn", "to": "LVCC (이 노선은 LVCC만)",
+      "stops": [
+        { "ko": "Encore at Wynn", "board": "Wynn의 South Gate 버스 구역", "venue": "WYNN", "query": "Wynn Las Vegas" },
+        { "ko": "Wynn", "board": "South Gate 버스 구역", "venue": "WYNN", "query": "Wynn Las Vegas" }
+      ],
+      "arrive": "LVCC 사우스 홀 · 웨스트 홀 버스 구역",
+      "schedule": "split", "fare": "무료", "status": "confirmed", "note": "",
+      "sources": [{ "ko": "CES 2027 무료 교통 전단", "url": "https://www.ces.tech/media/ujcpm5xz/final-ces-2027-transportation-flyer_1022.pdf", "read": "2026-11-21" }, { "ko": "CES 공식 교통 안내", "url": "https://www.ces.tech/attendee-guides/transportation/", "read": "2026-11-21" }]
+    },
+    {
+      "id": "r2", "kind": "hotel", "no": 2, "ko": "2번 · Treasure Island",
+      "from": "Treasure Island", "to": "LVCC (이 노선은 LVCC만)",
+      "stops": [{ "ko": "Treasure Island", "board": "투어 버스 구역 (Tour Bus Area)", "query": "Treasure Island Las Vegas" }],
+      "arrive": "LVCC 사우스 홀 · 웨스트 홀 버스 구역",
+      "schedule": "split", "fare": "무료", "status": "confirmed", "note": "",
+      "sources": [{ "ko": "CES 2027 무료 교통 전단", "url": "https://www.ces.tech/media/ujcpm5xz/final-ces-2027-transportation-flyer_1022.pdf", "read": "2026-11-21" }]
+    },
+    {
+      "id": "r3", "kind": "hotel", "no": 3, "ko": "3번 · MGM Grand · New York New York",
+      "from": "MGM Grand · New York New York · Signature at MGM", "to": "LVCC · 베네시안 엑스포",
+      "stops": [
+        { "ko": "MGM Grand", "board": "Grand Garden 입구", "query": "MGM Grand Las Vegas" },
+        { "ko": "New York New York", "board": "발레 입구 (Valet Entrance)", "query": "New York-New York Hotel & Casino Las Vegas" },
+        { "ko": "Signature at MGM", "board": "MGM Grand의 Grand Garden 입구", "query": "MGM Grand Las Vegas" }
+      ],
+      "arrive": "LVCC 사우스 홀 · 웨스트 홀 버스 구역 / 베네시안 엑스포 지하 셔틀 구역",
+      "schedule": "split", "fare": "무료", "status": "confirmed", "note": "",
+      "sources": [{ "ko": "CES 2027 무료 교통 전단", "url": "https://www.ces.tech/media/ujcpm5xz/final-ces-2027-transportation-flyer_1022.pdf", "read": "2026-11-21" }]
+    },
+    {
+      "id": "r4", "kind": "hotel", "no": 4, "ko": "4번 · Mandalay Bay · W",
+      "from": "Mandalay Bay · W Las Vegas", "to": "LVCC · 베네시안 엑스포",
+      "stops": [
+        { "ko": "Mandalay Bay", "board": "Shark Reef 입구", "query": "Mandalay Bay Resort and Casino" },
+        { "ko": "W Las Vegas", "board": "Mandalay Bay의 Shark Reef 입구", "query": "Mandalay Bay Resort and Casino" }
+      ],
+      "arrive": "LVCC 사우스 홀 · 웨스트 홀 버스 구역 / 베네시안 엑스포 지하 셔틀 구역",
+      "schedule": "split", "fare": "무료", "status": "confirmed", "note": "",
+      "sources": [{ "ko": "CES 2027 무료 교통 전단", "url": "https://www.ces.tech/media/ujcpm5xz/final-ces-2027-transportation-flyer_1022.pdf", "read": "2026-11-21" }]
+    },
+    {
+      "id": "r5", "kind": "hotel", "no": 5, "ko": "5번 · 다운타운 (Golden Nugget · Circa)",
+      "from": "Circa · The Fremont Hotel · The Golden Nugget · The Plaza", "to": "LVCC · 베네시안 엑스포",
+      "stops": [
+        { "ko": "Circa", "board": "Golden Nugget의 Carson Tower 입구", "query": "Circa Resort & Casino Las Vegas" },
+        { "ko": "The Fremont Hotel", "board": "Golden Nugget의 Carson Tower 입구", "query": "Fremont Hotel & Casino Las Vegas" },
+        { "ko": "The Golden Nugget", "board": "Carson Tower 입구", "query": "Golden Nugget Las Vegas" },
+        { "ko": "The Plaza", "board": "Golden Nugget의 Carson Tower 입구", "query": "Plaza Hotel & Casino Las Vegas" }
+      ],
+      "arrive": "LVCC 사우스 홀 · 웨스트 홀 버스 구역 / 베네시안 엑스포 지하 셔틀 구역",
+      "schedule": "split", "fare": "무료", "status": "confirmed", "note": "",
+      "sources": [{ "ko": "CES 2027 무료 교통 전단", "url": "https://www.ces.tech/media/ujcpm5xz/final-ces-2027-transportation-flyer_1022.pdf", "read": "2026-11-21" }]
+    },
+    {
+      "id": "r6", "kind": "hotel", "no": 6, "ko": "6번 · Bellagio · Cosmopolitan",
+      "from": "Bellagio · Cosmopolitan", "to": "LVCC · 베네시안 엑스포",
+      "stops": [
+        { "ko": "Bellagio", "board": "투어 버스 구역 (Tour Bus Area)", "venue": "BELLAGIO", "query": "Bellagio Las Vegas" },
+        { "ko": "Cosmopolitan", "board": "Tiffany Lot", "venue": "COSMO", "query": "The Cosmopolitan of Las Vegas" }
+      ],
+      "arrive": "LVCC 사우스 홀 · 웨스트 홀 버스 구역 / 베네시안 엑스포 지하 셔틀 구역",
+      "schedule": "split", "fare": "무료", "status": "confirmed", "note": "Cosmopolitan은 낮 시간에 7번(ARIA)으로도 갈 수 있다고 전단에 적혀 있다.",
+      "sources": [{ "ko": "CES 2027 무료 교통 전단", "url": "https://www.ces.tech/media/ujcpm5xz/final-ces-2027-transportation-flyer_1022.pdf", "read": "2026-11-21" }]
+    },
+    {
+      "id": "r7", "kind": "cspace", "no": 7, "ko": "7번 · C Space (ARIA)",
+      "from": "ARIA · Park MGM · Vdara", "to": "LVCC · 베네시안 엑스포",
+      "stops": [
+        { "ko": "ARIA", "board": "투어 버스 구역 (Tour Bus Area). 거기서 ARIA 컨벤션 센터로 걸어간다", "venue": "ARIA", "query": "ARIA Resort & Casino" },
+        { "ko": "Park MGM", "board": "ARIA의 투어 버스 구역", "query": "Park MGM Las Vegas" },
+        { "ko": "Vdara", "board": "ARIA의 투어 버스 구역", "venue": "VDARA", "query": "Vdara Hotel & Spa" }
+      ],
+      "arrive": "LVCC 사우스 홀 · 웨스트 홀 버스 구역 / 베네시안 엑스포 지하 셔틀 구역",
+      "schedule": "allday", "fare": "무료", "status": "check",
+      "note": "다니는 날이 안내끼리 다르다. 전단의 시간표는 화 ~ 토를 싣고, 공식 교통 안내 글과 C Space 안내는 수 ~ 금이라고 적는다(C Space는 1/6 ~ 1/8만 연다). 어느 쪽인지 확인할 때까지 위 시간표는 전단 그대로다.",
+      "todo": "가기 전에 공식 교통 허브(전단의 QR)나 CES 고객지원에서 7번이 화요일과 토요일에도 다니는지 본다.",
+      "sources": [{ "ko": "CES 2027 무료 교통 전단", "url": "https://www.ces.tech/media/ujcpm5xz/final-ces-2027-transportation-flyer_1022.pdf", "read": "2026-11-21" }, { "ko": "CES 공식 교통 안내", "url": "https://www.ces.tech/attendee-guides/transportation/", "read": "2026-11-21" }, { "ko": "C Space 캠퍼스 안내", "url": "https://www.ces.tech/explore-ces/maps-and-locations/c-space-campus/", "read": "2026-11-21" }]
+    },
+    {
+      "id": "r8", "kind": "hotel", "no": 8, "ko": "8번 · Excalibur · Luxor",
+      "from": "Excalibur · Luxor", "to": "LVCC · 베네시안 엑스포",
+      "stops": [
+        { "ko": "Excalibur", "board": "투어 버스 구역 · 로턴다 입구 (Rotunda Entrance)", "query": "Excalibur Hotel & Casino Las Vegas" },
+        { "ko": "Luxor", "board": "Excalibur의 투어 버스 구역 · 로턴다 입구", "query": "Luxor Hotel & Casino Las Vegas" }
+      ],
+      "arrive": "LVCC 사우스 홀 · 웨스트 홀 버스 구역 / 베네시안 엑스포 지하 셔틀 구역",
+      "schedule": "split", "fare": "무료", "status": "confirmed", "note": "",
+      "sources": [{ "ko": "CES 2027 무료 교통 전단", "url": "https://www.ces.tech/media/ujcpm5xz/final-ces-2027-transportation-flyer_1022.pdf", "read": "2026-11-21" }]
+    },
+    {
+      "id": "r9", "kind": "express", "no": 9, "ko": "9번 · Tech Express (LVCC와 베네시안 사이)",
+      "from": "LVCC", "to": "베네시안 엑스포 (양쪽으로 다닌다)",
+      "stops": [
+        { "ko": "LVCC", "board": "센트럴 플라자, 모노레일 역 가는 길 옆", "venue": "LVCC", "query": "Las Vegas Convention Center Central Plaza" },
+        { "ko": "베네시안 엑스포", "board": "Sands Ave 쪽 엑스포 앞 길가", "venue": "VEN_EXPO", "query": "Venetian Expo" }
+      ],
+      "arrive": "",
+      "schedule": "express", "fare": "무료", "status": "confirmed", "note": "10분마다.",
+      "sources": [{ "ko": "CES 2027 무료 교통 전단", "url": "https://www.ces.tech/media/ujcpm5xz/final-ces-2027-transportation-flyer_1022.pdf", "read": "2026-11-21" }, { "ko": "CES 공식 교통 안내", "url": "https://www.ces.tech/attendee-guides/transportation/", "read": "2026-11-21" }]
+    },
+    {
+      "id": "airport", "kind": "airport", "no": null, "ko": "공항 셔틀",
+      "from": "LVCC · 베네시안 엑스포", "to": "해리 리드 국제공항 (LAS)",
+      "stops": [
+        { "ko": "LVCC", "board": "사우스 셔틀 구역", "venue": "LVCC", "query": "Las Vegas Convention Center South Hall" },
+        { "ko": "베네시안 엑스포", "board": "베네시안 지하 셔틀 구역", "venue": "VEN_EXPO", "query": "Venetian Expo" }
+      ],
+      "arrive": "",
+      "schedule": "airport", "fare": "유료 · 한 사람 편도 10달러", "status": "confirmed", "note": "정시와 30분에 떠난다.",
+      "sources": [{ "ko": "CES 2027 무료 교통 전단", "url": "https://www.ces.tech/media/ujcpm5xz/final-ces-2027-transportation-flyer_1022.pdf", "read": "2026-11-21" }]
+    },
+    {
+      "id": "media", "kind": "media", "no": null, "ko": "미디어 데이 셔틀 (보도 배지만)",
+      "from": "호텔 여러 곳", "to": "전시장",
+      "stops": [],
+      "arrive": "",
+      "schedule": null, "when": "1/4(월) ~ 1/5(화)", "fare": "무료 · CES 보도(Media) 배지가 있어야 탄다", "status": "confirmed",
+      "note": "우리는 탈 수 없다. 이 두 날의 오가는 길은 아래 다른 길을 쓴다. 호텔과 시간은 공식 전단에 있다.",
+      "sources": [{ "ko": "미디어 데이 셔틀 전단 (PDF)", "url": "https://www.ces.tech/media/kyeokwbt/cesmediadaysshuttleflyer_2027.pdf", "read": "2026-11-21" }, { "ko": "CES 공식 교통 안내", "url": "https://www.ces.tech/attendee-guides/transportation/", "read": "2026-11-21" }]
+    },
+    {
+      "id": "monorail", "kind": "monorail", "no": null, "ko": "라스베이거스 모노레일 (CES 셔틀 아님)",
+      "from": "LVCC · 웨스트게이트", "to": "스트립의 호텔들 (Horseshoe/Paris · Flamingo · Harrah's/LINQ · MGM Grand · Sahara)",
+      "stops": [{ "ko": "LVCC 모노레일 역", "board": "센트럴 플라자 쪽", "venue": "LVCC", "query": "Las Vegas Convention Center Monorail Station" }],
+      "arrive": "",
+      "schedule": null, "when": "월 7시 ~ 24시 · 화 ~ 목 7시 ~ 새벽 2시 · 금 ~ 일 7시 ~ 새벽 3시", "fare": "유료 · 등록 때 할인 표를 살 수 있다 (표가 있으면 배지가 표다)", "status": "confirmed",
+      "note": "베네시안 엑스포에는 서지 않는다. 그곳은 Tech Express(9번)를 탄다.",
+      "sources": [{ "ko": "CES 공식 교통 안내", "url": "https://www.ces.tech/attendee-guides/transportation/", "read": "2026-11-21" }, { "ko": "CES 2027 무료 교통 전단", "url": "https://www.ces.tech/media/ujcpm5xz/final-ces-2027-transportation-flyer_1022.pdf", "read": "2026-11-21" }]
+    },
+    {
+      "id": "loop", "kind": "loop", "no": null, "ko": "베가스 루프 (CES 셔틀 아님)",
+      "from": "LVCC", "to": "Encore · Fontainebleau · Resorts World · Sahara · Westgate",
+      "stops": [],
+      "arrive": "",
+      "schedule": null, "when": "자세한 시간은 공식 안내에 없다", "fare": "LVCC 캠퍼스 안(웨스트 ↔ 센트럴 · 사우스)은 무료, 호텔까지는 적은 요금", "status": "confirmed",
+      "note": "공식 교통 안내 글은 LVCC와 호텔 다섯 곳 사이라고 적고, 전단은 LVCC 역 넷에서 Encore · Resorts World · Westgate로 간다고 적는다. 자율주행 이동은 아래 링크에서 따로 본다.",
+      "sources": [{ "ko": "CES 공식 교통 안내", "url": "https://www.ces.tech/attendee-guides/transportation/", "read": "2026-11-21" }, { "ko": "CES 2027 무료 교통 전단", "url": "https://www.ces.tech/media/ujcpm5xz/final-ces-2027-transportation-flyer_1022.pdf", "read": "2026-11-21" }]
+    },
+    {
+      "id": "rideshare", "kind": "rideshare", "no": null, "ko": "우버 · 리프트 · 택시 타는 곳",
+      "from": "전시장과 호텔", "to": "어디든",
+      "stops": [
+        { "ko": "LVCC", "board": "사우스 홀 밖, 브론즈 랏과 르네상스 사이 / 웨스트 홀 옆 다이아몬드 랏", "venue": "LVCC", "query": "Las Vegas Convention Center South Hall" },
+        { "ko": "베네시안 엑스포", "board": "Sands Ave의 정문 차 대는 곳 (porte-cochere)", "venue": "VEN_EXPO", "query": "Venetian Expo" },
+        { "ko": "ARIA", "board": "North Valet Lobby 아래층", "venue": "ARIA", "query": "ARIA Resort & Casino" },
+        { "ko": "Fontainebleau", "board": "South Valet 구역", "venue": "FONT", "query": "Fontainebleau Las Vegas" },
+        { "ko": "Westgate", "board": "스포츠북 입구 (Sportsbook Entrance)", "venue": "WESTGATE", "query": "Westgate Las Vegas Resort & Casino" }
+      ],
+      "arrive": "",
+      "schedule": null, "when": "앱의 안내 글을 본다", "fare": "유료", "status": "confirmed",
+      "note": "LVCC와 베네시안 엑스포에는 일반 주차장이 없다. 택시 줄은 끝날 무렵 길다. LVCC는 S2 · C5 · 웨스트 홀 입구에서만 내리고 탈 수 있다.",
+      "sources": [{ "ko": "CES 공식 교통 안내", "url": "https://www.ces.tech/attendee-guides/transportation/", "read": "2026-11-21" }]
+    },
+    {
+      "id": "hub", "kind": "hub", "no": null, "ko": "교통 허브 (실시간 대기 시간)",
+      "from": "", "to": "",
+      "stops": [],
+      "arrive": "",
+      "schedule": null, "when": "전단의 QR 코드", "fare": "", "status": "check",
+      "note": "전단에 QR 코드가 있고, 노선과 지도, 지금 기다리는 시간을 본다고 적혀 있다. QR의 주소를 읽지 못해 여기에 적지 않았다.",
+      "todo": "QR이 가리키는 공식 교통 허브 주소를 확인해 이 줄에 넣는다. 휠체어 등 접근 가능한 이동은 정해진 셔틀 시간 중 30분 전까지 요청해야 하고, 전화번호는 전단 맨 아래에 있다.",
+      "sources": [{ "ko": "CES 2027 무료 교통 전단", "url": "https://www.ces.tech/media/ujcpm5xz/final-ces-2027-transportation-flyer_1022.pdf", "read": "2026-11-21" }, { "ko": "CES 공식 교통 안내", "url": "https://www.ces.tech/attendee-guides/transportation/", "read": "2026-11-21" }]
+    }
+  ]
+}

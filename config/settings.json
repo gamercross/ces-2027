@@ -1,6 +1,7 @@
 {
-  "about": "이재엽이 정하는 것을 적는 자리다. 정한 것: companyIntro(링크만, 2026-11-21) · collector(파일로 받기, 2026-11-21) · codysseyIcon(써도 된다는 답을 받아 넣음, 2026-11-21). speech(받아쓰기와 번역을 어디서 하나: 둘 다 두고 쓰는 사람이 화면에서 고른다, 2026-11-21. 여기 값은 고르기 전의 기본값이고 on-device = 폰 안에서만. device-service = 폰의 음성 인식 서비스, 소리가 폰 밖으로 간다). 아직 정하지 않은 것: privateOn. 값의 뜻은 README의 '정하는 것'에 있다.",
+  "about": "이재엽이 정하는 것을 적는 자리다. 정한 것: companyIntro(링크만, 2026-11-21) · collector(파일로 받기, 2026-11-21) · codysseyIcon(써도 된다는 답을 받아 넣음, 2026-11-21). speech(받아쓰기와 번역을 어디서 하나: 둘 다 두고 쓰는 사람이 화면에서 고른다, 2026-11-21. 여기 값은 고르기 전의 기본값이고 on-device = 폰 안에서만. device-service = 폰의 음성 인식 서비스, 소리가 폰 밖으로 간다). companyImage(회사 카드에 CES 공식 사이트의 로고를 누를 때만 보이는 단추, 기본 끔 · 켜면 누른 때 exhibitors.ces.tech에 그림을 묻는다). 아직 정하지 않은 것: privateOn. 값의 뜻은 README의 '정하는 것'에 있다.",
   "companyIntro": "link-only",
+  "companyImage": false,
   "collector": "file",
   "collectorUrl": "",
   "codysseyIcon": "icon/codyssey.png",

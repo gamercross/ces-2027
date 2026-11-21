@@ -19,9 +19,10 @@ const VIEWS = {
   listen: () => import('./views/listen.js'),
   apply: () => import('./views/apply.js'),
   people: () => import('./views/people.js'),
+  transit: () => import('./views/transit.js'),
   sessions: () => import('./views/sessions.js'),
 };
-const TAB_OF = { '': 'home', find: 'find', plan: 'plan', map: 'map', diary: 'diary', topics: 'topics', days: 'plan', ask: 'find', listen: 'diary', apply: 'home', sessions: 'plan' };
+const TAB_OF = { '': 'home', find: 'find', plan: 'plan', map: 'map', diary: 'diary', topics: 'topics', days: 'plan', ask: 'find', listen: 'diary', apply: 'home', transit: 'home', sessions: 'plan' };
 
 // 명함이 있으면 첫 화면이 쓸 자료를 화면 조각과 같이 받기 시작한다.
 if (getProfile()) { getInfo().catch(() => {}); getMeta(); }
