@@ -26,22 +26,25 @@ export async function render() {
       tels.length || l.mail ? el('div', { class: 'row-actions' },
         tels.map((t) => el('a', { class: 'pick', href: t.href, text: `전화 ${t.tel}` })),
         l.mail ? out(`mailto:${l.mail}`, `이메일 ${l.mail}`) : null) : null,
-      el('small', { class: 'proof wrap' }, `${md(src.read)} 확인 · `, out(src.url, src.ko)));
+      l.src ? proof(src) : null);
   }
+  const proof = (src) => el('small', { class: 'proof wrap' }, `${md(src.read)} 확인 · `, out(src.url, src.ko));
 
-  const urgent = data.sections.find((s) => s.k === 'urgent');
   return el('div', { class: 'page' },
     el('section', { class: 'panel' },
       el('h1', { text: '현장 안내' }),
       el('p', { class: 'lead', text: '급할 때 · 들어갈 때 · 도움이 필요할 때를 한곳에 모았다.' }),
-      el('p', { class: 'note', text: `${md(data.read)}에 CES 공식 안내 두 쪽에서 읽은 것이다. 공식 안내가 말한 것만 적었다.` }),
       el('p', { class: 'tag', text: '이 앱은 신고를 받지 않는다' }),
-      el('p', { class: 'note', text: data.notice }),
-      urgent ? el('p', { class: 'note', text: data.urgent.extra }) : null,
-      el('p', { class: 'note', text: data.recheck })),
+      el('p', { class: 'note', text: data.notice })),
     ...data.sections.map((s) => el('section', { class: 'panel', id: `onsite-${s.k}` },
       el('h2', { text: s.ko }),
       s.note ? el('p', { class: 'note', text: s.note }) : null,
-      el('ul', { class: 'stack' }, s.lines.map((l) => line(s, l))))),
+      s.k === 'urgent' ? el('p', { class: 'note', text: data.urgent.extra }) : null,
+      el('ul', { class: 'stack' }, s.lines.map((l) => line(s, l))),
+      proof(data.sources[s.src]))),
+    el('section', { class: 'panel' },
+      el('h2', { text: '이 글을 읽는 법' }),
+      el('p', { class: 'note', text: `${md(data.read)}에 CES 공식 안내 두 쪽에서 읽은 것이다. 공식 안내가 말한 것만 적었고, 줄마다 출처가 있다.` }),
+      el('p', { class: 'note', text: data.recheck })),
     el('div', { class: 'dock' }, el('a', { class: 'btn', href: '#/', text: '첫 화면으로' }), el('a', { class: 'btn ghost', href: '#/q', text: '물어보기' })));
 }

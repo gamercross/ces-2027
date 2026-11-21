@@ -97,6 +97,11 @@ function alertBands(showFrom) {
         el('div', { class: 'actions' },
           el('button', { class: 'btn', type: 'button', text: '있다', onclick: () => answer(true) }),
           el('button', { class: 'btn ghost', type: 'button', text: '없다', onclick: () => { answer(false); location.hash = '#/card'; } }))) : null,
+      alerts.soon.length ? el('section', { class: 'panel band' },
+        el('h2', { text: `곧 시작하는 일정 ${alerts.soon.length}개` }),
+        el('ul', { class: 'dots' }, alerts.soon.slice(0, 3).map((e) => el('li', { text: `${e.inMin}분 뒤 ${e.from} · ${e.name}${e.place ? ` (${e.place})` : ''}` }))),
+        el('p', { class: 'note', text: '라스베이거스 시각이다. 앱이 열려 있을 때만 알려 준다.' }),
+        el('div', { class: 'actions' }, el('a', { class: 'btn', href: '#/days', text: '일정 보기' }))) : null,
       alerts.needs.length ? el('section', { class: 'panel band' },
         el('h2', { text: `오늘 명함 ${alerts.needs.length}장 필요` }),
         el('p', { text: `오늘 동선에 명함 넣는 이벤트 부스가 있다: ${alerts.needs.slice(0, 4).map((n) => n.name).join(' · ')}${alerts.needs.length > 4 ? ' …' : ''}.` }),
@@ -169,7 +174,7 @@ function notifyBox() {
   paint();
   window.addEventListener('ces-alerts', paint);
   return el('section', { class: 'panel' }, el('h2', { text: '알림' }), state,
-    el('p', { class: 'note', text: '알리는 것: 오늘 동선에 명함 넣는 이벤트 부스가 있을 때, 그 부스 가까이 갔을 때. 서버가 없어서 앱을 열 때와 내 자리가 바뀔 때만 확인한다. 앱이 닫혀 있으면 정해진 시각에 울리지 않는다.' }),
+    el('p', { class: 'note', text: '알리는 것: 내 일정(세션 포함)이 30분 안에 시작할 때, 오늘 동선에 명함 넣는 이벤트 부스가 있을 때, 그 부스 가까이 갔을 때. 서버가 없어서 앱이 열려 있을 때(1분마다)와 앱을 열 때, 내 자리가 바뀔 때만 확인한다. 앱이 닫혀 있으면 정해진 시각에 울리지 않는다.' }),
     el('p', { class: 'note', text: '아이폰은 홈 화면에 추가한 뒤에야 알림을 켤 수 있다. 막아 두었으면 폰의 설정에서 이 앱의 알림을 다시 켠다.' }),
     error,
     el('div', { class: 'actions' }, button));

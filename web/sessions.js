@@ -39,21 +39,45 @@ export function search(items, query) {
   return items.filter((s) => { const h = haystack(s); return words.every((w) => h.includes(w)); });
 }
 
-// 내 주제 이름과 분야를 세션 제목 · 트랙 · 주제와 맞춘다. 아직 자료 밖의 관심은 만들지 않는다.
-export function recommend(items, topics) {
+// 두 때가 겹치는가: 같은 날이고, 하나가 끝나기 전에 다른 하나가 시작한다. 끝과 시작이 맞닿는 것은 겹치지 않는다.
+export const overlaps = (a, b) => a.date === b.date && a.from < b.to && b.from < a.to;
+
+// 내 주제 이름과 분야를 세션 제목 · 트랙 · 주제와 맞추고, 날짜와 시간에 맞춰 고른다.
+// 점수가 높은 것부터 담되, 내 일정 · 이미 고른 세션과 때가 겹치는 것은 건너뛴다. 아직 자료 밖의 관심은 만들지 않는다.
+// 돌려주는 것: 날짜 · 시간 차례의 열 곳 이하. skipped(건너뛴 수)는 두 번째 인자 없이 쓰려면 recommendWithSkips를 쓴다.
+export function recommendWithSkips(items, topics, events = [], limit = 10) {
   const words = [...new Set((topics || []).flatMap((topic) => [
     ...String(topic.name || '').toLowerCase().split(/\s+/),
     ...(topic.cats || []).map((cat) => String(cat).toLowerCase()),
   ]).map((word) => word.trim()).filter((word) => word.length >= 2))];
-  if (!words.length) return [];
-  return items.map((session) => {
+  if (!words.length) return { picks: [], skipped: 0 };
+  const mine = (events || []).map((e) => ({ date: e.date, from: e.from, to: e.to, id: e.id }));
+  const ranked = items.map((session) => {
     const hay = haystack(session);
     const score = words.reduce((sum, word) => sum + (hay.includes(word) ? 1 : 0), 0);
     return { session, score };
   }).filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score || a.session.date.localeCompare(b.session.date) || a.session.from.localeCompare(b.session.from))
-    .slice(0, 10)
-    .map((item) => item.session);
+    .sort((a, b) => b.score - a.score || a.session.date.localeCompare(b.session.date) || a.session.from.localeCompare(b.session.from));
+  const picks = [];
+  let skipped = 0;
+  for (const { session } of ranked) {
+    if (picks.length >= limit) break;
+    // 이미 내 일정에 넣은 세션은 자기 자신과 겹친 것으로 보지 않는다.
+    const clash = mine.some((e) => e.id !== eventId(session) && overlaps(e, session)) || picks.some((p) => overlaps(p, session));
+    if (clash) { skipped += 1; continue; }
+    picks.push(session);
+  }
+  picks.sort((a, b) => a.date.localeCompare(b.date) || a.from.localeCompare(b.from));
+  return { picks, skipped };
+}
+export const recommend = (items, topics, events = [], limit = 10) => recommendWithSkips(items, topics, events, limit).picks;
+
+// 세션 하나를 남에게 건네는 글: 제목 · 날짜와 때 · 곳 · 공식 쪽 링크. 우리 서버는 거치지 않는다(받는 쪽이 공식 쪽을 연다).
+const WEEK = '일월화수목금토';
+export function shareText(s) {
+  const [, m, d] = s.date.split('-').map(Number);
+  const w = WEEK[new Date(`${s.date}T00:00:00`).getDay()];
+  return `${s.title}\n${m}/${d} (${w}) ${s.from} ~ ${s.to} 라스베이거스 시각${s.place ? ` · ${s.place}` : ''}\n${s.url}`;
 }
 
 // 기조연설 먼저 보려면: 제목이 "Keynote"로 시작하는 것 (공식 제목 규칙).

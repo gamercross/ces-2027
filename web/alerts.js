@@ -59,6 +59,23 @@ export function fresh(sent, key, today) {
   return (sent || {})[key] !== today;
 }
 
+// 라스베이거스의 지금: { date: 'YYYY-MM-DD', min: 0 ~ 1439 }. 일정 시각은 라스베이거스 시각이라 폰의 시간대와 상관없이 이 시각으로 견준다.
+export function vegasNow(now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(now);
+  const get = (type) => parts.find((p) => p.type === type)?.value;
+  return { date: `${get('year')}-${get('month')}-${get('day')}`, min: Number(get('hour')) * 60 + Number(get('minute')) };
+}
+
+// 곧 시작하는 내 일정: 지금부터 ahead분 안에 시작하는 것(이미 시작한 것은 뺀다). 때가 이른 것부터. [{ ...일정, inMin }]
+export function soonEvents(events, now, ahead = 30) {
+  const at = (hhmm) => { const m = /^(\d\d):(\d\d)$/.exec(hhmm || ''); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+  return (events || [])
+    .filter((e) => e.date === now.date && at(e.from) != null)
+    .map((e) => ({ ...e, inMin: at(e.from) - now.min }))
+    .filter((e) => e.inMin >= 0 && e.inMin <= ahead)
+    .sort((x, y) => x.inMin - y.inMin);
+}
+
 // 이 폰에서 알림(Notification)을 쓸 수 있는 상태. 서버 없이 쓰는 길만 본다.
 // 'granted' 쓸 수 있다 · 'default' 물어볼 수 있다 · 'denied' 막아 두었다 · 'unsupported' 이 브라우저는 안 된다
 export function notifyState(env) {

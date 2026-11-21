@@ -2,8 +2,8 @@
 // 알림(Notification)을 쓸 수 있는 폰에서는 서비스 워커로 알림을 띄우고, 못 쓰는 폰에서는 화면의 띠로 같은 내용을 보인다.
 // 한계: 앱이 닫혀 있을 때 정해진 시각에 알리지는 못한다(푸시 서버가 없다). 그래서 아침 알림은 그날 앱을 처음 열 때 뜬다.
 
-import { load, save, getInterests, getProfile, getWhere } from './store.js';
-import { cardsNeeded, dateOf, fresh, nearMarks, notifyState, shouldAskPaper } from './alerts.js';
+import { load, save, getEvents, getInterests, getProfile, getWhere } from './store.js';
+import { cardsNeeded, dateOf, fresh, nearMarks, notifyState, shouldAskPaper, soonEvents, vegasNow } from './alerts.js';
 
 export const getPaper = () => load('paper.v1', null);
 export const setPaper = (paper) => save('paper.v1', paper);
@@ -16,7 +16,9 @@ export function setMarks(marks) {
 }
 
 // 지금 화면에 띠로 보일 것. { paper, needs, near, state, fallback, error }
-export const alerts = { paper: null, needs: [], near: [], state: 'unsupported', fallback: false, error: '' };
+export const alerts = { paper: null, needs: [], near: [], soon: [], state: 'unsupported', fallback: false, error: '' };
+// 일정(세션 포함)이 시작하기 몇 분 전부터 알리나.
+export const SOON_MIN = 30;
 const changed = () => window.dispatchEvent(new Event('ces-alerts'));
 
 export async function askPermission() {
@@ -61,6 +63,19 @@ async function checkAlertsNow() {
   alerts.paper = getProfile() ? shouldAskPaper(getPaper(), today) : null;
   alerts.needs = [];
   alerts.near = [];
+  // 곧 시작하는 내 일정(세션 포함): 앱이 열려 있거나 화면으로 돌아왔을 때 확인한다. 라스베이거스 시각으로 견준다.
+  alerts.soon = soonEvents(getEvents(), vegasNow(new Date()), SOON_MIN);
+  for (const e of alerts.soon) {
+    if (!fresh(sent, `soon:${e.id}`, today)) continue;
+    const where = e.place ? ` · ${e.place}` : '';
+    if (await notify(`${e.inMin}분 뒤 시작: ${e.name}`, `${e.from} ~ ${e.to} (라스베이거스 시각)${where}`, `ces-soon-${e.id}`, '#/days')) {
+      sent[`soon:${e.id}`] = today;
+      if (!save('alerts.v1', sent)) { alerts.fallback = true; alerts.error = '알림은 보냈지만 되풀이 방지 기록을 이 폰에 저장하지 못했다.'; }
+    } else if (alerts.state === 'granted') {
+      alerts.fallback = true;
+      alerts.error = '알림을 띄우지 못해 화면의 띠로 알린다.';
+    }
+  }
   if (Object.keys(marks).length) {
     try {
       const { byId, info } = await exhibitors();
@@ -119,6 +134,8 @@ export function startAlerts() {
   document.addEventListener('visibilitychange', () => { if (!document.hidden) checkAlerts(); });
   window.addEventListener('pageshow', () => checkAlerts());
   window.addEventListener('ces-where', () => checkAlerts());
+  // 앱이 열려 있는 동안 1분마다 곧 시작하는 일정이 있는지 본다 (내 일정이 있을 때만). 닫혀 있을 때는 못 한다.
+  setInterval(() => { if (!document.hidden && getEvents().length) checkAlerts(); }, 60000);
   checkAlerts();
   return true;
 }
