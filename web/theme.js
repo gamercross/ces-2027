@@ -11,7 +11,7 @@
     root.setAttribute('data-theme', dark ? 'dark' : 'light');
     root.setAttribute('data-theme-pref', p);
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', dark ? '#141a2b' : '#e9edf4');
+    if (meta) meta.setAttribute('content', dark ? '#161616' : '#f2f2f2');
   }
   apply();
   if (mq && mq.addEventListener) mq.addEventListener('change', apply);

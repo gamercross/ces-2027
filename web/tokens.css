@@ -2,38 +2,33 @@
    화면(app.css · views)은 이 이름만 쓴다. 지도를 캔버스 · SVG로 그리는 코드는 tokens.js로 같은 값을 읽는다.
    값을 바꾸면 tokens.js의 기본값과 design.md의 색 표도 같이 고친다(scripts/smoke.mjs가 맞춰 본다). */
 :root {
-  /* 색: 눈이 편한 파스텔 바탕 + 남색 글씨. 순백 · 검정 면 · 쨍한 파랑 없음 */
-  --bg: #e9edf4;
-  --panel: #f4f1ea;
-  --panel-2: #dfe7f1;
-  --ink: #1f2a44;
-  --ink-2: #4b5878;
-  --line: #c9d3e2;
-  --accent: #56679a;
-  --on-accent: #f4f1ea;
-  --mint: #cfe6dc;
-  --peach: #f4dccb;
-  --lilac: #e2dcef;
-  --warn: #8a3b2f;
-  --accent-soft: #dfe4f2;
-  /* QR은 어둡게에서도 같은 색: 밝은 바탕 + 남색 모듈이어야 카메라가 읽는다 */
-  --qr-bg: #f4f1ea;
-  --qr-ink: #1f2a44;
-
-  /* 탭마다 강조색 하나 (홈 · 회사 · 동선 · 지도 · 일기). 위는 글자 · 단추 색, soft는 면 색. 모두 차분한 파스텔 계열 */
-  --tab-home: #56679a;
-  --tab-home-soft: #dfe4f2;
-  --tab-plan: #9a4d62;
-  --tab-plan-soft: #f0dbe0;
-  --tab-map: #7d6420;
-  --tab-map-soft: #eee2c3;
-  --tab-diary: #7456a0;
-  --tab-diary-soft: #e5dcf1;
+  /* 색: 무채색(회색 단계) + 강조색 하나. 바탕은 순백보다 낮은 회색, 카드는 흰색, 글씨는 거의 검정 */
+  --bg: #f2f2f2;
+  --panel: #ffffff;
+  --panel-2: #ebebeb;
+  --ink: #111111;
+  --ink-2: #5c5c5c;
+  --line: #dcdcdc;
+  /* 강조색 하나: 관심 · 동선 · 지금 위치 · 고른 것. 채도를 낮춘 회청색 */
+  --accent: #5a6f96;
+  --on-accent: #ffffff;
+  --accent-soft: #e8ecf3;
+  /* 단추: 검정 칠한 단추 하나 (어둡게에서는 흰색) */
+  --btn: #111111;
+  --on-btn: #ffffff;
+  /* 옛 이름(고른 것 · 알림 띠)은 색 면이 아니라 회색 단계와 강조색의 옅은 면이다 */
+  --mint: #e8ecf3;
+  --peach: #dedede;
+  /* 위험 · 마감 같은 상태 글자만 쓰는 색 */
+  --warn: #a3342a;
+  /* QR은 어둡게에서도 같은 색: 밝은 바탕 + 어두운 모듈이어야 카메라가 읽는다 */
+  --qr-bg: #ffffff;
+  --qr-ink: #111111;
 
   /* 글꼴: 시스템 한글 고딕 하나 */
   --font: system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
-  --fs-title: 28px;
-  --fs-now: 22px;
+  --fs-title: 34px;
+  --fs-now: 24px;
   --fs-h2: 18px;
   --fs-body: 16px;
   --fs-small: 14px;
@@ -49,109 +44,97 @@
   --s5: 24px;
   --s6: 32px;
 
-  /* 모양 */
-  --radius: 20px;
-  --radius-ctl: 14px;
+  /* 모양: 모서리는 작게(8 ~ 12px) */
+  --radius: 12px;
+  --radius-ctl: 10px;
   --radius-tag: 8px;
   --tap: 52px;
   --tap-min: 44px;
   --tabs: 68px;
   --column: 560px;
-  --radius-big: 24px;
+  --radius-big: 12px;
   color-scheme: light;
 
-  /* 지도 바탕 (장소 종류 · 길 · 장식) */
-  --map-hall: #c9d6ee;
-  --map-room: #e2dcef;
-  --map-out: #d9e6dc;
-  --map-hotel: #ecdccb;
-  --map-place: #dde3ee;
-  --map-road: #cfd6e2;
-  --map-decor: #dfe3ea;
-  --map-link: #8fa3c8;
-  --map-plain: #9aa9cc;
-  --map-none: #c5cad3;
-  --map-badge: #8a6fb3;
-  --map-shuttle: #3f8f86;
-  --map-transit: #6b7896;
-  --map-city: #f0b08a;
-  --map-korea: #e88f8f;
-  --map-best: #dfa544;
-  --map-honoree: #f0d98c;
-  /* 날짜별 색: 미정 · 1/6 · 1/7 · 1/8 · 1/9 */
-  --day-0: #b9c0cf;
-  --day-1: #f4b9a7;
-  --day-2: #a9c6ee;
-  --day-3: #a8d8bf;
-  --day-4: #f1d38a;
-  /* 분야 묶음 일곱 (data/categories.json의 groups 기호) */
-  --group-ai: #8fa8e6;
-  --group-mob: #f0b08a;
-  --group-rob: #e79a9a;
-  --group-hea: #9ed3ab;
-  --group-hom: #e9cf7c;
-  --group-ent: #c3a2df;
-  --group-biz: #93cdd3;
+  /* 지도 바탕: 홀 · 부스는 회색 단계. 관심 · 동선만 강조색 */
+  --map-hall: #d8d8d8;
+  --map-room: #e3e3e3;
+  --map-out: #e9e9e9;
+  --map-hotel: #dedede;
+  --map-place: #e6e6e6;
+  --map-road: #cfcfcf;
+  --map-decor: #ececec;
+  --map-link: #a0a0a0;
+  --map-plain: #8f8f8f;
+  --map-none: #c9c9c9;
+  --map-badge: #5f5f5f;
+  --map-shuttle: #3d3d3d;
+  --map-transit: #7a7a7a;
+  --map-city: #b4b4b4;
+  /* 한국 · 혁신상 칠하기(고를 때만): 강조색과 그 옅은 단계 */
+  --map-korea: #5a6f96;
+  --map-best: #5a6f96;
+  --map-honoree: #9fb0cf;
+  /* 날짜별 동선 번호: 미정은 회색, 1/6 ~ 1/9는 강조색을 한 단계씩 짙게 */
+  --day-0: #c4c4c4;
+  --day-1: #c6d0e3;
+  --day-2: #a5b5d2;
+  --day-3: #869bc0;
+  --day-4: #6f87b3;
+  /* 분야 묶음 일곱: 기본은 꺼져 있고 지도에서 "분야"를 고를 때만 쓴다. 채도를 낮춘 일곱 */
+  --group-ai: #94a7c9;
+  --group-mob: #c9a48b;
+  --group-rob: #c99496;
+  --group-hea: #9dbba5;
+  --group-hom: #cdbd85;
+  --group-ent: #b4a0c8;
+  --group-biz: #8fb8bc;
 }
 
-/* 어둡게: 검정이 아니라 한 톤 올린 남색 바탕. theme.js가 <html data-theme="dark|light">를 정한다(설정의 밝게 · 어둡게 · 자동). */
+/* 어둡게: 순검정이 아닌 짙은 회색 바탕, 카드는 한 단계 밝은 회색. theme.js가 <html data-theme="dark|light">를 정한다(설정의 밝게 · 어둡게 · 자동). */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #141a2b;
-  --panel: #1e2641;
-  --panel-2: #29335a;
-  --ink: #e8ecf6;
-  --ink-2: #aeb8d2;
-  --line: #34406a;
-  --accent: #9fb0ea;
-  --on-accent: #141a2b;
-  --mint: #2b4a43;
-  --peach: #4e3b35;
-  --lilac: #373262;
-  --warn: #f0a99c;
-  --accent-soft: #2c3560;
-  --tab-home: #9fb0ea;
-  --tab-home-soft: #2c3560;
-  --tab-plan: #f0a3b6;
-  --tab-plan-soft: #4d2f3a;
-  --tab-map: #e3c36f;
-  --tab-map-soft: #483d1f;
-  --tab-diary: #c8a9f2;
-  --tab-diary-soft: #3f3166;
+  --bg: #161616;
+  --panel: #222222;
+  --panel-2: #2e2e2e;
+  --ink: #f2f2f2;
+  --ink-2: #a6a6a6;
+  --line: #3a3a3a;
+  --accent: #9db2da;
+  --on-accent: #161616;
+  --accent-soft: #2b3446;
+  --btn: #f2f2f2;
+  --on-btn: #161616;
+  --mint: #2b3446;
+  --peach: #373737;
+  --warn: #f0988c;
 
-  --map-hall: #32426e;
-  --map-room: #3b3664;
-  --map-out: #2f4b46;
-  --map-hotel: #4d4136;
-  --map-place: #2b3555;
-  --map-road: #38425f;
-  --map-decor: #252d47;
-  --map-link: #7086bb;
-  --map-plain: #8294c8;
-  --map-none: #4b5572;
-  --map-badge: #b79af0;
-  --map-shuttle: #6fcfc2;
-  --map-transit: #8f9cc0;
-  --map-city: #e8a272;
-  --map-korea: #e07f7f;
-  --map-best: #e0b25a;
-  --map-honoree: #cdb560;
-  --day-0: #5d6685;
-  --day-1: #b8654f;
-  --day-2: #4f78b8;
-  --day-3: #3f8a63;
-  --day-4: #a98a2e;
-  --group-ai: #4f66a8;
-  --group-mob: #a0643f;
-  --group-rob: #a14f57;
-  --group-hea: #3d7a55;
-  --group-hom: #8a7628;
-  --group-ent: #6e50a0;
-  --group-biz: #3d7e87;
+  --map-hall: #3a3a3a;
+  --map-room: #333333;
+  --map-out: #2f2f2f;
+  --map-hotel: #383838;
+  --map-place: #2c2c2c;
+  --map-road: #3f3f3f;
+  --map-decor: #262626;
+  --map-link: #6a6a6a;
+  --map-plain: #8a8a8a;
+  --map-none: #4a4a4a;
+  --map-badge: #b0b0b0;
+  --map-shuttle: #d0d0d0;
+  --map-transit: #909090;
+  --map-city: #6a6a6a;
+  --map-korea: #9db2da;
+  --map-best: #9db2da;
+  --map-honoree: #627294;
+  --day-0: #555555;
+  --day-1: #3f4b66;
+  --day-2: #4a5a7c;
+  --day-3: #546690;
+  --day-4: #596b94;
+  --group-ai: #5a6b8f;
+  --group-mob: #8a6c58;
+  --group-rob: #8a5f61;
+  --group-hea: #5f7d68;
+  --group-hom: #8a7d4f;
+  --group-ent: #75658a;
+  --group-biz: #55797d;
 }
-
-/* 탭마다 강조색: app.js가 <body data-tab>을 정한다 */
-body[data-tab="settings"] { --accent: var(--tab-home); --accent-soft: var(--tab-home-soft); }
-body[data-tab="plan"] { --accent: var(--tab-plan); --accent-soft: var(--tab-plan-soft); }
-body[data-tab="map"] { --accent: var(--tab-map); --accent-soft: var(--tab-map-soft); }
-body[data-tab="diary"] { --accent: var(--tab-diary); --accent-soft: var(--tab-diary-soft); }
