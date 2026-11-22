@@ -1,7 +1,7 @@
 // 뼈대: 주소(#/…)에 맞는 화면을 그때 불러와 그린다. 첫 화면은 가볍게 둔다.
 
 import { getProfile } from './store.js';
-import { getExhibitors, getInfo, getMeta, getPlaces, getSettings } from './data.js';
+import { getInfo, getMeta, getPlaces, getSettings } from './data.js';
 import { offline, startOffline } from './offline.js';
 import { alerts, checkAlerts, startAlerts } from './notify.js';
 import { failed, frame, loading, missing } from './frame.js';
@@ -28,8 +28,8 @@ const TAB_OF = { map: 'map', transit: 'map', plan: 'plan', rec: 'plan', days: 'p
 const ROOTS = new Set(['map', 'plan', 'diary', 'settings']);
 for (const k of Object.keys(VIEWS)) frame.views.add(k);
 
-// 명함이 있으면 첫 화면(지도)이 쓸 자료를 화면 조각과 같이 받기 시작한다 (조각을 다 받은 뒤에야 시작하면 한 걸음 늦는다).
-if (getProfile()) { getInfo().catch(() => {}); getMeta(); getPlaces().catch(() => {}); getExhibitors().catch(() => {}); }
+// 명함이 있으면 첫 화면(지도)이 쓸 자료(장소)를 화면 조각과 같이 받기 시작한다. 전시사 자료는 지도가 홀로 가까이 갈 때 홀마다 받는다.
+if (getProfile()) { getInfo().catch(() => {}); getMeta(); getPlaces().catch(() => {}); }
 
 // 지운 번역 기능이 폰에 남긴 설정(받아 둔 모델 표시 · 번역 앱 고름)을 치운다.
 for (const k of ['translationModel.v1', 'translatorApp.v1', 'translatorPrep.v1']) { try { localStorage.removeItem(`ces2027.${k}`); } catch { /* 막힌 폰이면 그대로 둔다 */ } }

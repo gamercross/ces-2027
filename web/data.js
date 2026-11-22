@@ -22,6 +22,9 @@ export const getInfo = () => cached('info', () => getJson('data/info.json'));
 export const getMeta = () => cached('meta', () => getJson('data/meta.json').catch(() => null));
 export const getPlaces = () => cached('places', () => getJson('data/places.json'));
 export const getExhibitors = () => cached('exhibitors', () => getJson('data/exhibitors.json'));
+// 홀 하나의 전시사 줄(지도가 가까이 갈 때 받는다). 없으면 null — 그때는 전체를 쓴다.
+const hallDocs = new Map();
+export const getHall = (k) => { if (!hallDocs.has(k)) hallDocs.set(k, getJson(`data/halls/${k}.json`).catch(() => null)); return hallDocs.get(k); };
 export const getCategories = () => cached('categories', () => getJson('data/categories.json'));
 // 정식 배치도에서 옮긴 부스 자리. 없거나 비어 있으면 모든 자리가 짐작이다.
 export const getOfficialSpots = () => cached('officialSpots', () => getJson('data/booth-spots.json').catch(() => ({ places: {} })));

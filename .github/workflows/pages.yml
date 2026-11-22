@@ -180,6 +180,9 @@ jobs:
           cp data/speech-model.json dist/data/
           node scripts/fetch-speech-runtime.mjs dist .cache/speech-runtime
 
+      - name: 전시사 자료를 홀마다 나눈다 (지도가 홀로 가까이 갈 때 그 홀의 것만 받게)
+        run: node scripts/split-halls.mjs dist
+
       - name: 판 이름 찍기 · 인터넷 없이 담아 둘 목록
         run: node scripts/stamp.mjs dist
 
