@@ -444,8 +444,8 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
     const settingsV = await readFile(join(dist, 'views/settings.js'), 'utf8');
     const cssV = await readFile(join(dist, 'app.css'), 'utf8');
     const required = (cardV.match(/return fail\('[^']*'/g) || []).filter((m) => /별명을 적는다|나를 하나 고른다/.test(m)).length;
-    check(/class: 'welcome'/.test(cardV) && cardV.includes('환영한다') && required === 2 && ['한 줄 (선택)', '깃허브 (선택)', '디스코드 (선택)'].every((w) => cardV.includes(w)) && cardV.includes("href: '#/map', text: '지도로'") && /rest\[0\] === 'edit'/.test(cardV) && settingsV.includes("href: '#/card', text: 'QR 보기'") && settingsV.includes("href: '#/card/edit'") && /const intro = name === 'card' && !getProfile\(\)/.test(app) && /\.form\.big \.choices \{ grid-template-columns: 1fr 1fr/.test(cssV) && /\.form\.big \.field input \{ font-size: 18px/.test(cssV),
-      '처음 들어오면 명함: 환영 한 줄과 한 화면(별명 · 나만 꼭 필요하고 한 줄 · 깃허브 · 디스코드는 "선택"), 만든 뒤 명함과 QR 그리고 "지도로", 설정 탭의 "QR 보기" · "명함 고치기", 큰 글씨(18px)와 2 × 2 고르기');
+    check(/class: 'welcome'/.test(cardV) && cardV.includes('환영한다') && required === 2 && ['한 줄 (선택)', '깃허브 (선택)', '디스코드 (선택)'].every((w) => cardV.includes(w)) && cardV.includes("href: '#/map', text: '지도로'") && /rest\[0\] === 'edit'/.test(cardV) && settingsV.includes("href: '#/card', text: 'QR 보기'") && settingsV.includes("href: '#/card/edit'") && /const intro = name === 'card' && !getProfile\(\)/.test(app) && /\.form\.big \.choices \{ grid-template-columns: 1fr 1fr/.test(cssV) && /\.form\.big \.field input \{ font-size: calc\(18px \* var\(--scale\)\)/.test(cssV),
+      '처음 들어오면 명함: 환영 한 줄과 한 화면(별명 · 나만 꼭 필요하고 한 줄 · 깃허브 · 디스코드는 "선택"), 만든 뒤 명함과 QR 그리고 "지도로", 설정 탭의 "QR 보기" · "명함 고치기", 큰 글씨(18px, 글자 크기 단계를 따른다)와 2 × 2 고르기');
     // 4단계(11/22): 지도 자세히. 확대 단계 셋 · 글자 13px · 겹치면 숨김 · 홀마다 나눠 받기 · 손짓 · 카드.
     {
       const mm = await import('../web/mapmath.js');
@@ -554,6 +554,22 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
   const lightVars = [...tokCss.split(':root[data-theme="dark"]')[0].matchAll(/--((?:bg|panel|panel-2|ink|ink-2|accent|on-accent|mint|peach|lilac|warn|map-[a-z]+|day-\d|group-[a-z]+|tab-[a-z]+(?:-soft)?))\s*:/g)].map((m) => m[1]);
   const lacking = lightVars.filter((v) => !darkVars.has(v));
   check(lacking.length === 0 && /--qr-bg/.test(tokCss) && !darkVars.has('qr-bg') && !darkVars.has('qr-ink'), `어둡게: 밝게의 색 ${lightVars.length}개가 모두 어둡게에도 있다 (빠진 것 ${lacking.join(' ') || '없음'}). QR 색은 어둡게에서도 그대로다`);
+  // 다시 짓기 7단계: 글자 크기 네 단계(기본 100 · 크게 115 · 더 크게 130 · 가장 크게 150%). 첫 그림 전에 걸리고, 제목은 상한, 지도 글자는 130%까지.
+  {
+    const scales = ['2', '3', '4'].map((n) => tokCss.match(new RegExp(':root\\[data-text="' + n + '"\\] \\{([^}]*)\\}'))?.[1] || '');
+    const val = (block, name) => Number((block.match(new RegExp('--' + name + ': ([0-9.]+)')) || [])[1]);
+    const body = [1, ...scales.map((b) => val(b, 'scale'))];
+    const head = [1, ...scales.map((b) => val(b, 'scale-head'))];
+    const mapS = [1, ...scales.map((b) => val(b, 'scale-map'))];
+    const fsVars = ['title', 'now', 'h2', 'body', 'small', 'note', 'fine'].every((k) => new RegExp('--fs-' + k + ': calc\\(\\d+px \\* var\\(--scale(-head)?\\)\\)').test(tokCss));
+    const sizeBox = settingsJs.slice(settingsJs.indexOf('function sizeBox'), settingsJs.indexOf('function themeBox'));
+    check(JSON.stringify(body) === '[1,1.15,1.3,1.5]' && head.every((h, k) => h <= body[k] && h <= 1.25) && Math.max(...mapS) === 1.3 && fsVars
+      && themeJs.includes("'ces2027.text.v1'") && themeJs.includes('data-text') && themeJs.includes('window.cesText')
+      && (await readFile(join(dist, 'index.html'), 'utf8')).indexOf('theme.js') < (await readFile(join(dist, 'index.html'), 'utf8')).indexOf('<body')
+      && ['기본', '크게', '더 크게', '가장 크게'].every((k) => sizeBox.includes("ko: '" + k + "'") || settingsJs.includes("ko: '" + k + "'")) && settingsJs.indexOf('sizeBox(),') > 0 && settingsJs.indexOf('sizeBox(),') < settingsJs.lastIndexOf('themeBox()')
+      && mapV2.includes('mapScale()') && !/\bMIN_FONT\b.*size:/.test(mapV2.replace(/import .*\n/, '')),
+      `글자 크기: 네 단계(배율 ${body.join(' · ')}, 제목은 ${head.join(' · ')}까지만, 지도 글자는 ${Math.max(...mapS)}배까지)를 첫 그림 전에 걸고 설정 맨 위에서 고른다`);
+  }
   // 무채색 테마(11/22): 회색 단계 + 강조색 하나. 탭마다 다른 강조색 · 파스텔 면이 없다. 회색이 아닌 값은 강조색 계열 · 상태색 · 고를 때만 쓰는 분야 칠하기뿐이다.
   const lightCss = tokCss.split(':root[data-theme="dark"]')[0];
   const tokVal = (css, n) => (css.match(new RegExp(`--${n}:\\s*(#[0-9a-fA-F]{6});`)) || [])[1];
