@@ -161,6 +161,27 @@ async (page) => {
   check((await page.locator('.sheet .card h2').innerText()) === two[1].name, '다른 화면의 "지도" 링크로 오면 그 회사 카드가 열린다');
   await page.evaluate(() => localStorage.removeItem('ces2027.interests.v1'));
 
+  // 8d. 공식 지도 기준: 길 이름 글자 · 홀 카드의 부스 번호 범위 · 회사 자료에 없는 번호도 홀을 알려 준다
+  await page.goto('about:blank');
+  await page.goto(`${URL}#/map`);
+  await page.locator('svg.map').waitFor();
+  await settle(1600);
+  const roadWords = await api((m) => [...m.board.querySelectorAll('g[pointer-events="none"] text')].map((t) => t.textContent).filter((s) => /Rd|Dr|Blvd|Ave/.test(s)));
+  await api((m) => m.fit(m.pad(m.L.campuses.find((c) => c.k === 'lvcc').box, 30)));
+  await settle(1400);
+  const roadWords2 = await api((m) => [...m.board.querySelectorAll('g[pointer-events="none"] text')].map((t) => t.textContent).filter((s) => /Rd|Dr|Blvd|Ave/.test(s)));
+  check(roadWords.length >= 1 && roadWords2.length >= 3, `길 이름이 글자로 나온다: 전체 ${roadWords.length}개, LVCC 캠퍼스 ${roadWords2.length}개 (${roadWords2.slice(0, 4).join(' · ')})`);
+  await api((m) => m.pickPlace(m.L.list.find((p) => p.k === 'LVCC_N')));
+  await page.waitForFunction(() => /부스 번호 10000–16999/.test(document.querySelector('.sheet').innerText), null, { timeout: 15000 });
+  check(true, '노스 홀 카드에 공식 지도의 부스 번호 범위(10000–16999)가 있다');
+  await api((m) => m.sheet.close());
+  const free = await page.evaluate(async () => { const d = await (await fetch('data/exhibitors.json')).json(); const used = new Set(d.ex.flatMap((r) => r[7].map((b) => b.split('@')[0]))); for (let n = 6000; n < 7999; n++) if (!used.has(String(n))) return n; return null; });
+  await page.locator('.find-field input').fill(String(free));
+  await page.locator('.results .result').first().waitFor({ timeout: 8000 });
+  const hallHit = await page.locator('.results .result').first().innerText();
+  check(hallHit.includes('웨스트') && hallHit.includes('번호 범위'), `회사 자료에 없는 부스 번호(${free})도 번호 범위로 홀을 알려 준다 (${hallHit.replace(/\n/g, ' · ')})`);
+  await page.locator('.find-field input').fill('');
+
   // 9. 3D 단추 하나로 그때 불러온다, 다시 누르면 2D (카드를 닫으면 오른쪽 단추가 나온다)
   await api((m) => m.sheet.close());
   await settle(400);

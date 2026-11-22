@@ -497,6 +497,13 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       const htmlNow = await readFile(join(dist, 'index.html'), 'utf8');
       check((mapSrc.match(/getExhibitors\(/g) || []).length === 1 && !/getExhibitors\(/.test(appJs2) && !/^import .*map3d/m.test(mapSrc) && mapSrc.includes("import('../map3d.js')") && ['웨스트', '센트럴', '노스', '사우스', '베네시안'].every((w) => mapSrc.includes(w)) && /ensureHall\(/.test(mapSrc) && !htmlNow.includes('map3d'),
         '지도 첫 열기: 전시사 전체 자료는 찾기 · 3D · 관심 회사가 있을 때만 받고(홀로 가까이 가면 그 홀 것만), 3D는 단추를 누를 때 불러오며, 홀 바로 가기 칩이 있다');
+      // 공식 지도 기준: 길 이름 · 홀별 부스 번호 범위
+      const pl = await json('data/places.json');
+      const mf = await import('../web/mapfind.js');
+      const named = new Set(pl.roads.filter((r) => r.name).map((r) => r.name));
+      check(['Las Vegas Blvd', 'Paradise Rd', 'Desert Inn Rd', 'Convention Center Dr', 'Sierra Vista Dr', 'Elvis Presley Dr', 'North Rd', 'Joe W. Brown Dr'].every((n) => named.has(n)) && mapSrc.includes('roadLabels') && mapSrc.includes('boothRange(')
+        && mf.hallOfNumber('14731', pl.boothRules.numbers)?.place === 'LVCC_N' && mf.hallOfNumber('30001', pl.boothRules.numbers)?.place === 'LVCC_S1' && mf.hallOfNumber('5000A', pl.boothRules.numbers)?.place === 'LVCC_W' && mf.hallOfNumber('2999', pl.boothRules.numbers) === null && mf.hallOfNumber('삼성', pl.boothRules.numbers) === null,
+      '공식 LVCC 지도의 길 이름 여덟이 지도에 글자로 나오고, 홀 카드에 부스 번호 범위가 있으며, 회사 자료에 없는 부스 번호도 번호 범위로 어느 홀인지 알려 준다');
       check(/startNav\(/.test(mapSrc) && /길 안내 시작/.test(mapSrc) && /function endNav/.test(mapSrc) && /navFollow/.test(mapSrc) && /map\/go|rest\[0\] === 'go'/.test(mapSrc) && /estimate\(/.test(mapSrc) && /\/\/ ---- 길 안내/.test(mapSrc),
         '길 안내: 카드의 "길 안내 시작" · 아래 띠(남은 거리 · 걷는 시간 · 방향 · 끝내기) · 걸으면 지도가 따라오고 손으로 끌면 멈춘다 · 다음 갈 곳에서도 시작한다(#/map/go/<회사>)');
       check(/pointerType|pointers\.size === 2/.test(gestSrc) && /DOUBLE_MS/.test(gestSrc) && /addEventListener\('wheel'/.test(gestSrc) && /requestAnimationFrame/.test(gestSrc) && /swallow/.test(gestSrc) && /sheet-grip/.test(sheetSrc) && /'half'/.test(sheetSrc) && /'full'/.test(sheetSrc) && /closed/.test(sheetSrc),
