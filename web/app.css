@@ -312,3 +312,13 @@ a.link-text { display: inline-flex; align-items: center; min-height: var(--tap-m
 
 /* 비어 있는 안내 줄은 자리를 차지하지 않는다 */
 .note:empty, .live:empty, p[role="status"]:empty { display: none; }
+
+/* 세션 한 줄: 제목 두 줄까지 · 때와 장소 한 줄 · 분야 한 줄 · 단추 한 줄 (줄이 많은 목록이라 짧게) */
+.session { padding: var(--s2) var(--s3); }
+.session > * + * { margin-top: 2px; }
+.session .name { display: block; }
+.session .title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-right: var(--s1); }
+.session .tag { margin-right: var(--s1); }
+.session .where.one { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.session .row-actions { margin-top: 0; gap: var(--s1); }
+.session .row-actions .pick { min-height: var(--tap-min); }
