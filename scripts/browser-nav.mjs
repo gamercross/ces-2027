@@ -33,6 +33,7 @@ async (page) => {
   check(fits, '내 자리와 목적지가 한 화면에 들어온다');
   const noScroll = await page.evaluate(() => document.documentElement.scrollWidth <= 360);
   check(noScroll, '360px 폭에서 옆으로 밀리지 않는다');
+  await page.waitForTimeout(1800);
   await page.screenshot({ path: `${SHOTS}98-nav.png` });
 
   // 2. 걸으면(위치가 바뀌면) 내 자리를 새로 잡는다 (너무 빠른 점프는 버린다: 초속 3m)
