@@ -82,3 +82,60 @@ export function shareText(s) {
 
 // 기조연설 먼저 보려면: 제목이 "Keynote"로 시작하는 것 (공식 제목 규칙).
 export const isKeynote = (s) => /^keynote\b/i.test(s.title);
+
+// ---- 회사와 세션 잇기
+// 공식 자료에는 회사와 세션을 잇는 값이 없다. 그래서 짐작하지 않고, 세션 제목이 스스로 밝힌 이름이 회사 이름과 "같을 때만" 잇는다.
+// 제목이 이름을 밝히는 자리는 셋이다: 끝의 "presented by 이름" · "hosted by 이름", 끝의 괄호 "(이름 and 이름)", 기조연설 제목("Keynote - 이름 Keynote").
+// 제목 속에 이름이 들어 있다는 것만으로는 잇지 않는다 (예: 회사 이름이 "The Future"인 줄이 "…the Future of…" 세션에 붙으면 안 된다).
+const LEGAL = /\s(inc|incorporated|corp|corporation|co|ltd|limited|llc|gmbh|sa|ag|plc|company|holdings)$/;
+
+// 이름을 견주는 꼴: 소문자 · 악센트 뗌 · 기호는 빈칸 · "&"는 and · 끝의 회사 형태(Inc. Co. Ltd …)는 뗌. 세 글자 미만이면 ''(견주지 않는다).
+export function nameKey(name) {
+  let s = String(name || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/&/g, ' and ').replace(/[^a-z0-9가-힣]+/g, ' ').trim();
+  while (LEGAL.test(s)) s = s.replace(LEGAL, '').trim();
+  return s.length >= 3 ? s : '';
+}
+
+const splitNames = (text) => String(text || '').split(/\s*(?:,|&|;|\band\b)\s*/i).map((x) => x.trim()).filter(Boolean);
+
+// 세션 제목이 스스로 밝힌 이름들(견주는 꼴).
+export function partiesOf(title) {
+  const t = String(title || '').trim();
+  const out = [];
+  const by = /(?:presented|hosted|sponsored) by\s+(.+)$/i.exec(t);
+  if (by) out.push(...splitNames(by[1]));
+  const paren = /\(([^()]+)\)\s*$/.exec(t);
+  if (paren) out.push(...splitNames(paren[1]));
+  const key = /^keynote\s*[-–:]\s*(.+)$/i.exec(t);
+  if (key) {
+    for (const part of String(key[1]).split(/\s*(?:\band\b|:|&)\s*/i)) {
+      const name = part.replace(/\bkeynote\b/gi, '').trim();
+      if (name) out.push(name);
+    }
+  }
+  return [...new Set(out.map(nameKey).filter(Boolean))];
+}
+
+// 이름 → 세션들 (날짜 · 시간 차례). 받은 세션 전체에서 한 번 만든다.
+export function indexByParty(items) {
+  const index = new Map();
+  for (const s of items || []) {
+    for (const key of partiesOf(s.title)) {
+      if (!index.has(key)) index.set(key, []);
+      index.get(key).push(s);
+    }
+  }
+  for (const list of index.values()) list.sort((a, b) => a.date.localeCompare(b.date) || a.from.localeCompare(b.from) || a.title.localeCompare(b.title));
+  return index;
+}
+
+// 그 회사 이름과 같은 이름을 밝힌 세션들. 없으면 [].
+export const forCompany = (index, name) => { const key = nameKey(name); return key ? (index.get(key) || []) : []; };
+
+// "1/7 (수) 9:00 ~ 9:40 · 곳" — 라스베이거스 시각이다. 곳이 없으면 "장소 미정".
+export function whenWhere(s) {
+  const [, m, d] = s.date.split('-').map(Number);
+  const w = WEEK[new Date(`${s.date}T00:00:00`).getDay()];
+  const clock = (t) => t.replace(/^0/, '');
+  return `${m}/${d} (${w}) ${clock(s.from)} ~ ${clock(s.to)} · ${s.place || '장소 미정'}`;
+}

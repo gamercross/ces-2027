@@ -6,7 +6,7 @@
 
 const SHORT = 7;
 export const shortId = (id) => (id.length > SHORT ? id.slice(-SHORT) : id);
-const clampDay = (d) => Math.max(0, Math.min(4, parseInt(d || '0', 10) || 0));
+const clampDay = (d) => Math.max(0, Math.min(5, parseInt(d || '0', 10) || 0));
 
 export function planCode(items) {
   return items.map((it) => shortId(it.id) + (it.day ? `.${it.day}` : '')).join(',');

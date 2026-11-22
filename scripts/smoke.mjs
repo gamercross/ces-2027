@@ -338,7 +338,7 @@ check(diary.fileName(who, new Date(2027, 0, 7)) === 'ces2027-일기-물개-20270
   const back = Sh.readCode(link, ids);
   const odd = Sh.readCode(' 1LD1QAM.9 , zzzzzzz.1,short.-3,1LD1QAM.1,, ', ids);
   const merged = Sh.mergeItems(mine, [{ id: ids[1], day: 1 }, { id: ids[0], day: 4 }]);
-  check(code === 'eUUaAAN.2,ellagio' && link === 'https://example.test/ces-2027/#plan=eUUaAAN.2,ellagio' && JSON.stringify(back) === JSON.stringify(mine) && JSON.stringify(odd) === JSON.stringify([{ id: ids[1], day: 4 }, { id: 'short', day: 0 }]) && merged.added === 1 && merged.items.length === 3 && merged.items[0].day === 2, '목록 코드 · 링크: 만들고 다시 읽으면 같다. 없는 회사 · 겹친 것은 빼고, 받은 것은 내게 없는 것만 더한다');
+  check(code === 'eUUaAAN.2,ellagio' && link === 'https://example.test/ces-2027/#plan=eUUaAAN.2,ellagio' && JSON.stringify(back) === JSON.stringify(mine) && JSON.stringify(odd) === JSON.stringify([{ id: ids[1], day: 5 }, { id: 'short', day: 0 }]) && merged.added === 1 && merged.items.length === 3 && merged.items[0].day === 2, '목록 코드 · 링크: 만들고 다시 읽으면 같다. 없는 회사 · 겹친 것은 빼고, 받은 것은 내게 없는 것만 더한다');
   const byId = new Map([[ids[0], [ids[0], 'Alpha | Mobility', '', 0, '0', 2, 0, ['W317@LVCC_W_MTG', '5131@LVCC_W']]], [ids[2], [ids[2], 'Bellagio "Suites"', '', -1, '', 0, 0, []]]]);
   const days = [{ key: 1, ko: '1/6 (수)', short: '1/6' }, { key: 2, ko: '1/7 (목)', short: '1/7' }, { key: 0, ko: '날짜 미정', short: '미정' }];
   const pk = new Map([['LVCC_W_MTG', '웨스트 홀 회의실'], ['LVCC_W', '웨스트 홀']]);
@@ -570,7 +570,7 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       && appCss.includes('.mappage:has(.mapx[data-sheet="half"]') && /\.mapx-top \{[^}]*background: var\(--bg\)/.test(appCss)
       && !cardJs.includes('paperPanel(showFrom),\n') && settingsJs.includes('paperPanel(showFrom)') && (await readFile(join(dist, 'bands.js'), 'utf8')).includes('종이 명함이 있나요?')
       && formStart > 0 && cardJs.indexOf("class: 'dock'", formStart) > 0 && cardJs.indexOf("class: 'dock'", formStart) < cardJs.indexOf("field('한 줄 (선택)', line)", formStart)
-      && planJs.includes('부스 ${row[7].length}곳'),
+      && planJs.includes('boothLines(') && (await readFile(join(dist, 'company-extra.js'), 'utf8')).includes('부스 ${booths.length}곳'),
       '디자인 마감: 제목은 24px 한 줄 · 12px 글자가 없다(13px부터) · 아래 도크를 걷고 "일기 쓰기"만 탭 바로 위에 붙는다 · 링크 모양 회색 칩이 없다 · 선택된 탭은 굵은 선 · 지도 탭은 머리를 접고 "비공식"을 찾기 칸에 · 카드가 열리면 지도 아래 묶음을 가린다 · 종이 명함 질문은 동선 띠와 설정에만 · 첫 명함은 필수 둘 다음에 바로 단추 · 부스가 여럿인 회사는 카드에 모두 보인다');
   }
   // 다시 짓기 7단계: 글자 크기 네 단계(기본 100 · 크게 115 · 더 크게 130 · 가장 크게 150%). 첫 그림 전에 걸리고, 제목은 상한, 지도 글자는 130%까지.
@@ -594,10 +594,10 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
   const tokVal = (css, n) => (css.match(new RegExp(`--${n}:\\s*(#[0-9a-fA-F]{6});`)) || [])[1];
   const isGray = (hex) => { const n = parseInt(hex.slice(1), 16); return (n >> 16) === ((n >> 8) & 255) && ((n >> 8) & 255) === (n & 255); };
   const chroma = [...lightCss.matchAll(/--([a-z0-9-]+):\s*(#[0-9a-fA-F]{6});/g)].filter((m) => !isGray(m[2])).map((m) => m[1]);
-  const okChroma = new Set(['accent', 'accent-soft', 'mint', 'warn', 'map-korea', 'map-best', 'map-honoree', 'day-1', 'day-2', 'day-3', 'day-4']);
+  const okChroma = new Set(['accent', 'accent-soft', 'mint', 'warn', 'map-korea', 'map-best', 'map-honoree', 'day-1', 'day-2', 'day-3', 'day-4', 'day-5']);
   const strayChroma = chroma.filter((n) => !okChroma.has(n) && !n.startsWith('group-'));
   const accentHue = (hex) => { const n = parseInt(hex.slice(1), 16); const [r, g, b] = [n >> 16, (n >> 8) & 255, n & 255]; return b > g && g >= r; };
-  check(!/--tab-/.test(tokCss) && !/body\[data-tab=/.test(tokCss) && !/--tab:/.test(appCss) && strayChroma.length === 0 && ['accent', 'accent-soft', 'mint', 'map-korea', 'map-best', 'map-honoree', 'day-1', 'day-2', 'day-3', 'day-4'].every((n) => accentHue(tokVal(lightCss, n))) && tokCss.includes('--btn:') && tokCss.includes('--on-btn:') && app.includes('document.body.dataset.tab'),
+  check(!/--tab-/.test(tokCss) && !/body\[data-tab=/.test(tokCss) && !/--tab:/.test(appCss) && strayChroma.length === 0 && ['accent', 'accent-soft', 'mint', 'map-korea', 'map-best', 'map-honoree', 'day-1', 'day-2', 'day-3', 'day-4', 'day-5'].every((n) => accentHue(tokVal(lightCss, n))) && tokCss.includes('--btn:') && tokCss.includes('--on-btn:') && app.includes('document.body.dataset.tab'),
     `무채색 테마: 탭마다 다른 강조색이 없고, 회색이 아닌 색은 강조색 하나의 계열 · 상태색 · 분야 칠하기(고를 때만)뿐이다 (그 밖의 색 ${strayChroma.join(' ') || '없음'}), 단추는 검정 칠한 단추 + 글자 단추`);
   const headPos = (needle) => html.indexOf(needle);
   check(headPos('src="theme.js"') > 0 && headPos('src="theme.js"') < headPos('href="tokens.css"') + 1000 && /prefers-color-scheme: dark/.test(themeJs) && /'light'/.test(themeJs) && /'dark'/.test(themeJs) && ['자동', '밝게', '어둡게'].every((w) => settingsJs.includes(w)) && /ces2027\.theme\.v1/.test(themeJs) && settingsJs.includes('setTheme') && /settings: \(\) => import/.test(app) && html.includes('href="#/settings"'), '테마: 설정에서 자동 · 밝게 · 어둡게를 고르고, theme.js가 첫 그림 전에 폰 설정(prefers-color-scheme)을 읽어 정한다');
@@ -692,6 +692,64 @@ check(cats.groups.length === 7 && ['stu', 'job', 'ret', 'mid'].every((k) => cats
     check(true, '세션 일정 자료(data/sessions.json)가 이번 판에는 없다: 공식 일정을 받지 못한 날이다. 화면은 "받지 못했다"를 보이고 앱은 그대로 열린다');
   }
   check(/받아 두지 못했다/.test(await readFile(join(dist, 'views/sessions.js'), 'utf8')), '세션 일정: 받지 못한 날에는 못 받았다고 보인다 (짐작해서 채우지 않는다)');
+}
+
+// 마무리 셋(11/22): ① 1/5 사전 일정 날짜 ② 회사 카드의 "이 회사 세션"과 부스 자리마다 한 줄 ③ 설정의 "이 폰의 내 자료 지우기".
+{
+  const D = await import('../web/days.js');
+  const Rt = await import('../web/route.js');
+  const Sh = await import('../web/share.js');
+  const S = await import('../web/sessions.js');
+  const pre = info.show.pre?.[0];
+  const list = D.dayList(info);
+  check(pre?.date === '2027-01-05' && isCes(pre.source) && /^\d{4}-\d\d-\d\d$/.test(pre.source.read) && list.map((d) => `${d.key}:${d.date.slice(5)}`).join(' ') === '5:01-05 1:01-06 2:01-07 3:01-08 4:01-09' && D.dayKeyOf(info, '2027-01-05') === 5 && D.dayKeyOf(info, '2027-01-06') === 1 && D.dayKeyOf(info, '2027-01-04') === null && D.dayByKey(info, 5)?.pre === true && D.dayByKey(info, 0) === null && info.show.days.length === 4,
+    '날짜 칩: 1/5(화) 사전 일정이 맨 앞에 더해진다 (번호는 5, 전시 날 1 ~ 4는 그대로). 1/4는 넣지 않는다');
+  const none = () => null;
+  const tbl = new Map();
+  const sorted = Rt.sortRoute([{ id: 'a', day: 2 }, { id: 'b', day: 5 }, { id: 'c', day: 0 }, { id: 'd', day: 1 }], none, tbl).map((it) => it.id).join('');
+  const nx = Rt.nextStop([{ id: 'a', day: 2 }, { id: 'b', day: 5 }, { id: 'c', day: 0 }], undefined)?.id;
+  const filled = Rt.fillDays([{ id: 'a', day: 5 }, { id: 'b', day: 0 }, { id: 'c', day: 0 }], none, tbl, [0, 1, 1, 1, 1]);
+  const five = Sh.readCode(Sh.planCode([{ id: 'abcdefg1234', day: 5 }]), ['abcdefg1234']);
+  check(sorted === 'bdac' && nx === 'b' && filled.items.find((it) => it.id === 'a').day === 5 && filled.items.every((it) => it.day >= 1) && five[0]?.day === 5 && Sh.planCode([{ id: 'abcdefg1234', day: 5 }]).endsWith('.5'),
+    '1/5를 쓰는 곳: 동선 차례(1/5가 맨 앞 · 미정이 맨 뒤) · 다음 갈 곳 · 날짜 채우기(1/5에 넣은 곳은 그대로) · 나눈 코드가 5번 날짜를 지킨다');
+
+  // 이 회사 세션: 세션 제목이 스스로 밝힌 이름이 회사 이름과 같을 때만 잇는다. 이름이 제목 속에 들어 있다는 것만으로는 잇지 않는다.
+  const ses = (id, title) => ({ id, date: '2027-01-06', from: '09:00', to: '09:40', title, place: 'ARIA, Level 1', url: `https://www.ces.tech/schedule/${id}/` });
+  const idx = S.indexByParty([
+    ses('s1', 'Tech Trends 2027: Humans x Machines, presented by Deloitte'),
+    ses('s2', 'Never Stop the Line: Agentic AI for Factories (Deloitte and SymphonyAI)'),
+    ses('s3', 'Physical AI From Concept to Production, presented by NVIDIA'),
+    ses('s4', 'Keynote - CTA State of the Industry Address and Stellantis Keynote'),
+    ses('s5', 'Keynote - Waymo Keynote'),
+    ses('s6', 'The Future of Robot Navigation'),
+    ses('s7', 'Event - CTA Women in Tech Brunch, hosted by CTA, The Female Quotient & Black Girl Ventures'),
+  ]);
+  const ids = (name) => S.forCompany(idx, name).map((s) => s.id).join(' ');
+  check(ids('Deloitte') === 's2 s1' && ids('NVIDIA Corporation') === 's3' && ids('Stellantis') === 's4' && ids('Waymo Inc.') === 's5' && ids('The Female Quotient') === 's7'
+    && ids('The Future') === '' && ids('Circular') === '' && ids('AI') === '' && ids('SymphonyAI') === 's2' && ids('') === '' && S.nameKey('BXRX Inc.') === 'bxrx' && S.nameKey('DEPT®') === 'dept' && S.whenWhere(ses('x', 't')) === '1/6 (수) 9:00 ~ 9:40 · ARIA, Level 1' && S.whenWhere({ ...ses('x', 't'), place: '' }).endsWith('장소 미정'),
+    '이 회사 세션: 제목이 밝힌 이름(presented by · hosted by · 끝의 괄호 · 기조연설)이 회사 이름과 같을 때만 잇는다. 제목 속에 이름이 든 것("The Future"…)이나 짧은 이름은 잇지 않는다');
+  const extraJs = await readFile(join(dist, 'company-extra.js'), 'utf8');
+  const mapJs = await readFile(join(dist, 'views/map.js'), 'utf8');
+  const planJs2 = await readFile(join(dist, 'views/plan.js'), 'utf8');
+  check(/sessionBlock\(name\)/.test(mapJs) && /boothLines\(row\[7\]/.test(mapJs) && /sessionBlock\(nameOf\(id\)\)/.test(planJs2) && /boothLines\(row\?\.\[7\]/.test(planJs2) && /import\('\.\/sessions\.js'\)/.test(extraJs) && !/^import[^(\n]*sessions\.js/m.test(extraJs) && /hidden: true/.test(extraJs) && /\.length < 2\) return null/.test(extraJs) && /\.pick-row/.test(await readFile(join(dist, 'app.css'), 'utf8')),
+    '회사 카드(지도 · 동선 둘 다): "이 회사 세션" 줄과 부스 자리마다 한 줄. 세션 셈은 누를 때 불러오고, 맞는 세션이 없으면 줄을 숨긴다');
+
+  // 이 폰의 내 자료 지우기: ces2027. 열쇠만 지우고(앱 껍데기 캐시는 그대로), 두 번 확인하고, 먼저 내보내기를 권한다.
+  const mem = () => { const m = new Map(); return { get length() { return m.size; }, key: (i) => [...m.keys()][i] ?? null, setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k), getItem: (k) => (m.has(k) ? m.get(k) : null) }; };
+  const ls = mem(), ss = mem();
+  for (const k of ['ces2027.profile.v1', 'ces2027.diary.v1', 'ces2027.people.v1', 'ces2027.interests.v1', 'ces2027.theme.v1', 'other.app']) ls.setItem(k, '1');
+  ss.setItem('ces2027.introLater', '1'); ss.setItem('keep', '1');
+  Object.defineProperty(globalThis, 'localStorage', { value: ls, configurable: true });
+  Object.defineProperty(globalThis, 'sessionStorage', { value: ss, configurable: true });
+  const { clearMine } = await import('../web/store.js');
+  const cleared = clearMine();
+  const settingsJs2 = await readFile(join(dist, 'views/settings.js'), 'utf8');
+  const mineFn = settingsJs2.slice(settingsJs2.indexOf('function mineRow'), settingsJs2.indexOf('// 종이 명함: 있는지'));
+  const storageFn = settingsJs2.slice(settingsJs2.indexOf('function storageRow'), settingsJs2.indexOf('// 일기 전부와 폰에 있는 대화를'));
+  check(cleared === 6 && ls.length === 1 && ls.getItem('other.app') === '1' && ss.length === 1 && ss.getItem('keep') === '1'
+    && mineFn.includes("'이 폰의 내 자료'") && mineFn.includes('downloadExport()') && mineFn.indexOf('const first') < mineFn.indexOf('const second') && mineFn.includes('clearMine()') && mineFn.includes("'#/'") && !/caches/.test(mineFn)
+    && storageFn.includes("rowState('받아 둔 모델')") && !/저장 공간/.test(storageFn.replace(/이 브라우저는 크기를|저장 공간 비우기/g, '')) && /dropAllAudio/.test(settingsJs2),
+    '설정 "이 폰의 내 자료 지우기": 두 번 확인(첫 확인에서 내보내기를 권한다) 뒤 ces2027. 자료만 지우고 처음 명함부터 다시 시작한다. 앱 파일(캐시)은 그대로고, "받아 둔 모델 비우기" 줄과 이름이 나뉘어 있다');
 }
 
 if (await exists('data/meta.json')) {

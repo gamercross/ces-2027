@@ -43,3 +43,10 @@ export const getFinder = () => cached('finder', async () => {
   core.loadIndex(new Uint8Array(index));
   return { core, data, placeKo: new Map(places.places.map((p) => [p.k, p.ko])) };
 });
+// 세션 일정(공식 일정에서 받아 둔 것). 쓸 수 없는 꼴이면 읽지 못한 것으로 친다.
+export const getSessions = () => cached('sessions', async () => {
+  const { clean } = await import('./sessions.js');
+  const doc = clean(await getJson('data/sessions.json'));
+  if (!doc) throw new Error('data/sessions.json을 쓸 수 없다');
+  return doc;
+});

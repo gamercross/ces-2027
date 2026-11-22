@@ -5,8 +5,7 @@ import { run } from './idb.js';
 export const savePhoto = (id, blob) => run('photo', 'readwrite', (s) => s.put(blob, id));
 export const loadPhoto = (id) => run('photo', 'readonly', (s) => s.get(id));
 export const dropPhoto = (id) => run('photo', 'readwrite', (s) => s.delete(id));
-// 이 폰의 일기 사진을 전부 지운다("이 폰의 내 자료 지우기"가 부른다).
-export const clearPhotos = () => run('photo', 'readwrite', (s) => s.clear());
+// "이 폰의 내 자료 지우기"는 데이터베이스('ces2027')째 지우는 dropAllAudio(web/audio-store.js)를 불러, 같은 데이터베이스에 둔 사진도 함께 지워진다.
 
 // 저장 공간이 모자라서 못 담은 것인가(브라우저마다 이름이 다르다).
 export const isFull = (e) => e?.name === 'QuotaExceededError' || e?.code === 22 || /quota/i.test(String(e?.message || ''));

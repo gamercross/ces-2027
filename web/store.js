@@ -90,3 +90,19 @@ export const setTopics = (list) => save('topics.v1', list);
 // 파일로 내보낼 때만 그 파일에 든 일기와 이어진 대화가 들어간다(녹음은 어느 때도 가지 않는다). 모양은 talk.js.
 export const getTalks = () => load('talks.v1', []);
 export const setTalks = (list) => save('talks.v1', list);
+
+// 이 폰의 내 자료를 모두 지운다: 명함 · 관심 · 동선 · 일기 · 만난 사람 · 대화 · 주제 · 일정 · 설정 · 표시 · 이 탭에서 적어 둔 것(ces2027.로 시작하는 열쇠 전부).
+// 앱 껍데기(인터넷 없이 열리게 담아 둔 파일)는 여기 없다 — 건드리지 않는다. 지운 열쇠 수를 돌려주고, 저장 공간이 막혀 있으면 null.
+export function clearMine() {
+  try {
+    let n = 0;
+    for (const store of [localStorage, sessionStorage]) {
+      const mine = [];
+      for (let i = 0; i < store.length; i++) { const key = store.key(i); if (key && key.startsWith(PREFIX)) mine.push(key); }
+      for (const key of mine) { store.removeItem(key); n += 1; }
+    }
+    return n;
+  } catch {
+    return null;
+  }
+}

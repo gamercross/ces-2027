@@ -70,7 +70,7 @@ async (page) => {
   const order = await page.locator('.stops .stop .name').allTextContents();
   check(order[2] === name, '아래로: 뒤의 줄도 그 회사가 3번째다');
   // 날짜 1/7로 → 첫 날 줄에서 사라지고 보는 날이 따라간다
-  await page.locator('.pcard .segs .seg').nth(1).click();
+  await page.locator('.pcard .segs .seg', { hasText: '1/7' }).click();
   await settle(300);
   check(/1\/7/.test(await page.locator('.pcard-sub').textContent()), '날짜를 바꾸면 카드가 1/7로 바뀐다');
   await page.getByRole('button', { name: '닫기', exact: true }).click();

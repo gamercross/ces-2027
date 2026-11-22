@@ -85,6 +85,7 @@
   --day-2: #a5b5d2;
   --day-3: #869bc0;
   --day-4: #6f87b3;
+  --day-5: #dbe1ee;
   /* 분야 묶음 일곱: 기본은 꺼져 있고 지도에서 "분야"를 고를 때만 쓴다. 채도를 낮춘 일곱 */
   --group-ai: #94a7c9;
   --group-mob: #c9a48b;
@@ -139,6 +140,7 @@
   --day-2: #4a5a7c;
   --day-3: #546690;
   --day-4: #596b94;
+  --day-5: #38405a;
   --group-ai: #5a6b8f;
   --group-mob: #8a6c58;
   --group-rob: #8a5f61;

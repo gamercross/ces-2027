@@ -52,7 +52,7 @@ async (page) => {
   const field = page.locator('.photo-field');
   check((await field.count()) === 1 && (await field.locator('.label').textContent()).includes('사진 (한 장, 선택)') && (await field.locator('.pick', { hasText: '사진 넣기' }).count()) === 1 && (await field.locator('.pick', { hasText: '사진 빼기' }).isHidden()), '쓰기 칸에 "사진 (한 장, 선택)"과 "사진 넣기"가 있고 "사진 빼기"는 숨어 있다');
   await field.scrollIntoViewIfNeeded();
-  await shot('140-photo-form-empty.png');
+  await shot('160-photo-form-empty.png');
   await field.locator('.file-hidden').setInputFiles([NOT_IMAGE]);
   await page.getByText('이 사진을 읽지 못했다').waitFor();
   check((await field.locator('img.photo').isHidden()), '사진이 아닌 파일은 "이 사진을 읽지 못했다"로 거절하고 미리 보기가 없다');
@@ -66,7 +66,7 @@ async (page) => {
   check((await field.locator('.pick', { hasText: '사진 바꾸기' }).count()) === 1 && (await field.locator('.pick', { hasText: '사진 빼기' }).isVisible()), '고른 뒤 "사진 바꾸기"와 "사진 빼기"가 보인다');
   check((await idbGet('none')) === null, '남기기 전에는 폰에 담지 않았다');
   await field.scrollIntoViewIfNeeded();
-  await shot('141-photo-form-picked.png');
+  await shot('161-photo-form-picked.png');
   await page.locator('textarea[name=saw]').fill('로봇 팔이 컵을 집어 옮긴다 (시험용 지어낸 글)');
   await page.locator('input[name=other]').fill('Alpha Robotics (지어낸 회사)');
 
@@ -77,7 +77,7 @@ async (page) => {
   const full = await page.locator('.error').textContent();
   check(full.includes('저장 공간이 모자라 사진을 못 담았다') && full.includes('사진 빼기') && (await diaryEntries()).length === 0, `저장 공간이 모자라면 안내 한 줄이 나오고 글도 남기지 않는다 (${full})`);
   await page.locator('.error').scrollIntoViewIfNeeded();
-  await shot('142-photo-full.png');
+  await shot('162-photo-full.png');
   await page.evaluate(() => { IDBObjectStore.prototype.put = window.__realPut; });
 
   // 4. 남기기: 사진은 IndexedDB에, 글(localStorage)에는 표시만
@@ -91,7 +91,7 @@ async (page) => {
   await page.locator('.stop-open').first().click();
   await page.locator('.pcard .photo-box img.photo').waitFor();
   check((await page.locator('.pcard .photo-box .note').textContent()).includes('이 폰에만'), '일기 카드에 사진이 보이고 "이 폰에만" 안내가 있다');
-  await shot('143-photo-card.png');
+  await shot('163-photo-card.png');
   await page.locator('.pcard-close').click();
 
   // 5. 파일로 내보내기(일기 탭 보내기): 사진이 그 파일에 들어간다
@@ -115,7 +115,7 @@ async (page) => {
   await page.locator('.file-hidden').setInputFiles([{ name: 'ces2027-일기-시험-사진.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(all)) }]);
   await page.locator('.coll-summary:not([hidden])').waitFor();
   check(/^일기 1개 · 쓴 사람 1명/.test(await page.locator('.coll-summary').textContent()) && (await page.locator('.coll-co').textContent()).includes('사진 있음'), '모은 일기 열기가 사진이 든 파일(약 ' + Math.round(JSON.stringify(all).length / 1024) + 'KB)을 읽고 카드에 "사진 있음"을 보인다');
-  await shot('144-photo-collect.png');
+  await shot('164-photo-collect.png');
   const [dl3] = await Promise.all([page.waitForEvent('download'), page.locator('.btn', { hasText: '한장.md 내려받기' }).click()]);
   const md = await readDownload(dl3);
   check(md.includes('- 사진 있음 (시험, ') && !md.includes('data:image') && md.length < 3000, `한장.md에는 사진을 넣지 않고 "사진 있음"만 적힌다 (${md.length}자)`);
@@ -172,7 +172,7 @@ async (page) => {
       const a = await audit(`${W}px · 글자 ${n}단계 · 쓰기`, W);
       results.push(a);
       check(!a.side && a.small.length === 0 && a.tiny === 0 && !a.wide, `${a.label}: 가로 넘침 없음 · 누르는 곳 44px 이상 · 12px 글자 없음 · 사진이 칸 안에 든다 (${JSON.stringify(a)})`);
-      if (W === 360 && n === 4) { await page.locator('.photo-field').scrollIntoViewIfNeeded(); await shot('145-photo-form-text4.png'); }
+      if (W === 360 && n === 4) { await page.locator('.photo-field').scrollIntoViewIfNeeded(); await shot('165-photo-form-text4.png'); }
     }
   }
   await page.evaluate(() => localStorage.setItem('ces2027.text.v1', JSON.stringify(1)));
