@@ -1,12 +1,14 @@
-// 지도 아래에서 올라오는 카드: 반쯤 → 끝까지 끌어올린다. 손잡이를 끌거나 누른다. 아래로 끌면 닫힌다.
+// 지도 아래에서 올라오는 카드: 반쯤 → 끝까지 끌어올린다. 손잡이를 끌거나 누른다. 아래로 끌면 닫힌다. 오른쪽 위 ×로도 닫는다.
 // 카드는 지도 칸(host) 안에서만 움직인다. 지도는 카드가 덮지 않는 곳에서 그대로 눌리고 끌린다.
 
-import { el } from './dom.js';
+import { cross, el } from './dom.js';
 
 export function createSheet(host, { onClose, onChange } = {}) {
   const body = el('div', { class: 'sheet-body' });
   const grip = el('button', { class: 'sheet-grip', type: 'button', 'aria-label': '카드 크기 바꾸기' }, el('span', { class: 'sheet-bar' }));
-  const node = el('section', { class: 'sheet', role: 'dialog', 'aria-label': '카드', hidden: true }, grip, body);
+  // 닫기(×)는 카드만 닫는다. 길 안내를 끝내는 것은 아래 띠의 "끝내기"다.
+  const shut = el('button', { class: 'sheet-close', type: 'button', 'aria-label': '카드 닫기', onclick: () => close() }, cross());
+  const node = el('section', { class: 'sheet', role: 'dialog', 'aria-label': '카드', hidden: true }, grip, shut, body);
   let state = 'closed';
 
   const hostH = () => host.clientHeight || 600;
@@ -61,6 +63,26 @@ export function createSheet(host, { onClose, onChange } = {}) {
   };
   grip.addEventListener('pointerup', release);
   grip.addEventListener('pointercancel', release);
+
+  // 바퀴 · 트랙패드 · 아이폰 미러링의 쓸기는 손가락(pointer)이 아니라 바퀴 스크롤로 온다(touch-action으로 못 막는다).
+  // 카드 안 글이 더 굴러갈 수 있으면 그대로 두고, 아니면 페이지로 넘기지 않는다(화면 전체가 밀리지 않게).
+  // 손잡이 위에서는 쓴 쪽으로 카드를 한 단계 옮긴다(아래로: 끝까지 → 반 → 닫힘, 위로: 끝까지).
+  let wheel = { sum: 0, at: 0, done: false };
+  node.addEventListener('wheel', (ev) => {
+    if (ev.ctrlKey || Math.abs(ev.deltaX) > Math.abs(ev.deltaY)) return;
+    const inBody = body.contains(ev.target);
+    if (inBody && (ev.deltaY < 0 ? body.scrollTop > 0 : body.scrollTop + body.clientHeight < body.scrollHeight - 1)) return;
+    ev.preventDefault();
+    if (inBody) return;
+    const now = performance.now();
+    if (now - wheel.at > 250) wheel = { sum: 0, at: now, done: false };
+    wheel.at = now;
+    if (wheel.done) return;
+    wheel.sum += ev.deltaMode === 1 ? ev.deltaY * 16 : ev.deltaY;
+    if (Math.abs(wheel.sum) < 80) return;
+    wheel.done = true;
+    if (wheel.sum > 0) setState('full'); else setState(state === 'full' ? 'half' : 'closed');
+  }, { passive: false });
   node.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') close(); });
   host.addEventListener('resize-sheet', () => { if (state !== 'closed') place(heightOf(state)); });
   return { node, open, close, setState, state: () => state, height: () => heightOf(state), expectedHeight: () => sizes().half };

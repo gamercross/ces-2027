@@ -82,6 +82,37 @@ async (page) => {
   await page.goto(`${URL}#/map/go/${encodeURIComponent(row.id)}`);
   await page.waitForFunction(() => document.querySelector('.navbar') && /^→/.test(document.querySelector('.navbar').innerText), null, { timeout: 15000 });
   check(true, '#/map/go/<회사> 주소로 오면 바로 길 안내가 시작된다');
+
+  // 6. 폰이 라스베이거스 밖이면(서울) 띠가 그 까닭과 거리를 말하고 구글맵을 준다. 카드에는 "다른 캠퍼스"가 아니라 "전시장 밖" (폰 확인 2차 C · D)
+  await page.evaluate(() => { localStorage.removeItem('ces2027.interests.v1'); localStorage.removeItem('ces2027.where.v1'); });
+  await page.context().setGeolocation({ latitude: 37.5665, longitude: 126.978, accuracy: 30 });
+  await page.goto('about:blank');
+  await page.goto(`${URL}#/map/go/${encodeURIComponent(row.id)}`);
+  await page.waitForFunction(() => /전시장 밖/.test(document.querySelector('.navbar')?.innerText || ''), null, { timeout: 15000 });
+  text = await bar();
+  const farLink = await page.locator('.navbar a', { hasText: '구글맵' }).getAttribute('href');
+  check(/가장 가까운 전시장까지 약 [\d,]+km/.test(text) && text.includes('다시 잡기') && text.includes('끝내기') && /^https:\/\/www\.google\.com\/maps\/dir\//.test(farLink || ''), `라스베이거스 밖이면 띠에 "전시장 밖 · 거리"와 다시 잡기 · 구글맵 · 끝내기가 나온다 (${text.replace(/\n/g, ' · ')})`);
+  const fits360 = await page.evaluate(() => { const n = document.querySelector('.navbar'); return document.documentElement.scrollWidth <= 360 && [...n.querySelectorAll('.btn')].every((b) => b.getBoundingClientRect().height >= 44 && b.scrollWidth <= b.clientWidth + 1); });
+  check(fits360, '띠의 단추 셋이 360px 안에 들고 글자가 잘리지 않는다 (누르는 곳 44px 이상)');
+  await page.waitForTimeout(900);
+  await page.screenshot({ path: `${SHOTS}98b-nav-far.png` });
+  await page.getByRole('button', { name: '끝내기' }).click();
+  await page.goto('about:blank');
+  await page.goto(`${URL}#/map/at/${encodeURIComponent(row.id)}`);
+  await page.locator('.sheet .card h2').waitFor({ timeout: 15000 });
+  const way = await page.locator('.card-way').innerText();
+  check(way.includes('전시장 밖이다') && !way.includes('다른 캠퍼스'), `카드의 "여기까지 길"도 "전시장 밖"이라고 말한다 (${way.split('\n')[1] || way})`);
+
+  // 7. 위치를 거부하면 띠가 거부했다고 말한다 (예전에는 "내 위치를 먼저 잡는다"만 남았다)
+  await page.evaluate(() => { localStorage.removeItem('ces2027.where.v1'); });
+  await page.context().clearPermissions();
+  await page.goto('about:blank');
+  await page.goto(`${URL}#/map/go/${encodeURIComponent(row.id)}`);
+  await page.waitForFunction(() => /^→/.test(document.querySelector('.navbar')?.innerText || ''), null, { timeout: 15000 });
+  await page.getByRole('button', { name: '내 위치 잡기' }).click();
+  await page.waitForFunction(() => /거부/.test(document.querySelector('.navbar')?.innerText || ''), null, { timeout: 15000 });
+  check(true, '위치를 거부하면 띠에 "위치 권한을 거부했다"가 나온다');
+  await page.context().grantPermissions(['geolocation']);
   await page.evaluate(() => { localStorage.removeItem('ces2027.interests.v1'); localStorage.removeItem('ces2027.where.v1'); });
   return checks.map((c) => `됨 | ${c.what}`).join('\n');
 }
