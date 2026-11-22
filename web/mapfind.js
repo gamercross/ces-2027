@@ -1,57 +1,69 @@
-// 지도 탭 위의 찾기 칸: 회사 이름 · 분야 · 부스 번호 · 장소로 찾고, 줄마다 관심 · 지도 · 대화 · 공식 단추가 있다.
-// 회사 탭이 없어지면서 find.js에서 옮겼다. 찾기 자료(코어 · 색인 · 전시사)는 글자를 칠 때 불러온다.
+// 지도 맨 위 찾기 칸: 회사 이름 · 부스 번호 · 분야 · 한글 별칭 · 홀 이름으로 찾는다. 고르면 지도가 그 부스로 날아가 카드가 열린다.
+// 찾기 자료(코어 · 색인 · 전시사)는 글자를 칠 때 불러온다. 첫 화면에는 싣지 않는다.
 
-import { el, num } from './dom.js';
+import { el } from './dom.js';
 import { getFinder, getMeta } from './data.js';
-import { companyRow } from './company.js';
-import { getInterests } from './store.js';
+import { splitBooth } from './route.js';
 
-const PAGE = 20;
+const SHOW = 8;
 
-// 많은 줄은 조금씩 보인다.
-function pagedList(rows, makeRow) {
-  const list = el('ol', { class: 'hits' });
-  const more = el('button', { class: 'btn ghost wide', type: 'button' });
-  let shown = 0;
-  const add = () => {
-    list.append(...rows.slice(shown, shown + PAGE).map(makeRow));
-    shown = Math.min(rows.length, shown + PAGE);
-    more.hidden = shown >= rows.length;
-    more.textContent = `더 보기 (${num(rows.length - shown)}곳 남음)`;
-  };
-  more.addEventListener('click', add);
-  add();
-  return el('div', { class: 'page' }, list, more);
-}
-
-export function findBox() {
-  const input = el('input', { type: 'search', inputmode: 'search', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', placeholder: '회사 찾기: 삼성, 로봇, 14731', 'aria-label': '회사 이름 · 분야 · 부스 번호 · 장소' });
-  const note = el('p', { class: 'note', role: 'status' });
-  const results = el('div', { class: 'page' });
-  const plan = el('a', { class: 'chip', href: '#/plan' });
-  const paintPlan = () => { plan.textContent = `관심 ${getInterests().length}곳 · 동선`; };
-  paintPlan();
+// opts: { places: [{ k, ko, ... }], onCompany(row, data, finder), onPlace(place) }
+export function findBox({ places, onCompany, onPlace }) {
+  const input = el('input', { type: 'search', inputmode: 'search', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search', placeholder: '회사 · 부스 번호 · 홀 찾기', 'aria-label': '회사 이름 · 부스 번호 · 분야 · 홀 찾기' });
+  const list = el('ul', { class: 'results', role: 'listbox', 'aria-label': '찾은 것', hidden: true });
+  const note = el('p', { class: 'results-note', role: 'status', hidden: true });
+  const node = el('div', { class: 'find' }, el('label', { class: 'find-field' }, input), note, list);
   let turn = 0;
+  let current = [];
+
+  const clear = () => { list.replaceChildren(); list.hidden = true; note.hidden = true; current = []; };
+  const say = (text) => { list.replaceChildren(); list.hidden = true; note.textContent = text; note.hidden = false; };
+
+  function pick(item) {
+    clear();
+    input.value = '';
+    input.blur();
+    if (item.place) onPlace(item.place); else onCompany(item.row, item.finder);
+  }
+  function show(items) {
+    current = items;
+    note.hidden = true;
+    list.replaceChildren(...items.map((it, i) => el('li', { role: 'option' },
+      el('button', { class: 'result', type: 'button', onclick: () => pick(it) },
+        el('b', { text: it.title }), el('span', { text: it.sub })))));
+    list.hidden = false;
+  }
   async function find() {
     const mine = ++turn;
     const q = input.value.trim();
-    if (!q) { results.replaceChildren(); note.textContent = ''; return; }
+    if (!q) { clear(); return; }
+    // 홀 이름은 바로 찾는다 (자료를 기다리지 않는다).
+    const lower = q.toLowerCase();
+    const hallHits = places.filter((p) => p.ko.toLowerCase().includes(lower) || p.en?.toLowerCase().includes(lower)).slice(0, 2)
+      .map((p) => ({ place: p, title: p.ko, sub: '홀 · 장소' }));
+    if (hallHits.length) show(hallHits);
     let finder;
     try {
-      if (!(await getMeta())) { note.textContent = '전시사 자료를 아직 받지 못했다.'; return; }
+      if (!(await getMeta())) { if (!hallHits.length) say('전시사 자료를 아직 받지 못했다.'); return; }
       finder = await getFinder();
     } catch {
-      note.textContent = '찾기 자료를 불러오지 못했다. 인터넷을 확인한다.';
+      if (!hallHits.length) say('찾기 자료를 불러오지 못했다. 인터넷을 확인한다.');
       return;
     }
     if (mine !== turn) return;
-    const rows = finder.core.search(q, 200).map((i) => finder.data.ex[i]);
-    note.textContent = rows.length ? (rows.length === 200 ? '먼저 200곳' : `${rows.length}곳`) : '맞는 회사가 없다.';
-    results.replaceChildren(pagedList(rows, (r) => companyRow(r, finder.data, finder.placeKo, paintPlan)));
+    const rows = finder.core.search(q, SHOW * 3).map((i) => finder.data.ex[i]).slice(0, SHOW);
+    const items = [...hallHits, ...rows.map((row) => {
+      const b = row[7][0];
+      const where = b ? splitBooth(b) : null;
+      return { row, finder, title: row[1], sub: where ? `${finder.placeKo.get(where.place) || '장소 모름'} · 부스 ${where.code}` : '부스 미정' };
+    })];
+    if (!items.length) { say('맞는 회사가 없다.'); return; }
+    show(items);
   }
   input.addEventListener('input', find);
-  return el('section', { class: 'panel' },
-    el('label', { class: 'field' }, input),
-    note, results,
-    el('div', { class: 'actions' }, plan));
+  input.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') { ev.preventDefault(); if (current[0]) pick(current[0]); }
+    if (ev.key === 'Escape') { clear(); input.value = ''; }
+  });
+  return { node, input, clear };
 }

@@ -1,29 +1,32 @@
-// 지도: 2D가 기본이다. 3D는 "3D"를 누를 때 불러온다. "크게 보기"는 캠퍼스 셋을 한 화면에 보인다.
-// 관심 회사는 동선 번호로 찍힌다. 홀 안 부스 자리는 짐작이다.
+// 지도: 2D가 기본이다. 3D는 위 단추를 누를 때 불러온다.
+// 손가락으로 크게 · 작게(두 손가락 벌리기 · 두 번 톡), 한 손가락 끌기. 확대 단계 셋: 캠퍼스 셋 → 홀 → 부스.
+// 확대할수록 더 보인다: 캠퍼스에는 홀 이름, 홀에는 큰 회사 · 관심 회사 이름, 부스에는 부스 번호와 회사 이름(겹치면 숨기고, 글자는 13px 아래로 줄지 않는다).
+// 위에 찾기 칸과 홀 바로 가기, 회사를 누르면 아래에서 올라오는 큰 카드. 관심 회사는 동선 번호로 찍히고 차례대로 선이 이어진다.
+// 전시사 자료는 첫 화면에 다 받지 않는다: 홀로 가까이 갈 때 그 홀의 것만 받는다(찾기 · 관심 회사가 있으면 전체). 홀 안 부스 자리는 짐작이다.
 
 import { el, out } from '../dom.js';
-import { getCategories, getExhibitors, getIndoorPaths, getInfo, getOfficialSpots, getPlaces } from '../data.js';
+import { getCategories, getExhibitors, getHall, getIndoorPaths, getInfo, getOfficialSpots, getPlaces } from '../data.js';
 import { boothColorer, legend, MODES } from '../colors.js';
-import { load, save } from '../store.js';
-import { getInterests } from '../store.js';
-import { layout } from '../geo.js';
+import { getInterests, getWhere, hasInterest, load, save, setInterests, setWhere, toggleInterest } from '../store.js';
+import { bbox, layout } from '../geo.js';
 import { boothSpots, spotOf } from '../spots.js';
 import { mapsLink } from '../maps.js';
 import { findBooth, fixProblem, nearBooth, nearestArea, nearestCampus } from '../locate.js';
-import { nextStop } from '../route.js';
-import { getWhere, setWhere } from '../store.js';
-import { companyRow } from '../company.js';
+import { nextStop, splitBooth } from '../route.js';
+import { attachImage } from '../company-image.js';
 import { guideTo } from '../guide.js';
 import { markLabel, toggleMark } from '../alerts.js';
 import { getMarks, setMarks } from '../notify.js';
 import { getEvents } from '../store.js';
 import { routeThroughAisle } from '../indoor-path.js';
-import { T, DAY_COLORS, withAlpha } from '../tokens.js';
+import { T, withAlpha } from '../tokens.js';
 import { findBox } from '../mapfind.js';
+import { createSheet } from '../mapsheet.js';
+import { attachGestures } from '../mapgesture.js';
+import { BOOTH_DOTS, MIN_FONT, clip, layoutLabels, levelOf, viewFor, widthOf } from '../mapmath.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const FILL = { hall: T.hall, room: T.room, out: T.out, hotel: T.hotel };
-const DAY_FILL = DAY_COLORS;
 
 function svg(tag, attrs, ...kids) {
   const node = document.createElementNS(NS, tag);
@@ -32,14 +35,29 @@ function svg(tag, attrs, ...kids) {
   return node;
 }
 const pts = (poly) => poly.map(([x, z]) => `${x.toFixed(1)},${z.toFixed(1)}`).join(' ');
+const boothKey = (booth) => { const { code, place } = splitBooth(booth); return `${place}|${code}`; };
 
-// 관심 회사를 동선 차례대로, 날짜마다 번호를 붙여 돌려준다.
-export function interestPins(data, spots) {
-  const byId = new Map(data.ex.map((r) => [r[0], r]));
+// 홀 바로 가기 칩: [이름, 장소 기호들]. 눌러서 그 홀로 날아간다.
+const HALL_CHIPS = [
+  ['웨스트', ['LVCC_W', 'LVCC_W_MTG']],
+  ['센트럴', ['LVCC_C', 'LVCC_C_MTG', 'LVCC_CP']],
+  ['노스', ['LVCC_N', 'LVCC_N_MTG']],
+  ['사우스', ['LVCC_S1', 'LVCC_S2', 'LVCC_S3', 'LVCC_S_MTG']],
+  ['베네시안 A-D', ['VEN_AD']],
+  ['베네시안 G', ['VEN_G']],
+  ['아리아', ['ARIA']],
+  ['윈', ['WYNN']],
+  ['퐁텐블로', ['FONT']],
+  ['웨스트게이트', ['WESTGATE']],
+];
+const shortName = (ko) => ko.replace('LVCC ', '').replace('베네시안 엑스포 ', '').replace(/ \(.*\)$/, '');
+
+// 관심 회사를 동선 차례대로, 날짜마다 번호를 붙여 돌려준다. rows는 id → 전시사 줄(받은 것만).
+export function interestPins(rows, spots) {
   const counter = new Map();
   const pins = [];
   for (const it of getInterests()) {
-    const row = byId.get(it.id);
+    const row = rows.get(it.id);
     const booth = row?.[7]?.[0];
     const spot = spotOf(spots, booth);
     const day = it.day || 0;
@@ -52,363 +70,631 @@ export function interestPins(data, spots) {
 
 export async function render({ rest = [] } = {}) {
   const places = await getPlaces();
-  const [data, info, official, table, indoorPaths] = await Promise.all([getExhibitors().catch(() => null), getInfo(), getOfficialSpots(), getCategories(), getIndoorPaths()]);
   const L = layout(places);
-  const spots = data ? boothSpots(places, data, official) : new Map();
-  const pins = data ? interestPins(data, spots) : [];
+  const placeBy = new Map(L.list.map((p) => [p.k, p]));
   const placeKo = new Map(places.places.map((p) => [p.k, p.ko]));
   const pad = (b, m) => [b[0] - m, b[1] - m, b[2] + m, b[3] + m];
   const all = pad(L.boxAll, 120);
   let view = [...all];
 
+  // ---- 늦게 받는 자료: 처음에는 장소(places)만으로 그린다. 홀로 가까이 가면 그 홀의 전시사 줄을 받는다.
+  let meta = null;                 // 분야 · 나라 · 링크 (홀 자료에도 같이 있다)
+  const rows = new Map();          // id → 줄
+  const boothEx = new Map();       // "장소|부스" → 줄들
+  let spots = new Map();           // "장소|부스" → { x, z, official? }
+  let boothList = [];              // 부스 점 + 글자 자료
+  const loaded = new Set();        // 받은 홀
+  let fullDone = false;
+  let official = { places: {} };
+  let info = null;
+  let table = null;
+  let indoorPaths = { halls: {}, read: '' };
+  let fullOnce = null;
+  const pending = new Map();
+  let pins = [];
+  let colorMode = MODES.some((m) => m.k === load('mapColor.v1', 'plain')) ? load('mapColor.v1', 'plain') : 'plain';
+  const mapx = el('div', { class: 'mapx', 'data-level': 'campus' });
+  const page = el('div', { class: 'page mappage' });
+
+  const addRows = (doc, only) => {
+    meta ||= { cats: doc.cats, catsKo: doc.catsKo, countries: doc.countries, link: doc.link, v: doc.v };
+    for (const raw of doc.ex) {
+      const row = rows.get(raw[0]) || (rows.set(raw[0], raw), raw);
+      for (const b of raw[7]) {
+        const { code, place } = splitBooth(b);
+        if (only && place !== only) continue;
+        const key = `${place}|${code}`;
+        const list = boothEx.get(key) || [];
+        if (!list.includes(row)) list.push(row);
+        boothEx.set(key, list);
+      }
+    }
+  };
+  function rebuild(only) {
+    const got = boothSpots(places, { ex: [...rows.values()] }, official);
+    spots = new Map(only ? [...spots, ...[...got].filter(([k]) => k.startsWith(`${only}|`))] : got);
+    boothList = [...spots].map(([key, s]) => {
+      const rs = boothEx.get(key) || [];
+      const best = rs.reduce((a, r) => ((r[5] || 0) > (a?.[5] || 0) ? r : a), rs[0]);
+      const bar = key.indexOf('|');
+      return { key, x: s.x, z: s.z, code: key.slice(bar + 1), name: best?.[1] || '', award: best?.[5] || 0, n: rs.length };
+    });
+    colorOf = null;
+    afterData();
+  }
+  async function ensureHall(k) {
+    if (fullDone || loaded.has(k)) return;
+    if (pending.has(k)) return pending.get(k);
+    const job = (async () => {
+      const [doc] = await Promise.all([getHall(k), getOfficialSpots().then((o) => { official = o; })]);
+      if (!doc) { await ensureFull(); return; }
+      if (fullDone) return;
+      addRows(doc, k);
+      loaded.add(k);
+      rebuild(k);
+    })().finally(() => pending.delete(k));
+    pending.set(k, job);
+    return job;
+  }
+  function ensureFull() {
+    fullOnce ||= (async () => {
+      const [doc, o] = await Promise.all([getExhibitors(), getOfficialSpots()]);
+      official = o;
+      addRows(doc);
+      fullDone = true;
+      rebuild();
+    })().catch((e) => { fullOnce = null; throw e; });
+    return fullOnce;
+  }
+  getInfo().then((i) => { info = i; }).catch(() => {});
+
+  // ---- 그림 층
   const roads = svg('g', { fill: 'none', stroke: T.road, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },
     ...places.roads.map((r) => svg('polyline', { points: pts(r.pts.map(([x, z]) => L.W(r.c, x, z))), 'stroke-width': r.w * (places.campuses.find((c) => c.k === r.c).toWorld.scale) })));
   const decor = svg('g', { fill: T.decor }, ...places.decor.map((d) => svg('polygon', { points: pts(d.poly.map(([x, z]) => L.W(d.c, x, z))) })));
   const links = svg('g', { fill: 'none', stroke: T.link, 'stroke-dasharray': '18 14', 'stroke-width': 5, opacity: 0.8 },
     ...places.links.map((k) => { const a = L.W(k.from.c, ...k.from.at), b = L.W(k.to.c, ...k.to.at); return svg('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1] }); }));
   const shapes = svg('g', { stroke: T.accent, 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke' });
-  const labels = svg('g', { 'text-anchor': 'middle', fill: T.ink, 'font-weight': 700 });
-  const campusLabels = svg('g', { 'text-anchor': 'middle', fill: T.ink2, 'font-weight': 700 });
+  const boothLayer = svg('g', {});
+  const routeLayer = svg('g', { fill: 'none', 'pointer-events': 'none' });
   const marks = svg('g', {});
   const pinLayer = svg('g', {});
+  const labelLayer = svg('g', { 'pointer-events': 'none', 'font-weight': 700 });
   const me = svg('g', { id: 'me-layer' });
-  const board = svg('svg', { class: 'map', role: 'img', 'aria-label': 'CES 2027 캠퍼스 지도. 홀 안 부스 자리는 짐작이다.' }, roads, decor, links, shapes, campusLabels, labels, marks, pinLayer, me);
+  const board = svg('svg', { class: 'map', role: 'img', 'aria-label': 'CES 2027 캠퍼스 지도. 홀 안 부스 자리는 짐작이다.' }, roads, decor, links, shapes, boothLayer, routeLayer, marks, pinLayer, labelLayer, me);
 
-  const detail = el('div', { class: 'panel', 'aria-live': 'polite' }, el('p', { class: 'note', text: '장소나 부스 점을 누르면 회사가 나온다. 가까이 봐야 점이 찍힌다.' }));
-  // 그 장소에 부스가 있는 회사 (이름 차례). 많으면 조금씩 보인다.
-  function companyList(rows) {
-    const list = el('ol', { class: 'hits' });
-    const more = el('button', { class: 'btn ghost wide', type: 'button' });
-    let shown = 0;
-    const add = () => {
-      list.append(...rows.slice(shown, shown + 20).map((r) => companyRow(r, data, placeKo)));
-      shown = Math.min(rows.length, shown + 20);
-      more.hidden = shown >= rows.length;
-      more.textContent = `더 보기 (${rows.length - shown}곳 남음)`;
-    };
-    more.addEventListener('click', add);
-    add();
-    return [list, more];
-  }
-  const rowsAt = (keys) => (data?.ex || []).filter((r) => r[7].some((b) => keys.includes(b.slice(b.lastIndexOf('@') + 1))));
-  const in3d = () => solid.getAttribute('aria-pressed') === 'true';
-  // 2D로 넘어가 그 칸을 보인다.
-  const to2d = (box) => { focus = box; if (in3d()) mode(false); else fit(box); };
-  function pick(p, scroll) {
-    for (const node of shapes.children) node.setAttribute('stroke-width', node.dataset.k === p.k ? 4 : 1.5);
-    three?.choose(p.k);
-    const link = mapsLink(places, p);
-    const route = mapsLink(places, p, 'directions');
-    const here = pins.filter((pin) => pin.booth.endsWith(`@${p.k}`));
-    const rows = rowsAt([p.k]);
-    const box = pad([Math.min(...p.world.map((w) => w[0])), Math.min(...p.world.map((w) => w[1])), Math.max(...p.world.map((w) => w[0])), Math.max(...p.world.map((w) => w[1]))], 30);
-    // replaceChildren은 null을 글자 "null"로 찍으므로 빈 것은 걸러서 넣는다.
-    detail.replaceChildren(...[
-      el('h2', { text: p.ko }),
-      el('p', { text: p.theme }),
-      here.length ? el('p', { class: 'note', text: `내 관심 ${here.length}곳: ${here.map((h) => h.name).slice(0, 4).join(' · ')}${here.length > 4 ? ' …' : ''}` }) : null,
-      el('p', { class: 'note', text: `${p.shapeGuess ? '모양과 자리는 어림이다. ' : ''}${p.boothSpots === 'guess' ? '부스 자리는 짐작이다.' : '부스 자리는 공식 배치도다.'}` }),
-      el('div', { class: 'actions' },
-        in3d() ? el('button', { class: 'btn', type: 'button', text: '2D로 보기', onclick: () => to2d(box) }) : null,
-        link ? out(link, '구글맵에서 열기', in3d() ? 'btn ghost' : 'btn') : null,
-        link ? out(route, '걸어서 길찾기', 'btn ghost') : null),
-      link ? null : el('p', { class: 'note', text: '구글맵에서 쓸 이름을 아직 모른다.' }),
-      el('h3', { text: `이 장소의 회사 ${rows.length}곳` }),
-      ...(rows.length ? companyList(rows) : [el('p', { class: 'note', text: '받은 자료에는 이 장소의 회사가 없다.' })]),
-    ].filter(Boolean));
-    if (scroll) detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }
-  // 캠퍼스를 누르면(3D의 바닥): 그 캠퍼스의 장소들과 회사 수.
-  function pickCampus(c, scroll) {
-    three?.choose(null);
-    const mine = L.list.filter((p) => p.c === c.k);
-    const count = new Map(mine.map((p) => [p.k, 0]));
-    for (const r of data?.ex || []) for (const k of new Set(r[7].map((b) => b.slice(b.lastIndexOf('@') + 1)))) if (count.has(k)) count.set(k, count.get(k) + 1);
-    detail.replaceChildren(
-      el('h2', { text: c.ko }),
-      el('p', { text: c.sub }),
-      el('p', { class: 'note', text: `장소 ${mine.length}곳 · 회사 ${rowsAt(mine.map((p) => p.k)).length}곳` }),
-      el('div', { class: 'actions' }, el('button', { class: 'btn', type: 'button', text: '2D 지도에서 보기', onclick: () => to2d(pad(c.box, 40)) })),
-      el('div', { class: 'fields' }, mine.filter((p) => count.get(p.k) > 0).map((p) => el('button', { class: 'field-link', type: 'button', onclick: () => pick(p, true) },
-        el('span', { text: p.ko.replace('LVCC ', '').replace('베네시안 엑스포 ', '') }), el('small', { text: String(count.get(p.k)) })))));
-    if (scroll) detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }
   for (const p of L.list) {
     const shape = svg('polygon', { points: pts(p.world), fill: FILL[p.kind] || T.place, tabindex: 0, role: 'button', 'aria-label': p.ko });
     shape.dataset.k = p.k;
-    shape.addEventListener('click', () => pick(p));
-    shape.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pick(p); } });
+    shape.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pickPlace(p); } });
     shapes.append(shape);
-    const short = p.ko.replace('LVCC ', '').replace('베네시안 엑스포 ', '').replace(/ \(.*\)$/, '');
-    const text = svg('text', { x: p.center[0], y: p.center[1], 'dominant-baseline': 'middle', 'pointer-events': 'none' });
-    text.textContent = short;
-    text.dataset.big = p.kind === 'hall' || p.kind === 'hotel' ? '1' : '0';
-    labels.append(text);
-  }
-  for (const c of L.campuses) {
-    const text = svg('text', { x: (c.box[0] + c.box[2]) / 2, y: c.box[1] - 40, 'pointer-events': 'none' });
-    text.textContent = c.ko;
-    campusLabels.append(text);
-  }
-  for (const m of places.landmarks) {
-    const at = m.at ? L.W(m.c, ...m.at) : (() => { const s = spots.get(`${m.place}|${m.booth}`); return s ? [s.x, s.z] : null; })();
-    if (!at) continue;
-    const g = svg('g', {}, svg('circle', { cx: at[0], cy: at[1], fill: m.kind === 'badge' ? T.badge : m.kind === 'shuttle' ? T.shuttle : T.transit }), svg('title', {}));
-    g.lastChild.textContent = m.ko;
-    const text = svg('text', { x: at[0], y: at[1], fill: T.ink, 'pointer-events': 'none' });
-    text.textContent = m.ko;
-    g.append(text);
-    marks.append(g);
-  }
-  for (const c of L.city) {
-    const g = svg('g', { tabindex: 0, role: 'button', 'aria-label': `${c.ko} (전시장 밖, 자리는 어림)` }, svg('circle', { cx: c.center[0], cy: c.center[1], fill: T.city, stroke: T.ink, 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke' }), svg('title', {}));
-    g.dataset.city = c.k;
-    g.querySelector('title').textContent = c.ko;
-    const text = svg('text', { x: c.center[0], y: c.center[1], fill: T.ink, 'font-weight': 700, 'pointer-events': 'none' });
-    text.textContent = c.ko;
-    g.append(text);
-    g.style.cursor = 'pointer';
-    g.addEventListener('click', () => pickCity(c));
-    g.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pickCity(c); } });
-    marks.append(g);
-  }
-  for (const pin of pins) {
-    const g = svg('g', {}, svg('circle', { cx: pin.x, cy: pin.z, fill: DAY_FILL[pin.day], stroke: T.ink, 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke', opacity: pin.seen ? 0.45 : 1 }), svg('title', {}));
-    g.querySelector('title').textContent = `${pin.no}. ${pin.name}`;
-    const text = svg('text', { x: pin.x, y: pin.z, 'text-anchor': 'middle', 'dominant-baseline': 'central', fill: T.ink, 'font-weight': 700, 'pointer-events': 'none' });
-    text.textContent = String(pin.no);
-    g.append(text);
-    pinLayer.append(g);
   }
 
-  // 가까이 보면 부스를 점으로 찍는다 (보이는 칸 안의 것만). 누르면 그 부스의 회사가 나온다. 자리는 짐작이다.
-  const boothLayer = svg('g', {});
-  shapes.after(boothLayer);
-  const boothEx = new Map();
-  for (const row of data?.ex || []) for (const b of row[7]) { const at = b.lastIndexOf('@'); const key = `${b.slice(at + 1)}|${b.slice(0, at)}`; if (!boothEx.has(key)) boothEx.set(key, []); boothEx.get(key).push(row); }
-  const boothList = [...spots].map(([key, s]) => ({ key, x: s.x, z: s.z }));
-  const BOOTH_ZOOM = 560;
-  // 부스 점을 무엇으로 칠할까: 한 색 · 분야 묶음 · 한국 · 혁신상. 고른 것은 폰에 남는다.
-  let colorMode = MODES.some((m) => m.k === load('mapColor.v1', 'plain')) ? load('mapColor.v1', 'plain') : 'plain';
-  const noRows = [];
-  let colorOf = data ? boothColorer(colorMode, data, table, (key) => boothEx.get(key) || noRows) : () => T.plain;
-  const legendBox = el('div', { class: 'legend', 'aria-label': '부스 점의 색' });
-  function paintLegend() {
-    legendBox.replaceChildren(...legend(colorMode, table).map((l) => el('span', { class: 'swatch' }, el('i', { style: `background:${l.color}` }), l.ko)));
-    legendBox.hidden = colorMode === 'plain';
-  }
-  let boothFrame = 0;
+  // ---- 보는 칸과 그리기
+  const boardSize = () => ({ width: board.clientWidth || 360, height: board.clientHeight || 520 });
+  const unitNow = () => widthOf(view) / boardSize().width;
+  let lastUnit = 0;
+  let drawn = null;       // 부스 점을 그려 둔 칸
   let chosenBooth = null;
   let routeTarget = null;
-  // 부스를 누르면(2D의 점, 3D의 점): 그 부스의 회사 카드와 관심 단추.
-  function pickBooth(key, scroll) {
-    chosenBooth = key;
-    routeTarget = null;
-    const bar = key.indexOf('|');
-    const place = L.list.find((p) => p.k === key.slice(0, bar));
-    const rows = boothEx.get(key) || [];
-    const spot = spots.get(key);
-    drawBooths();
-    three?.chooseBooth(key);
-    detail.replaceChildren(...[
-      el('h2', { text: `부스 ${key.slice(bar + 1)}` }),
-      el('p', { class: 'note', text: `${place ? place.ko : '장소 모름'} · ${spot?.official ? '자리는 공식 배치도다' : '자리는 짐작이다'}` }),
-      in3d() && spot ? el('div', { class: 'actions' }, el('button', { class: 'btn ghost', type: 'button', text: '2D 지도에서 보기', onclick: () => to2d([spot.x - 110, spot.z - 110, spot.x + 110, spot.z + 110]) })) : null,
-      el('ol', { class: 'hits' }, rows.map((r) => companyRow(r, data, placeKo))),
-      markBlock(key),
-      guideBlock(key, place, spot),
-    ].filter(Boolean));
-    drawMe();
-    if (scroll) detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  let colorOf = null;
+  let chip = null;
+  const moving = { on: false };
+
+  function sizeMarks() {
+    const unit = unitNow();
+    lastUnit = unit;
+    for (const g of marks.children) g.querySelector('circle').setAttribute('r', (unit * (g.dataset.city ? 8 : 5)).toFixed(2));
+    for (const g of pinLayer.children) {
+      g.querySelector('circle').setAttribute('r', (unit * 11).toFixed(2));
+      const t = g.querySelector('text');
+      t.setAttribute('font-size', (unit * MIN_FONT).toFixed(2));
+    }
+    for (const node of routeLayer.children) node.setAttribute('stroke-width', node.dataset.today ? 4 : 2.5);
   }
+  // 한 프레임에 한 번: 보는 칸만 바꾼다. 점 · 글자는 손을 뗄 때(settle) 다시 놓는다.
+  function draw() {
+    board.setAttribute('viewBox', `${view[0].toFixed(2)} ${view[1].toFixed(2)} ${widthOf(view).toFixed(2)} ${(view[3] - view[1]).toFixed(2)}`);
+    const unit = unitNow();
+    if (!lastUnit || Math.abs(unit - lastUnit) / lastUnit > 0.004) { sizeMarks(); drawMe?.(); }
+    mapx.dataset.level = levelOf(widthOf(view));
+    if (!moving.on) { moving.on = true; labelLayer.style.opacity = '0'; }
+    needDots();
+  }
+  function needDots() {
+    const w = widthOf(view);
+    if (w >= BOOTH_DOTS) { if (drawn) { boothLayer.replaceChildren(); drawn = null; } return; }
+    if (!drawn || view[0] < drawn[0] || view[1] < drawn[1] || view[2] > drawn[2] || view[3] > drawn[3] || w / drawn.w > 1.4 || w / drawn.w < 0.55) drawBooths();
+  }
+  const setView = (v) => { view = v; };
+
+  // 부스 점: 보이는 칸보다 조금 넓게 그려 두어, 끌 때 빈 곳이 보이지 않게 한다.
+  function drawBooths() {
+    const w = widthOf(view);
+    if (w >= BOOTH_DOTS) { boothLayer.replaceChildren(); drawn = null; return; }
+    const mx = (view[2] - view[0]) * 0.5, mz = (view[3] - view[1]) * 0.5;
+    const box = [view[0] - mx, view[1] - mz, view[2] + mx, view[3] + mz];
+    box.w = w;
+    drawn = box;
+    const unit = unitNow();
+    const r = (unit * 5).toFixed(2);
+    const marksNow = getMarks();
+    colorOf ||= makeColorer();
+    const nodes = [];
+    for (const b of boothList) {
+      if (b.x < box[0] || b.x > box[2] || b.z < box[1] || b.z > box[3]) continue;
+      const on1 = b.key === chosenBooth;
+      const marked = !!marksNow[b.key];
+      const dot = svg('circle', { cx: b.x.toFixed(1), cy: b.z.toFixed(1), r: marked ? (Number(r) * 1.35).toFixed(2) : r, fill: colorOf(b.key), stroke: on1 ? T.ink : marked ? T.warn : T.panel, 'stroke-width': on1 || marked ? 3 : 1, 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' });
+      dot.dataset.key = b.key;
+      nodes.push(dot);
+      if (nodes.length >= 1500) break;
+    }
+    boothLayer.replaceChildren(...nodes);
+  }
+  function makeColorer() {
+    if (!meta) return () => T.plain;
+    return boothColorer(colorMode, { ...meta, ex: [...rows.values()] }, table || { groups: [] }, (key) => boothEx.get(key) || []);
+  }
+
+  // 놓을 글자 모으기 (확대 단계마다 다르다)
+  function candidates(level, W, H) {
+    const w = widthOf(view);
+    const unit = w / W;
+    const sx = (x) => (x - view[0]) / unit, sy = (z) => (z - view[1]) / unit;
+    const near = (x, z, m = 60) => x > view[0] - m * unit && x < view[2] + m * unit && z > view[1] - m * unit && z < view[3] + m * unit;
+    const cs = [];
+    const marksOn = getMarks();
+    const mine = new Map(pins.map((p) => [p.id, p]));
+    if (level === 'campus') {
+      for (const c of L.campuses) { const x = (c.box[0] + c.box[2]) / 2; cs.push({ id: `c:${c.k}`, x: sx(x), y: sy(c.box[1] - 55), text: c.ko, size: 14, prio: 100, anchor: 'middle' }); }
+    }
+    for (const p of L.list) {
+      if (!near(p.center[0], p.center[1], 40)) continue;
+      const big = p.kind === 'hall' || p.kind === 'hotel';
+      if (level === 'campus' && !big) continue;
+      if (level !== 'campus' && !big && w > 900) continue;
+      cs.push({ id: `p:${p.k}`, x: sx(p.center[0]), y: sy(p.center[1]), text: shortName(p.ko), size: MIN_FONT, prio: big ? (level === 'hall' ? 60 : level === 'campus' ? 50 : 30) : 20, anchor: 'middle' });
+    }
+    for (const c of L.city) {
+      if (!near(c.center[0], c.center[1], 40)) continue;
+      cs.push({ id: `y:${c.k}`, x: sx(c.center[0]), y: sy(c.center[1]), text: c.ko, size: MIN_FONT, prio: 70, anchor: 'start', dx: 12 });
+    }
+    for (const m of places.landmarks) {
+      if (level === 'campus') break;
+      const at = landmarkAt(m);
+      if (!at || !near(at[0], at[1], 40)) continue;
+      cs.push({ id: `m:${m.ko}`, x: sx(at[0]), y: sy(at[1]), text: m.ko, size: MIN_FONT, prio: 65, anchor: 'start', dx: 9 });
+    }
+    if (level !== 'campus') {
+      // 관심 · 동선 회사는 늘 이름이 보인다.
+      for (const p of pins) if (near(p.x, p.z, 60)) cs.push({ id: `n:${p.id}`, x: sx(p.x), y: sy(p.z), text: clip(p.name, 12), size: MIN_FONT, prio: 95, anchor: 'start', dx: 15, pin: true });
+    }
+    if (level === 'hall') {
+      // 홀 단계: 혁신상 · 명함 이벤트 · 한국 회사 가운데 큰 회사 이름 (겹치면 숨는다).
+      for (const b of boothList) {
+        if (!b.name || !near(b.x, b.z, 20) || mine.has(boothEx.get(b.key)?.[0]?.[0])) continue;
+        const marked = !!marksOn[b.key];
+        const prio = marked ? 80 : b.award & 2 ? 55 : b.award ? 45 : 0;
+        if (!prio) continue;
+        cs.push({ id: `b:${b.key}`, x: sx(b.x), y: sy(b.z), text: clip(b.name, 12), size: MIN_FONT, prio, anchor: 'start', dx: 8, dot: true });
+      }
+    }
+    if (level === 'booth') {
+      for (const b of boothList) {
+        if (!near(b.x, b.z, 20)) continue;
+        const rs = boothEx.get(b.key) || [];
+        const interest = rs.find((r) => mine.has(r[0]));
+        const marked = !!marksOn[b.key];
+        const prio = interest ? 90 : marked ? 80 : b.key === chosenBooth ? 85 : b.award & 2 ? 50 : b.award ? 40 : 10;
+        const label = interest ? interest[1] : b.name;
+        cs.push({ id: `b:${b.key}`, x: sx(b.x), y: sy(b.z), text: `${b.code} ${clip(label, 9)}${b.n > 1 ? ` +${b.n - 1}` : ''}`, alts: [`${b.code} ${clip(label, 5)}`, b.code], size: MIN_FONT, prio, anchor: 'start', dx: 9 });
+      }
+    }
+    return cs;
+  }
+  const landmarkAt = (m) => (m.at ? L.W(m.c, ...m.at) : (() => { const s = spots.get(`${m.place}|${m.booth}`); return s ? [s.x, s.z] : null; })());
+
+  function relayout() {
+    const { width: W, height: H } = boardSize();
+    const level = levelOf(widthOf(view));
+    const unit = widthOf(view) / W;
+    const placed = layoutLabels(candidates(level, W, H), { width: W, height: H });
+    const nodes = [];
+    for (const c of placed) {
+      const x = view[0] + (c.x + (c.dx || 0)) * unit, z = view[1] + (c.y + (c.dy || 0)) * unit;
+      const t = svg('text', { x: x.toFixed(2), y: z.toFixed(2), 'font-size': (c.size * unit).toFixed(2), 'text-anchor': c.anchor === 'start' ? 'start' : 'middle', 'dominant-baseline': 'central', fill: T.ink, stroke: T.panel, 'stroke-width': (unit * 3.2).toFixed(2), 'stroke-linejoin': 'round', 'paint-order': 'stroke' });
+      t.textContent = c.text;
+      nodes.push(t);
+      if (c.dot) nodes.push(svg('circle', { cx: (view[0] + c.x * unit).toFixed(2), cy: z.toFixed(2), r: (unit * 4).toFixed(2), fill: T.ink2, stroke: T.panel, 'stroke-width': unit * 1.5 }));
+    }
+    labelLayer.replaceChildren(...nodes);
+    labelLayer.style.opacity = '1';
+    moving.on = false;
+    mapx.dataset.labels = String(placed.length);
+  }
+
+  // 손을 떼거나 날아가기가 끝났을 때: 점 · 글자를 다시 놓고, 보이는 홀의 자료를 받는다.
+  let settleTimer = 0;
+  function settle() {
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(() => {
+      if (!mapx.isConnected) return;
+      drawBooths();
+      relayout();
+      drawMe?.();
+      loadVisible();
+      paintChips();
+    }, 40);
+  }
+  // 가까이 보는 홀(셋까지)의 전시사 줄을 받는다. 멀리서는 받지 않는다.
+  function loadVisible() {
+    const w = widthOf(view);
+    if (w >= 1300) return;
+    const near = L.list.filter((p) => { const b = bbox(p.world); return b[2] > view[0] && b[0] < view[2] && b[3] > view[1] && b[1] < view[3]; })
+      .sort((a, b) => Math.hypot(a.center[0] - (view[0] + view[2]) / 2, a.center[1] - (view[1] + view[3]) / 2) - Math.hypot(b.center[0] - (view[0] + view[2]) / 2, b.center[1] - (view[1] + view[3]) / 2))
+      .slice(0, 3);
+    for (const p of near) ensureHall(p.k).catch(() => {});
+  }
+
+  // ---- 자료가 들어온 뒤: 관심 회사 번호 점과 선, 랜드마크, 점 · 글자
+  function afterData() {
+    pins = interestPins(rows, spots);
+    drawPins();
+    drawMarks();
+    if (!mapx.isConnected) return;
+    drawBooths();
+    relayout();
+    drawMe?.();
+    rebuildChips();
+  }
+  function drawPins() {
+    pinLayer.replaceChildren(...pins.map((pin) => {
+      const g = svg('g', { 'data-pin': pin.id, role: 'button', tabindex: 0, 'aria-label': `${pin.no}번 ${pin.name}` },
+        svg('circle', { cx: pin.x, cy: pin.z, fill: T.accent, stroke: T.panel, 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke', opacity: pin.seen ? 0.5 : 1 }));
+      const text = svg('text', { x: pin.x, y: pin.z, 'text-anchor': 'middle', 'dominant-baseline': 'central', fill: T.panel, 'font-weight': 800, 'pointer-events': 'none' });
+      text.textContent = String(pin.no);
+      g.append(text);
+      g.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openCompany(rows.get(pin.id)); } });
+      return g;
+    }));
+    // 오늘 동선(전시 기간이면 오늘, 아니면 번호가 있는 첫 날)은 굵은 실선, 다른 날은 얇은 점선. 관심 · 동선만 강조색 하나로 그린다.
+    const today = todayIndex();
+    const byDay = new Map();
+    for (const p of pins) if (p.day) { if (!byDay.has(p.day)) byDay.set(p.day, []); byDay.get(p.day).push(p); }
+    routeLayer.replaceChildren(...[...byDay].filter(([, list]) => list.length > 1).map(([day, list]) => {
+      const line = svg('polyline', { points: pts(list.map((p) => [p.x, p.z])), stroke: T.accent, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'vector-effect': 'non-scaling-stroke', opacity: day === today ? 0.95 : 0.45, 'stroke-dasharray': day === today ? null : '7 6' });
+      if (day === today) line.dataset.today = '1';
+      return line;
+    }));
+    sizeMarks();
+  }
+  function todayIndex() {
+    const d = new Date();
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const at = info?.show?.days?.findIndex((x) => x.date === iso) ?? -1;
+    if (at >= 0) return at + 1;
+    return Math.min(...pins.filter((p) => p.day).map((p) => p.day), 9);
+  }
+  function drawMarks() {
+    const nodes = [];
+    for (const m of places.landmarks) {
+      const at = landmarkAt(m);
+      if (!at) continue;
+      const g = svg('g', {}, svg('circle', { cx: at[0], cy: at[1], fill: m.kind === 'badge' ? T.badge : m.kind === 'shuttle' ? T.shuttle : T.transit, stroke: T.panel, 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke' }));
+      nodes.push(g);
+    }
+    for (const c of L.city) {
+      const g = svg('g', { tabindex: 0, role: 'button', 'aria-label': `${c.ko} (전시장 밖, 자리는 어림)` }, svg('circle', { cx: c.center[0], cy: c.center[1], fill: T.city, stroke: T.ink, 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke' }));
+      g.dataset.city = c.k;
+      g.style.cursor = 'pointer';
+      g.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pickCity(c); } });
+      nodes.push(g);
+    }
+    marks.replaceChildren(...nodes);
+    sizeMarks();
+  }
+  drawMarks();
+
+  // ---- 카드(아래에서 올라온다)와 날아가기
+  const sheet = createSheet(mapx, { onClose: () => { if (chosenBooth) { chosenBooth = null; routeTarget = null; drawBooths(); three?.chooseBooth(null); drawMe(); } } });
+  const frame = el('div', { class: 'map-frame' }, board);
+  let three = null;
+  const in3d = () => solid.getAttribute('aria-pressed') === 'true';
+  let gesture = null;
+
+  // 화면에 보이는 칸(찾기 칸 아래 ~ 카드 위)의 가운데에 box를 놓는다.
+  const TOP = 118;
+  function goBox(box, { withSheet = false, ms = 420 } = {}) {
+    if (in3d()) { three?.look(box); return; }
+    const { width, height } = boardSize();
+    const bottom = withSheet ? sheet.expectedHeight() + 8 : 26;
+    gesture.animateTo(viewFor(box, width, height, { top: TOP, bottom }), ms, true);
+  }
+  function flyTo(x, z, w = 200) {
+    const { width, height } = boardSize();
+    const half = [x - w / 2, z - w * 0.28, x + w / 2, z + w * 0.28];
+    gesture.animateTo(viewFor(half, width, height, { top: TOP, bottom: sheet.expectedHeight() + 8 }), 460, true);
+  }
+  const wrapBox = (list) => { const b = bbox(list.flatMap((p) => p.world)); return pad(b, 28); };
+
+  // 회사 한 곳의 카드
+  const infoDays = () => (info?.show?.days || []).map((d, i) => ({ key: i + 1, ko: d.ko.split(' ')[0] }));
+  async function openCompany(row, key) {
+    if (!row) return;
+    const id = row[0];
+    if (!rows.has(id)) await ensureFull().catch(() => {});
+    const bk = key || (row[7][0] ? boothKey(row[7][0]) : null);
+    const bar = bk ? bk.indexOf('|') : -1;
+    const place = bk ? placeBy.get(bk.slice(0, bar)) : null;
+    if (bk && !spots.has(bk)) { if (place) await ensureHall(place.k).catch(() => {}); }
+    chosenBooth = bk && spots.has(bk) ? bk : null;
+    routeTarget = null;
+    three?.chooseBooth(chosenBooth);
+    if (!info) info = await getInfo().catch(() => null);
+    sheet.open(companyCard(rows.get(id) || row, bk, place), 'half');
+    const spot = bk ? spots.get(bk) : null;
+    if (spot) { if (in3d()) three?.look([spot.x - 110, spot.z - 110, spot.x + 110, spot.z + 110]); else flyTo(spot.x, spot.z, 200); } else if (place) goBox(wrapBox([place]), { withSheet: true });
+    drawBooths();
+    drawMe();
+  }
+  function companyCard(row, bk, place) {
+    const [id, name, , country, cats, award] = row;
+    const bar = bk ? bk.indexOf('|') : -1;
+    const spot = bk ? spots.get(bk) : null;
+    const code = bk ? bk.slice(bar + 1) : '';
+    const korea = meta?.countries?.indexOf('South Korea');
+    const catKo = cats && meta ? cats.split('.').map((c) => meta.catsKo[c] || meta.cats[c]).filter(Boolean).slice(0, 3).join(' · ') : '';
+    const box = el('div', { class: 'card' });
+    const interestBtn = el('button', { class: 'btn', type: 'button' });
+    const paint = () => {
+      const on = hasInterest(id);
+      interestBtn.textContent = on ? '관심 중 · 빼기' : '관심 담기';
+      interestBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      interestBtn.classList.toggle('ghost', on);
+      dayRow.replaceChildren(...infoDays().map((d) => {
+        const cur = getInterests().find((it) => it.id === id)?.day || 0;
+        return el('button', { class: 'seg', type: 'button', text: d.ko, 'aria-pressed': cur === d.key ? 'true' : 'false', 'aria-label': `${d.ko}에 동선으로 넣기`, onclick: () => {
+          const list = getInterests();
+          const at = list.findIndex((it) => it.id === id);
+          if (at >= 0) list[at] = { ...list[at], day: d.key }; else list.push({ id, day: d.key });
+          setInterests(list);
+          afterInterests();
+          paint();
+        } });
+      }));
+    };
+    const dayRow = el('div', { class: 'segs', role: 'group', 'aria-label': '동선에 넣기' });
+    interestBtn.addEventListener('click', () => { toggleInterest(id); afterInterests(); paint(); });
+    const guide = bk ? guideBlock(bk, place, spot) : null;
+    const logoBox = el('div', { class: 'card-logo' });
+    attachImage(logoBox, id, name, meta);
+    const head = el('div', { class: 'card-head' },
+      el('h2', { text: name }),
+      el('p', { class: 'card-where', text: bk ? `부스 ${code} · ${place ? shortName(place.ko) : '장소 모름'}` : '부스 미정' }),
+      el('p', { class: 'card-tags' },
+        spot && !spot.official ? el('span', { class: 'tag', text: '자리 짐작' }) : null,
+        award ? el('span', { class: 'tag mint', text: award & 2 ? '최고 혁신상' : '혁신상' }) : null,
+        country >= 0 && country === korea ? el('span', { class: 'tag mint', text: '한국' }) : null),
+      catKo ? el('p', { class: 'note', text: catKo }) : null);
+    paint();
+    box.append(head,
+      el('div', { class: 'card-actions' }, interestBtn, el('p', { class: 'label', text: '동선에 넣기' }), dayRow),
+      guide,
+      el('div', { class: 'row-actions' }, meta?.link ? out(meta.link.replace('{id}', encodeURIComponent(id)), '공식 링크') : null, el('a', { href: `#/talk/${encodeURIComponent(id)}`, text: '대화' }), markBlock(bk)),
+      logoBox);
+    return box;
+  }
+  const afterInterests = () => { pins = interestPins(rows, spots); drawPins(); relayout(); drawMe(); };
   // 명함 넣는 이벤트가 있는 부스인지 사람이 표시한다. 공식 자료에는 없다.
   function markBlock(key) {
+    if (!key) return null;
     const mark = getMarks()[key];
-    return el('div', { class: 'block guide' },
-      el('h3', { text: '명함 넣는 이벤트' }),
-      el('div', { class: 'actions' },
-        el('button', { class: 'pick', type: 'button', text: mark ? `이벤트 있음 (${markLabel(mark)})` : '이벤트 있음으로 표시', 'aria-pressed': mark ? 'true' : 'false', onclick: () => {
-          setMarks(toggleMark(getMarks(), key));
-          drawBooths();
-          three?.redraw();
-          pickBooth(key);
-        } })),
-      el('p', { class: 'note', text: '공식 자료에는 없다. 본 사람이 표시하고 파일로 주고받는다.' }));
+    return el('button', { class: 'linkish', type: 'button', text: mark ? `명함 이벤트 있음 (${markLabel(mark)})` : '명함 이벤트 있음으로 표시', 'aria-pressed': mark ? 'true' : 'false', onclick: () => {
+      setMarks(toggleMark(getMarks(), key));
+      drawBooths();
+      relayout();
+      three?.redraw();
+      const row = (boothEx.get(key) || [])[0];
+      if (row) openCompany(row, key);
+    } });
   }
-  // 여기서 가는 길: 내 자리에서 고른 부스까지. 같은 곳이면 부스 번호 쪽으로, 다른 캠퍼스면 구글맵 길찾기.
+  // 여기서 가는 길: 같은 홀이면 짐작 길(홀 입구나 내 자리에서), 다른 캠퍼스면 구글맵.
   function guideBlock(key, place, spot) {
     const bar = key.indexOf('|');
     const where = getWhere();
     const g = guideTo(where, { place: key.slice(0, bar), code: key.slice(bar + 1) }, (k) => placeBy.get(k));
-    const open = mapsLink(places, place);
     const route = mapsLink(places, place, 'directions');
     const at = myPoint(where);
-    return el('div', { class: 'block guide' },
-      el('h3', { text: '여기서 가는 길' }),
-      ...g.lines.map((line) => el('p', { class: 'note', text: line })),
-      indoorPaths.halls[place?.k] ? el('p', { class: 'note', text: '홀 안 길은 짐작이다. 실제 통로와 다를 수 있다.' }) : null,
+    const sameHall = g.kind === 'same-place' || (g.kind === 'unknown' || g.kind === 'same-campus') && !!indoorPaths.halls[place?.k];
+    return el('div', { class: 'card-way' },
+      el('p', { class: 'label', text: '여기까지 길' }),
+      el('p', { class: 'note', text: g.lines[0] }),
       el('div', { class: 'actions' },
-        g.kind !== 'other-campus' && spot && place && indoorPaths.halls[place.k] ? el('button', { class: 'btn', type: 'button', text: at ? '내 자리에서 길 보기' : '홀 입구에서 길 보기', onclick: () => {
+        spot && place && (g.kind === 'same-place' || sameHall) && g.kind !== 'other-campus' ? el('button', { class: 'btn', type: 'button', text: at ? '내 자리에서 길 보기' : '홀 입구에서 길 보기', onclick: async () => {
+          indoorPaths = await getIndoorPaths().catch(() => indoorPaths);
           const hall = indoorPaths.halls[place.k];
-          const entry = L.W(place.c, ...hall.entrance);
-          const where = getWhere();
-          const from = (where?.by === 'booth' && where.place === place.k)
-            || (where?.by === 'gps' && where.area?.places.includes(place.k)) ? at : null;
-          const aisle = hall.aisle.map(([x, z]) => L.W(place.c, x, z));
-          const path = routeThroughAisle(from, [spot.x, spot.z], aisle, entry);
+          if (!hall) { if (route) window.open(route, '_blank', 'noopener'); return; }
           routeTarget = key;
+          const entry = L.W(place.c, ...hall.entrance);
+          const aisle = hall.aisle.map(([x, z]) => L.W(place.c, x, z));
+          const from = (where?.by === 'booth' && where.place === place.k) || (where?.by === 'gps' && where.area?.places.includes(place.k)) ? at : null;
+          const path = routeThroughAisle(from, [spot.x, spot.z], aisle, entry);
           const xs = path.map(([x]) => x), zs = path.map(([, z]) => z);
-          const box = pad([Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)], 60);
-          if (in3d()) to2d(box); else { focus = null; fit(box); }
+          goBox(pad([Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)], 40), { withSheet: true });
           drawMe();
-          frame.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         } }) : null,
-        g.kind === 'unknown' ? el('button', { class: 'btn', type: 'button', text: '내 자리 넣기', onclick: () => { boothInput.scrollIntoView({ block: 'center', behavior: 'smooth' }); boothInput.focus({ preventScroll: true }); } }) : null,
-        g.maps && route ? out(route, '구글맵 길찾기', g.kind === 'other-campus' ? 'btn' : 'btn ghost') : null,
-        open ? out(open, '구글맵에서 열기', 'btn ghost') : null));
+        g.kind === 'unknown' ? el('button', { class: 'btn ghost', type: 'button', text: '내 자리 넣기', onclick: () => { sheet.close(); boothInput.scrollIntoView({ block: 'center', behavior: 'smooth' }); boothInput.focus({ preventScroll: true }); } }) : null,
+        route && (g.maps || g.kind === 'other-campus') ? out(route, '구글맵 길찾기', g.kind === 'other-campus' ? 'btn' : 'btn ghost') : null),
+      indoorPaths.halls[place?.k] ? el('p', { class: 'note', text: '홀 안 길은 짐작이다.' }) : null);
+  }
+
+  // 부스(점)를 누르면: 회사가 하나면 그 회사 카드, 여럿이면 목록.
+  async function pickBooth(key) {
+    const rs = boothEx.get(key) || [];
+    if (rs.length === 1) return openCompany(rs[0], key);
+    chosenBooth = key;
+    routeTarget = null;
+    const bar = key.indexOf('|');
+    const place = placeBy.get(key.slice(0, bar));
+    const spot = spots.get(key);
+    sheet.open(el('div', { class: 'card' },
+      el('div', { class: 'card-head' }, el('h2', { text: `부스 ${key.slice(bar + 1)}` }),
+        el('p', { class: 'card-where', text: `${place ? shortName(place.ko) : '장소 모름'} · 회사 ${rs.length}곳` }),
+        spot && !spot.official ? el('p', { class: 'card-tags' }, el('span', { class: 'tag', text: '자리 짐작' })) : null),
+      companyButtons(rs, key)), 'half');
+    if (spot) flyTo(spot.x, spot.z, 200);
+    three?.chooseBooth(key);
+    drawBooths();
+  }
+  function companyButtons(list, key, first = 30) {
+    const wrap = el('div', { class: 'pick-list' });
+    let shown = 0;
+    const more = el('button', { class: 'btn ghost wide', type: 'button' });
+    const add = () => {
+      wrap.append(...list.slice(shown, shown + first).map((r) => {
+        const b = r[7][0] ? splitBooth(r[7][0]) : null;
+        return el('button', { class: 'pick-row', type: 'button', onclick: () => openCompany(r, key || (r[7][0] ? boothKey(r[7][0]) : null)) }, el('b', { text: r[1] }), el('span', { text: b ? `부스 ${b.code}` : '부스 미정' }));
+      }));
+      shown = Math.min(list.length, shown + first);
+      more.hidden = shown >= list.length;
+      more.textContent = `더 보기 (${list.length - shown}곳 남음)`;
+    };
+    more.addEventListener('click', add);
+    add();
+    return el('div', {}, wrap, more);
+  }
+
+  // 홀(장소)을 누르면: 그 홀로 날아가 카드가 열린다.
+  async function pickPlace(p) {
+    chosenBooth = null;
+    routeTarget = null;
+    three?.choose(p.k);
+    const link = mapsLink(places, p);
+    const route = mapsLink(places, p, 'directions');
+    const here = pins.filter((pin) => pin.booth.endsWith(`@${p.k}`));
+    const listBox = el('div', { class: 'card-list' }, el('p', { class: 'note', text: '회사를 불러오는 중이다.' }));
+    sheet.open(el('div', { class: 'card' },
+      el('div', { class: 'card-head' }, el('h2', { text: shortName(p.ko) }),
+        el('p', { class: 'card-where', text: p.theme }),
+        el('p', { class: 'card-tags' }, p.boothSpots === 'guess' ? el('span', { class: 'tag', text: '자리 짐작' }) : null)),
+      here.length ? el('p', { class: 'note', text: `내 관심 ${here.length}곳: ${here.map((h) => h.name).slice(0, 3).join(' · ')}${here.length > 3 ? ' …' : ''}` }) : null,
+      el('div', { class: 'actions' }, link ? out(link, '구글맵에서 열기', 'btn ghost') : null, route ? out(route, '걸어서 길찾기', 'btn ghost') : null),
+      listBox), 'half');
+    goBox(wrapBox([p]), { withSheet: true });
+    await ensureHall(p.k).catch(() => {});
+    const mineRows = [...rows.values()].filter((r) => r[7].some((b) => splitBooth(b).place === p.k)).sort((a, b) => a[1].localeCompare(b[1], 'en'));
+    listBox.replaceChildren(el('h3', { text: `이 홀의 회사 ${mineRows.length}곳` }), mineRows.length ? companyButtons(mineRows, null) : el('p', { class: 'note', text: '받은 자료에는 이 홀의 회사가 없다.' }));
+  }
+  // 캠퍼스를 누르면(3D의 바닥): 그 캠퍼스의 홀 단추.
+  function pickCampus(c) {
+    three?.choose(null);
+    const mine = L.list.filter((p) => p.c === c.k && (p.kind === 'hall' || p.kind === 'hotel'));
+    sheet.open(el('div', { class: 'card' }, el('div', { class: 'card-head' }, el('h2', { text: c.ko }), el('p', { class: 'card-where', text: c.sub })),
+      el('div', { class: 'pick-list' }, mine.map((p) => el('button', { class: 'pick-row', type: 'button', onclick: () => pickPlace(p) }, el('b', { text: shortName(p.ko) }), el('span', { text: p.kind === 'hall' ? '홀' : '호텔' }))))), 'half');
   }
   // 전시장 밖의 공개 장소를 누르면: 이름 · 내 일정 · 구글맵.
   function pickCity(c) {
     three?.choose(null);
     const mine = getEvents().filter((e) => e.place === c.ko || e.place === c.en);
     const query = encodeURIComponent(`${c.maps.query}, ${c.maps.address}`);
-    detail.replaceChildren(...[
-      el('h2', { text: c.ko }),
-      el('p', { class: 'note', text: `${c.en}. 전시장 밖이라 자리는 어림이다.${c.maps.addressChecked ? '' : ' 주소는 확인 전이다.'}` }),
+    sheet.open(el('div', { class: 'card' },
+      el('div', { class: 'card-head' }, el('h2', { text: c.ko }), el('p', { class: 'card-where', text: `전시장 밖 · 자리는 어림이다${c.maps.addressChecked ? '' : ' (주소는 확인 전)'}` })),
       mine.length ? el('ul', { class: 'stack' }, mine.map((e) => el('li', {}, el('b', { text: e.name }), el('span', { text: `${e.date.slice(5).replace('-', '/')} ${e.from} ~ ${e.to}` })))) : el('p', { class: 'note', text: '여기서 하는 내 일정은 없다.' }),
-      el('div', { class: 'actions' },
-        out(places.mapsUrls.search.replace('{query}', query), '구글맵에서 열기', 'btn'),
-        out(places.mapsUrls.directions.replace('{query}', query), '구글맵 길찾기', 'btn ghost')),
-    ]);
-    detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      el('div', { class: 'actions' }, out(places.mapsUrls.search.replace('{query}', query), '구글맵에서 열기', 'btn'), out(places.mapsUrls.directions.replace('{query}', query), '구글맵 길찾기', 'btn ghost'))), 'half');
+    flyTo(c.center[0], c.center[1], 600);
   }
-  function drawBooths() {
-    boothFrame = 0;
-    const [x0, z0, x1, z1] = view;
-    const w = x1 - x0;
-    if (w > BOOTH_ZOOM) { boothLayer.replaceChildren(); return; }
-    // 화면에서 반지름 5px쯤 되게 (손가락으로 누를 수 있게).
-    const r = ((w / 360) * 5).toFixed(2);
-    const marks = getMarks();
-    const nodes = [];
-    for (const b of boothList) {
-      if (b.x < x0 || b.x > x1 || b.z < z0 || b.z > z1) continue;
-      // 고른 부스는 짙은 테두리로 보인다 (색은 칠하기에 쓰고 있어서).
-      const on1 = b.key === chosenBooth;
-      // 명함 이벤트로 표시한 부스는 붉은 테두리로 두른다.
-      const marked = !!marks[b.key];
-      const dot = svg('circle', { cx: b.x.toFixed(1), cy: b.z.toFixed(1), r: marked ? (Number(r) * 1.35).toFixed(2) : r, fill: colorOf(b.key), stroke: on1 ? T.ink : marked ? T.warn : T.panel, 'stroke-width': on1 || marked ? 3 : 1, 'vector-effect': 'non-scaling-stroke' });
-      dot.dataset.key = b.key;
-      nodes.push(dot);
-      if (nodes.length >= 900) break;
-    }
-    boothLayer.replaceChildren(...nodes);
-  }
-  boothLayer.addEventListener('click', (ev) => { const key = ev.target?.dataset?.key; if (key) pickBooth(key); });
-  board.addEventListener('viewchange', () => { if (!boothFrame) boothFrame = requestAnimationFrame(drawBooths); });
 
-  // 보는 칸을 바꾸면 글자와 점의 크기를 화면에 맞춘다.
-  function apply() {
-    const [x0, z0, x1, z1] = view;
-    const w = x1 - x0;
-    board.setAttribute('viewBox', `${x0} ${z0} ${w} ${z1 - z0}`);
-    const unit = w / 360;
-    labels.setAttribute('font-size', (unit * 11).toFixed(1));
-    campusLabels.setAttribute('font-size', (unit * 13).toFixed(1));
-    for (const t of labels.children) t.style.display = t.dataset.big === '1' ? (w < 2600 ? '' : 'none') : (w < 1100 ? '' : 'none');
-    campusLabels.style.display = w >= 1500 ? '' : 'none';
-    for (const g of marks.children) {
-      const city = !!g.dataset.city;
-      g.querySelector('circle').setAttribute('r', (unit * (city ? 7 : 4)).toFixed(1));
-      const t = g.querySelector('text');
-      t.setAttribute('font-size', (unit * (city ? 10 : 9)).toFixed(1));
-      t.setAttribute('dx', (unit * (city ? 10 : 6)).toFixed(1));
-      t.setAttribute('dy', (unit * 3).toFixed(1));
-      // 공개 장소는 멀리서도 이름이 보인다.
-      t.style.display = city || w < 900 ? '' : 'none';
+  // ---- 눌렀을 때: 번호 점 → 부스 점(가장 가까운 것, 손가락 크기) → 홀 → 장소
+  board.addEventListener('click', (ev) => {
+    const pin = ev.target.closest?.('[data-pin]');
+    if (pin) { openCompany(rows.get(pin.dataset.pin)); return; }
+    const city = ev.target.closest?.('[data-city]');
+    if (city) { pickCity(L.city.find((c) => c.k === city.dataset.city)); return; }
+    const w = widthOf(view);
+    if (w < BOOTH_DOTS) {
+      const [wx, wz] = gesture.toWorld(ev.clientX, ev.clientY);
+      const reach = unitNow() * 22;
+      let best = null, bestD = reach;
+      for (const b of boothList) {
+        const dx = b.x - wx, dz = b.z - wz;
+        if (Math.abs(dx) > reach || Math.abs(dz) > reach) continue;
+        const d = Math.hypot(dx, dz);
+        if (d < bestD) { best = b; bestD = d; }
+      }
+      if (best) { pickBooth(best.key); return; }
     }
-    for (const g of pinLayer.children) {
-      g.querySelector('circle').setAttribute('r', (unit * 9).toFixed(1));
-      g.querySelector('text').setAttribute('font-size', (unit * 10).toFixed(1));
-    }
-    board.dispatchEvent(new CustomEvent('viewchange', { detail: { unit } }));
-  }
-  // 화면 비율에 맞게 칸을 넓혀서 다 보이게 한다.
-  function fit(box) {
-    const ratio = (board.clientHeight || 420) / (board.clientWidth || 360);
-    let [x0, z0, x1, z1] = box;
-    const w = x1 - x0, h = z1 - z0;
-    if (h / w > ratio) { const grow = (h / ratio - w) / 2; x0 -= grow; x1 += grow; } else { const grow = (w * ratio - h) / 2; z0 -= grow; z1 += grow; }
-    view = [x0, z0, x1, z1];
-    apply();
-  }
-  function zoom(factor, cx, cz) {
-    const [x0, z0, x1, z1] = view;
-    const w = x1 - x0;
-    if ((factor < 1 && w < 120) || (factor > 1 && w > 6000)) return;
-    const px = cx ?? (x0 + x1) / 2, pz = cz ?? (z0 + z1) / 2;
-    view = [px - (px - x0) * factor, pz - (pz - z0) * factor, px + (x1 - px) * factor, pz + (z1 - pz) * factor];
-    apply();
-  }
-  const toWorldPoint = (ev) => {
-    const r = board.getBoundingClientRect();
-    return [view[0] + ((ev.clientX - r.left) / r.width) * (view[2] - view[0]), view[1] + ((ev.clientY - r.top) / r.height) * (view[3] - view[1])];
-  };
-  // 한 손가락은 옮기기, 두 손가락은 크게 · 작게.
-  const touch = new Map();
-  let gap = 0;
-  board.addEventListener('pointerdown', (ev) => { touch.set(ev.pointerId, [ev.clientX, ev.clientY]); });
-  board.addEventListener('pointermove', (ev) => {
-    if (!touch.has(ev.pointerId)) return;
-    const before = touch.get(ev.pointerId);
-    touch.set(ev.pointerId, [ev.clientX, ev.clientY]);
-    const r = board.getBoundingClientRect();
-    if (touch.size === 1) {
-      const dx = ((ev.clientX - before[0]) / r.width) * (view[2] - view[0]);
-      const dz = ((ev.clientY - before[1]) / r.height) * (view[3] - view[1]);
-      if (Math.abs(ev.clientX - before[0]) + Math.abs(ev.clientY - before[1]) > 0) { view = [view[0] - dx, view[1] - dz, view[2] - dx, view[3] - dz]; apply(); }
-    } else if (touch.size === 2) {
-      const [a, b] = [...touch.values()];
-      const now = Math.hypot(a[0] - b[0], a[1] - b[1]);
-      if (gap > 0 && now > 0) zoom(gap / now, ...toWorldPoint({ clientX: (a[0] + b[0]) / 2, clientY: (a[1] + b[1]) / 2 }));
-      gap = now;
-    }
+    const k = ev.target.dataset?.k;
+    if (k) pickPlace(placeBy.get(k));
   });
-  const lift = (ev) => { touch.delete(ev.pointerId); gap = 0; };
-  board.addEventListener('pointerup', lift);
-  board.addEventListener('pointercancel', lift);
-  board.addEventListener('pointerleave', lift);
-  board.addEventListener('wheel', (ev) => { ev.preventDefault(); zoom(ev.deltaY > 0 ? 1.15 : 0.87, ...toWorldPoint(ev)); }, { passive: false });
 
-  const frame = el('div', { class: 'map-frame' }, board);
-  const flat = el('button', { class: 'seg', type: 'button', text: '2D', 'aria-pressed': 'true' });
-  const solid = el('button', { class: 'seg', type: 'button', text: '3D', 'aria-pressed': 'false' });
-  let three = null;
-  let focus = null;
+  // ---- 2D · 3D
+  const flat = el('button', { class: 'ctl ctl-wide', type: 'button', text: '2D', 'aria-pressed': 'true', 'aria-label': '2D 지도' });
+  const solid = el('button', { class: 'ctl ctl-wide', type: 'button', text: '3D', 'aria-pressed': 'false', 'aria-label': '3D 지도 (누를 때 불러온다)' });
+  void flat;
   async function mode(is3d) {
     flat.setAttribute('aria-pressed', is3d ? 'false' : 'true');
     solid.setAttribute('aria-pressed', is3d ? 'true' : 'false');
-    if (!is3d) { frame.replaceChildren(board); fit(focus || all); return; }
+    solid.textContent = is3d ? '2D' : '3D';
+    solid.setAttribute('aria-label', is3d ? '2D 지도로 돌아가기' : '3D 지도 (누를 때 불러온다)');
+    if (!is3d) { frame.replaceChildren(board); requestAnimationFrame(() => { draw(); settle(); }); return; }
     frame.replaceChildren(el('p', { class: 'note map-wait', text: '3D를 불러오는 중이다.' }));
     try {
-      // 3D는 여기서 처음 불러온다. 첫 화면에는 싣지 않는다.
-      three ??= (await import('../map3d.js')).create(L, places, pins, { onPlace: (p) => pick(p, true), onCampus: (c) => pickCampus(c, true), onBooth: (key) => pickBooth(key, true), booths: boothList, colorOf: (key) => colorOf(key), isMarked: (key) => !!getMarks()[key] });
+      // 3D는 여기서 처음 불러온다. 첫 화면에는 싣지 않는다. 부스 점이 있어야 해서 전시사 자료를 다 받는다.
+      await ensureFull().catch(() => {});
+      three ??= (await import('../map3d.js')).create(L, places, pins, { onPlace: (p) => pickPlace(p), onCampus: (c) => pickCampus(c), onBooth: (key) => pickBooth(key), booths: boothList, colorOf: (key) => (colorOf ||= makeColorer())(key), isMarked: (key) => !!getMarks()[key] });
       page.three = three;
       frame.replaceChildren(three.node);
-      three.look(focus);
+      three.look(all);
     } catch {
-      frame.replaceChildren(el('p', { class: 'note map-wait', text: '3D를 불러오지 못했다. 2D로 본다.' }));
+      frame.replaceChildren(board);
+      flat.setAttribute('aria-pressed', 'true');
+      solid.setAttribute('aria-pressed', 'false');
+      solid.textContent = '3D';
+      frame.prepend(el('p', { class: 'note map-wait', text: '3D를 불러오지 못했다. 2D로 본다.' }));
     }
   }
-  flat.addEventListener('click', () => mode(false));
-  solid.addEventListener('click', () => mode(true));
-  const go = (box) => { focus = box; if (solid.getAttribute('aria-pressed') === 'true') three?.look(box); else fit(box || all); };
+  solid.addEventListener('click', () => mode(!in3d()));
+  const zoomBy = (f) => { if (in3d()) three?.zoom(f); else { const v = view; const cx = (v[0] + v[2]) / 2, cz = (v[1] + v[3]) / 2; gesture.zoomTo(f, cx, cz); } };
+  const plus = el('button', { class: 'ctl', type: 'button', text: '+', 'aria-label': '크게', onclick: () => zoomBy(in3d() ? 0.8 : 0.5) });
+  const minus = el('button', { class: 'ctl', type: 'button', text: '−', 'aria-label': '작게', onclick: () => zoomBy(in3d() ? 1.25 : 2) });
+  const locate = el('button', { class: 'ctl', type: 'button', 'aria-label': '내 위치', onclick: () => gpsButton.click() }, (() => { const s = svg('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true' }); s.append(svg('circle', { cx: 12, cy: 12, r: 3.5 }), svg('path', { d: 'M12 3v3M12 18v3M3 12h3M18 12h3' })); return s; })());
+
+  // ---- 위: 찾기 칸 · 홀 바로 가기
+  const finder = findBox({
+    places: places.places,
+    onPlace: (p) => pickPlace(placeBy.get(p.k)),
+    onCompany: async (row, f) => {
+      // 찾은 자료로 지도 자료를 채운다(전체), 그 부스로 날아가 카드를 연다.
+      try { await ensureFull(); } catch { /* 전체를 못 받아도 줄은 있다 */ }
+      openCompany(rows.get(row[0]) || row);
+    },
+  });
+  const chips = el('div', { class: 'chips', role: 'group', 'aria-label': '홀 바로 가기' });
+  const chipBoxes = [];
+  function paintChips() {
+    const mx = (view[0] + view[2]) / 2, mz = (view[1] + view[3]) / 2;
+    const cur = chipBoxes.find((c) => c.box && mx >= c.box[0] && mx <= c.box[2] && mz >= c.box[1] && mz <= c.box[3] && widthOf(view) < 1300);
+    for (const c of chipBoxes) c.node.setAttribute('aria-pressed', c === cur || (c.all && widthOf(view) >= 1300 && !cur) ? 'true' : 'false');
+  }
+  function buildChips() {
+    chipBoxes.length = 0;
+    const defs = [{ ko: '전체', all: true, box: null }, ...HALL_CHIPS.map(([ko, keys]) => ({ ko, list: keys.map((k) => placeBy.get(k)).filter(Boolean) })).filter((d) => d.list.length).map((d) => ({ ko: d.ko, box: wrapBox(d.list) }))];
+    if (pins.length) defs.push({ ko: '내 동선', box: pad(bbox(pins.map((p) => [p.x, p.z])), 90) });
+    for (const d of defs) {
+      d.node = el('button', { class: 'chip-go', type: 'button', text: d.ko, 'aria-pressed': 'false', onclick: () => { sheet.close(); finder.clear(); goBox(d.box || all); } });
+      chipBoxes.push(d);
+    }
+    chips.replaceChildren(...chipBoxes.map((d) => d.node));
+    paintChips();
+  }
+  buildChips();
+  const rebuildChips = () => { buildChips(); };
 
   // 내 위치: GPS로는 어느 캠퍼스인지까지, 홀 안은 가까운 부스 번호로 맞춘다. 위치는 폰 밖으로 나가지 않는다.
   const whereText = el('p', { class: 'big' });
   const whereNote = el('p', { class: 'note', role: 'status' });
   const nextBox = el('div', { class: 'block' });
-  const placeBy = new Map(L.list.map((p) => [p.k, p]));
   function myPoint(where) {
     if (where?.by === 'booth') return [where.x, where.z];
     if (where?.by === 'gps' && where.area) {
@@ -462,7 +748,7 @@ export async function render({ rest = [] } = {}) {
       nextBox.replaceChildren(el('p', { class: 'note', text: pins.length ? '동선의 회사를 다 봤다.' : '관심 회사를 넣으면 다음 갈 곳이 나온다.' }));
       return;
     }
-    const row = data?.ex.find((r) => r[0] === next.id);
+    const row = rows.get(next.id);
     const booth = row?.[7]?.[0];
     const place = booth ? placeBy.get(booth.slice(booth.lastIndexOf('@') + 1)) : null;
     const route = mapsLink(places, place, 'directions');
@@ -471,7 +757,7 @@ export async function render({ rest = [] } = {}) {
       el('p', { class: 'note', text: booth ? `${place ? place.ko : '장소 모름'} · 부스 ${booth.slice(0, booth.lastIndexOf('@'))} (자리는 짐작)` : '부스 미정' }),
       el('div', { class: 'actions' },
         route ? out(route, '구글맵 길찾기', 'btn') : null,
-        nextPin ? el('button', { class: 'btn ghost', type: 'button', text: '지도에서 보기', onclick: () => { if (solid.getAttribute('aria-pressed') === 'true') mode(false); focus = null; fit([nextPin.x - 140, nextPin.z - 140, nextPin.x + 140, nextPin.z + 140]); } }) : null,
+        nextPin ? el('button', { class: 'btn ghost', type: 'button', text: '지도에서 보기', onclick: () => { if (in3d()) mode(false); goBox([nextPin.x - 140, nextPin.z - 140, nextPin.x + 140, nextPin.z + 140]); } }) : null,
         el('a', { class: 'btn ghost', href: '#/plan', text: '동선에서 표시' })));
   }
   board.addEventListener('viewchange', drawMe);
@@ -505,11 +791,11 @@ export async function render({ rest = [] } = {}) {
     if (following && lastCampus === where.campus) {
       // 따라가기: 보는 크기는 그대로 두고 내 자리를 가운데로.
       const w = view[2] - view[0], h = view[3] - view[1];
-      view = [at[0] - w / 2, at[1] - h / 2, at[0] + w / 2, at[1] + h / 2];
-      apply();
+      setView([at[0] - w / 2, at[1] - h / 2, at[0] + w / 2, at[1] + h / 2]);
+      draw();
+      settle();
     } else {
-      focus = null;
-      fit(area ? [at[0] - 260, at[1] - 260, at[0] + 260, at[1] + 260] : pad(L.campuses.find((c) => c.k === where.campus).box, 40));
+      goBox(area ? [at[0] - 260, at[1] - 260, at[0] + 260, at[1] + 260] : pad(L.campuses.find((c) => c.k === where.campus).box, 40));
     }
     lastCampus = where.campus;
     return true;
@@ -586,8 +872,7 @@ export async function render({ rest = [] } = {}) {
     setWhere({ by: 'booth', campus: placeBy.get(hit.place)?.c, place: hit.place, code: hit.code, x: hit.x, z: hit.z, at: Date.now() });
     whereNote.textContent = exact.length > 1 ? `같은 이름의 부스가 ${exact.length}곳 있어 첫 곳으로 맞췄다.` : exact.length ? '부스 번호로 맞췄다. 자리는 짐작이다.' : `그 번호는 자료에 없어 가장 가까운 ${hit.code}로 맞췄다.`;
     if (solid.getAttribute('aria-pressed') === 'true') mode(false);
-    focus = null;
-    fit([hit.x - 160, hit.z - 160, hit.x + 160, hit.z + 160]);
+    goBox([hit.x - 160, hit.z - 160, hit.x + 160, hit.z + 160]);
   });
   const mePanel = el('section', { class: 'panel' },
     el('h2', { text: '내 위치' }),
@@ -598,53 +883,75 @@ export async function render({ rest = [] } = {}) {
     nextBox,
     el('p', { class: 'note', text: '위치는 이 폰 안에서만 쓴다. 홀 안은 부스 번호로 맞춘다.' }));
 
-  const colorButtons = MODES.map((m) => el('button', { class: 'seg', type: 'button', text: m.k === 'plain' ? '색: 한 색' : m.ko, 'aria-pressed': m.k === colorMode ? 'true' : 'false', onclick: (ev) => {
+
+  // ---- 색 칠하기 (지도 아래 묶음)
+  const legendBox = el('div', { class: 'legend', 'aria-label': '부스 점의 색' });
+  function paintLegend() {
+    legendBox.replaceChildren(...legend(colorMode, table || { groups: [] }).map((l) => el('span', { class: 'swatch' }, el('i', { style: `background:${l.color}` }), l.ko)));
+    legendBox.hidden = colorMode === 'plain';
+  }
+  const colorButtons = MODES.map((m) => el('button', { class: 'seg', type: 'button', text: m.k === 'plain' ? '색: 한 색' : m.ko, 'aria-pressed': m.k === colorMode ? 'true' : 'false', onclick: async (ev) => {
     colorMode = m.k;
     save('mapColor.v1', colorMode);
-    colorOf = data ? boothColorer(colorMode, data, table, (key) => boothEx.get(key) || noRows) : colorOf;
+    if (m.k === 'group' && !table) table = await getCategories().catch(() => null);
+    colorOf = null;
     for (const b of colorButtons) b.setAttribute('aria-pressed', b === ev.currentTarget ? 'true' : 'false');
     paintLegend();
     drawBooths();
     three?.redraw();
     // 점은 가까이 봐야 찍힌다. 멀리 보고 있으면 알려 준다.
-    if (!in3d() && view[2] - view[0] > BOOTH_ZOOM) whereNote.textContent = '부스 점은 지도를 가까이 봐야 찍힌다. 홀을 누르거나 "크게"를 누른다.';
+    if (!in3d() && widthOf(view) > BOOTH_DOTS) whereNote.textContent = '부스 점은 지도를 가까이 봐야 찍힌다. 홀을 누르거나 홀 바로 가기를 누른다.';
   } }));
   paintLegend();
+  if (colorMode === 'group') getCategories().then((t) => { table = t; colorOf = null; paintLegend(); drawBooths(); }).catch(() => {});
 
-  const page = el('div', { class: 'page' },
-    findBox(),
+  // ---- 조립
+  mapx.append(el('h1', { class: 'sr-only', text: '지도' }), frame,
+    el('div', { class: 'mapx-top' }, finder.node, chips),
+    el('div', { class: 'ctls' }, plus, minus, locate, solid),
+    sheet.node);
+  const setHeight = () => {
+    const tabs = document.querySelector('.tabs');
+    const top = mapx.getBoundingClientRect().top + window.scrollY;
+    // 지도 칸은 화면에서 위 머리와 아래 탭을 뺀 만큼. 아래에 다음 묶음이 한 줄쯤 보여 끌어내릴 곳을 남긴다.
+    mapx.style.height = `${Math.max(440, Math.round(window.innerHeight - top - (tabs?.offsetHeight || 68) - 64))}px`;
+    mapx.dispatchEvent(new Event('resize-sheet'));
+  };
+  page.append(mapx,
     el('section', { class: 'panel' },
-      el('h1', { text: '지도' }),
-      frame,
-      el('div', { class: 'segs' },
-        el('button', { class: 'seg', type: 'button', text: '크게 보기', onclick: () => go(null) }),
-        L.campuses.map((c) => el('button', { class: 'seg', type: 'button', text: c.ko.replace(' 캠퍼스', ''), onclick: () => go(pad(c.box, 40)) }))),
-      el('div', { class: 'segs' }, flat, solid,
-        el('button', { class: 'seg', type: 'button', text: '크게', 'aria-label': '지도 크게', onclick: () => (solid.getAttribute('aria-pressed') === 'true' ? three?.zoom(0.8) : zoom(0.7)) }),
-        el('button', { class: 'seg', type: 'button', text: '작게', 'aria-label': '지도 작게', onclick: () => (solid.getAttribute('aria-pressed') === 'true' ? three?.zoom(1.25) : zoom(1.4)) })),
+      el('h2', { text: '지도 보기' }),
       el('div', { class: 'segs', role: 'group', 'aria-label': '부스 점 칠하기' }, colorButtons),
       legendBox,
       el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: '#/transit', text: '셔틀 · 오가는 법' })),
-      el('p', { class: 'note', text: `부스 자리는 짐작이다 (${places.edition}판, 정식 배치도 전). 붉은 테두리는 명함 넣는 부스.` }),
-      pins.length
-        ? el('p', { class: 'note', text: `번호는 동선 차례, 색은 날짜: ${info.show.days.map((d, i) => `${d.ko.split(' ')[0]} ${['분홍', '파랑', '초록', '노랑'][i]}`).join(' · ')}.` })
-        : el('p', { class: 'note', text: '위 찾기 칸에서 회사를 찾아 관심에 넣으면 번호로 찍힌다.' })),
-    detail,
+      el('p', { class: 'note', text: `부스 자리는 짐작이다 (${places.edition}판, 정식 배치도 전). 붉은 테두리는 명함 넣는 부스.` })),
     mePanel);
+
+  gesture = attachGestures(board, { getView: () => view, setView, draw, onSettle: settle, ratio: () => { const s = boardSize(); return s.height / s.width; } });
+  const onResize = () => { if (!mapx.isConnected) { window.removeEventListener('resize', onResize); return; } setHeight(); settle(); };
+  window.addEventListener('resize', onResize);
+
   // 화면에 붙은 뒤에야 크기를 알 수 있다.
   requestAnimationFrame(() => {
-    fit(all);
-    // 회사 화면의 "지도"에서 왔으면 그 회사의 첫 부스로 간다.
-    const row = rest[0] === 'at' ? data?.ex.find((r) => r[0] === rest[1]) : null;
-    const booth = row?.[7]?.[0];
-    const spot = spotOf(spots, booth);
-    if (spot) {
-      fit([spot.x - 110, spot.z - 110, spot.x + 110, spot.z + 110]);
-      const at = booth.lastIndexOf('@');
-      drawBooths();
-      pickBooth(`${booth.slice(at + 1)}|${booth.slice(0, at)}`);
-    }
+    setHeight();
+    const { width, height } = boardSize();
+    view = viewFor(all, width, height, { top: TOP, bottom: 20 });
+    draw();
+    settle();
+    const idle = window.requestIdleCallback || ((f) => setTimeout(f, 300));
+    // 관심 회사가 있으면 번호 점을 그리려고 전체 자료를 첫 그림 뒤에 받는다.
+    if (getInterests().length) idle(() => { ensureFull().catch(() => {}); });
+    // 다른 화면의 "지도" 단추로 왔으면 그 회사로 간다.
+    if (rest[0] === 'at' && rest[1]) ensureFull().then(() => openCompany(rows.get(rest[1]))).catch(() => {});
   });
-  page.mapApi = { board, layer: me, get view() { return view; }, fit, L, places, spots, pad };
+  page.mapApi = {
+    board, mapx, sheet, L, places, pad,
+    get view() { return view; },
+    get spots() { return spots; },
+    get rows() { return rows; },
+    get boothEx() { return boothEx; },
+    get level() { return levelOf(widthOf(view)); },
+    fit: (box) => { const { width, height } = boardSize(); view = viewFor(box, width, height, { top: TOP, bottom: 20 }); draw(); settle(); },
+    goBox, flyTo, openCompany, pickPlace, ensureHall, ensureFull, relayout, settle,
+  };
   return page;
 }

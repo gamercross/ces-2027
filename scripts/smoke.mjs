@@ -404,7 +404,7 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
     const transitV = await readFile(join(dist, 'views/transit.js'), 'utf8');
     const mapfindV = await readFile(join(dist, 'mapfind.js'), 'utf8');
     const mapV3 = await readFile(join(dist, 'views/map.js'), 'utf8');
-    check(planV.includes('지금 갈 곳') && planV.includes('alertBands(') && ['#/rec', '#/days', '#/sessions'].every((h) => planV.includes(h)) && ['#/listen', '#/talk', '#/people'].every((h) => diaryV.includes(h)) && transitV.includes('info.moving') && mapV3.includes('findBox()') && mapV3.includes('#/transit') && mapfindV.includes('getFinder'),
+    check(planV.includes('지금 갈 곳') && planV.includes('alertBands(') && ['#/rec', '#/days', '#/sessions'].every((h) => planV.includes(h)) && ['#/listen', '#/talk', '#/people'].every((h) => diaryV.includes(h)) && transitV.includes('info.moving') && mapV3.includes('findBox(') && mapV3.includes('#/transit') && mapfindV.includes('getFinder'),
       '합친 자리: 동선 맨 위에 "지금 갈 곳" 한 줄과 띠, 동선 아래에 추천 · 시간과 일정 · 세션, 일기 안에 듣기 · 대화 칸 · 만난 사람, 지도 위에 찾기 칸과 셔틀 · 오가는 법');
     // 서비스 워커: 지운 영한 번역 모델이 폰에 남긴 것만 비우고 받아쓰기 모델 파일은 건드리지 않는다.
     const { default: vm } = await import('node:vm');
@@ -429,6 +429,65 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
     const required = (cardV.match(/return fail\('[^']*'/g) || []).filter((m) => /별명을 적는다|나를 하나 고른다/.test(m)).length;
     check(/class: 'welcome'/.test(cardV) && cardV.includes('환영한다') && required === 2 && ['한 줄 (선택)', '깃허브 (선택)', '디스코드 (선택)'].every((w) => cardV.includes(w)) && cardV.includes("href: '#/map', text: '지도로'") && /rest\[0\] === 'edit'/.test(cardV) && settingsV.includes("href: '#/card', text: 'QR 보기'") && settingsV.includes("href: '#/card/edit'") && /const intro = name === 'card' && !getProfile\(\)/.test(app) && /\.form\.big \.choices \{ grid-template-columns: 1fr 1fr/.test(cssV) && /\.form\.big \.field input \{ font-size: 18px/.test(cssV),
       '처음 들어오면 명함: 환영 한 줄과 한 화면(별명 · 나만 꼭 필요하고 한 줄 · 깃허브 · 디스코드는 "선택"), 만든 뒤 명함과 QR 그리고 "지도로", 설정 탭의 "QR 보기" · "명함 고치기", 큰 글씨(18px)와 2 × 2 고르기');
+    // 4단계(11/22): 지도 자세히. 확대 단계 셋 · 글자 13px · 겹치면 숨김 · 홀마다 나눠 받기 · 손짓 · 카드.
+    {
+      const mm = await import('../web/mapmath.js');
+      const ratio = 1.5;
+      const box = [0, 0, 400, 100];
+      const fit = mm.fitBox(box, ratio);
+      const z = mm.zoomBox([0, 0, 360, 540], 0.5, 90, 135);
+      const tiny = mm.zoomBox([0, 0, 100, 150], 0.1, 50, 75);
+      const huge = mm.zoomBox([0, 0, 3000, 4500], 5, 0, 0);
+      const vf = mm.viewFor([100, 100, 300, 160], 360, 600, { top: 120, bottom: 300 });
+      check(mm.levelOf(3000) === 'campus' && mm.levelOf(1300) === 'campus' && mm.levelOf(900) === 'hall' && mm.levelOf(519) === 'booth' && mm.levelOf(100) === 'booth' && mm.MIN_FONT === 13, '확대 단계 셋: 칸 너비 1300 이상은 캠퍼스, 520 ~ 1300은 홀, 520 아래는 부스이고 글자는 13px 아래로 줄지 않는다');
+      check(Math.abs((fit[3] - fit[1]) / (fit[2] - fit[0]) - ratio) < 1e-9 && fit[0] <= 0 && fit[2] >= 400 && fit[1] <= 0 && fit[3] >= 100, '보는 칸 맞추기: 상자가 다 보이고 화면 비율과 같다');
+      check(Math.abs(z[0] - 45) < 1e-9 && Math.abs(z[2] - 225) < 1e-9 && Math.abs(z[1] - 67.5) < 1e-9 && mm.widthOf(tiny) >= mm.MIN_W - 1e-9 && mm.widthOf(huge) <= mm.MAX_W + 1e-9, '확대 · 축소는 누른 점을 그대로 두고, 너비는 한계(90 ~ 3800) 안이다');
+      const sx = (x) => (x - vf[0]) / ((vf[2] - vf[0]) / 360);
+      const sy = (z2) => (z2 - vf[1]) / ((vf[2] - vf[0]) / 360);
+      check(sx(100) >= 11.9 && sx(300) <= 348.1 && sy(100) >= 119.9 && sy(160) <= 300.1, '찾기 칸(위)과 카드(아래)를 피해 보이는 칸 가운데에 놓는다');
+      const cands = [
+        { id: 'a', x: 100, y: 100, text: '노스 홀', size: 13, prio: 60, anchor: 'middle' },
+        { id: 'b', x: 105, y: 102, text: '센트럴 홀', size: 13, prio: 50, anchor: 'middle' },
+        { id: 'c', x: 200, y: 200, text: '11735 Union bio', alts: ['11735 Uni', '11735'], size: 13, prio: 30, anchor: 'start', dx: 9 },
+        { id: 'd', x: 205, y: 203, text: '11736 Other', alts: ['11736 Oth'], size: 13, prio: 20, anchor: 'start', dx: 9 },
+        { id: 'e', x: 355, y: 300, text: '밖으로 나감', size: 13, prio: 99, anchor: 'start' },
+      ];
+      const placed = mm.layoutLabels(cands, { width: 360, height: 600 });
+      let over = 0;
+      for (let i2 = 0; i2 < placed.length; i2++) for (let j = i2 + 1; j < placed.length; j++) { const a = placed[i2].rect, b = placed[j].rect; if (a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3]) over++; }
+      check(placed.some((p) => p.id === 'a') && !placed.some((p) => p.id === 'b') && !placed.some((p) => p.id === 'e') && over === 0 && placed.every((p) => p.size >= 13) && placed.find((p) => p.id === 'c')?.text === '11735 Union bio', '글자 놓기: 중요한 것부터 놓고 겹치거나 화면 밖으로 나가는 것은 숨기며 글자는 13px 이상이다');
+      const crowded = mm.layoutLabels([{ id: 'x', x: 50, y: 50, text: '11735 Union bio', alts: ['11735 U', '11735'], size: 13, prio: 90, anchor: 'start' }, { id: 'y', x: 50, y: 52, text: '높은 것', size: 13, prio: 99, anchor: 'start' }], { width: 360, height: 600 });
+      check(crowded.length === 1 && crowded[0].id === 'y', '좁은 곳에서는 높은 순위 하나만 남고 나머지는 숨는다');
+      // 홀마다 나눈 자료
+      const idx = await json('data/halls/index.json').catch(() => null);
+      if (idx && (await exists('data/exhibitors.json'))) {
+        const full = await json('data/exhibitors.json');
+        const bad = [];
+        const idsAt = new Map();
+        for (const [k, n] of Object.entries(idx.halls)) {
+          const doc = await json(`data/halls/${k}.json`);
+          if (doc.ex.length !== n || doc.hall !== k || !doc.cats || !doc.catsKo || !doc.countries || !doc.link) bad.push(k);
+          for (const r of doc.ex) { if (!r[7].some((b) => b.endsWith(`@${k}`))) bad.push(`${k}:${r[0]}`); idsAt.set(r[0], (idsAt.get(r[0]) || 0) + 1); }
+        }
+        const missing = full.ex.filter((r) => r[7].length && !idsAt.has(r[0]) && r[7].some((b) => /^[A-Za-z0-9_]+$/.test(b.slice(b.lastIndexOf('@') + 1)))).length;
+        const sizes = await Promise.all(Object.keys(idx.halls).map(async (k) => (await readFile(join(dist, `data/halls/${k}.json`))).length));
+        const biggest = Math.max(...sizes);
+        const fullSize = (await readFile(join(dist, 'data/exhibitors.json'))).length;
+        check(bad.length === 0 && missing === 0 && biggest < fullSize * 0.4 && swFiles.includes('data/halls/index.json') && (await readFile(new URL('../.github/workflows/pages.yml', import.meta.url), 'utf8')).includes('scripts/split-halls.mjs dist'), `전시사 자료는 홀 ${Object.keys(idx.halls).length}곳으로 나뉜다: 홀 자료마다 그 홀에 부스가 있는 회사만(${bad.length ? bad.slice(0, 3).join(' ') : '어긋남 없음'}), 빠진 회사 ${missing}곳, 가장 큰 홀 ${(biggest / 1024).toFixed(0)} KB(전체 ${(fullSize / 1024).toFixed(0)} KB), 오프라인에도 담긴다`);
+      } else {
+        lines.push('주의 | 전시사 자료가 없어 홀 나누기는 보지 않았다');
+      }
+      // 지도 코드: 첫 열기에 전시사 자료를 받지 않고, 손짓 · 카드 · 칩 · 3D를 갖췄는지
+      const mapSrc = await readFile(join(dist, 'views/map.js'), 'utf8');
+      const gestSrc = await readFile(join(dist, 'mapgesture.js'), 'utf8');
+      const sheetSrc = await readFile(join(dist, 'mapsheet.js'), 'utf8');
+      const appJs2 = await readFile(join(dist, 'app.js'), 'utf8');
+      const htmlNow = await readFile(join(dist, 'index.html'), 'utf8');
+      check((mapSrc.match(/getExhibitors\(/g) || []).length === 1 && !/getExhibitors\(/.test(appJs2) && !/^import .*map3d/m.test(mapSrc) && mapSrc.includes("import('../map3d.js')") && ['웨스트', '센트럴', '노스', '사우스', '베네시안'].every((w) => mapSrc.includes(w)) && /ensureHall\(/.test(mapSrc) && !htmlNow.includes('map3d'),
+        '지도 첫 열기: 전시사 전체 자료는 찾기 · 3D · 관심 회사가 있을 때만 받고(홀로 가까이 가면 그 홀 것만), 3D는 단추를 누를 때 불러오며, 홀 바로 가기 칩이 있다');
+      check(/pointerType|pointers\.size === 2/.test(gestSrc) && /DOUBLE_MS/.test(gestSrc) && /addEventListener\('wheel'/.test(gestSrc) && /requestAnimationFrame/.test(gestSrc) && /swallow/.test(gestSrc) && /sheet-grip/.test(sheetSrc) && /'half'/.test(sheetSrc) && /'full'/.test(sheetSrc) && /closed/.test(sheetSrc),
+        '손짓: 한 손가락 끌기 · 두 손가락 벌리기 · 두 번 톡 · 휠, 프레임마다 한 번만 그리고 끌고 난 뒤 click은 막는다. 카드는 반쯤 → 끝까지 끌어올리고 아래로 끌면 닫힌다');
+    }
   }
   check(['loading()', 'failed(', 'missing(', 'history.back()'].every((w) => app.includes(w)) && !/p\.textContent = '화면을 불러오지 못했다/.test(app), '메인 틀: 느린 망엔 "불러오는 중", 못 불러오면 "다시 열기", 없는 주소는 첫 화면으로 말없이 보내지 않고 알린다, 뒤로는 앱 안 기록을 따른다');
   // 테마와 짧은 화면 (design.md "테마" · "글과 길이"): 밝게 · 어둡게 · 자동, 탭마다 강조색, 첫 화면은 지금 할 일만.

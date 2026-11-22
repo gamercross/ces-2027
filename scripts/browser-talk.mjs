@@ -39,10 +39,11 @@ async (page) => {
 
   // 2. 회사 카드
   await page.goto(`${URL}#/map`);
-  await page.locator('input[type=search]').fill(first.name);
-  await page.locator('#view .hits li').first().waitFor();
-  const row = page.locator('#view .hits li').first();
-  check(await row.getByRole('link', { name: '대화' }).count() === 1 && await row.getByRole('button', { name: '번역 앱' }).count() === 0, '지도 위 찾기 칸의 회사 카드: "대화" 단추가 있고 "번역 앱" 단추는 없다');
+  await page.locator('.find-field input').fill(first.name);
+  await page.locator('.results .result').first().click();
+  await page.locator('.sheet .card h2').waitFor();
+  const row = page.locator('.sheet .card');
+  check(await row.getByRole('link', { name: '대화' }).count() === 1 && await row.getByRole('button', { name: '번역 앱' }).count() === 0, '지도 위 찾기 칸에서 고른 회사 카드: "대화" 링크가 있고 "번역 앱" 단추는 없다');
   await noSideScroll('회사 카드');
 
   // 3. 대화 칸: 붙여넣기 → 나누기 → 일기 초안

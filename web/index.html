@@ -25,19 +25,8 @@
 <link rel="modulepreload" href="dom.js">
 <link rel="modulepreload" href="frame.js">
 <link rel="modulepreload" href="views/card.js">
-<link rel="modulepreload" href="views/map.js">
-<link rel="modulepreload" href="colors.js">
-<link rel="modulepreload" href="tokens.js">
-<link rel="modulepreload" href="geo.js">
-<link rel="modulepreload" href="spots.js">
-<link rel="modulepreload" href="route.js">
-<link rel="modulepreload" href="maps.js">
-<link rel="modulepreload" href="locate.js">
-<link rel="modulepreload" href="company.js">
-<link rel="modulepreload" href="company-image.js">
-<link rel="modulepreload" href="guide.js">
-<link rel="modulepreload" href="indoor-path.js">
-<link rel="modulepreload" href="mapfind.js">
+<!-- 명함이 있는 사람은 앱을 열면 지도다: 지도 조각도 같이 받는다 (명함부터 만드는 사람에게는 받지 않는다) -->
+<script>try{if(localStorage.getItem('ces2027.profile.v1'))for(const f of ["views/map.js","mapsheet.js","mapgesture.js","mapmath.js","colors.js","tokens.js","geo.js","spots.js","route.js","maps.js","locate.js","company.js","company-image.js","guide.js","indoor-path.js","mapfind.js"]){const l=document.createElement('link');l.rel='modulepreload';l.href=f;document.head.append(l)}}catch(e){}</script>
 </head>
 <body>
 <header class="bar">
