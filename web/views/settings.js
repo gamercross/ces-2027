@@ -161,19 +161,21 @@ function storageRow() {
 function exportRow() {
   const ready = getDiary().filter((e) => !e.draft);
   const status = el('p', { class: 'setrow-hint', role: 'status', hidden: true });
-  const button = el('button', { class: 'pick', type: 'button', text: '파일로', 'aria-label': '일기 · 대화 전부 파일로', disabled: ready.length === 0, onclick: () => {
-    const text = JSON.stringify(bundle(ready, getProfile(), new Date(), talksFor(ready, getTalks(), true)), null, 2);
+  const button = el('button', { class: 'pick', type: 'button', text: '파일로', 'aria-label': '일기 · 대화 · 사진 전부 파일로', disabled: ready.length === 0, onclick: async () => {
+    const photos = ready.some((e) => e.photo) ? await (await import('../photo-store.js')).photosFor(ready) : null;
+    const text = JSON.stringify(bundle(ready, getProfile(), new Date(), talksFor(ready, getTalks(), true), photos), null, 2);
     const url = URL.createObjectURL(new Blob([text], { type: 'application/json;charset=utf-8' }));
     const a = el('a', { href: url, download: fileName(getProfile()) });
     document.body.append(a);
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    status.textContent = `일기 ${ready.length}개와 폰에 있는 대화를 파일로 내보냈다. 녹음은 안 간다.`;
+    const n = Object.keys(photos || {}).length;
+    status.textContent = `일기 ${ready.length}개와 폰에 있는 대화${n ? ` · 사진 ${n}장` : ''}를 파일로 내보냈다. 녹음은 안 간다.`;
     status.hidden = false;
   } });
   const collect = row('모은 일기 열기', '받은 일기 파일 여러 개를 한 장으로', el('a', { class: 'pick', href: '#/collect', text: '열기' }));
-  return [row('내보내기', ready.length ? `일기 ${ready.length}개 · 대화 ${getTalks().length}개` : '내보낼 일기가 아직 없다', button), el('li', { class: 'setrow-more' }, status), collect];
+  return [row('내보내기', ready.length ? `일기 ${ready.length}개 · 대화 ${getTalks().length}개${ready.some((e) => e.photo) ? ` · 사진 ${ready.filter((e) => e.photo).length}장` : ''}` : '내보낼 일기가 아직 없다', button), el('li', { class: 'setrow-more' }, status), collect];
 }
 
 // 종이 명함: 있는지 · 없으면 QR 명함으로 대신. 묻는 곳은 동선 탭 위 띠와 여기 두 곳뿐이다(QR 화면에는 두지 않는다).

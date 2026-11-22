@@ -1,6 +1,6 @@
 //! 모인 일기를 네 태그로 나눠 한 장으로 만든다 (이슈 #18의 첫 조각).
 //!
-//! 폰의 일기 화면에서 내보낸 파일(`web/diary.js`의 꼴)을 읽어, "누구에게"(학생 · 취준생 · 정년 · 장년)로 나눈
+//! 폰의 일기 화면에서 내보낸 파일(`web/diary.js`의 꼴. 사진이 든 파일도 읽는다)을 읽어, "누구에게"(학생 · 취준생 · 정년 · 장년)로 나눈
 //! 마크다운 한 장을 쓴다. 이 한 장은 보낸 글을 그대로 묶은 초안이다. 맞다고 확정하는 것은 사람이 한다.
 //! 모은 파일과 만든 한 장에는 별명과 일기가 들어 있으니 공개 레포에 올리지 않는다.
 
@@ -27,6 +27,8 @@ pub struct Entry {
     pub felt: String,
     /// 누구에게 (태그 기호).
     pub tags: Vec<String>,
+    /// 일기에 사진이 든 파일이었나(R49). 사진 자체는 읽어 두지 않는다 — 한 장에는 "사진 있음"만 적는다.
+    pub has_photo: bool,
 }
 
 fn text(v: &Value, key: &str) -> String {
@@ -53,9 +55,10 @@ pub fn read_bundle(json: &Value) -> Result<Vec<Entry>, String> {
             booth: text(e, "booth"),
             saw: text(e, "saw"),
             felt: text(e, "felt"),
+            has_photo: e.get("photo").and_then(Value::as_str).is_some_and(|p| p.starts_with("data:image/")),
             tags: e["for"].as_array().into_iter().flatten().filter_map(Value::as_str).filter(|t| TAGS.iter().any(|(k, _)| k == t)).map(str::to_string).collect(),
         })
-        .filter(|e| !e.saw.is_empty() || !e.felt.is_empty())
+        .filter(|e| !e.saw.is_empty() || !e.felt.is_empty() || e.has_photo)
         .collect())
 }
 
@@ -104,6 +107,11 @@ fn section(out: &mut String, title: &str, entries: &[&Entry]) {
             if !lines.is_empty() {
                 out.push_str(&format!("\n{label}\n\n{}", lines.concat()));
             }
+        }
+        // 사진(R49)은 한 장에 넣지 않고 "사진 있음"만 적는다.
+        let photos: Vec<String> = list.iter().filter(|e| e.has_photo).map(|e| format!("- 사진 있음{}\n", tail(e))).collect();
+        if !photos.is_empty() {
+            out.push_str(&format!("\n사진\n\n{}", photos.concat()));
         }
     }
 }
@@ -210,6 +218,27 @@ mod tests {
         assert!(stu.starts_with("학생 (일기 3개 · 회사 2곳)\n"));
         // 일기가 많은 회사가 먼저, 이름은 처음 나온 대로, 부스는 적힌 것으로.
         assert!(stu.contains("### Alpha Robotics (부스 14731) · 일기 2개\n\n본 것\n\n- 팔이 컵을 집는다 (가짜 가, 2027-01-06)\n\n느낀 점\n\n- 값이 궁금하다 (가짜 나, 2027-01-07)\n\n### Solo Works\n"));
+    }
+
+    #[test]
+    fn 사진이_든_파일도_읽고_한_장에는_사진_있음만_적는다() {
+        // 사진(R49)은 일기 한 개의 "photo"(데이터 주소)다. 한 장에는 사진을 넣지 않는다.
+        let big = format!("data:image/jpeg;base64,{}", "QUJD".repeat(5000));
+        let b = bundle("가짜 가", json!([
+            { "id": "p1", "date": "2027-01-06", "company": "Alpha Robotics", "saw": "로봇 팔", "felt": "", "photo": big, "for": ["stu"] },
+            { "id": "p2", "date": "2027-01-07", "company": "Alpha Robotics", "saw": "", "felt": "", "photo": "data:image/png;base64,AAAA", "for": ["stu"] },
+            { "id": "p3", "date": "2027-01-07", "company": "Beta Cloud", "saw": "사진이 아닌 칸", "felt": "", "photo": { "x": 1 }, "for": ["stu"] },
+            { "id": "p4", "date": "2027-01-07", "company": "Beta Cloud", "saw": "글자만 든 칸", "felt": "", "photo": "http://example.com/a.jpg", "for": ["stu"] }
+        ]));
+        let got = read_bundle(&b).unwrap();
+        assert_eq!(got.iter().map(|e| e.has_photo).collect::<Vec<_>>(), [true, true, false, false], "데이터 주소만 사진으로 센다. 다른 꼴은 깨지지 않고 지나간다");
+        assert_eq!(got.len(), 4, "글 없이 사진만 든 일기도 한 개로 센다");
+        let page = one_page(&merge(vec![got]), "2027-01-15T00:00:00Z");
+        assert!(!page.contains("data:image") && !page.contains("QUJD"), "한 장에는 사진이 들어가지 않는다");
+        assert!(page.contains("### Alpha Robotics · 일기 2개\n\n본 것\n\n- 로봇 팔 (가짜 가, 2027-01-06)\n\n사진\n\n- 사진 있음 (가짜 가, 2027-01-06)\n- 사진 있음 (가짜 가, 2027-01-07)\n"), "회사 칸 끝에 \"사진 있음\"이 날짜 차례로 적힌다");
+        assert!(!page.split("### Beta Cloud").nth(1).unwrap().contains("사진 있음"), "사진이 없는 회사에는 그 줄이 없다");
+        // 사진이 없는 파일은 한 장이 이전과 똑같다.
+        assert!(!one_page(&merge(vec![read_bundle(&bundle("가짜 나", json!([{ "id": "z", "date": "2027-01-06", "company": "Zeta", "saw": "본 것", "felt": "", "for": ["stu"] }]))).unwrap()]), "x").contains("사진"));
     }
 
     #[test]
