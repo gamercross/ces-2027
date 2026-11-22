@@ -23,6 +23,7 @@ import { T, withAlpha } from '../tokens.js';
 import { findBox } from '../mapfind.js';
 import { createSheet } from '../mapsheet.js';
 import { attachGestures } from '../mapgesture.js';
+import { estimate, fmtDistance } from '../nav.js';
 import { BOOTH_DOTS, MIN_FONT, clip, layoutLabels, levelOf, viewFor, widthOf } from '../mapmath.js';
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -95,6 +96,10 @@ export async function render({ rest = [] } = {}) {
   let colorMode = MODES.some((m) => m.k === load('mapColor.v1', 'plain')) ? load('mapColor.v1', 'plain') : 'plain';
   const mapx = el('div', { class: 'mapx', 'data-level': 'campus' });
   const page = el('div', { class: 'page mappage' });
+  const navbar = el('div', { class: 'navbar', hidden: true, role: 'status', 'aria-live': 'polite' });
+  let nav = null;            // 길 안내 중인 곳 { id, name, key, code, place, spot }
+  let navFollow = true;      // 걸으면 지도가 따라온다 (손으로 끌면 멈춘다)
+  let navOwnsFollow = false; // 따라가기를 안내가 켰나
 
   const addRows = (doc, only) => {
     meta ||= { cats: doc.cats, catsKo: doc.catsKo, countries: doc.countries, link: doc.link, v: doc.v };
@@ -397,7 +402,7 @@ export async function render({ rest = [] } = {}) {
   drawMarks();
 
   // ---- 카드(아래에서 올라온다)와 날아가기
-  const sheet = createSheet(mapx, { onClose: () => { if (chosenBooth) { chosenBooth = null; routeTarget = null; drawBooths(); three?.chooseBooth(null); drawMe(); } } });
+  const sheet = createSheet(mapx, { onChange: () => paintNav(), onClose: () => { if (chosenBooth) { chosenBooth = null; routeTarget = null; drawBooths(); three?.chooseBooth(null); drawMe(); } } });
   const frame = el('div', { class: 'map-frame' }, board);
   let three = null;
   const in3d = () => solid.getAttribute('aria-pressed') === 'true';
@@ -405,11 +410,11 @@ export async function render({ rest = [] } = {}) {
 
   // 화면에 보이는 칸(찾기 칸 아래 ~ 카드 위)의 가운데에 box를 놓는다.
   const TOP = 118;
-  function goBox(box, { withSheet = false, ms = 420 } = {}) {
+  function goBox(box, { withSheet = false, ms = 420, bottom: bottomPx, side = 12 } = {}) {
     if (in3d()) { three?.look(box); return; }
     const { width, height } = boardSize();
-    const bottom = withSheet ? sheet.expectedHeight() + 8 : 26;
-    gesture.animateTo(viewFor(box, width, height, { top: TOP, bottom }), ms, true);
+    const bottom = bottomPx ?? (withSheet ? sheet.expectedHeight() + 8 : 26);
+    gesture.animateTo(viewFor(box, width, height, { top: TOP, bottom, side }), ms, true);
   }
   function flyTo(x, z, w = 200) {
     const { width, height } = boardSize();
@@ -466,7 +471,7 @@ export async function render({ rest = [] } = {}) {
     };
     const dayRow = el('div', { class: 'segs', role: 'group', 'aria-label': '동선에 넣기' });
     interestBtn.addEventListener('click', () => { toggleInterest(id); afterInterests(); paint(); });
-    const guide = bk ? guideBlock(bk, place, spot) : null;
+    const guide = bk ? guideBlock(bk, place, spot, row) : null;
     const logoBox = el('div', { class: 'card-logo' });
     attachImage(logoBox, id, name, meta);
     const head = el('div', { class: 'card-head' },
@@ -500,7 +505,7 @@ export async function render({ rest = [] } = {}) {
     } });
   }
   // 여기서 가는 길: 같은 홀이면 짐작 길(홀 입구나 내 자리에서), 다른 캠퍼스면 구글맵.
-  function guideBlock(key, place, spot) {
+  function guideBlock(key, place, spot, row) {
     const bar = key.indexOf('|');
     const where = getWhere();
     const g = guideTo(where, { place: key.slice(0, bar), code: key.slice(bar + 1) }, (k) => placeBy.get(k));
@@ -511,6 +516,7 @@ export async function render({ rest = [] } = {}) {
       el('p', { class: 'label', text: '여기까지 길' }),
       el('p', { class: 'note', text: g.lines[0] }),
       el('div', { class: 'actions' },
+        spot && row ? el('button', { class: 'btn', type: 'button', text: '길 안내 시작', onclick: () => startNav(row, key) }) : null,
         spot && place && (g.kind === 'same-place' || sameHall) && g.kind !== 'other-campus' ? el('button', { class: 'btn', type: 'button', text: at ? '내 자리에서 길 보기' : '홀 입구에서 길 보기', onclick: async () => {
           indoorPaths = await getIndoorPaths().catch(() => indoorPaths);
           const hall = indoorPaths.halls[place.k];
@@ -658,7 +664,7 @@ export async function render({ rest = [] } = {}) {
   const zoomBy = (f) => { if (in3d()) three?.zoom(f); else { const v = view; const cx = (v[0] + v[2]) / 2, cz = (v[1] + v[3]) / 2; gesture.zoomTo(f, cx, cz); } };
   const plus = el('button', { class: 'ctl', type: 'button', text: '+', 'aria-label': '크게', onclick: () => zoomBy(in3d() ? 0.8 : 0.5) });
   const minus = el('button', { class: 'ctl', type: 'button', text: '−', 'aria-label': '작게', onclick: () => zoomBy(in3d() ? 1.25 : 2) });
-  const locate = el('button', { class: 'ctl', type: 'button', 'aria-label': '내 위치', onclick: () => gpsButton.click() }, (() => { const s = svg('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true' }); s.append(svg('circle', { cx: 12, cy: 12, r: 3.5 }), svg('path', { d: 'M12 3v3M12 18v3M3 12h3M18 12h3' })); return s; })());
+  const locate = el('button', { class: 'ctl', type: 'button', 'aria-label': '내 위치', onclick: () => { navFollow = true; if (nav) navView(); else gpsButton.click(); } }, (() => { const s = svg('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true' }); s.append(svg('circle', { cx: 12, cy: 12, r: 3.5 }), svg('path', { d: 'M12 3v3M12 18v3M3 12h3M18 12h3' })); return s; })());
 
   // ---- 위: 찾기 칸 · 홀 바로 가기
   const finder = findBox({
@@ -711,7 +717,9 @@ export async function render({ rest = [] } = {}) {
     const at = myPoint(where);
     const unit = (view[2] - view[0]) / 360;
     me.replaceChildren();
-    const chosenSpot = chosenBooth ? spots.get(chosenBooth) : null;
+    if (nav) drawNav(at, where);
+    paintNav();
+    const chosenSpot = !nav && chosenBooth ? spots.get(chosenBooth) : null;
     if (routeTarget && chosenSpot) {
       const bar = routeTarget.indexOf('|');
       const place = placeBy.get(routeTarget.slice(0, bar));
@@ -778,7 +786,7 @@ export async function render({ rest = [] } = {}) {
     }
     const near = nearestCampus(places, lat, lng);
     const area = near.inside && accuracy <= 100 ? nearestArea(places, lat, lng) : null;
-    const where = { by: 'gps', campus: area ? area.c : near.k, inside: near.inside, meters: Math.round(near.meters), area: area ? { ko: area.ko, places: area.places, meters: Math.round(area.meters) } : null, at: Date.now() };
+    const where = { by: 'gps', lat, lng, accuracy: Math.round(accuracy), campus: area ? area.c : near.k, inside: near.inside, meters: Math.round(near.meters), area: area ? { ko: area.ko, places: area.places, meters: Math.round(area.meters) } : null, at: Date.now() };
     setWhere(where);
     acceptedFix = { lat, lng, accuracy, at: now };
     whereNote.textContent = !near.inside ? '캠퍼스 밖이다. 현장에 가면 다시 누른다.'
@@ -786,6 +794,7 @@ export async function render({ rest = [] } = {}) {
       : accuracy > 100 ? 'GPS 정확도가 낮아 캠퍼스까지만 맞췄다. 홀 안에서는 가까운 부스 번호를 적는다.'
         : 'GPS는 캠퍼스까지만 맞췄다. 홀 안에서는 가까운 부스 번호를 적는다.';
     const at = myPoint(where);
+    if (nav) { lastCampus = where.campus; drawMe(); if (navFollow) navView(at); return true; }
     if (!at) { drawMe(); return true; }
     if (in3d()) { three?.look([at[0] - 260, at[1] - 260, at[0] + 260, at[1] + 260]); drawMe(); return true; }
     if (following && lastCampus === where.campus) {
@@ -813,7 +822,7 @@ export async function render({ rest = [] } = {}) {
       gpsError, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
   } });
   // 따라가기: 걸으면 지도가 나를 따라온다. 배터리를 아끼려고 20초에 한 번만 고치고, 화면이 꺼지거나 지도를 떠나면 멈춘다.
-  const FOLLOW_EVERY = 20000;
+  let FOLLOW_EVERY = 20000;
   let watchId = null;
   let lastFix = 0;
   let following = false;
@@ -833,9 +842,11 @@ export async function render({ rest = [] } = {}) {
       if (!frame.isConnected) { stopFollow(); return; }
       if (document.hidden || Date.now() - lastFix < FOLLOW_EVERY) return;
       if (useFix(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, true)) lastFix = Date.now();
-    }, (error) => stopFollow(error?.code === 1
-      ? '위치 권한을 거부했다. 따라가기를 껐다. 브라우저 설정에서 허락하거나 부스 번호로 맞춘다.'
-      : '위치를 받지 못해 따라가기를 껐다. 다시 켜거나 부스 번호로 맞춘다.'), { enableHighAccuracy: true, maximumAge: FOLLOW_EVERY, timeout: 60000 });
+    }, (error) => {
+      // 권한을 거부했을 때만 끈다. 잠깐 못 받은 것(실내 · 터널)은 계속 기다린다.
+      if (error?.code === 1) stopFollow('위치 권한을 거부했다. 따라가기를 껐다. 브라우저 설정에서 허락하거나 부스 번호로 맞춘다.');
+      else whereNote.textContent = '위치를 잠깐 받지 못했다. 계속 기다린다. 급하면 부스 번호로 맞춘다.';
+    }, { enableHighAccuracy: true, maximumAge: FOLLOW_EVERY, timeout: 60000 });
   }
   function startFollow() {
     if (!('geolocation' in navigator)) return noGps();
@@ -843,7 +854,7 @@ export async function render({ rest = [] } = {}) {
     lastFix = 0;
     followButton.textContent = '따라가기 끄기';
     followButton.setAttribute('aria-pressed', 'true');
-    whereNote.textContent = '따라가기를 켰다. 위치 정확도를 살펴 20초에 한 번 내 자리를 고친다.';
+    whereNote.textContent = `따라가기를 켰다. 위치 정확도를 살펴 ${FOLLOW_EVERY / 1000}초에 한 번 내 자리를 고친다.`;
     watchFollow();
   }
   followButton.addEventListener('click', () => (following ? stopFollow('따라가기를 껐다.') : startFollow()));
@@ -884,6 +895,106 @@ export async function render({ rest = [] } = {}) {
     el('p', { class: 'note', text: '위치는 이 폰 안에서만 쓴다. 홀 안은 부스 번호로 맞춘다.' }));
 
 
+
+  // ---- 길 안내: 목적지까지 선 · 남은 거리 · 걷는 시간 · 방향. 걸으면 지도가 따라온다.
+  const placeCampus = (k) => places.campuses.find((c) => c.k === k);
+  function navEstimate(target, where, at) {
+    const coarse = where?.by === 'gps' && !where.area;
+    const campusFrom = placeCampus(where?.campus) || null;
+    return estimate(at, [target.spot.x, target.spot.z], { campusFrom, campusTo: placeCampus(target.place?.c), me: where?.by === 'gps' && Number.isFinite(where.lat) ? { lat: where.lat, lng: where.lng } : null, coarse });
+  }
+  function drawNav(at, where) {
+    const unit = (view[2] - view[0]) / 360;
+    const t = [nav.spot.x, nav.spot.z];
+    const line = (points, dash) => [
+      svg('polyline', { points: pts(points), fill: 'none', stroke: T.panel, 'stroke-width': 8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' }),
+      svg('polyline', { points: pts(points), fill: 'none', stroke: T.accent, 'stroke-width': 4.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-dasharray': dash, 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' })];
+    const hall = indoorPaths.halls[nav.place?.k];
+    const here = (where?.by === 'booth' && where.place === nav.place?.k) || (where?.by === 'gps' && where.area?.places.includes(nav.place?.k));
+    if (hall && nav.place && (here || !at || routeTarget === nav.key)) {
+      // 같은 홀 안이면 홀 입구와 큰 통로를 따라가는 짐작 길
+      const entry = L.W(nav.place.c, ...hall.entrance);
+      const aisle = hall.aisle.map(([x, z]) => L.W(nav.place.c, x, z));
+      const path = routeThroughAisle(here ? at : null, t, aisle, entry);
+      if (at && !here) path.unshift(at);
+      me.append(...line(path, null));
+    } else if (at) me.append(...line([at, t], '12 9'));
+    me.append(
+      svg('circle', { cx: t[0], cy: t[1], r: (unit * 15).toFixed(1), fill: withAlpha(T.accent, 0.16), stroke: T.accent, 'stroke-width': 3, 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' }),
+      svg('circle', { cx: t[0], cy: t[1], r: (unit * 5).toFixed(1), fill: T.accent, 'pointer-events': 'none' }));
+  }
+  async function startNav(row, key) {
+    const spot = spots.get(key);
+    if (!row || !spot) return;
+    const bar = key.indexOf('|');
+    sheet.close();
+    indoorPaths = await getIndoorPaths().catch(() => indoorPaths);
+    nav = { id: row[0], name: row[1], key, code: key.slice(bar + 1), place: placeBy.get(key.slice(0, bar)), spot };
+    chosenBooth = key;
+    routeTarget = null;
+    navFollow = true;
+    three?.chooseBooth(key);
+    // 걸을 때 따라오게 위치를 받는다 (안내를 끝내면 같이 끈다).
+    if (!following && 'geolocation' in navigator) { FOLLOW_EVERY = 5000; navOwnsFollow = true; startFollow(); }
+    navKey = '';
+    drawMe();
+    drawBooths();
+    navView();
+  }
+  function endNav() {
+    nav = null;
+    routeTarget = null;
+    chosenBooth = null;
+    navKey = '';
+    if (navOwnsFollow) { navOwnsFollow = false; stopFollow('길 안내를 끝냈다. 따라가기도 껐다.'); FOLLOW_EVERY = 20000; }
+    drawBooths();
+    drawMe();
+  }
+  // 목적지와 내 자리가 한 화면에 들어오게. 내 자리를 모르면 목적지로.
+  function navView(atArg) {
+    if (!nav || in3d()) return;
+    const at = atArg || myPoint(getWhere());
+    const t = [nav.spot.x, nav.spot.z];
+    const bottom = navbar.hidden ? 26 : (navbar.offsetHeight || 96) + 14;
+    const where = getWhere();
+    const same = at && (!where?.campus || where.campus === nav.place?.c);
+    goBox(pad(bbox(same ? [at, t] : [t, t]), same ? 40 : 110), { bottom, ms: 520, side: 64 });
+  }
+  // 아래 띠: 안내 중이면 목적지 · 남은 거리 · 걷는 시간 · 방향, 아니면 "다음 갈 곳"에서 안내를 시작한다.
+  let navKey = '';
+  function paintNav() {
+    if (sheet.state() !== 'closed') { navbar.hidden = true; navKey = ''; mapx.style.removeProperty('--nav-h'); return; }
+    const where = getWhere();
+    const at = myPoint(where);
+    let target = nav;
+    let kind = 'nav';
+    if (!target) {
+      const nx = nextStop(getInterests());
+      const pin = nx ? pins.find((p) => p.id === nx.id && !p.seen) : null;
+      if (pin) { const b = splitBooth(pin.booth); target = { id: pin.id, name: pin.name, key: `${b.place}|${b.code}`, code: b.code, place: placeBy.get(b.place), spot: { x: pin.x, z: pin.z } }; kind = 'next'; }
+    }
+    if (!target) { if (!navbar.hidden) { navbar.hidden = true; mapx.style.removeProperty('--nav-h'); } navKey = ''; return; }
+    const est = at ? navEstimate(target, where, at) : null;
+    let sub;
+    if (!est) sub = kind === 'nav' ? '내 위치를 먼저 잡는다' : `${target.place ? target.place.ko.replace(/ \(.*\)$/, '') : '장소 모름'} · 부스 ${target.code}`;
+    else if (est.arrived) sub = `도착했다 · 부스 ${target.code}를 찾는다`;
+    else if (!est.sameCampus) sub = `${fmtDistance(est.meters)} · 다른 캠퍼스 · 걸어서 약 ${est.minutes}분 또는 셔틀`;
+    else sub = `${fmtDistance(est.meters)} · 걸어서 ${est.minutes}분 · ${est.word}${est.coarse ? ' (대략)' : ' (짐작)'}`;
+    const key = [kind, target.id, sub].join('|');
+    if (key === navKey && !navbar.hidden) return;
+    navKey = key;
+    const seen = () => { setInterests(getInterests().map((x) => (x.id === target.id ? { ...x, seen: true } : x))); endNav(); afterInterests(); };
+    navbar.replaceChildren(
+      el('div', { class: 'nav-head' }, el('b', { text: kind === 'nav' ? `→ ${target.name}` : `다음 갈 곳 · ${target.name}` }), el('span', { class: 'nav-sub', text: sub })),
+      el('div', { class: 'nav-actions' },
+        kind === 'next' ? el('button', { class: 'btn', type: 'button', text: '길 안내', onclick: () => startNav(rows.get(target.id), target.key) }) : null,
+        kind === 'nav' && !est ? el('button', { class: 'btn', type: 'button', text: '내 위치 잡기', onclick: () => gpsButton.click() }) : null,
+        kind === 'nav' && est?.arrived ? el('button', { class: 'btn', type: 'button', text: '봤다', onclick: seen }) : null,
+        kind === 'nav' ? el('button', { class: 'btn ghost', type: 'button', text: '끝내기', onclick: endNav }) : null));
+    navbar.hidden = false;
+    requestAnimationFrame(() => mapx.style.setProperty('--nav-h', `${navbar.offsetHeight + 8}px`));
+  }
+
   // ---- 색 칠하기 (지도 아래 묶음)
   const legendBox = el('div', { class: 'legend', 'aria-label': '부스 점의 색' });
   function paintLegend() {
@@ -909,6 +1020,7 @@ export async function render({ rest = [] } = {}) {
   mapx.append(el('h1', { class: 'sr-only', text: '지도' }), frame,
     el('div', { class: 'mapx-top' }, finder.node, chips),
     el('div', { class: 'ctls' }, plus, minus, locate, solid),
+    navbar,
     sheet.node);
   const setHeight = () => {
     const tabs = document.querySelector('.tabs');
@@ -926,6 +1038,7 @@ export async function render({ rest = [] } = {}) {
       el('p', { class: 'note', text: `부스 자리는 짐작이다 (${places.edition}판, 정식 배치도 전). 붉은 테두리는 명함 넣는 부스.` })),
     mePanel);
 
+  board.addEventListener('pointerdown', () => { navFollow = false; }, true);
   gesture = attachGestures(board, { getView: () => view, setView, draw, onSettle: settle, ratio: () => { const s = boardSize(); return s.height / s.width; } });
   const onResize = () => { if (!mapx.isConnected) { window.removeEventListener('resize', onResize); return; } setHeight(); settle(); };
   window.addEventListener('resize', onResize);
@@ -942,6 +1055,7 @@ export async function render({ rest = [] } = {}) {
     if (getInterests().length) idle(() => { ensureFull().catch(() => {}); });
     // 다른 화면의 "지도" 단추로 왔으면 그 회사로 간다.
     if (rest[0] === 'at' && rest[1]) ensureFull().then(() => openCompany(rows.get(rest[1]))).catch(() => {});
+    if (rest[0] === 'go' && rest[1]) ensureFull().then(() => { const row = rows.get(rest[1]); const b = row?.[7]?.[0]; if (row && b) startNav(row, boothKey(b)); }).catch(() => {});
   });
   page.mapApi = {
     board, mapx, sheet, L, places, pad,
@@ -951,7 +1065,7 @@ export async function render({ rest = [] } = {}) {
     get boothEx() { return boothEx; },
     get level() { return levelOf(widthOf(view)); },
     fit: (box) => { const { width, height } = boardSize(); view = viewFor(box, width, height, { top: TOP, bottom: 20 }); draw(); settle(); },
-    goBox, flyTo, openCompany, pickPlace, ensureHall, ensureFull, relayout, settle,
+    goBox, flyTo, drawMe, openCompany, startNav, endNav, get nav() { return nav; }, pickPlace, ensureHall, ensureFull, relayout, settle,
   };
   return page;
 }

@@ -458,6 +458,18 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       check(placed.some((p) => p.id === 'a') && !placed.some((p) => p.id === 'b') && !placed.some((p) => p.id === 'e') && over === 0 && placed.every((p) => p.size >= 13) && placed.find((p) => p.id === 'c')?.text === '11735 Union bio', '글자 놓기: 중요한 것부터 놓고 겹치거나 화면 밖으로 나가는 것은 숨기며 글자는 13px 이상이다');
       const crowded = mm.layoutLabels([{ id: 'x', x: 50, y: 50, text: '11735 Union bio', alts: ['11735 U', '11735'], size: 13, prio: 90, anchor: 'start' }, { id: 'y', x: 50, y: 52, text: '높은 것', size: 13, prio: 99, anchor: 'start' }], { width: 360, height: 600 });
       check(crowded.length === 1 && crowded[0].id === 'y', '좁은 곳에서는 높은 순위 하나만 남고 나머지는 숨는다');
+      // 길 안내의 셈 (web/nav.js)
+      const nv = await import('../web/nav.js');
+      const lvcc = { k: 'lvcc', toWorld: { scale: 1 }, geo: { lat: 36.1313, lng: -115.1525 } };
+      const ven = { k: 'ven', toWorld: { scale: 0.5 }, geo: { lat: 36.1216, lng: -115.1658 } };
+      const near = nv.estimate([0, 0], [300, -300], { campusFrom: lvcc, campusTo: lvcc });
+      const scaled = nv.estimate([0, 0], [100, 0], { campusFrom: ven, campusTo: ven });
+      const far = nv.estimate([0, 0], [0, 0], { campusFrom: lvcc, campusTo: ven });
+      const here = nv.estimate([0, 0], [10, 10], { campusFrom: lvcc, campusTo: lvcc });
+      const coarse = nv.estimate([0, 0], [10, 10], { campusFrom: lvcc, campusTo: lvcc, coarse: true });
+      check(nv.bearingWord(10, -10) === '북동쪽' && nv.bearingWord(0, 50) === '남쪽' && nv.bearingWord(-30, 0) === '서쪽' && nv.fmtDistance(42) === '40m' && nv.fmtDistance(433) === '450m' && nv.fmtDistance(1530) === '1.5km'
+        && near.sameCampus && Math.abs(near.meters - 530.33) < 0.5 && near.minutes === 8 && near.word === '북동쪽' && Math.abs(scaled.meters - 250) < 0.01 && !far.sameCampus && far.meters > 1900 && far.meters < 2300 && here.arrived && !coarse.arrived,
+      '길 안내 셈: 방향(북동쪽 · 남쪽 …) · 거리(40m · 450m · 1.5km) · 걷는 시간(분당 70m) · 줄여 그린 캠퍼스는 그만큼 더 멀다 · 다른 캠퍼스는 실제 위도 · 경도 거리 · 30m 안이면 도착이고 GPS가 캠퍼스까지만 맞았으면 도착으로 치지 않는다');
       // 홀마다 나눈 자료
       const idx = await json('data/halls/index.json').catch(() => null);
       if (idx && (await exists('data/exhibitors.json'))) {
@@ -485,6 +497,8 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       const htmlNow = await readFile(join(dist, 'index.html'), 'utf8');
       check((mapSrc.match(/getExhibitors\(/g) || []).length === 1 && !/getExhibitors\(/.test(appJs2) && !/^import .*map3d/m.test(mapSrc) && mapSrc.includes("import('../map3d.js')") && ['웨스트', '센트럴', '노스', '사우스', '베네시안'].every((w) => mapSrc.includes(w)) && /ensureHall\(/.test(mapSrc) && !htmlNow.includes('map3d'),
         '지도 첫 열기: 전시사 전체 자료는 찾기 · 3D · 관심 회사가 있을 때만 받고(홀로 가까이 가면 그 홀 것만), 3D는 단추를 누를 때 불러오며, 홀 바로 가기 칩이 있다');
+      check(/startNav\(/.test(mapSrc) && /길 안내 시작/.test(mapSrc) && /function endNav/.test(mapSrc) && /navFollow/.test(mapSrc) && /map\/go|rest\[0\] === 'go'/.test(mapSrc) && /estimate\(/.test(mapSrc) && /\/\/ ---- 길 안내/.test(mapSrc),
+        '길 안내: 카드의 "길 안내 시작" · 아래 띠(남은 거리 · 걷는 시간 · 방향 · 끝내기) · 걸으면 지도가 따라오고 손으로 끌면 멈춘다 · 다음 갈 곳에서도 시작한다(#/map/go/<회사>)');
       check(/pointerType|pointers\.size === 2/.test(gestSrc) && /DOUBLE_MS/.test(gestSrc) && /addEventListener\('wheel'/.test(gestSrc) && /requestAnimationFrame/.test(gestSrc) && /swallow/.test(gestSrc) && /sheet-grip/.test(sheetSrc) && /'half'/.test(sheetSrc) && /'full'/.test(sheetSrc) && /closed/.test(sheetSrc),
         '손짓: 한 손가락 끌기 · 두 손가락 벌리기 · 두 번 톡 · 휠, 프레임마다 한 번만 그리고 끌고 난 뒤 click은 막는다. 카드는 반쯤 → 끝까지 끌어올리고 아래로 끌면 닫힌다');
     }

@@ -115,7 +115,7 @@ export async function render() {
         el('p', { class: 'note', text: [day?.ko, booth ? `${place ? place.ko : '장소 모름'} · 부스 ${splitBooth(booth).code} (자리는 짐작)` : '부스 미정'].filter(Boolean).join(' · ') }),
         el('div', { class: 'actions' },
           route ? out(route, '길찾기', 'btn') : null,
-          el('a', { class: 'btn ghost', href: '#/map', text: '지도' }),
+          el('a', { class: 'btn ghost', href: `#/map/go/${encodeURIComponent(next.id)}`, text: '길 안내' }),
           el('button', { class: 'btn ghost', type: 'button', text: '봤다', onclick: () => {
             setInterests(getInterests().map((x) => (x.id === next.id ? { ...x, seen: true } : x)));
             status.textContent = '봤다.';
