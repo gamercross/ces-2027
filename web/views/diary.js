@@ -1,11 +1,11 @@
 // 회사 일기: 본 회사마다 날짜 · 본 것 · 느낀 점 · 누구에게(네 태그)를 쓴다. 폰에만 남는다.
 // 보내기를 누른 일기만 폰 밖으로 나간다. 모으는 곳은 아직 정하지 않아, 지금은 파일로 내보낸다.
-// 듣기에서 만든 초안(draft)은 사람이 다듬어 남긴 뒤에만 보낸다. 들은 글(원문 · 번역)과 녹음은 보내지 않고 폰에만 둔다.
+// 듣기에서 만든 초안(draft)은 사람이 다듬어 남긴 뒤에만 보낸다. 들은 글(원문 · 번역)과 녹음은 모으는 곳 주소로는 보내지 않는다. 파일로 내려받을 때만 일기와 이어진 대화(들은 글)가 그 파일에 들어가고, 녹음은 어느 때도 가지 않는다.
 
 import { el } from '../dom.js';
 import { getExhibitors, getSettings } from '../data.js';
-import { getDiary, getInterests, getProfile, setDiary, TAGS, tagKo } from '../store.js';
-import { asText, bundle, collectorUrl, fileName } from '../diary.js';
+import { getDiary, getInterests, getProfile, getTalks, setDiary, TAGS, tagKo } from '../store.js';
+import { asText, bundle, collectorUrl, fileName, talksFor } from '../diary.js';
 import { countAt } from '../people.js';
 import { getPeople } from '../people-store.js';
 
@@ -18,7 +18,7 @@ function heardBox(e) {
   if (!e.heard?.length) return null;
   return el('details', {},
     el('summary', { text: `들은 글 ${e.heard.length}줄 (원문 · 번역, 이 폰에만)` }),
-    el('ol', { class: 'heard' }, e.heard.map((l) => el('li', {}, el('span', { lang: 'en', text: `${clock(l.t)} ${l.en}` }), l.ko ? el('small', { text: l.ko }) : null))));
+    el('ol', { class: 'heard' }, e.heard.map((l) => el('li', {}, el('span', { lang: 'en', text: l.t > 0 ? `${clock(l.t)} ${l.en}` : l.en }), l.ko ? el('small', { text: l.ko }) : null))));
 }
 
 // 녹음: 누를 때 폰 안에서 꺼내 온다.
@@ -66,7 +66,7 @@ function form(entry, preset, companies, done) {
 
   const node = el('form', { class: 'panel form', novalidate: true },
     el('h1', { text: entry?.draft ? '일기 초안 다듬기' : entry ? '일기 고치기' : '일기 쓰기' }),
-    entry?.draft ? el('p', { class: 'note', text: '듣기에서 만든 초안이다. "본 것"을 다듬고 느낀 점과 "누구에게"를 채워 남긴다. 남기기 전에는 보내지 않는다.' }) : null,
+    entry?.draft ? el('p', { class: 'note', text: '듣기나 대화 칸에서 만든 초안이다. "본 것"을 다듬고 느낀 점과 "누구에게"를 채워 남긴다. 남기기 전에는 보내지 않는다.' }) : null,
     field('회사', pick), field('', other),
     field('날짜', date),
     field('본 것', saw),
@@ -101,6 +101,8 @@ function form(entry, preset, companies, done) {
       // 들은 글과 녹음 표시는 그대로 둔다. 사람이 남겼으니 초안 표시는 뗀다.
       ...(entry?.heard ? { heard: entry.heard } : {}),
       ...(entry?.audio ? { audio: entry.audio } : {}),
+      // 이어진 대화(대화 칸)도 그대로 둔다.
+      ...(entry?.talkId ? { talkId: entry.talkId } : {}),
     };
     const list = getDiary().filter((x) => x.id !== next.id);
     list.push(next);
@@ -139,6 +141,7 @@ export async function render({ rest, go }) {
     const send = el('button', { class: 'btn', type: 'button', text: `보내기 (${unsent.length}개)`, disabled: unsent.length === 0, onclick: async () => {
       const payload = bundle(unsent, getProfile());
       if (sendTo) {
+        // 모으는 곳 주소로는 일기만 간다 (대화는 가지 않는다).
         try {
           // 모으는 곳(설정의 collectorUrl)으로 보낸다. 답은 읽을 수 없어 도착은 모으는 곳에서 확인한다.
           await fetch(sendTo, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
@@ -149,13 +152,14 @@ export async function render({ rest, go }) {
         }
         return;
       }
-      download(fileName(getProfile()), JSON.stringify(payload, null, 2));
+      // 파일로 내려받을 때는 그 일기와 이어진 대화가 같이 들어간다.
+      download(fileName(getProfile()), JSON.stringify(bundle(unsent, getProfile(), new Date(), talksFor(unsent, getTalks())), null, 2));
       markSent(unsent.map((e) => e.id));
       show(`${unsent.length}개를 파일로 내보냈다. 이 파일을 정리하는 사람에게 건넨다.`);
     } });
     const fileAll = el('button', { class: 'btn ghost', type: 'button', text: '전부 파일로', disabled: ready.length === 0, onclick: () => {
-      download(fileName(getProfile()), JSON.stringify(bundle(ready, getProfile()), null, 2));
-      status.textContent = `일기 ${ready.length}개를 파일로 내보냈다.`;
+      download(fileName(getProfile()), JSON.stringify(bundle(ready, getProfile(), new Date(), talksFor(ready, getTalks(), true)), null, 2));
+      status.textContent = `일기 ${ready.length}개와 폰에 있는 대화를 파일로 내보냈다.`;
     } });
     const copy = el('button', { class: 'btn ghost', type: 'button', text: '글로 복사', disabled: ready.length === 0, onclick: async () => {
       try { await navigator.clipboard.writeText(asText(ready, getProfile(), tagKo)); status.textContent = '글로 복사했다. 단톡방에 붙여 넣을 수 있다.'; } catch { status.textContent = '복사하지 못했다.'; }
@@ -177,10 +181,10 @@ export async function render({ rest, go }) {
         el('p', { class: 'note', text: sendTo
           ? '보내기를 누르면 아직 보내지 않은 일기와 별명 · 태그가 모으는 곳으로 간다. 깃허브 · 디스코드 · 관심 · 동선은 가지 않는다.'
           : settings.collector === 'file'
-            ? '일기는 파일로 모은다. 보내기를 누르면 아직 보내지 않은 일기가 파일로 내려오고, 그 파일을 정리하는 사람에게 건넨다(단톡방 · 메일). 파일에는 일기와 별명 · 태그만 들어간다.'
-            : '모으는 곳이 아직 정해지지 않았다. 지금은 보내기를 누르면 아직 보내지 않은 일기가 파일로 내려온다. 그 파일을 정리하는 사람에게 건넨다. 파일에는 일기와 별명 · 태그만 들어간다.' }),
+            ? '일기는 파일로 모은다. 보내기를 누르면 아직 보내지 않은 일기가 파일로 내려오고, 그 파일을 정리하는 사람에게 건넨다(단톡방 · 메일). 파일에는 일기와 별명 · 태그, 그리고 그 일기와 이어진 대화(있으면)가 들어간다.'
+            : '모으는 곳이 아직 정해지지 않았다. 지금은 보내기를 누르면 아직 보내지 않은 일기가 파일로 내려온다. 그 파일을 정리하는 사람에게 건넨다. 파일에는 일기와 별명 · 태그, 그리고 그 일기와 이어진 대화(있으면)가 들어간다.' }),
         el('div', { class: 'actions' }, send, fileAll, copy),
-        drafts.length ? el('p', { class: 'note', text: `초안 ${drafts.length}개는 보내지 않는다. 다듬어 남기면 보낼 수 있다. 들은 글과 녹음은 어느 때도 보내지 않는다.` }) : null,
+        drafts.length ? el('p', { class: 'note', text: `초안 ${drafts.length}개는 보내지 않는다. 다듬어 남기면 보낼 수 있다. 들은 글은 파일로 내려받을 때만 들어가고, 녹음은 어느 때도 보내지 않는다.` }) : null,
         status),
       days.map((d) => el('section', { class: 'panel' },
         el('h2', { text: `${d.date} · ${d.items.length}개` }),

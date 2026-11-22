@@ -551,7 +551,7 @@ check(preloadOk, `첫 화면이 미리 받는 조각 ${preloads.length}개가 �
 {
   const firstScreen = (await Promise.all(['app.js', 'store.js', 'data.js', 'offline.js', 'notify.js', 'alerts.js', 'dom.js', 'views/home.js', 'views/card.js'].map((f) => readFile(join(dist, f), 'utf8')))).join('\n');
   const fixed = [...firstScreen.matchAll(/^import [^;]*from '([^']+)';/gm)].map((m) => m[1]);
-  const lazy = /speech|talk-ui|audio-store|views\/(ask|listen)/;
+  const lazy = /speech|talk-ui|audio-store|translator|talk\.js|views\/(ask|listen|talk|translate|deep)/;
   check(!fixed.some((f) => lazy.test(f)) && !preloads.some((f) => lazy.test(f) || f.includes('phrases')) && appJs.includes("ask: () => import('./views/ask.js')") && appJs.includes("listen: () => import('./views/listen.js')"), '물어볼 말 · 듣기 · 질문 묶음은 첫 화면에 싣지 않고 누를 때 불러온다');
 }
 check(html.includes('id="update"') && appJs.includes('offline.update') && appJs.includes('startOffline'), '새 판 안내 자리가 있고, 서비스 워커는 첫 화면 뒤에 건다');
@@ -559,7 +559,7 @@ const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 const version = await json('version.json').catch(() => null);
 const swFiles = JSON.parse(`[${(sw.match(/const FILES = \[(.*)\];/) || [])[1] || ''}]`);
 check(!!version && sw.includes(JSON.stringify(version.v)) && !sw.includes('__VERSION__'), `판 이름이 찍혔다 (${version?.v})`);
-const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'tokens.js', 'frame.js', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'views/map.js', 'views/diary.js', 'views/topics.js', 'views/days.js', 'views/ask.js', 'views/listen.js', 'views/apply.js', 'separate.js', 'data/separate.json', 'speech.js', 'talk-ui.js', 'audio-store.js', 'data/phrases.json', 'topics.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'alerts.js', 'notify.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/topics.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
+const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'tokens.js', 'frame.js', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'views/map.js', 'views/diary.js', 'views/topics.js', 'views/days.js', 'views/ask.js', 'views/listen.js', 'views/talk.js', 'views/translate.js', 'views/deep.js', 'talk.js', 'translator.js', 'translator-ui.js', 'views/apply.js', 'separate.js', 'data/separate.json', 'speech.js', 'talk-ui.js', 'audio-store.js', 'data/phrases.json', 'topics.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'alerts.js', 'notify.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/topics.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
 // 디자인 토큰: tokens.css가 값의 원본이고, 지도 코드가 쓰는 tokens.js의 기본값이 한 글자도 다르지 않아야 한다.
 // 화면 파일(app.css · views · 지도 코드)이 색을 직접 적지 않는 것도 본다 (design.md).
 {
@@ -595,16 +595,16 @@ check(missing.length === 0 && gone.length === 0, `서비스 워커가 담아 둘
   new Function('window', boardData)(win);
   const BD = win.BOARD;
   const reqNos = BD.elements.filter((e) => e.t === 'requirement').map((e) => e.no);
-  const wantNos = Array.from({ length: 14 }, (_, i) => `R${18 + i}`);
+  const wantNos = [...Array.from({ length: 14 }, (_, i) => `R${18 + i}`), 'R39', 'R40', 'R41'];
   const frontText = JSON.stringify(BD.elements.filter((e) => e.f === 'v_big' || e.f === 'v_flow'));
-  const frontWords = ['날마다 쓸 시간', '내 일정', '추천', '길 안내', '종이 명함', '이벤트 부스', '명함 알림', '물어볼 말', '듣기', '녹음 알림', '따로 신청', '첫 화면 카드'];
-  check(wantNos.every((no) => reqNos.includes(no)) && frontWords.every((w) => frontText.includes(w)) && Object.keys(BD.objectMap.objects).length >= 20 && BD.usecases.length >= 7 && BD.usecases.every((u) => !u.prop), `보드에 깊게 4 ~ 7이 보인다: 앞면 두 장에 낱말 ${frontWords.length}개, 뒷면에 요구 ${reqNos.length}개(R18 ~ R31) · 객체 ${Object.keys(BD.objectMap.objects).length}개 · 순서도 ${BD.usecases.length}개`);
+  const frontWords = ['날마다 쓸 시간', '내 일정', '추천', '길 안내', '종이 명함', '이벤트 부스', '명함 알림', '물어볼 말', '듣기', '녹음 알림', '따로 신청', '첫 화면 카드', '번역 앱', '대화 칸'];
+  check(wantNos.every((no) => reqNos.includes(no)) && frontWords.every((w) => frontText.includes(w)) && Object.keys(BD.objectMap.objects).length >= 20 && BD.usecases.length >= 7 && BD.usecases.every((u) => !u.prop), `보드에 깊게 4 ~ 7이 보인다: 앞면 두 장에 낱말 ${frontWords.length}개, 뒷면에 요구 ${reqNos.length}개(R18 ~ R31 · R39 ~ R41) · 객체 ${Object.keys(BD.objectMap.objects).length}개 · 순서도 ${BD.usecases.length}개`);
   const guide = await readFile(join(dist, 'testers/index.html'), 'utf8').catch(() => '');
   const guideWords = ['홈 화면에 추가', '비행기 모드', '알림 켜기', '폰 안에서만', '폰의 음성 인식 서비스', '번역', 'QR 두 개', '첫 화면', '안드로이드 크롬', '아이폰 사파리', '이름과 연락처는 적지 않는다', '일정은 바뀔 수 있', 'data-copy'];
   check(guideWords.every((w) => guide.includes(w)) && !/<input|<form|type="email"|type="tel"/.test(guide) && guide.includes('href="../app.css"'), `테스터 안내가 /testers/에 있다: 확인할 것 여덟 · 폰 둘 · 복사할 글, 이름과 연락처를 받는 칸이 없다`);
   // 안내에 적은 단추 · 글귀가 앱에 그대로 있는지 (앱의 글이 바뀌면 안내도 고친다).
-  const appText = (await Promise.all(['views/home.js', 'views/card.js', 'views/map.js', 'views/ask.js', 'views/listen.js', 'views/diary.js', 'talk-ui.js', 'app.js', 'index.html'].map((f) => readFile(join(dist, f), 'utf8')))).join('\n');
-  const labels = ['명함부터 만든다', '명함 만들기', '인터넷 없이 쓰기', '인터넷 없이 열 준비가 됐다.', '알림 켜기', '알림이 켜져 있다.', '이벤트 있음으로 표시', '가까운 부스 번호', '맞추기', '가까이에 명함 넣는 이벤트 부스', '크게 띄우기', '읽어 주기', '이 폰에서 되는 것', '이 폰에서는 안 됨', '받아쓰기 · 번역을 어디서 하나', '알겠다 · 이 길로 한다', '그만둔다', '상대의 답', '직접 적어 묻기', '번역 사이트에서 열기', '듣고 일기 초안', '상대에게 알렸다 · 듣기 시작', '알렸다 · 듣기 시작', '손으로 적기', '줄 넣기', '멈추고 일기 초안 만들기', '적은 것으로 초안 만들기', '일기 초안 다듬기', '폰에 남기기', '녹음 듣기', '새 판이 있다'];
+  const appText = (await Promise.all(['views/home.js', 'views/card.js', 'views/map.js', 'views/ask.js', 'views/listen.js', 'views/diary.js', 'views/talk.js', 'views/translate.js', 'views/deep.js', 'translator-ui.js', 'talk-ui.js', 'app.js', 'index.html'].map((f) => readFile(join(dist, f), 'utf8')))).join('\n');
+  const labels = ['명함부터 만든다', '명함 만들기', '인터넷 없이 쓰기', '인터넷 없이 열 준비가 됐다.', '알림 켜기', '알림이 켜져 있다.', '이벤트 있음으로 표시', '가까운 부스 번호', '맞추기', '가까이에 명함 넣는 이벤트 부스', '크게 띄우기', '읽어 주기', '이 폰에서 되는 것', '이 폰에서는 안 됨', '받아쓰기 · 번역을 어디서 하나', '알겠다 · 이 길로 한다', '그만둔다', '상대의 답', '직접 적어 묻기', '번역 사이트에서 열기', '듣고 일기 초안', '상대에게 알렸다 · 듣기 시작', '알렸다 · 듣기 시작', '손으로 적기', '줄 넣기', '멈추고 일기 초안 만들기', '적은 것으로 초안 만들기', '일기 초안 다듬기', '번역 앱 열기', '번역 앱 준비', '나누기', '말한 사람 바꾸기', '저장하고 일기 초안 만들기', '깊은 설정', '폰에 남기기', '녹음 듣기', '새 판이 있다'];
   const missingLabels = labels.filter((l) => !appText.includes(l) || !guide.includes(l.replace(/&/g, '&amp;')));
   check(missingLabels.length === 0, `테스터 안내에 적은 단추와 글귀 ${labels.length}개가 앱과 안내에 그대로 있다 (없는 것: ${missingLabels.join(' / ') || '없음'})`);
   const daysJs = await readFile(join(dist, 'views/days.js'), 'utf8');
@@ -856,6 +856,93 @@ if (await exists('data/meta.json')) {
   check(vegas.date === '2027-01-06' && vegas.min === 565 && soon.length === 1 && soon[0].id === 'a' && soon[0].inMin === 15 && /soon:/.test(notifyT) && /setInterval/.test(notifyT), '일정 시작 전 알림: 라스베이거스 시각으로 30분 안에 시작하는 것만 고르고(이미 시작했거나 다른 날은 뺀다), 앱이 열려 있을 때 1분마다 본다');
   lines.push(`기준표 채우기 | 현장 안내 ${lineN}줄 · 물어보기 현장 ${entries.filter((e) => e.kind === 'onsite').length} · 셔틀 ${entries.filter((e) => e.kind === 'transit').length} · 장소 ${entries.filter((e) => e.kind === 'places').length}`);
 }
+
+// 대화 칸 · 번역 앱 (R39 ~ R41): 번역은 번역 앱으로, 회사마다 대화 칸, 붙여넣은 번역 앱 기록을 줄마다 나누고 짝짓는다. 예시 글은 지어낸 것이다.
+{
+  const talk = await import('../web/talk.js');
+  const tr = await import('../web/translator.js');
+  const { bundle, talksFor } = await import('../web/diary.js');
+  const papago = `Papago\n2027.01.06. 오후 2:31\nHello, welcome to our booth.\n안녕하세요, 저희 부스에 오신 것을 환영합니다.\n\nHow much is the base model?\n기본 모델은 얼마예요?\n\nIt costs $99.\n99달러입니다.`;
+  const google = `Hi, are you from Korea?\n안녕하세요, 한국에서 오셨나요?\n네, 서울에서 왔어요.\nYes, I am from Seoul.\nNice to meet you\n만나서 반갑습니다`;
+  const mixed = `영어: Thanks for stopping by.\n한국어: 들러 주셔서 감사합니다.\nHello → 안녕하세요\nWhat do you do? | 무슨 일을 하세요?\n저는 학생이에요 / I am a student`;
+  const a = talk.splitPaste(papago);
+  const b = talk.splitPaste(google);
+  const c = talk.splitPaste(mixed);
+  const sameLines = (got, want) => got.kind === 'pairs' && got.pairs.length === want.length && want.every(([who, en, ko], i) => got.pairs[i].who === who && got.pairs[i].en === en && got.pairs[i].ko === ko);
+  check(sameLines(a, [['them', 'Hello, welcome to our booth.', '안녕하세요, 저희 부스에 오신 것을 환영합니다.'], ['them', 'How much is the base model?', '기본 모델은 얼마예요?'], ['them', 'It costs $99.', '99달러입니다.']]) && a.app === 'papago',
+    '붙여넣기 나누기(파파고 꼴): 앱 이름 · 시간 줄을 떼고 빈 줄로 나뉜 원문 · 번역을 세 짝으로 만든다');
+  check(sameLines(b, [['them', 'Hi, are you from Korea?', '안녕하세요, 한국에서 오셨나요?'], ['me', 'Yes, I am from Seoul.', '네, 서울에서 왔어요.'], ['them', 'Nice to meet you', '만나서 반갑습니다']]),
+    '붙여넣기 나누기(구글 꼴): 영 한 · 한 영이 번갈아 나오면 위 줄을 원문으로 읽고 말한 사람(상대 · 나)을 나눈다');
+  check(sameLines(c, [['them', 'Thanks for stopping by.', '들러 주셔서 감사합니다.'], ['them', 'Hello', '안녕하세요'], ['them', 'What do you do?', '무슨 일을 하세요?'], ['me', 'I am a student', '저는 학생이에요']]),
+    '붙여넣기 나누기(섞인 꼴): "영어:" 이름표 · 한 줄의 → | / 짝을 함께 읽는다');
+  const blockA = talk.splitPaste('We launch next spring.\nWe launch in Korea too.\n다음 봄에 출시합니다.');
+  const blockB = talk.splitPaste('Hello\nHow are you');
+  const none = talk.splitPaste('\n 2:31 PM \nPapago');
+  check(blockA.kind === 'block' && blockA.lines.length === 3 && blockA.lines.map((l) => l.lang).join() === 'en,en,ko' && blockB.kind === 'block' && blockB.lines.every((l) => l.lang === 'en') && none.kind === 'empty',
+    '붙여넣기 나누기: 줄 수가 안 맞거나 한쪽 말뿐이면 짝을 만들지 않고 그대로 한 덩어리로 두며(줄마다 영어 / 한국어로는 나눈다), 대화 줄이 없으면 비었다고 한다');
+  check(talk.langOf('How much is it?') === 'en' && talk.langOf('얼마예요?') === 'ko' && talk.langOf('삼성 TV 가격은?') === 'ko' && talk.langOf('Where is the Samsung 부스') === 'en' && talk.langOf('2027') === 'none', '줄의 말은 글자로 가린다: 한글이 글자의 4분의 1 이상이면 한국어, 글자가 없으면 앞 줄에 붙인다');
+  const company = { id: 'x1', name: '지어낸 회사', booth: '100@LVCC_N' };
+  const t1 = talk.makeTalk({ ...c, src: 'paste' }, company, '2027-01-06', 't1');
+  const heard = talk.heardOf(t1);
+  const d1 = talk.draftFromTalk(t1, '2027-01-06', 'd1');
+  check(heard.length === 3 && heard.every((h) => h.en && !/학생/.test(h.en + h.ko)) && d1.draft === true && d1.felt === '' && d1.for.length === 0 && d1.sent === null && d1.talkId === 't1' && d1.exId === 'x1'
+    && d1.saw.includes('Thanks for stopping by. / Hello / What do you do?') && !d1.saw.includes('들러 주셔서') && !d1.saw.includes('student'),
+  '붙인 대화 → 일기 초안: 들은 것 칸은 상대가 한 영어 원문 줄만 붙이고(번역 · 내가 한 말은 빼고), 느낀 점과 "누구에게"는 비워 둔다');
+  const sourceWords = new Set(`${a.pairs.map((p) => p.en).join(' ')} ${b.pairs.map((p) => p.en).join(' ')} ${c.pairs.map((p) => p.en).join(' ')}`.toLowerCase().match(/[a-z$0-9']+/g));
+  const sawWords = (talk.draftFromTalk(talk.makeTalk({ ...a, src: 'paste' }, company, '2027-01-06', 't2'), '2027-01-06', 'd2').saw.split(') ').pop().toLowerCase().match(/[a-z$0-9']+/g) || []);
+  check(sawWords.length > 0 && sawWords.every((w) => sourceWords.has(w)), '일기 초안의 들은 것에는 붙인 글에 없는 말이 없다 (지어내지 않는다)');
+  const tb = talk.makeTalk({ ...blockA, src: 'paste' }, company, '2027-01-06', 't3');
+  check(talk.heardOf(tb).length === 2 && talk.heardOf(tb).every((h) => /launch/.test(h.en) && h.ko === ''), '짝을 못 지은 덩어리도 영어 줄만 들은 것이 된다 (한국어 줄은 번역으로 붙이지 않는다)');
+  const hp = talk.handPair('How much?', '', '');
+  const hq = talk.handPair('얼마예요?', 'How much?', '');
+  check(hp.who === 'them' && hp.en === 'How much?' && hp.ko === '' && hq.who === 'me' && hq.ko === '얼마예요?' && hq.en === 'How much?' && talk.handPair('  ', '', '') === null && talk.handPair('Hi', '', 'me').who === 'me', '손으로 넣기: 영어는 상대가 한 말 · 한국어는 내가 한 말로 읽고 번역은 비워도 된다, 누른 쪽이 있으면 그것을 따른다');
+  const ready = [{ id: 'e1', date: '2027-01-06', company: '지어낸 회사', saw: 's', felt: 'f', for: ['stu'], talkId: 't1', heard: [{ t: 0, en: 'x' }], audio: { bytes: 5 } }, { id: 'e2', date: '2027-01-06', company: '다른 회사', saw: 's', felt: 'f', for: [] }];
+  const talks = [t1, tb];
+  const withTalk = bundle(ready, { nick: 'a' }, new Date('2027-01-06T00:00:00Z'), talksFor(ready, talks));
+  const plain = bundle(ready, { nick: 'a' });
+  const allTalks = bundle(ready, { nick: 'a' }, new Date(), talksFor(ready, talks, true));
+  check(withTalk.talks.length === 1 && withTalk.talks[0].id === 't1' && withTalk.talks[0].pairs.length === 4 && !('talks' in plain) && allTalks.talks.length === 2 && !JSON.stringify(withTalk).includes('audio') && !Object.keys(withTalk.entries[0]).some((k) => ['heard', 'audio', 'talkId'].includes(k)),
+    '내보내기 파일: 파일로 내려받을 때만 일기와 이어진 대화가 들어가고(전부 파일로는 폰의 대화 전부), 모으는 곳 주소로 보내는 묶음에는 대화가 없고, 녹음은 어느 때도 없다');
+  const diaryT = await readFile(join(dist, 'views/diary.js'), 'utf8');
+  check(/bundle\(unsent, getProfile\(\)\);\s*\n\s*if \(sendTo\)/.test(diaryT) && diaryT.includes('talksFor(unsent, getTalks())') && diaryT.includes('...(entry?.talkId ? { talkId: entry.talkId } : {})'), '일기 화면: 모으는 곳 주소로는 대화 없이 보내고, 파일로 내려받을 때만 대화를 넣고, 다듬어 남겨도 대화 이음이 남는다');
+
+  // 번역 앱 열기
+  const phone = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/130 Mobile';
+  const ios = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1';
+  const pa = tr.openPlan('papago', '얼마예요?', phone);
+  const gi = tr.openPlan('google', 'How much is it?', ios);
+  check(pa.from === 'ko' && pa.to === 'en' && pa.kind === 'app' && pa.copy === '얼마예요?' && pa.url.startsWith('intent://papago.naver.com/?sk=ko&tk=en&st=') && pa.url.includes('package=com.naver.labs.translator') && pa.url.includes('S.browser_fallback_url=') && pa.web.startsWith('https://papago.naver.com/?sk=ko&tk=en&st=')
+    && gi.from === 'en' && gi.to === 'ko' && gi.kind === 'web' && gi.url === 'https://translate.google.com/?sl=en&tl=ko&op=translate&text=How%20much%20is%20it%3F' && tr.openPlan('papago', '', ios).url === 'https://papago.naver.com/?sk=ko&tk=en' && tr.openPlan('nope', 'x').app === 'papago' && tr.openPlan('google', 'a'.repeat(5000)).copy.length === tr.MAX_TEXT,
+  '번역 앱 열기: 한글이 많으면 한국어 → 영어, 아니면 영어 → 한국어. 안드로이드는 앱(없으면 웹 번역으로 돌아가는 주소), 그 밖은 웹 번역 주소, 글이 없으면 글 없이 열고, 긴 글은 자른다');
+  check(!/[?&]key=/.test(pa.url + gi.url) && Object.values(tr.APPS).every((x) => /^https:\/\/(play\.google\.com|apps\.apple\.com)\//.test(x.android + x.ios) && x.help.url.startsWith('https://') && x.offline.length > 10), '번역 앱 주소에는 키가 없고, 앱마다 스토어 링크 · 오프라인 팩 안내 · 도움말 링크가 있다');
+  const calls = [];
+  const env = (clip) => ({ navigator: { userAgent: phone, clipboard: clip }, location: { href: '' }, open: (...args) => calls.push(args), getSelection: () => ({ toString: () => '' }) });
+  const e1 = env({ writeText: async (t) => calls.push(['copy', t]) });
+  const r1 = await tr.openTranslator('papago', '얼마예요?', e1);
+  const e2 = env({ writeText: async () => { throw new Error('막힘'); } });
+  e2.navigator.userAgent = ios;
+  const r2 = await tr.openTranslator('google', 'How much?', e2);
+  check(r1.copied === true && calls[0][0] === 'copy' && calls[0][1] === '얼마예요?' && e1.location.href.startsWith('intent://') && r2.copied === false && calls.at(-1)[0].startsWith('https://translate.google.com/') && /복사하지 못했다/.test(tr.openedNote(r2)) && /글을 복사했다/.test(tr.openedNote(r1)),
+    '번역 앱 열기: 글을 먼저 복사해 두고 앱을 연다. 복사 칸이 막힌 폰에서도 앱은 열리고 "복사하지 못했다"고 알린다');
+  check(tr.pickText('회사', env(null), 1000) === '회사' && tr.pickText('', { getSelection: () => ({ toString: () => ' 고른 글 ' }) }, 1000) === '고른 글', '번역 앱 열기: 고른 글이 있으면 그것을, 없으면 카드의 글을 쓴다');
+
+  // 화면과 첫 화면
+  const read = (f) => readFile(join(dist, f), 'utf8');
+  const [talkV, transV, deepV, askV, listenV, companyJs, homeV, appT] = await Promise.all(['views/talk.js', 'views/translate.js', 'views/deep.js', 'views/ask.js', 'views/listen.js', 'company.js', 'views/home.js', 'app.js'].map(read));
+  check(['듣기', '붙여넣기', '손으로', '나누기', '저장하고 일기 초안 만들기', '말한 사람 바꾸기', '번역 앱 열기'].every((w) => talkV.includes(w)) && talkV.includes('copyGuide()') && /talk: \(\) => import\('\.\/views\/talk\.js'\)/.test(appT) && /translate: \(\) => import\('\.\/views\/translate\.js'\)/.test(appT) && /deep: \(\) => import\('\.\/views\/deep\.js'\)/.test(appT),
+    '대화 칸: 듣기 · 붙여넣기 · 손으로 셋과 복사하는 법 안내가 있고, 대화 · 번역 앱 · 깊은 설정 화면은 누를 때 불러온다');
+  check(companyJs.includes("`#/talk/${encodeURIComponent(id)}`") && companyJs.includes('translatorRow(') && homeV.includes("view: 'translate'") && askV.includes('translatorButton(') && transV.includes('오프라인 팩') && transV.includes('app.android') && transV.includes('app.help.url'),
+    '번역 앱 열기 단추는 회사 · 부스 카드와 물어볼 말에 있고, 출발 전 준비(깔기 · 한국어 영어 오프라인 팩 · 공식 도움말)는 번역 앱 준비 화면에 있다');
+  check(!askV.includes('translationModelPicker') && !listenV.includes('translationModelPicker') && deepV.includes('translationModelPicker') && settings.translationModel === 'off' && /깊은 설정/.test(askV) && /깊은 설정/.test(listenV),
+    '폰 안 영한 번역 모델은 지우지 않고 기본 꺼짐 그대로 깊은 설정으로 옮겼다: 물어볼 말 · 듣기 앞 화면은 권하지 않고 링크만 둔다');
+  const talkCode2 = (await Promise.all(['talk.js', 'translator.js', 'translator-ui.js', 'views/talk.js', 'views/translate.js', 'views/deep.js'].map(read))).join('\n');
+  check(!/fetch\(|XMLHttpRequest|sendBeacon|WebSocket/.test(talkCode2) && !/innerHTML/.test(talkCode2), '대화 · 번역 앱 코드는 스스로 어디로도 보내지 않고(복사 칸과 번역 앱 열기뿐), 붙인 글을 HTML로 넣지 않는다');
+  const firstScreen2 = (await Promise.all(['app.js', 'store.js', 'data.js', 'offline.js', 'notify.js', 'alerts.js', 'dom.js', 'views/home.js', 'views/card.js'].map(read))).join('\n');
+  const fixed2 = [...firstScreen2.matchAll(/^import [^;]*from '([^']+)';/gm)].map((m) => m[1]);
+  check(!fixed2.some((f) => /talk\.js|translator|views\/(talk|translate|deep)/.test(f)) && !preloads.some((f) => /talk|translator/.test(f)), '대화 칸 · 번역 앱 코드는 첫 화면에 싣지 않는다');
+  lines.push(`대화 칸 | 붙여넣기 예시 셋(파파고 ${a.pairs.length}짝 · 구글 ${b.pairs.length}짝 · 섞인 ${c.pairs.length}짝) · 한 덩어리 둘 · 들은 것은 원문 줄만`);
+}
+
 
 const table = ['무엇 | 본 것', '--- | ---', ...lines].join('\n');
 console.log(table);

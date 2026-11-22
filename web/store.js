@@ -78,3 +78,8 @@ export const setPace = (n) => save('pace.v1', n);
 // 주제 판: [{ id, name, cats: [공식 분야 이름], notes: { stu, job, ret, mid }, ex: [회사 id] }] — 폰에만 남는다.
 export const getTopics = () => load('topics.v1', []);
 export const setTopics = (list) => save('topics.v1', list);
+
+// 회사 대화: [{ id, exId, company, booth, date, src: 'listen' | 'paste' | 'hand', app, kind: 'pairs' | 'block', pairs | lines · text }] — 폰에만 남는다.
+// 파일로 내보낼 때만 그 파일에 든 일기와 이어진 대화가 들어간다(녹음은 어느 때도 가지 않는다). 모양은 talk.js.
+export const getTalks = () => load('talks.v1', []);
+export const setTalks = (list) => save('talks.v1', list);
