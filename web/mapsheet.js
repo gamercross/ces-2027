@@ -3,7 +3,7 @@
 
 import { el } from './dom.js';
 
-export function createSheet(host, { onClose } = {}) {
+export function createSheet(host, { onClose, onChange } = {}) {
   const body = el('div', { class: 'sheet-body' });
   const grip = el('button', { class: 'sheet-grip', type: 'button', 'aria-label': '카드 크기 바꾸기' }, el('span', { class: 'sheet-bar' }));
   const node = el('section', { class: 'sheet', role: 'dialog', 'aria-label': '카드', hidden: true }, grip, body);
@@ -20,6 +20,7 @@ export function createSheet(host, { onClose } = {}) {
     place(heightOf(next));
     host.dataset.sheet = next;
     if (next === 'closed') onClose?.();
+    onChange?.(next);
   }
   // 열 때 아직 안 보이던 카드는 맨 위부터 보인다.
   function open(children, next = 'half') {

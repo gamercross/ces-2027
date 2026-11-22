@@ -233,11 +233,18 @@ details.more[open] > summary { margin-bottom: var(--s2); }
 .chips::-webkit-scrollbar { display: none; }
 .chip-go { flex: none; min-height: var(--tap-min); padding: 0 var(--s4); border: 0; border-radius: var(--radius-ctl); background: var(--panel); color: var(--ink); font-size: 15px; font-weight: 700; cursor: pointer; }
 .chip-go[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
-.ctls { position: absolute; right: var(--s2); bottom: calc(var(--s4) + var(--sheet-h, 0px)); z-index: 3; display: grid; gap: 6px; transition: bottom 0.22s ease; }
+.ctls { position: absolute; right: var(--s2); bottom: calc(var(--s4) + var(--sheet-h, 0px) + var(--nav-h, 0px)); z-index: 3; display: grid; gap: 6px; transition: bottom 0.22s ease; }
 .mapx[data-sheet="half"] .ctls, .mapx[data-sheet="full"] .ctls { display: none; }
 .ctl { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; padding: 0; border: 0; border-radius: var(--radius-ctl); background: var(--panel); color: var(--ink); font-size: 24px; font-weight: 700; cursor: pointer; }
 .ctl svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 .ctl-wide { font-size: 15px; }
+.navbar { position: absolute; left: var(--s2); right: var(--s2); bottom: var(--s2); z-index: 4; display: grid; gap: var(--s2); padding: var(--s3) var(--s4); border-radius: var(--radius); background: var(--panel); }
+.navbar[hidden] { display: none; }
+.nav-head { display: grid; gap: 2px; }
+.nav-head b { font-size: 18px; line-height: 1.3; overflow-wrap: anywhere; }
+.nav-sub { font-size: var(--fs-body); font-weight: 700; color: var(--ink-2); }
+.nav-actions { display: flex; gap: var(--s2); }
+.nav-actions .btn { flex: 1 1 0; }
 .sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; flex-direction: column; height: var(--sheet-h, 0px); background: var(--panel); border-radius: var(--radius-big) var(--radius-big) 0 0; transition: height 0.22s ease; }
 .sheet.drag { transition: none; }
 .sheet[hidden] { display: none; }
