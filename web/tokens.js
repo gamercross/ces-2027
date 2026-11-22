@@ -3,18 +3,18 @@
 // 기본값은 tokens.css와 한 글자도 다르면 안 된다 (scripts/smoke.mjs가 맞춰 본다).
 
 export const DEFAULTS = {
-  bg: ['--bg', '#e9edf4'], panel: ['--panel', '#f4f1ea'], panel2: ['--panel-2', '#dfe7f1'],
-  ink: ['--ink', '#1f2a44'], ink2: ['--ink-2', '#4b5878'], accent: ['--accent', '#56679a'],
-  mint: ['--mint', '#cfe6dc'], warn: ['--warn', '#8a3b2f'],
-  qrBg: ['--qr-bg', '#f4f1ea'], qrInk: ['--qr-ink', '#1f2a44'],
-  hall: ['--map-hall', '#c9d6ee'], room: ['--map-room', '#e2dcef'], out: ['--map-out', '#d9e6dc'], hotel: ['--map-hotel', '#ecdccb'],
-  place: ['--map-place', '#dde3ee'], road: ['--map-road', '#cfd6e2'], decor: ['--map-decor', '#dfe3ea'], link: ['--map-link', '#8fa3c8'],
-  plain: ['--map-plain', '#9aa9cc'], none: ['--map-none', '#c5cad3'],
-  badge: ['--map-badge', '#8a6fb3'], shuttle: ['--map-shuttle', '#3f8f86'], transit: ['--map-transit', '#6b7896'], city: ['--map-city', '#f0b08a'],
-  korea: ['--map-korea', '#e88f8f'], best: ['--map-best', '#dfa544'], honoree: ['--map-honoree', '#f0d98c'],
-  day0: ['--day-0', '#b9c0cf'], day1: ['--day-1', '#f4b9a7'], day2: ['--day-2', '#a9c6ee'], day3: ['--day-3', '#a8d8bf'], day4: ['--day-4', '#f1d38a'],
-  gAi: ['--group-ai', '#8fa8e6'], gMob: ['--group-mob', '#f0b08a'], gRob: ['--group-rob', '#e79a9a'], gHea: ['--group-hea', '#9ed3ab'],
-  gHom: ['--group-hom', '#e9cf7c'], gEnt: ['--group-ent', '#c3a2df'], gBiz: ['--group-biz', '#93cdd3'],
+  bg: ['--bg', '#f2f2f2'], panel: ['--panel', '#ffffff'], panel2: ['--panel-2', '#ebebeb'],
+  ink: ['--ink', '#111111'], ink2: ['--ink-2', '#5c5c5c'], accent: ['--accent', '#5a6f96'],
+  mint: ['--mint', '#e8ecf3'], warn: ['--warn', '#a3342a'],
+  qrBg: ['--qr-bg', '#ffffff'], qrInk: ['--qr-ink', '#111111'],
+  hall: ['--map-hall', '#d8d8d8'], room: ['--map-room', '#e3e3e3'], out: ['--map-out', '#e9e9e9'], hotel: ['--map-hotel', '#dedede'],
+  place: ['--map-place', '#e6e6e6'], road: ['--map-road', '#cfcfcf'], decor: ['--map-decor', '#ececec'], link: ['--map-link', '#a0a0a0'],
+  plain: ['--map-plain', '#8f8f8f'], none: ['--map-none', '#c9c9c9'],
+  badge: ['--map-badge', '#5f5f5f'], shuttle: ['--map-shuttle', '#3d3d3d'], transit: ['--map-transit', '#7a7a7a'], city: ['--map-city', '#b4b4b4'],
+  korea: ['--map-korea', '#5a6f96'], best: ['--map-best', '#5a6f96'], honoree: ['--map-honoree', '#9fb0cf'],
+  day0: ['--day-0', '#c4c4c4'], day1: ['--day-1', '#c6d0e3'], day2: ['--day-2', '#a5b5d2'], day3: ['--day-3', '#869bc0'], day4: ['--day-4', '#6f87b3'],
+  gAi: ['--group-ai', '#94a7c9'], gMob: ['--group-mob', '#c9a48b'], gRob: ['--group-rob', '#c99496'], gHea: ['--group-hea', '#9dbba5'],
+  gHom: ['--group-hom', '#cdbd85'], gEnt: ['--group-ent', '#b4a0c8'], gBiz: ['--group-biz', '#8fb8bc'],
 };
 
 const style = typeof document !== 'undefined' && document.documentElement ? getComputedStyle(document.documentElement) : null;
