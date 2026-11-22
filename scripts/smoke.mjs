@@ -369,7 +369,7 @@ const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 const version = await json('version.json').catch(() => null);
 const swFiles = JSON.parse(`[${(sw.match(/const FILES = \[(.*)\];/) || [])[1] || ''}]`);
 check(!!version && sw.includes(JSON.stringify(version.v)) && !sw.includes('__VERSION__'), `판 이름이 찍혔다 (${version?.v})`);
-const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'tokens.js', 'frame.js', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/card.js', 'views/plan.js', 'plancard.js', 'views/rec.js', 'views/map.js', 'mapfind.js', 'bands.js', 'views/settings.js', 'views/diary.js', 'views/days.js', 'views/listen.js', 'views/talk.js', 'talk.js', 'speech.js', 'talk-ui.js', 'audio-store.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'alerts.js', 'notify.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
+const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'tokens.js', 'frame.js', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/card.js', 'views/plan.js', 'plancard.js', 'people-ui.js', 'views/rec.js', 'views/map.js', 'mapfind.js', 'bands.js', 'views/settings.js', 'views/diary.js', 'views/days.js', 'views/listen.js', 'views/talk.js', 'talk.js', 'speech.js', 'talk-ui.js', 'audio-store.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'alerts.js', 'notify.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
 // 디자인 토큰: tokens.css가 값의 원본이고, 지도 코드가 쓰는 tokens.js의 기본값이 한 글자도 다르지 않아야 한다.
 // 화면 파일(app.css · views · 지도 코드)이 색을 직접 적지 않는 것도 본다 (design.md).
 {
@@ -415,6 +415,14 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       && pcardV.includes('Escape') && pcardV.includes("role: 'dialog'") && !/class: 'dock'/.test(planV) && !planV.includes('<select')
       && /rest\[0\] === 'day'/.test(mapV3) && mapV3.includes('dayFocus'),
       '동선: 날짜 칩 한 줄(칩마다 곳 수) · 줄에는 누르는 단추 둘(줄 전체 + 봤다) · 날짜 · 위로 · 아래로 · 빼기 · 일기는 회사 카드로 · 카드는 Esc로 닫히는 대화창 · "이 날 지도에서 보기"(#/map/day/N, 그 날 번호만 진하게) · 아래 도크 없음');
+    // 다시 짓기 6단계 일기 + 만난 사람: 일기 첫 묶음이 만난 사람(최근 세 명 + 명함 받기), 맨 위 회색 단추 셋 없음, 읽자마자 저장, 일기는 본 것 한 칸이면 된다.
+    const peopleV = await readFile(join(dist, 'views/people.js'), 'utf8');
+    const peopleUiV = await readFile(join(dist, 'people-ui.js'), 'utf8');
+    check(diaryV.includes("class: 'panel met'") && diaryV.includes('slice(0, 3)') && diaryV.includes('#/people/new') && !diaryV.includes("class: 'segs'")
+      && diaryV.includes("class: 'dock solo'") && diaryV.includes('본 것을 한 줄 적는다') && diaryV.includes('diaryDraft.v1') && diaryV.includes('#/listen') && diaryV.includes('#/talk')
+      && peopleV.includes("rest[0] === 'new'") && peopleV.includes('result.merged > 0') && peopleV.includes('fresh: true') && /camBtn\.disabled = !can\.ok|disabled: !can\.ok/.test(peopleV) && !peopleV.includes("el('h2', { text: '카메라로 읽기' })")
+      && peopleUiV.includes('safeHref') && peopleUiV.includes('removePerson'),
+      '일기 + 만난 사람: 일기 첫 묶음이 "만난 사람"(최근 세 명 · 명함 받기 · 전체), 맨 위 회색 단추 셋이 없고, 검정 단추는 "일기 쓰기" 하나 · 명함을 읽으면(또는 붙여 넣으면) 바로 저장하고 같은 사람은 새 줄을 만들지 않는다 · 일기는 본 것 한 칸이면 저장되고 적던 글이 남는다 · 듣기 · 대화는 일기 쓰기 안에 있다');
     // 서비스 워커: 지운 영한 번역 모델이 폰에 남긴 것만 비우고 받아쓰기 모델 파일은 건드리지 않는다.
     const { default: vm } = await import('node:vm');
     const handlers = {};

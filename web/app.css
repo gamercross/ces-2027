@@ -104,11 +104,28 @@ h3 { font-size: var(--fs-body); }
 .now-go { display: grid; justify-items: center; gap: 0; }
 .now-go .pick { min-height: var(--tap-min); }
 .head-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
-.planpage { gap: var(--s3); }
-.planpage h1 { font-size: var(--fs-now); }
-.planpage .head { padding-top: 0; }
-.planpage .panel { padding: var(--s3) var(--s4); }
-.planpage .panel h2 { font-size: var(--fs-body); }
+.planpage, .listpage { gap: var(--s3); }
+.planpage h1, .listpage h1 { font-size: var(--fs-now); }
+.planpage .head, .listpage .head { padding-top: 0; }
+.planpage .panel, .listpage .panel { padding: var(--s3) var(--s4); }
+.planpage .panel h2, .listpage .panel h2 { font-size: var(--fs-body); }
+/* 일기 · 만난 사람: 묶음 머리(제목 + 글자 단추), 이니셜 동그라미, 줄 오른쪽 상태, 탭 위의 검정 단추 하나 */
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
+.no.av { background: var(--panel); color: var(--ink); }
+.stop .state { align-self: center; padding-right: var(--s2); font-size: var(--fs-small); font-weight: 700; color: var(--ink-2); }
+.where.clamp { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.more { justify-self: start; }
+.dock.solo { background: transparent; padding: 0; margin-bottom: var(--s2); }
+.dock.solo .btn { width: 100%; }
+.listpage { padding-bottom: var(--s3); }
+.contacts { display: grid; gap: var(--s1); padding: 0; list-style: none; }
+.contact { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); min-height: var(--tap-min); font-size: var(--fs-body); overflow-wrap: anywhere; }
+.contact .link-text { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.pcard-note { font-size: var(--fs-body); line-height: var(--lh); white-space: pre-wrap; overflow-wrap: anywhere; }
+.people-q { width: 100%; min-height: var(--tap-min); padding: 0 var(--s3); border: 2px solid transparent; border-radius: var(--radius-ctl); background: var(--panel-2); color: var(--ink); font-size: var(--fs-body); }
+.people-q[hidden] { display: none; }
+.paste { display: grid; gap: var(--s2); }
+.paste[hidden] { display: none; }
 .planpage .segs[aria-label="날짜"] { position: sticky; top: 0; z-index: 3; padding: var(--s2) 0; background: var(--bg); }
 .seg.daychip { flex-direction: column; gap: 0; min-width: 64px; min-height: 56px; line-height: 1.2; }
 .dc-day { font-size: var(--fs-body); font-weight: 800; }
@@ -409,3 +426,5 @@ a.link-text { display: inline-flex; align-items: center; min-height: var(--tap-m
 .session .where.one { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .session .row-actions { margin-top: 0; gap: var(--s1); }
 .session .row-actions .pick { min-height: var(--tap-min); }
+.scan-video { display: block; width: 100%; max-height: 48vh; object-fit: cover; border-radius: var(--radius-ctl); background: var(--panel-2); }
+.scan-video[hidden] { display: none; }
