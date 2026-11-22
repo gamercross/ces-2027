@@ -422,6 +422,13 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
     await pending;
     check(!store.has('ces2027-old') && !store.get('ces2027keep-speech-v1').has('https://x/vendor/translate/source-tokenizer.json') && store.get('ces2027keep-speech-v1').has('https://x/vendor/speech/a.js') && [...store.get('transformers-cache').keys()].length === 1 && [...store.get('transformers-cache').keys()][0].includes('moonshine') && /translationModel\.v1/.test(app),
       '서비스 워커: 켜질 때 이미 받아 둔 영한 번역 모델과 단어 사전만 폰에서 비우고(받아쓰기 모델 파일은 그대로), 번역 설정 열쇠도 치운다');
+    // 3단계(11/22): 처음 들어오면 명함. 환영 한 줄 → 한 화면(별명 · 나만 필수) → 명함 + QR 둘 → "지도로". 설정에서 QR 보기 · 고치기.
+    const cardV = await readFile(join(dist, 'views/card.js'), 'utf8');
+    const settingsV = await readFile(join(dist, 'views/settings.js'), 'utf8');
+    const cssV = await readFile(join(dist, 'app.css'), 'utf8');
+    const required = (cardV.match(/return fail\('[^']*'/g) || []).filter((m) => /별명을 적는다|나를 하나 고른다/.test(m)).length;
+    check(/class: 'welcome'/.test(cardV) && cardV.includes('환영한다') && required === 2 && ['한 줄 (선택)', '깃허브 (선택)', '디스코드 (선택)'].every((w) => cardV.includes(w)) && cardV.includes("href: '#/map', text: '지도로'") && /rest\[0\] === 'edit'/.test(cardV) && settingsV.includes("href: '#/card', text: 'QR 보기'") && settingsV.includes("href: '#/card/edit'") && /const intro = name === 'card' && !getProfile\(\)/.test(app) && /\.form\.big \.choices \{ grid-template-columns: 1fr 1fr/.test(cssV) && /\.form\.big \.field input \{ font-size: 18px/.test(cssV),
+      '처음 들어오면 명함: 환영 한 줄과 한 화면(별명 · 나만 꼭 필요하고 한 줄 · 깃허브 · 디스코드는 "선택"), 만든 뒤 명함과 QR 그리고 "지도로", 설정 탭의 "QR 보기" · "명함 고치기", 큰 글씨(18px)와 2 × 2 고르기');
   }
   check(['loading()', 'failed(', 'missing(', 'history.back()'].every((w) => app.includes(w)) && !/p\.textContent = '화면을 불러오지 못했다/.test(app), '메인 틀: 느린 망엔 "불러오는 중", 못 불러오면 "다시 열기", 없는 주소는 첫 화면으로 말없이 보내지 않고 알린다, 뒤로는 앱 안 기록을 따른다');
   // 테마와 짧은 화면 (design.md "테마" · "글과 길이"): 밝게 · 어둡게 · 자동, 탭마다 강조색, 첫 화면은 지금 할 일만.
@@ -466,7 +473,7 @@ check(missing.length === 0 && gone.length === 0, `서비스 워커가 담아 둘
   check(guideWords.every((w) => guide.includes(w)) && !/<input|<form|type="email"|type="tel"/.test(guide) && guide.includes('href="../app.css"'), `테스터 안내가 /testers/에 있다: 확인할 것 여덟 · 폰 둘 · 복사할 글, 이름과 연락처를 받는 칸이 없다`);
   // 안내에 적은 단추 · 글귀가 앱에 그대로 있는지 (앱의 글이 바뀌면 안내도 고친다).
   const appText = (await Promise.all(['views/settings.js', 'views/card.js', 'views/map.js', 'views/listen.js', 'views/diary.js', 'views/talk.js', 'talk-ui.js', 'app.js', 'index.html'].map((f) => readFile(join(dist, f), 'utf8')))).join('\n');
-  const labels = ['명함부터 만든다', '명함 만들기', '인터넷 없이', '인터넷 없이 열린다', '켜기', '켜져 있다', '이벤트 있음으로 표시', '가까운 부스 번호', '맞추기', '가까이에 명함 넣는 이벤트 부스', '크게 띄우기', '읽어 주기', '이 폰에서 되는 것', '이 폰에서는 안 됨', '받아쓰기를 어디서 하나', '알겠다 · 이 길로 한다', '그만둔다', '상대에게 알렸다 · 듣기 시작', '알렸다 · 듣기 시작', '손으로 적기', '줄 넣기', '멈추고 일기 초안 만들기', '적은 것으로 초안 만들기', '일기 초안 다듬기', '나누기', '말한 사람 바꾸기', '초안 만들기', '폰에 남기기', '녹음 듣기', '새 판이 있다'];
+  const labels = ['명함부터 만든다', '명함 만들기', '명함 고치기 끝', '지도로', 'QR 보기', '명함 고치기', '인터넷 없이', '인터넷 없이 열린다', '켜기', '켜져 있다', '이벤트 있음으로 표시', '가까운 부스 번호', '맞추기', '가까이에 명함 넣는 이벤트 부스', '크게 띄우기', '읽어 주기', '이 폰에서 되는 것', '이 폰에서는 안 됨', '받아쓰기를 어디서 하나', '알겠다 · 이 길로 한다', '그만둔다', '상대에게 알렸다 · 듣기 시작', '알렸다 · 듣기 시작', '손으로 적기', '줄 넣기', '멈추고 일기 초안 만들기', '적은 것으로 초안 만들기', '일기 초안 다듬기', '나누기', '말한 사람 바꾸기', '초안 만들기', '폰에 남기기', '녹음 듣기', '새 판이 있다'];
   const missingLabels = labels.filter((l) => !appText.includes(l) || !guide.includes(l.replace(/&/g, '&amp;')));
   check(missingLabels.length === 0, `테스터 안내에 적은 단추와 글귀 ${labels.length}개가 앱과 안내에 그대로 있다 (없는 것: ${missingLabels.join(' / ') || '없음'})`);
   const daysJs = await readFile(join(dist, 'views/days.js'), 'utf8');
