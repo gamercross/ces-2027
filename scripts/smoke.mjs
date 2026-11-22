@@ -1034,6 +1034,22 @@ if (await exists('data/meta.json')) {
   check(!/photo/.test(firstScreen), '사진 코드는 첫 화면에 싣지 않는다');
 }
 
+// 회사 링크(R48): 관심 회사의 공식 주소를 줄마다 글로. 로그인하지 않고 어디로도 보내지 않는다.
+{
+  const read = (p) => readFile(join(dist, p), 'utf8');
+  const { officialLinks } = await import('../web/share.js');
+  const byId = new Map([['A1', ['A1', 'Alpha Robotics']], ['B/2', ['B/2', 'Beta 가나']]]);
+  const link = 'https://exhibitors.ces.tech/8_0/exhibitor/exhibitor-details.cfm?exhid={id}';
+  const r = officialLinks([{ id: 'B/2' }, { id: 'NOPE' }, { id: 'A1' }], byId, link, '2026-11-22');
+  const lines = r.text.trim().split('\n');
+  check(r.count === 2 && lines.length === 3 && lines[0] === 'CES 2027 관심 회사 2곳의 공식 전시사 쪽 링크 (자료 2026-11-22에 받음)' && lines[1] === 'Beta 가나 — https://exhibitors.ces.tech/8_0/exhibitor/exhibitor-details.cfm?exhid=B%2F2' && lines[2].startsWith('Alpha Robotics — ') && officialLinks([], byId, link, 'x').text === '',
+    '회사 링크: 관심 목록 차례로 줄마다 "회사 이름 — 공식 주소"이고, 자료에서 빠진 회사는 건너뛰고, 주소의 id는 인코딩하고, 관심이 없으면 빈 글이다');
+  const settingsV = await read('views/settings.js');
+  const linksFn = settingsV.slice(settingsV.indexOf('function linksRow'), settingsV.indexOf('// 종이 명함: 있는지'));
+  check(linksFn.includes("row('회사 링크'") && linksFn.includes('navigator.clipboard.writeText') && linksFn.includes('ces2027-관심회사-공식링크.txt') && /make = async \(\) => \{\s*const \[data, meta\] = await Promise\.all\(\[getExhibitors\(\)/.test(linksFn) && !/fetch\(|sendBeacon|XMLHttpRequest|innerHTML|window\.open|location/.test(linksFn),
+    '설정의 "회사 링크": 복사 · 파일로 둘이고, 전시사 자료는 누를 때만 받고, 로그인하거나 어디로 보내는 코드가 없다');
+}
+
 const table = ['무엇 | 본 것', '--- | ---', ...lines].join('\n');
 console.log(table);
 if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `### 지은 것 살피기\n\n${table}\n`);
