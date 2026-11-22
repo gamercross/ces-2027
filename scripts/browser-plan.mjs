@@ -31,7 +31,7 @@ async (page) => {
   await settle();
 
   // 1. 날짜 칩 + 그 날 차례
-  const chips = await page.locator('.segs[aria-label="날짜"] .seg').evaluateAll((ns) => ns.map((n) => `${n.querySelector('.dc-day').textContent} ${n.querySelector('.dc-n').textContent}`));
+  const chips = await page.locator('.segs[aria-label="날짜"] .daychip').evaluateAll((ns) => ns.map((n) => `${n.querySelector('.dc-day').textContent} ${n.querySelector('.dc-n').textContent}`));
   check(chips.length === 2 && chips[0] === '1/6 5곳' && chips[1] === '1/7 2곳', `날짜 칩: 날마다 몇 곳인지 보인다(${chips.join(' / ')}), 합은 관심 회사 수 ${seed.length}`);
   check(await page.locator('.segs[aria-label="날짜"]').evaluate((n) => getComputedStyle(n).position === 'sticky'), '날짜 칩은 위에 붙어 있다');
   check((await page.locator('.dock').count()) === 0, '아래 도크가 없다(탭 위를 가리지 않는다)');

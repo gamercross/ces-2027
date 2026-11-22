@@ -26,6 +26,8 @@ function download(name, text, type) {
 }
 
 const DAY_KEY = 'ces2027.planDay';
+// "안 본 곳" 칩(R47): 켜면 "봤다"를 누른 회사를 목록과 칩의 곳 수에서 뺀다. 보는 방법일 뿐이라 "봤다" 값(관심 회사의 seen)은 바꾸지 않는다. 이 탭을 여는 동안만 기억한다.
+const UNSEEN_KEY = 'ces2027.planUnseen';
 const shortDay = (ko) => ko.split(' ').join('');
 
 export async function render() {
@@ -75,6 +77,9 @@ export async function render() {
   // 지금 보는 날: 저장해 둔 날 → 오늘 → 동선이 있는 첫 날.
   const today = () => { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
   let shown = null;
+  let unseenOnly = false;
+  try { unseenOnly = sessionStorage.getItem(UNSEEN_KEY) === '1'; } catch { /* 저장이 막혀도 화면은 된다 */ }
+  const setUnseenOnly = (on) => { unseenOnly = on; try { sessionStorage.setItem(UNSEEN_KEY, on ? '1' : '0'); } catch { /* 저장이 막혀도 화면은 된다 */ } };
   function chooseDay(list, events) {
     const has = (k) => list.some((it) => (it.day || 0) === k) || (dayOf(k)?.date && eventsOn(events, dayOf(k).date).length > 0);
     const saved = Number(sessionStorage.getItem(DAY_KEY));
@@ -136,7 +141,7 @@ export async function render() {
         el('span', { class: 'name', text: nameOf(it.id) }),
         el('span', { class: 'where', text: [when, whereOf(it.id).replace(' · 부스', ' ·')].filter(Boolean).join(' · ') }),
         tagsOf(row).length ? el('span', { class: 'stop-tags' }, tagsOf(row)) : null));
-    const seen = el('button', { class: 'pick seen-btn', type: 'button', text: it.seen ? '봤다' : '아직', 'aria-pressed': it.seen ? 'true' : 'false', 'aria-label': `${nameOf(it.id)} 봤다고 표시`, onclick: () => { status.textContent = it.seen ? '아직 안 본 곳으로 돌렸다.' : '봤다. 다음 갈 곳이 바뀐다.'; setSeen(it.id); } });
+    const seen = el('button', { class: 'pick seen-btn', type: 'button', text: it.seen ? '봤다' : '아직', 'aria-pressed': it.seen ? 'true' : 'false', 'aria-label': `${nameOf(it.id)} 봤다고 표시`, onclick: () => { status.textContent = it.seen ? '아직 안 본 곳으로 돌렸다.' : unseenOnly ? '봤다. 안 본 곳에서 빠졌다. 칩을 다시 누르면 전체가 보인다.' : '봤다. 다음 갈 곳이 바뀐다.'; setSeen(it.id); } });
     return el('li', { class: it.seen ? 'stop seen' : 'stop', 'data-booth': booth ? 'y' : 'n' }, open, seen);
   }
 
@@ -236,11 +241,15 @@ export async function render() {
     const live = days.filter((d) => list.some((it) => (it.day || 0) === d.key) || (d.date && eventsOn(events, d.date).length));
     if (live.length) {
       showDay(chooseDay(list, events));
+      // 칩의 곳 수는 "안 본 곳"을 켜면 안 본 곳만 센다.
+      const unseenAll = list.filter((it) => !it.seen).length;
+      const counted = (key) => list.filter((it) => (it.day || 0) === key && !(unseenOnly && it.seen)).length;
       chipHolder.replaceChildren(...live.map((d) => {
-        const n = list.filter((it) => (it.day || 0) === d.key).length;
-        return el('button', { class: 'seg daychip', type: 'button', 'aria-pressed': d.key === shown ? 'true' : 'false', 'aria-label': `${d.ko} ${n}곳 보기`, onclick: () => { showDay(d.key); draw(); } },
+        const n = counted(d.key);
+        return el('button', { class: 'seg daychip', type: 'button', 'aria-pressed': d.key === shown ? 'true' : 'false', 'aria-label': `${d.ko} ${unseenOnly ? '안 본 곳 ' : ''}${n}곳 보기`, onclick: () => { showDay(d.key); draw(); } },
           el('span', { class: 'dc-day', text: d.key ? shortDay(d.ko).replace(/\(.*\)/, '') : '미정' }), el('span', { class: 'dc-n', text: `${n}곳` }));
-      }));
+      }), el('button', { class: 'seg unseen-chip', type: 'button', 'aria-pressed': unseenOnly ? 'true' : 'false', 'aria-label': unseenOnly ? `안 본 곳 ${unseenAll}곳만 보는 중, 누르면 전체` : `안 본 곳 ${unseenAll}곳만 보기`, onclick: () => { setUnseenOnly(!unseenOnly); draw(); } },
+        el('span', { class: 'dc-day', text: '안 본' }), el('span', { class: 'dc-n', text: `${unseenAll}곳` })));
     } else chipHolder.replaceChildren();
     chipHolder.hidden = !live.length;
 
@@ -248,6 +257,9 @@ export async function render() {
     const d = live.length ? dayOf(shown) : null;
     if (d) {
       const items = list.filter((it) => (it.day || 0) === d.key);
+      // 번호는 지도와 같아야 하므로 그 날 전체의 차례를 유지하고, "안 본 곳"이면 본 곳만 감춘다.
+      const numberOf = new Map(items.map((it, i) => [it.id, i + 1]));
+      const shownItems = unseenOnly ? items.filter((it) => !it.seen) : items;
       const evs = d.date ? eventsOn(events, d.date) : [];
       // 1/5는 전시장을 열기 전이라 걷는 시간을 어림하지 않는다(쓸 시간 · 몇 곳까지가 없다).
       const hours = d.date && !d.pre ? hoursFor(d.date, savedHours, info) : null;
@@ -255,27 +267,27 @@ export async function render() {
       items.forEach((it, i) => { if (hours) whenOf.set(it.id, when[i]); });
       const kids = evs.map(eventRow);
       let lastCampus = null;
-      items.forEach((it, i) => {
+      shownItems.forEach((it) => {
         const booth = firstBooth(it.id);
         const campus = booth ? table.get(splitBooth(booth).place)?.campus : null;
         if (campus !== lastCampus) {
           kids.push(el('li', { class: 'campus', text: campus ? campusKo.get(campus) : '장소를 모르는 곳' }));
           lastCampus = campus;
         }
-        kids.push(item(it, i + 1));
+        kids.push(item(it, numberOf.get(it.id)));
       });
       const room = hours ? limits[d.key] : null;
       const allMarks = getMarks();
       const cardCount = items.filter((it) => (byId.get(it.id)?.[7] || []).some((b) => { const at = b.lastIndexOf('@'); return allMarks[`${b.slice(at + 1)}|${b.slice(0, at)}`]; })).length;
       sections.push(el('section', { class: 'panel' },
-        el('h2', { text: `${d.ko} · ${items.length}곳` }),
+        el('h2', { text: unseenOnly ? `${d.ko} · 안 본 곳 ${shownItems.length}곳` : `${d.ko} · ${items.length}곳` }),
         d.pre ? el('p', { class: 'note', text: d.note }) : null,
         hours ? el('p', { class: 'note', text: hours.off
           ? '이 날은 안 보는 날이다.'
           : `${cardCount ? `명함 ${cardCount}장 필요 · ` : ''}${clock(hours.from)} ~ ${clock(hours.to)} · 한 곳 ${pace}분 · ${room}곳까지` }) : null,
         // 그 날에 들어가는 수를 넘으면 알려 준다 (막지는 않는다).
         hours && items.length > room ? el('p', { class: 'note warn', text: `${items.length - room}곳이 넘친다. 날짜를 옮기거나 시간을 늘린다.` }) : null,
-        items.length ? el('ol', { class: 'stops' }, kids) : el('p', { class: 'note', text: '이 날 넣은 회사가 없다. 지도에서 회사 카드의 날짜로 넣는다.' }),
+        shownItems.length ? el('ol', { class: 'stops' }, kids) : el('p', { class: 'note', text: items.length ? '이 날은 다 봤다. "안 본 곳"을 다시 누르면 전체가 보인다.' : '이 날 넣은 회사가 없다. 지도에서 회사 카드의 날짜로 넣는다.' }),
         items.length ? el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: `#/map/day/${d.key}`, text: '이 날 지도에서 보기' })) : null));
     }
     // 전시 기간 밖의 내 일정 (공항 이동 같은 것).

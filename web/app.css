@@ -487,3 +487,9 @@ a.link-text { display: inline-flex; align-items: center; min-height: var(--tap-m
 .photo-field > * + * { margin-top: var(--s2); }
 .photo-field .row-actions { margin-top: var(--s2); }
 .photo-box > * + * { margin-top: var(--s2); }
+
+/* ---- "안 본 곳" 칩 (R47): 날짜 칩 줄 맨 끝. 날짜 칩과 같은 두 줄 꼴("안 본" / 남은 곳 수)이라 칩 일곱이 360px에 한 줄로 든다 ---- */
+.planpage .segs[aria-label="날짜"] { gap: 4px; margin: 0 -10px; padding-left: 6px; padding-right: 6px; }
+.segs .seg.unseen-chip { flex: 0 0 auto; flex-direction: column; gap: 0; min-width: 44px; min-height: 56px; padding: 0 6px; line-height: 1.2; }
+/* 켜진 "안 본 곳"은 날짜 칩(검정 칠)과 헷갈리지 않게 강조색 테두리 + 옅은 면 */
+.segs .seg.unseen-chip[aria-pressed="true"] { background: var(--accent-soft); color: var(--ink); border-color: var(--accent); }

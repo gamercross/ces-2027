@@ -1022,6 +1022,17 @@ if (await exists('data/meta.json')) {
   check(!/photo/.test(firstScreen), '사진 코드는 첫 화면에 싣지 않는다');
 }
 
+// "안 본 곳" 칩(R47): 날짜 칩 줄 끝, seen 하나만 보고, 칩이 seen을 바꾸지 않는다. 지도 길 안내의 "봤다"와 같은 값이다.
+{
+  const read = (p) => readFile(join(dist, p), 'utf8');
+  const [planV, mapV] = await Promise.all(['views/plan.js', 'views/map.js'].map(read));
+  const toggle = planV.slice(planV.indexOf("class: 'seg unseen-chip'"), planV.indexOf("'안 본 곳'));") + 8);
+  check(planV.includes("const UNSEEN_KEY = 'ces2027.planUnseen'") && toggle.includes('setUnseenOnly(!unseenOnly)') && !/setInterests|setSeen|seen:/.test(toggle)
+    && planV.includes('!(unseenOnly && it.seen)') && planV.includes('shownItems = unseenOnly ? items.filter((it) => !it.seen) : items') && planV.includes('numberOf.get(it.id)'),
+    '동선 "안 본 곳" 칩: 날짜 칩 줄 끝에 서고, 켜면 본 곳을 빼고 칩의 곳 수도 줄이며, 번호는 지도와 같고, 칩은 "봤다" 값을 바꾸지 않는다');
+  check(/\{ \.\.\.x, seen: true \}/.test(mapV) && mapV.includes('setInterests(') && planV.includes('it.seen'), '"봤다"는 동선 줄과 지도 길 안내가 같은 관심 회사의 seen 하나를 쓴다(거르기는 따로 상태를 만들지 않는다)');
+}
+
 const table = ['무엇 | 본 것', '--- | ---', ...lines].join('\n');
 console.log(table);
 if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `### 지은 것 살피기\n\n${table}\n`);
