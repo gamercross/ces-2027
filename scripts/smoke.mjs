@@ -1026,7 +1026,7 @@ if (await exists('data/meta.json')) {
 {
   const read = (p) => readFile(join(dist, p), 'utf8');
   const [planV, mapV] = await Promise.all(['views/plan.js', 'views/map.js'].map(read));
-  const toggle = planV.slice(planV.indexOf("class: 'seg unseen-chip'"), planV.indexOf("'안 본 곳'));") + 8);
+  const toggle = planV.slice(planV.indexOf("class: 'seg unseen-chip'"), planV.indexOf("class: 'dc-n', text: `${unseenAll}곳`"));
   check(planV.includes("const UNSEEN_KEY = 'ces2027.planUnseen'") && toggle.includes('setUnseenOnly(!unseenOnly)') && !/setInterests|setSeen|seen:/.test(toggle)
     && planV.includes('!(unseenOnly && it.seen)') && planV.includes('shownItems = unseenOnly ? items.filter((it) => !it.seen) : items') && planV.includes('numberOf.get(it.id)'),
     '동선 "안 본 곳" 칩: 날짜 칩 줄 끝에 서고, 켜면 본 곳을 빼고 칩의 곳 수도 줄이며, 번호는 지도와 같고, 칩은 "봤다" 값을 바꾸지 않는다');
