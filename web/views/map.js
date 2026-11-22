@@ -16,7 +16,7 @@ import { nextStop, splitBooth } from '../route.js';
 import { dayByKey, dayKeyOf, dayList, dayRank } from '../days.js';
 import { attachImage } from '../company-image.js';
 import { boothLines, sessionBlock } from '../company-extra.js';
-import { guideTo } from '../guide.js';
+import { farText, guideTo } from '../guide.js';
 import { markLabel, toggleMark } from '../alerts.js';
 import { getMarks, setMarks } from '../notify.js';
 import { getEvents } from '../store.js';
@@ -556,7 +556,7 @@ export async function render({ rest = [] } = {}) {
           drawMe();
         } }) : null,
         g.kind === 'unknown' ? el('button', { class: 'btn ghost', type: 'button', text: '내 자리 넣기', onclick: () => { sheet.close(); boothInput.scrollIntoView({ block: 'center', behavior: 'smooth' }); boothInput.focus({ preventScroll: true }); } }) : null,
-        route && (g.maps || g.kind === 'other-campus') ? out(route, '구글맵 길찾기', g.kind === 'other-campus' ? 'btn' : 'btn ghost') : null),
+        route && (g.maps || g.kind === 'other-campus') ? out(route, '구글맵 길찾기', g.kind === 'other-campus' || g.kind === 'outside' ? 'btn' : 'btn ghost') : null),
       indoorPaths.halls[place?.k] ? el('p', { class: 'note', text: '홀 안 길은 짐작이다.' }) : null);
   }
 
@@ -802,17 +802,21 @@ export async function render({ rest = [] } = {}) {
   // GPS로 받은 자리 하나를 쓴다: 캠퍼스 → (짐작으로) 홀 · 건물. 지도는 그 자리를 가운데로 옮긴다.
   let lastCampus = null;
   let acceptedFix = null;
+  // 위치를 받는 일의 지금 상태(받는 중 · 거부 · 못 받음 · 흔들림). 길 안내 띠에도 같은 말을 보인다.
+  let gpsNote = '';
+  const gpsSay = (text) => { whereNote.textContent = text; gpsNote = text; if (nav) paintNav(); };
   function useFix(lat, lng, accuracy, following) {
     const now = Date.now();
     const issue = fixProblem(acceptedFix, { lat, lng, accuracy, at: now }, 150, 3);
     if (issue === 'accuracy') {
-      whereNote.textContent = `위치가 흔들린다 (정확도 약 ${Number.isFinite(accuracy) ? `${Math.round(accuracy)}m` : '모름'}). 자리를 바꾸지 않았다. 부스 번호로 맞춘다.`;
+      gpsSay(`위치가 흔들린다 (정확도 약 ${Number.isFinite(accuracy) ? `${Math.round(accuracy)}m` : '모름'}). 자리를 바꾸지 않았다. 부스 번호로 맞춘다.`);
       return false;
     }
     if (following && issue === 'jump') {
-      whereNote.textContent = '위치가 갑자기 바뀌어 보인다. 자리를 바꾸지 않았다. 다음 위치를 기다린다.';
+      gpsSay('위치가 갑자기 바뀌어 보인다. 자리를 바꾸지 않았다. 다음 위치를 기다린다.');
       return false;
     }
+    gpsNote = '';
     const near = nearestCampus(places, lat, lng);
     const area = near.inside && accuracy <= 100 ? nearestArea(places, lat, lng) : null;
     const where = { by: 'gps', lat, lng, accuracy: Math.round(accuracy), campus: area ? area.c : near.k, inside: near.inside, meters: Math.round(near.meters), area: area ? { ko: area.ko, places: area.places, meters: Math.round(area.meters) } : null, at: Date.now() };
@@ -838,15 +842,15 @@ export async function render({ rest = [] } = {}) {
     lastCampus = where.campus;
     return true;
   }
-  const noGps = () => { whereNote.textContent = '이 브라우저는 위치를 알려 주지 않는다. 부스 번호로 맞춘다.'; };
+  const noGps = () => { gpsSay('이 브라우저는 위치를 알려 주지 않는다. 부스 번호로 맞춘다.'); };
   const gpsError = (error) => {
-    whereNote.textContent = error?.code === 1
+    gpsSay(error?.code === 1
       ? '위치 권한을 거부했다. 브라우저 설정에서 허락하거나 부스 번호로 맞춘다.'
-      : '위치를 받지 못했다. 다시 누르거나 부스 번호로 맞춘다.';
+      : '위치를 받지 못했다. 다시 누르거나 부스 번호로 맞춘다.');
   };
   const gpsButton = el('button', { class: 'btn', type: 'button', text: 'GPS로 찾기', onclick: () => {
     if (!('geolocation' in navigator)) return noGps();
-    whereNote.textContent = '위치를 받는 중이다.';
+    gpsSay('위치를 받는 중이다. 위치를 묻는 창이 뜨면 허락한다.');
     navigator.geolocation.getCurrentPosition((pos) => useFix(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, false),
       gpsError, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
   } });
@@ -873,8 +877,8 @@ export async function render({ rest = [] } = {}) {
       if (useFix(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, true)) lastFix = Date.now();
     }, (error) => {
       // 권한을 거부했을 때만 끈다. 잠깐 못 받은 것(실내 · 터널)은 계속 기다린다.
-      if (error?.code === 1) stopFollow('위치 권한을 거부했다. 따라가기를 껐다. 브라우저 설정에서 허락하거나 부스 번호로 맞춘다.');
-      else whereNote.textContent = '위치를 잠깐 받지 못했다. 계속 기다린다. 급하면 부스 번호로 맞춘다.';
+      if (error?.code === 1) { stopFollow(); gpsSay('위치 권한을 거부했다. 따라가기를 껐다. 브라우저 설정에서 허락하거나 부스 번호로 맞춘다.'); }
+      else gpsSay('위치를 잠깐 받지 못했다. 계속 기다린다. 급하면 부스 번호로 맞춘다.');
     }, { enableHighAccuracy: true, maximumAge: FOLLOW_EVERY, timeout: 60000 });
   }
   function startFollow() {
@@ -965,6 +969,8 @@ export async function render({ rest = [] } = {}) {
     three?.chooseBooth(key);
     // 걸을 때 따라오게 위치를 받는다 (안내를 끝내면 같이 끈다).
     if (!following && 'geolocation' in navigator) { FOLLOW_EVERY = 5000; navOwnsFollow = true; startFollow(); }
+    // 내 자리를 아직 모르면 띠가 "받는 중"부터 말한다(첫 위치가 오면 바뀐다).
+    if (!myPoint(getWhere())) gpsNote = 'geolocation' in navigator ? '위치를 받는 중이다. 위치를 묻는 창이 뜨면 허락한다.' : '이 브라우저는 위치를 알려 주지 않는다. 부스 번호로 맞춘다.';
     navKey = '';
     drawMe();
     drawBooths();
@@ -1004,8 +1010,11 @@ export async function render({ rest = [] } = {}) {
     }
     if (!target) { if (!navbar.hidden) { navbar.hidden = true; mapx.style.removeProperty('--nav-h'); } navKey = ''; return; }
     const est = at ? navEstimate(target, where, at) : null;
+    // 전시장 밖(라스베이거스 밖이거나 전시장 사이)이면 지도에 내 자리를 찍지 못한다. 그 까닭을 띠에 말한다.
+    const outside = !est && where?.by === 'gps' && where.inside === false;
     let sub;
-    if (!est) sub = kind === 'nav' ? '내 위치를 먼저 잡는다' : `${target.place ? target.place.ko.replace(/ \(.*\)$/, '') : '장소 모름'} · 부스 ${target.code}`;
+    if (!est && kind === 'nav') sub = gpsNote || (outside ? `전시장 밖이다 · 가장 가까운 전시장까지 약 ${farText(where.meters)}. 전시장에 들어가면 거리 · 분이 나온다` : '내 위치를 먼저 잡는다');
+    else if (!est) sub = `${target.place ? target.place.ko.replace(/ \(.*\)$/, '') : '장소 모름'} · 부스 ${target.code}`;
     else if (est.arrived) sub = `도착했다 · 부스 ${target.code}를 찾는다`;
     else if (!est.sameCampus) sub = `${fmtDistance(est.meters)} · 다른 캠퍼스 · 걸어서 약 ${est.minutes}분 또는 셔틀`;
     else sub = `${fmtDistance(est.meters)} · 걸어서 ${est.minutes}분 · ${est.word}${est.coarse ? ' (대략)' : ' (짐작)'}`;
@@ -1013,11 +1022,13 @@ export async function render({ rest = [] } = {}) {
     if (key === navKey && !navbar.hidden) return;
     navKey = key;
     const seen = () => { setInterests(getInterests().map((x) => (x.id === target.id ? { ...x, seen: true } : x))); endNav(); afterInterests(); };
+    const farRoute = kind === 'nav' && outside && target.place ? mapsLink(places, target.place, 'directions') : null;
     navbar.replaceChildren(
       el('div', { class: 'nav-head' }, el('b', { text: kind === 'nav' ? `→ ${target.name}` : `다음 갈 곳 · ${target.name}` }), el('span', { class: 'nav-sub', text: sub })),
       el('div', { class: 'nav-actions' },
         kind === 'next' ? el('button', { class: 'btn', type: 'button', text: '길 안내', onclick: () => startNav(rows.get(target.id), target.key) }) : null,
-        kind === 'nav' && !est ? el('button', { class: 'btn', type: 'button', text: '내 위치 잡기', onclick: () => gpsButton.click() }) : null,
+        kind === 'nav' && !est ? el('button', { class: outside ? 'btn ghost' : 'btn', type: 'button', text: where ? '다시 잡기' : '내 위치 잡기', onclick: () => gpsButton.click() }) : null,
+        farRoute ? out(farRoute, '구글맵', 'btn') : null,
         kind === 'nav' && est?.arrived ? el('button', { class: 'btn', type: 'button', text: '봤다', onclick: seen }) : null,
         kind === 'nav' ? el('button', { class: 'btn ghost', type: 'button', text: '끝내기', onclick: endNav }) : null));
     navbar.hidden = false;
