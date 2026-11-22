@@ -369,7 +369,7 @@ const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 const version = await json('version.json').catch(() => null);
 const swFiles = JSON.parse(`[${(sw.match(/const FILES = \[(.*)\];/) || [])[1] || ''}]`);
 check(!!version && sw.includes(JSON.stringify(version.v)) && !sw.includes('__VERSION__'), `판 이름이 찍혔다 (${version?.v})`);
-const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'tokens.js', 'frame.js', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/card.js', 'views/plan.js', 'views/rec.js', 'views/map.js', 'mapfind.js', 'bands.js', 'views/settings.js', 'views/diary.js', 'views/days.js', 'views/listen.js', 'views/talk.js', 'talk.js', 'speech.js', 'talk-ui.js', 'audio-store.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'alerts.js', 'notify.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
+const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'tokens.js', 'frame.js', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/card.js', 'views/plan.js', 'plancard.js', 'views/rec.js', 'views/map.js', 'mapfind.js', 'bands.js', 'views/settings.js', 'views/diary.js', 'views/days.js', 'views/listen.js', 'views/talk.js', 'talk.js', 'speech.js', 'talk-ui.js', 'audio-store.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'alerts.js', 'notify.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
 // 디자인 토큰: tokens.css가 값의 원본이고, 지도 코드가 쓰는 tokens.js의 기본값이 한 글자도 다르지 않아야 한다.
 // 화면 파일(app.css · views · 지도 코드)이 색을 직접 적지 않는 것도 본다 (design.md).
 {
@@ -406,6 +406,15 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
     const mapV3 = await readFile(join(dist, 'views/map.js'), 'utf8');
     check(planV.includes('지금 갈 곳') && planV.includes('alertBands(') && ['#/rec', '#/days', '#/sessions'].every((h) => planV.includes(h)) && ['#/listen', '#/talk', '#/people'].every((h) => diaryV.includes(h)) && transitV.includes('info.moving') && mapV3.includes('findBox(') && mapV3.includes('#/transit') && mapfindV.includes('getFinder'),
       '합친 자리: 동선 맨 위에 "지금 갈 곳" 한 줄과 띠, 동선 아래에 추천 · 시간과 일정 · 세션, 일기 안에 듣기 · 대화 칸 · 만난 사람, 지도 위에 찾기 칸과 셔틀 · 오가는 법');
+    // 다시 짓기 5단계 동선: 날짜 칩 하나에 그 날 차례만, 줄에는 단추 하나(봤다)와 누르면 열리는 큰 카드, 지도와 같은 번호, 도크 없음.
+    const pcardV = await readFile(join(dist, 'plancard.js'), 'utf8');
+    const rowFn = planV.slice(planV.indexOf('function item('), planV.indexOf('// ---- 회사 카드(큰 창)'));
+    const rowButtons = (rowFn.match(/el\('button'/g) || []).length;
+    check(rowFn.includes('stop-open') && rowButtons === 2 && !rowFn.includes('select') && !rowFn.includes("'위로'") && !rowFn.includes("'빼기'")
+      && ['위로', '아래로', '관심에서 빼기', '#/diary/new/', '#/map/at/', '#/map/go/', '#/map/day/'].every((t) => planV.includes(t))
+      && pcardV.includes('Escape') && pcardV.includes("role: 'dialog'") && !/class: 'dock'/.test(planV) && !planV.includes('<select')
+      && /rest\[0\] === 'day'/.test(mapV3) && mapV3.includes('dayFocus'),
+      '동선: 날짜 칩 한 줄(칩마다 곳 수) · 줄에는 누르는 단추 둘(줄 전체 + 봤다) · 날짜 · 위로 · 아래로 · 빼기 · 일기는 회사 카드로 · 카드는 Esc로 닫히는 대화창 · "이 날 지도에서 보기"(#/map/day/N, 그 날 번호만 진하게) · 아래 도크 없음');
     // 서비스 워커: 지운 영한 번역 모델이 폰에 남긴 것만 비우고 받아쓰기 모델 파일은 건드리지 않는다.
     const { default: vm } = await import('node:vm');
     const handlers = {};

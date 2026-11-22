@@ -16,11 +16,11 @@ export function alertBands(showFrom) {
     const answer = (has) => { setPaper({ remindOn: defaultRemind(showFrom), ...(paper || {}), has, asked: dateOf(new Date()) }); checkAlerts(); };
     box.replaceChildren(...[
       alerts.paper ? el('section', { class: 'panel band ask' },
-        el('h2', { text: alerts.paper === 'again' ? '종이 명함은 준비됐나요?' : '종이 명함이 있나요?' }),
-        el('p', { class: 'note', text: '명함을 넣어야 응모되는 부스가 있다.' }),
-        el('div', { class: 'actions' },
-          el('button', { class: 'btn', type: 'button', text: '있다', onclick: () => answer(true) }),
-          el('button', { class: 'btn ghost', type: 'button', text: '없다', onclick: () => { answer(false); location.hash = '#/card'; } }))) : null,
+        el('div', { class: 'band-line' },
+          el('h2', { text: alerts.paper === 'again' ? '종이 명함은 준비됐나요?' : '종이 명함이 있나요?' }),
+          el('div', { class: 'actions' },
+            el('button', { class: 'pick', type: 'button', text: '있다', onclick: () => answer(true) }),
+            el('button', { class: 'pick', type: 'button', text: '없다', onclick: () => { answer(false); location.hash = '#/card'; } })))) : null,
       alerts.soon.length ? el('section', { class: 'panel band' },
         el('h2', { text: `곧 시작하는 일정 ${alerts.soon.length}개` }),
         el('ul', { class: 'dots' }, alerts.soon.slice(0, 3).map((e) => el('li', { text: `${e.inMin}분 뒤 ${e.from} · ${e.name}${e.place ? ` (${e.place})` : ''}` }))),
