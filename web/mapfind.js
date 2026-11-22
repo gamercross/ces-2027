@@ -8,7 +8,15 @@ import { splitBooth } from './route.js';
 const SHOW = 8;
 
 // opts: { places: [{ k, ko, ... }], onCompany(row, data, finder), onPlace(place) }
-export function findBox({ places, onCompany, onPlace }) {
+// 부스 번호만 적었을 때 공식 지도의 번호 범위로 어느 홀인지 짐작한다. ranges: [{ from, to, place }]
+export function hallOfNumber(q, ranges) {
+  const m = /^(\d{3,5})[a-zA-Z]?$/.exec(String(q).trim());
+  if (!m) return null;
+  const n = Number(m[1]);
+  return ranges.find((r) => n >= r.from && n <= r.to) || null;
+}
+
+export function findBox({ places, ranges = [], onCompany, onPlace }) {
   const input = el('input', { type: 'search', inputmode: 'search', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search', placeholder: '회사 · 부스 번호 · 홀 찾기', 'aria-label': '회사 이름 · 부스 번호 · 분야 · 홀 찾기' });
   const list = el('ul', { class: 'results', role: 'listbox', 'aria-label': '찾은 것', hidden: true });
   const note = el('p', { class: 'results-note', role: 'status', hidden: true });
@@ -57,6 +65,10 @@ export function findBox({ places, onCompany, onPlace }) {
       const where = b ? splitBooth(b) : null;
       return { row, finder, title: row[1], sub: where ? `${finder.placeKo.get(where.place) || '장소 모름'} · 부스 ${where.code}` : '부스 미정' };
     })];
+    // 회사 자료에 없는 부스 번호도 공식 지도의 번호 범위로 홀은 알려 준다.
+    const rule = rows.length ? null : hallOfNumber(q, ranges);
+    const hall = rule ? places.find((p) => p.k === rule.place) : null;
+    if (hall) items.push({ place: hall, title: hall.ko, sub: `부스 ${q.trim()} · 번호 범위 ${rule.from}–${rule.to}로 본 홀` });
     if (!items.length) { say('맞는 회사가 없다.'); return; }
     show(items);
   }

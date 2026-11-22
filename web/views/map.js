@@ -261,6 +261,10 @@ export async function render({ rest = [] } = {}) {
       if (level !== 'campus' && !big && w > 900) continue;
       cs.push({ id: `p:${p.k}`, x: sx(p.center[0]), y: sy(p.center[1]), text: shortName(p.ko), size: MIN_FONT, prio: big ? (level === 'hall' ? 60 : level === 'campus' ? 50 : 30) : 20, anchor: 'middle' });
     }
+    for (const r of roadLabels) {
+      if (level === 'booth' || !near(r.x, r.z, 20)) continue;
+      cs.push({ id: `r:${r.name}:${r.x | 0}`, x: sx(r.x), y: sy(r.z), text: r.name, size: MIN_FONT, prio: 12, anchor: 'middle', road: true });
+    }
     for (const c of L.city) {
       if (!near(c.center[0], c.center[1], 40)) continue;
       cs.push({ id: `y:${c.k}`, x: sx(c.center[0]), y: sy(c.center[1]), text: c.ko, size: MIN_FONT, prio: 70, anchor: 'start', dx: 12 });
@@ -298,6 +302,19 @@ export async function render({ rest = [] } = {}) {
     }
     return cs;
   }
+  // 길 이름: 이름이 있는 길의 가운데에 놓는다 (공식 LVCC 지도의 길 이름).
+  const roadLabels = places.roads.filter((r) => r.name).map((r) => {
+    const pts = r.pts.map(([x, z]) => L.W(r.c, x, z));
+    let total = 0;
+    for (let i = 1; i < pts.length; i++) total += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    let left = total / 2;
+    for (let i = 1; i < pts.length; i++) {
+      const seg = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+      if (left <= seg) { const t = left / seg; return { name: r.name, x: pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t, z: pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t }; }
+      left -= seg;
+    }
+    return { name: r.name, x: pts[0][0], z: pts[0][1] };
+  });
   const landmarkAt = (m) => (m.at ? L.W(m.c, ...m.at) : (() => { const s = spots.get(`${m.place}|${m.booth}`); return s ? [s.x, s.z] : null; })());
 
   function relayout() {
@@ -571,6 +588,8 @@ export async function render({ rest = [] } = {}) {
     return el('div', {}, wrap, more);
   }
 
+  // 공식 지도의 홀별 부스 번호 범위 (data/places.json의 boothRules.numbers)
+  const boothRange = (k) => (places.boothRules?.numbers || []).filter((r) => r.place === k).map((r) => `${r.from}–${r.to}`).join(' · ');
   // 홀(장소)을 누르면: 그 홀로 날아가 카드가 열린다.
   async function pickPlace(p) {
     chosenBooth = null;
@@ -583,6 +602,7 @@ export async function render({ rest = [] } = {}) {
     sheet.open(el('div', { class: 'card' },
       el('div', { class: 'card-head' }, el('h2', { text: shortName(p.ko) }),
         el('p', { class: 'card-where', text: p.theme }),
+        boothRange(p.k) ? el('p', { class: 'note', text: `부스 번호 ${boothRange(p.k)}` }) : null,
         el('p', { class: 'card-tags' }, p.boothSpots === 'guess' ? el('span', { class: 'tag', text: '자리 짐작' }) : null)),
       here.length ? el('p', { class: 'note', text: `내 관심 ${here.length}곳: ${here.map((h) => h.name).slice(0, 3).join(' · ')}${here.length > 3 ? ' …' : ''}` }) : null,
       el('div', { class: 'actions' }, link ? out(link, '구글맵에서 열기', 'btn ghost') : null, route ? out(route, '걸어서 길찾기', 'btn ghost') : null),
@@ -669,6 +689,7 @@ export async function render({ rest = [] } = {}) {
   // ---- 위: 찾기 칸 · 홀 바로 가기
   const finder = findBox({
     places: places.places,
+    ranges: places.boothRules?.numbers || [],
     onPlace: (p) => pickPlace(placeBy.get(p.k)),
     onCompany: async (row, f) => {
       // 찾은 자료로 지도 자료를 채운다(전체), 그 부스로 날아가 카드를 연다.
