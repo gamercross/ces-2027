@@ -8,7 +8,9 @@ export const VERSION = 1;
 
 // 보낼 묶음. 명함에서는 별명과 태그만 넣는다(깃허브 · 디스코드는 넣지 않는다).
 // talks를 주면(파일로 내려받을 때만) 그 대화가 같이 들어간다. 모으는 곳 주소로 보낼 때는 주지 않는다. 녹음은 어느 때도 넣지 않는다.
-export function bundle(entries, profile, now = new Date(), talks = null) {
+// photos({ 일기 id: 사진 데이터 주소 })도 파일로 내려받을 때만 준다(R49). 일기 하나의 "photo" 칸으로 들어가고, 판 번호는 그대로 1이다 —
+// 사진을 모르는 읽는 쪽은 그 칸을 지나친다.
+export function bundle(entries, profile, now = new Date(), talks = null, photos = null) {
   return {
     app: FORMAT,
     v: VERSION,
@@ -23,6 +25,7 @@ export function bundle(entries, profile, now = new Date(), talks = null) {
       saw: e.saw || '',
       felt: e.felt || '',
       for: Array.isArray(e.for) ? e.for : [],
+      ...(photos?.[e.id] ? { photo: photos[e.id] } : {}),
     })),
     ...(talks?.length ? { talks: talks.map(talkOut) } : {}),
   };
@@ -44,6 +47,7 @@ export function asText(entries, profile, tagKo) {
     lines.push(`- ${e.company || '회사 없음'}${e.for?.length ? ` (${e.for.map(tagKo).join(' · ')}에게)` : ''}`);
     if (e.saw) lines.push(`  본 것: ${e.saw}`);
     if (e.felt) lines.push(`  느낀 점: ${e.felt}`);
+    if (e.photo) lines.push('  사진 있음 (글로는 안 간다. 파일로 내보내면 같이 간다)');
   }
   return lines.join('\n');
 }

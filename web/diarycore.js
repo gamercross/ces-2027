@@ -62,7 +62,7 @@ export function parseOnePage(md) {
       const n = nameLine.match(/^(.*?)(?: \(부스 (.+?)\))?(?: · 일기 (\d+)개)?$/);
       const parts = [];
       for (const line of body) {
-        if (line === '본 것' || line === '느낀 점') parts.push({ label: line, lines: [] });
+        if (line === '본 것' || line === '느낀 점' || line === '사진') parts.push({ label: line, lines: [] });
         else if (line.startsWith('- ') && parts.length) parts.at(-1).lines.push(line.slice(2));
         else if (line.startsWith('- ')) { parts.push({ label: '', lines: [line.slice(2)] }); }
       }

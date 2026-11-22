@@ -1,6 +1,7 @@
 // 회사 일기: 본 회사마다 날짜 · 본 것 · 느낀 점 · 누구에게(네 태그)를 쓴다. 폰에만 남는다.
 // 일기 탭 맨 위에는 "만난 사람"이 있어 누구를 만났는지 바로 보인다(6단계).
 // 보내기를 누른 일기만 폰 밖으로 나간다. 모으는 곳은 아직 정하지 않아, 지금은 파일로 내보낸다.
+// 일기마다 사진 한 장(R49)을 넣을 수 있다: 폰에서 줄여(긴 변 1024px · 150KB 안, web/photo.js) 이 폰(IndexedDB, web/photo-store.js)에만 둔다. 파일로 내려받을 때만 그 파일에 들어가고 모으는 곳 주소로는 가지 않는다.
 // 듣기에서 만든 초안(draft)은 사람이 다듬어 남긴 뒤에만 보낸다. 들은 글(원문 · 번역)과 녹음은 모으는 곳 주소로는 보내지 않는다. 파일로 내려받을 때만 일기와 이어진 대화(들은 글)가 그 파일에 들어가고, 녹음은 어느 때도 가지 않는다.
 
 import { el } from '../dom.js';
@@ -47,6 +48,26 @@ function audioBox(e, onDrop) {
   return box;
 }
 
+// 사진: 카드에서 폰 안에서 꺼내 보인다.
+function photoBox(e) {
+  if (!e.photo) return null;
+  const box = el('div', { class: 'photo-box' });
+  const note = el('p', { class: 'note', text: '사진 한 장 · 이 폰에만. 파일로 내보낼 때만 같이 간다.' });
+  box.append(note);
+  (async () => {
+    try {
+      const { loadPhoto } = await import('../photo-store.js');
+      const blob = await loadPhoto(e.id);
+      if (!blob) { note.textContent = '사진이 이 폰에 없다.'; return; }
+      const url = URL.createObjectURL(blob);
+      const img = el('img', { class: 'photo', src: url, alt: `${e.company || '회사'} 일기에 넣은 사진`, width: e.photo.w || undefined, height: e.photo.h || undefined });
+      img.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
+      box.prepend(img);
+    } catch { note.textContent = '사진을 꺼내지 못했다.'; }
+  })();
+  return box;
+}
+
 // 일기 쓰기: 필수는 "본 것" 한 칸이다. 날짜는 오늘로 채우고, 회사는 동선의 "일기"에서 오면 미리 채운다(없어도 된다).
 // 적던 글은 폰에 남겨 앱을 닫아도 돌아온다(남기기 전까지). 누구에게는 마지막에 고른 것을 기억한다.
 const DRAFT = 'diaryDraft.v1';
@@ -76,6 +97,46 @@ function form(entry, preset, companies, done) {
   const tags = el('div', { class: 'choices', role: 'group', 'aria-label': '누구에게' },
     TAGS.map((t) => el('label', { class: 'choice' }, el('input', { type: 'checkbox', name: 'for', value: t.k, checked: e.for?.includes(t.k) }), el('span', { text: t.ko }))));
   const error = el('p', { class: 'error', role: 'alert', hidden: true });
+  // 사진 한 장: 고르면 폰에서 줄여 미리 보인다. "폰에 남기기"를 누를 때 이 폰에 담는다.
+  let photoNew = null; // { blob, w, h }
+  let photoGone = false;
+  let photoUrl = '';
+  const photoImg = el('img', { class: 'photo', alt: '넣을 사진', hidden: true });
+  const photoNote = el('p', { class: 'note', role: 'status' });
+  const photoFile = el('input', { type: 'file', accept: 'image/*', class: 'file-hidden', 'aria-label': '사진 고르기', tabindex: '-1' });
+  const photoPick = el('button', { class: 'pick', type: 'button', onclick: () => photoFile.click() });
+  const photoDrop = el('button', { class: 'pick', type: 'button', text: '사진 빼기', hidden: true });
+  const showPhoto = (blob, w, h) => {
+    if (photoUrl) URL.revokeObjectURL(photoUrl);
+    photoUrl = blob ? URL.createObjectURL(blob) : '';
+    if (blob) { photoImg.src = photoUrl; if (w) photoImg.width = w; if (h) photoImg.height = h; }
+    photoImg.hidden = !blob;
+    photoDrop.hidden = !blob;
+    photoPick.textContent = blob ? '사진 바꾸기' : '사진 넣기';
+  };
+  showPhoto(null);
+  if (entry?.photo) {
+    photoNote.textContent = '사진을 꺼내는 중이다.';
+    import('../photo-store.js').then(({ loadPhoto }) => loadPhoto(entry.id)).then((blob) => {
+      if (photoNew || photoGone) return;
+      if (blob) { showPhoto(blob, entry.photo.w, entry.photo.h); photoNote.textContent = ''; } else photoNote.textContent = '사진이 이 폰에 없다.';
+    }).catch(() => { photoNote.textContent = '사진을 꺼내지 못했다.'; });
+  }
+  photoFile.addEventListener('change', async () => {
+    const file = photoFile.files?.[0];
+    photoFile.value = '';
+    if (!file) return;
+    photoNote.textContent = '사진을 줄이는 중이다.';
+    try {
+      const { shrink, MAX_BYTES, MAX_EDGE } = await import('../photo.js');
+      const r = await shrink(file);
+      photoNew = r;
+      photoGone = false;
+      showPhoto(r.blob, r.w, r.h);
+      photoNote.textContent = `${r.w} × ${r.h} · ${Math.max(1, Math.round(r.blob.size / 1024))}KB로 줄였다 (긴 변 ${MAX_EDGE}px · ${MAX_BYTES / 1024}KB 안). 이 폰에만 남는다.`;
+    } catch { photoNote.textContent = '이 사진을 읽지 못했다. 다른 사진을 고른다.'; }
+  });
+  photoDrop.addEventListener('click', () => { photoNew = null; photoGone = true; showPhoto(null); photoNote.textContent = '사진을 뺐다. 남기기를 누르면 적용된다.'; });
   const field = (label, input, hint) => el('label', { class: 'field' }, el('span', { class: 'label', text: label }), input, hint && el('span', { class: 'hint', text: hint }));
   // 듣기 · 붙여넣기는 이 회사 일기의 일부다(맨 위 단추가 아니라 여기 있다).
   const tail = known || e.exId ? `/${encodeURIComponent(known?.id || e.exId)}` : '';
@@ -96,13 +157,14 @@ function form(entry, preset, companies, done) {
     field('날짜', date),
     entry ? el('div', { class: 'entry' }, heardBox(entry), entry.audio ? el('p', { class: 'note', text: '녹음은 일기 카드에서 듣는다.' }) : null) : null,
     field('느낀 점', felt),
+    el('div', { class: 'field photo-field' }, el('span', { class: 'label', text: '사진 (한 장, 선택)' }), photoImg, el('div', { class: 'row-actions' }, photoPick, photoDrop, photoFile), photoNote),
     el('div', { class: 'field' }, el('span', { class: 'label', text: '누구에게 (여럿 가능)' }), tags),
     talkRow,
     error,
     el('div', { class: 'dock' },
       el('button', { class: 'btn', type: 'submit', text: '폰에 남기기' }),
       el('button', { class: 'btn ghost', type: 'button', text: '그만두기', onclick: () => { if (fresh) save(DRAFT, null); done(); } })));
-  node.addEventListener('submit', (ev) => {
+  node.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const fail = (msg, input) => { error.textContent = msg; error.hidden = false; input?.focus(); };
     const chosen = companies.find((c) => c.id === pick.value);
@@ -111,8 +173,21 @@ function form(entry, preset, companies, done) {
     if (!saw.value.trim() && !felt.value.trim()) return fail('본 것을 한 줄 적는다.', saw);
     // 관심 목록에 없는 회사의 초안이면, 이름을 바꾸지 않은 한 그 회사 번호와 부스를 그대로 둔다.
     const same = !chosen && entry && company === entry.company;
+    const id = entry?.id || newId();
+    // 사진: 새로 고른 것은 이 폰에 먼저 담는다. 저장 공간이 모자라면 글도 남기지 않고 까닭을 말한다(사진만 빼고 남길 수 있게).
+    let photoMeta = photoGone ? null : entry?.photo || null;
+    if (photoNew) {
+      try {
+        const { savePhoto } = await import('../photo-store.js');
+        await savePhoto(id, photoNew.blob);
+        photoMeta = { bytes: photoNew.blob.size, w: photoNew.w, h: photoNew.h };
+      } catch (err) {
+        const { isFull } = await import('../photo-store.js');
+        return fail(isFull(err) ? '저장 공간이 모자라 사진을 못 담았다. "사진 빼기"로 글만 남기거나, 설정의 저장 공간에서 비우고 다시 누른다.' : '사진을 이 폰에 담지 못했다. 사생활 보호 창이면 보통 창으로 다시 연다. "사진 빼기"로 글만 남길 수 있다.');
+      }
+    }
     const next = {
-      id: entry?.id || newId(),
+      id,
       date: date.value,
       exId: chosen ? chosen.id : same ? entry.exId || '' : '',
       company,
@@ -127,10 +202,12 @@ function form(entry, preset, companies, done) {
       ...(entry?.audio ? { audio: entry.audio } : {}),
       // 이어진 대화(대화 칸)도 그대로 둔다.
       ...(entry?.talkId ? { talkId: entry.talkId } : {}),
+      ...(photoMeta ? { photo: photoMeta } : {}),
     };
     const list = getDiary().filter((x) => x.id !== next.id);
     list.push(next);
     if (!setDiary(list)) return fail('이 폰에 저장하지 못했다. 사생활 보호 창이면 보통 창으로 다시 연다.');
+    if (photoGone && entry?.photo) { try { const { dropPhoto } = await import('../photo-store.js'); await dropPhoto(id); } catch { /* 없으면 지울 것도 없다 */ } }
     save(LAST_TAGS, next.for);
     if (fresh) save(DRAFT, null);
     done('일기를 폰에 남겼다.');
@@ -176,6 +253,7 @@ export async function render({ rest, go }) {
       }
       setDiary(getDiary().filter((x) => x.id !== e.id));
       if (e.audio) { try { const { dropAudio } = await import('../audio-store.js'); await dropAudio(e.id); } catch { /* 없으면 지울 것도 없다 */ } }
+      if (e.photo) { try { const { dropPhoto } = await import('../photo-store.js'); await dropPhoto(e.id); } catch { /* 없으면 지울 것도 없다 */ } }
       shell.close();
       show('일기를 지웠다.');
     });
@@ -189,6 +267,7 @@ export async function render({ rest, go }) {
       e.felt ? el('div', {}, el('p', { class: 'label', text: '느낀 점' }), el('p', { class: 'pcard-note', text: e.felt })) : null,
       n ? el('p', { class: 'note' }, `이 회사에서 만난 사람 ${n}명 · `, el('a', { href: '#/people', text: '보기' })) : null,
       heardBox(e),
+      photoBox(e),
       audioBox(e, () => { setDiary(getDiary().map((x) => { if (x.id !== e.id) return x; const { audio, ...restOf } = x; return restOf; })); shell.close(); show('녹음을 지웠다. 글은 그대로다.'); }),
       el('div', { class: 'actions' },
         el('a', { class: 'btn', href: `#/diary/edit/${e.id}`, text: e.draft ? '다듬기' : '고치기' }),
@@ -208,7 +287,7 @@ export async function render({ rest, go }) {
     const send = el('button', { class: 'pick', type: 'button', text: '보내기', disabled: unsent.length === 0, onclick: async () => {
       const payload = bundle(unsent, getProfile());
       if (sendTo) {
-        // 모으는 곳 주소로는 일기만 간다 (대화는 가지 않는다).
+        // 모으는 곳 주소로는 일기 글만 간다 (대화 · 사진은 가지 않는다).
         try {
           // 모으는 곳(설정의 collectorUrl)으로 보낸다. 답은 읽을 수 없어 도착은 모으는 곳에서 확인한다.
           await fetch(sendTo, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
@@ -219,10 +298,12 @@ export async function render({ rest, go }) {
         }
         return;
       }
-      // 파일로 내려받을 때는 그 일기와 이어진 대화가 같이 들어간다.
-      download(fileName(getProfile()), JSON.stringify(bundle(unsent, getProfile(), new Date(), talksFor(unsent, getTalks())), null, 2));
+      // 파일로 내려받을 때는 그 일기와 이어진 대화와 일기 사진이 같이 들어간다.
+      const photos = unsent.some((e) => e.photo) ? await (await import('../photo-store.js')).photosFor(unsent) : null;
+      download(fileName(getProfile()), JSON.stringify(bundle(unsent, getProfile(), new Date(), talksFor(unsent, getTalks()), photos), null, 2));
       markSent(unsent.map((e) => e.id));
-      show(`${unsent.length}개를 파일로 내보냈다. 이 파일을 정리하는 사람에게 건넨다.`);
+      const n = Object.keys(photos || {}).length;
+      show(`${unsent.length}개를 파일로 내보냈다${n ? ` (사진 ${n}장 포함)` : ''}. 이 파일을 정리하는 사람에게 건넨다.`);
     } });
     const copy = el('button', { class: 'pick', type: 'button', text: '글로 복사', disabled: ready.length === 0, onclick: async () => {
       try { await navigator.clipboard.writeText(asText(ready, getProfile(), tagKo)); status.textContent = '글로 복사했다. 단톡방에 붙여 넣을 수 있다.'; } catch { status.textContent = '복사하지 못했다.'; }
