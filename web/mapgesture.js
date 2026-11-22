@@ -42,12 +42,16 @@ export function attachGestures(board, api) {
     };
     anim = requestAnimationFrame(step);
   }
+  // 지도 위에 얹힌 것(아래 카드 · 찾기 칸 · 단추)의 자리에서 시작한 입력은 받지 않는다. 그 자리에 보이는 것이 지도일 때만 받는다.
+  const onMap = (ev) => { const top = document.elementFromPoint(ev.clientX, ev.clientY); return !top || board.contains(top); };
+
   const zoomTo = (factor, cx, cz, animate = true) => {
     const next = zoomBox(api.getView(), factor, cx, cz);
     if (animate) animateTo(next, 260, true); else { set(next); api.onSettle?.(); }
   };
 
   board.addEventListener('pointerdown', (ev) => {
+    if (!onMap(ev)) return;
     stopAnim();
     pointers.set(ev.pointerId, [ev.clientX, ev.clientY]);
     if (pointers.size === 1) { moved = false; swallow = false; down = { x: ev.clientX, y: ev.clientY, t: performance.now() }; }
@@ -103,6 +107,7 @@ export function attachGestures(board, api) {
   // 끌고 난 뒤 · 두 번 톡 뒤의 click은 앞 화면에 닿지 않게 막는다.
   board.addEventListener('click', (ev) => { if (swallow) { ev.stopPropagation(); ev.preventDefault(); } }, true);
   board.addEventListener('wheel', (ev) => {
+    if (!onMap(ev)) return;
     ev.preventDefault();
     stopAnim();
     const [wx, wz] = toWorld(ev.clientX, ev.clientY);

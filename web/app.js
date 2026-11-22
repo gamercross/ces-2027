@@ -2,7 +2,7 @@
 
 import { getProfile } from './store.js';
 import { getInfo, getMeta, getPlaces, getSettings } from './data.js';
-import { offline, startOffline } from './offline.js';
+import { healOnce, offline, reopen, startOffline } from './offline.js';
 import { alerts, checkAlerts, startAlerts } from './notify.js';
 import { failed, frame, loading, missing } from './frame.js';
 
@@ -94,7 +94,10 @@ async function show() {
   // 느린 망: 0.25초 넘게 걸리면 "불러오는 중"을 보인다 (앞 화면이 그대로 남아 헷갈리지 않게).
   const wait = setTimeout(() => { if (mine === turn) view.replaceChildren(loading()); }, 250);
   try {
-    const node = lost ? missing(lost) : await (await VIEWS[name]()).render({ rest, go });
+    let mod = null;
+    // 화면 조각을 못 불러오면: 새 판과 옛 조각이 섞인 것일 수 있다. 새로 받아 한 번만 저절로 다시 연다.
+    if (!lost) { try { mod = await VIEWS[name](); } catch (e) { if (await healOnce(e)) return; throw e; } }
+    const node = lost ? missing(lost) : await mod.render({ rest, go });
     if (mine !== turn) return;
     view.replaceChildren(node);
     startOffline();
@@ -137,9 +140,9 @@ getSettings().then((s) => {
   img.addEventListener('load', () => { slot.replaceChildren(img); slot.hidden = false; });
 });
 
-// 새 판이 있으면 탭 위에 알리고, 누르면 다시 연다. 폰에 남긴 것(명함 · 관심 · 동선 · 일기)은 그대로다.
+// 새 판이 있으면 탭 위에 알리고, 누르면 새 파일을 받아 둔 뒤 다시 연다(offline.js의 reopen). 폰에 남긴 것(명함 · 관심 · 동선 · 일기)은 그대로다.
 window.addEventListener('ces-offline', () => { document.getElementById('update').hidden = !offline.update; });
-document.getElementById('update-go').addEventListener('click', () => location.reload());
+document.getElementById('update-go').addEventListener('click', (ev) => { ev.currentTarget.disabled = true; reopen(); });
 
 // 알림을 누르고 들어오면 그 화면으로 간다.
 navigator.serviceWorker?.addEventListener('message', (ev) => { if (typeof ev.data?.go === 'string' && ev.data.go.startsWith('#/')) go(ev.data.go); });
