@@ -1,47 +1,45 @@
 // 뼈대: 주소(#/…)에 맞는 화면을 그때 불러와 그린다. 첫 화면은 가볍게 둔다.
 
 import { getProfile } from './store.js';
-import { getInfo, getMeta, getSettings } from './data.js';
+import { getExhibitors, getInfo, getMeta, getPlaces, getSettings } from './data.js';
 import { offline, startOffline } from './offline.js';
 import { alerts, checkAlerts, startAlerts } from './notify.js';
 import { failed, frame, loading, missing } from './frame.js';
 
 const VIEWS = {
-  '': () => import('./views/home.js'),
   card: () => import('./views/card.js'),
-  find: () => import('./views/find.js'),
-  plan: () => import('./views/plan.js'),
   map: () => import('./views/map.js'),
-  diary: () => import('./views/diary.js'),
-  topics: () => import('./views/topics.js'),
-  days: () => import('./views/days.js'),
-  q: () => import('./views/askall.js'),
-  listen: () => import('./views/listen.js'),
-  apply: () => import('./views/apply.js'),
-  people: () => import('./views/people.js'),
   transit: () => import('./views/transit.js'),
+  plan: () => import('./views/plan.js'),
+  rec: () => import('./views/rec.js'),
+  days: () => import('./views/days.js'),
   sessions: () => import('./views/sessions.js'),
-  onsite: () => import('./views/onsite.js'),
+  diary: () => import('./views/diary.js'),
+  listen: () => import('./views/listen.js'),
   talk: () => import('./views/talk.js'),
+  people: () => import('./views/people.js'),
   settings: () => import('./views/settings.js'),
-  info: () => import('./views/info.js'),
 };
-const TAB_OF = { '': 'home', find: 'find', plan: 'plan', map: 'map', diary: 'diary', topics: 'topics', days: 'plan', listen: 'diary', apply: 'home', transit: 'home', sessions: 'plan', onsite: 'home', talk: 'find', settings: 'home', info: 'home' };
+// 어느 탭 아래의 화면인가: 지도(셔틀 · 오가는 법) · 동선(추천 · 시간과 일정 · 세션) · 일기(듣기 · 대화 칸 · 만난 사람) · 설정(명함).
+const TAB_OF = { map: 'map', transit: 'map', plan: 'plan', rec: 'plan', days: 'plan', sessions: 'plan', diary: 'diary', listen: 'diary', talk: 'diary', people: 'diary', settings: 'settings', card: 'settings' };
 
-// 메인 틀: 아래 탭은 다섯(홈 · 회사 · 동선 · 지도 · 일기). 주제 판은 회사 탭 아래에 선다.
+// 메인 틀: 아래 탭은 넷(지도 · 동선 · 일기 · 설정). 앱을 열면 지도.
 // 탭이 아닌 화면(명함 · 시간과 일정 · 듣기 …)은 위에 "뒤로"가 생기고, 돌아갈 곳은 TAB_OF의 탭이다.
-TAB_OF.topics = 'find';
-const ROOTS = new Set(['', 'find', 'plan', 'map', 'diary']);
+const ROOTS = new Set(['map', 'plan', 'diary', 'settings']);
 for (const k of Object.keys(VIEWS)) frame.views.add(k);
 
-// 명함이 있으면 첫 화면이 쓸 자료를 화면 조각과 같이 받기 시작한다.
-if (getProfile()) { getInfo().catch(() => {}); getMeta(); }
+// 명함이 있으면 첫 화면(지도)이 쓸 자료를 화면 조각과 같이 받기 시작한다 (조각을 다 받은 뒤에야 시작하면 한 걸음 늦는다).
+if (getProfile()) { getInfo().catch(() => {}); getMeta(); getPlaces().catch(() => {}); getExhibitors().catch(() => {}); }
+
+// 지운 번역 기능이 폰에 남긴 설정(받아 둔 모델 표시 · 번역 앱 고름)을 치운다.
+for (const k of ['translationModel.v1', 'translatorApp.v1', 'translatorPrep.v1']) { try { localStorage.removeItem(`ces2027.${k}`); } catch { /* 막힌 폰이면 그대로 둔다 */ } }
 
 const view = document.getElementById('view');
 let turn = 0;
 
 function route() {
   const [name = '', ...rest] = location.hash.replace(/^#\/?/, '').split('/');
+  if (name === '') return { name: '', rest };
   return name in VIEWS ? { name, rest } : { name: '', rest, lost: name };
 }
 
@@ -58,13 +56,13 @@ function stamp() {
 }
 function replaceTo(hash) { replacing = true; location.replace(hash); }
 const backButton = document.getElementById('back');
-let parent = '#/';
+let parent = '#/map';
 backButton.addEventListener('click', () => { if (depth > 0) history.back(); else go(parent); });
 
 function frameFor(name, rest) {
   const root = ROOTS.has(name) && !rest.length;
-  const tab = TAB_OF[name] || 'home';
-  parent = document.querySelector(`.tabs a[data-tab="${tab}"]`)?.getAttribute('href') || '#/';
+  const tab = TAB_OF[name] || 'map';
+  parent = document.querySelector(`.tabs a[data-tab="${tab}"]`)?.getAttribute('href') || '#/map';
   backButton.hidden = root;
   document.body.dataset.tab = tab;
   document.body.classList.toggle('sub', !root);
@@ -82,14 +80,13 @@ async function show() {
     return;
   }
   const { name, rest, lost } = route();
-  // 처음 들어오면 명함부터 만든다. "나중에"를 누르면 이번에는 묻지 않는다.
-  if (name === '' && !lost && !getProfile() && !sessionStorage.getItem('ces2027.introLater')) {
-    replaceTo('#/card');
+  // 앱을 열면(주소에 화면이 없으면) 지도. 처음 들어오면 명함부터 만든다. "나중에"를 누르면 이번에는 묻지 않는다.
+  if (name === '' && !lost) {
+    replaceTo(!getProfile() && !sessionStorage.getItem('ces2027.introLater') ? '#/card' : '#/map');
     return;
   }
   stamp();
   frameFor(lost ? 'lost' : name, lost ? [] : rest);
-  refreshChip();
   const first = !view.dataset.shown;
   // 느린 망: 0.25초 넘게 걸리면 "불러오는 중"을 보인다 (앞 화면이 그대로 남아 헷갈리지 않게).
   const wait = setTimeout(() => { if (mine === turn) view.replaceChildren(loading()); }, 250);
@@ -123,11 +120,6 @@ paintNet();
 
 export function go(hash) {
   if (location.hash === hash) show(); else location.hash = hash;
-}
-
-export function refreshChip() {
-  const profile = getProfile();
-  document.getElementById('me-chip').textContent = profile?.nick ? profile.nick : '내 명함';
 }
 
 // 코디세이 아이콘: 아직 정하지 않은 칸. 설정(codysseyIcon)에 그림 주소가 있을 때만 보인다.

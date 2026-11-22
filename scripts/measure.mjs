@@ -4,7 +4,7 @@
 // 주소는 아래 URL을 고친다. 지은 것(판 이름을 찍은 dist)을 gzip으로 내주는 서버가 떠 있어야 한다.
 //
 // 조건: 폰 크기 360x740 · CPU 4배 느리게 · 느린 4G(받기 1.6Mbps · 올리기 750kbps · 지연 150ms) · 캐시 끔.
-// 재는 것: 첫 그림(FCP)과 "화면이 다 그려진 때"(명함 적는 칸이나 첫 화면의 머리글이 나타난 때).
+// 재는 것: 첫 그림(FCP)과 "화면이 다 그려진 때"(명함 적는 칸이나 지도가 나타난 때).
 async (page) => {
   const URL = 'http://127.0.0.1:47130/';
   const RUNS = 5;
@@ -16,7 +16,7 @@ async (page) => {
     window.__t = {};
     new PerformanceObserver((list) => { for (const e of list.getEntries()) if (e.name === 'first-contentful-paint') window.__t.fcp = e.startTime; }).observe({ type: 'paint', buffered: true });
     const seen = () => {
-      if (!window.__t.view && document.querySelector('#view form.form, #view .hero')) window.__t.view = performance.now();
+      if (!window.__t.view && document.querySelector('#view form.form, #view svg.map')) window.__t.view = performance.now();
     };
     new MutationObserver(seen).observe(document, { childList: true, subtree: true });
   });
@@ -55,9 +55,9 @@ async (page) => {
   await page.goto(URL);
   await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
   out.push(await many('처음 여는 사람 (명함 적는 화면)', { profile: false }));
-  // 2. 명함이 있는 사람이 새 폰 · 지운 브라우저로 여는 때 → 첫 화면(알아둘 것).
+  // 2. 명함이 있는 사람이 새 폰 · 지운 브라우저로 여는 때 → 첫 화면(지도).
   await page.evaluate(() => localStorage.setItem('ces2027.profile.v1', JSON.stringify({ nick: '시험', tag: 'stu', line: '', github: '', discord: '' })));
-  out.push(await many('명함이 있는 사람 (첫 화면)', { profile: true }));
+  out.push(await many('명함이 있는 사람 (지도)', { profile: true }));
   // 3. 두 번째 열기: 서비스 워커가 다 담은 뒤, 네트워크를 끊고 연다.
   await client.send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
   await client.send('Emulation.setCPUThrottlingRate', { rate: 1 });

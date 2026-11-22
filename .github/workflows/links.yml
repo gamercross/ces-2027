@@ -1,4 +1,4 @@
-# 자료 파일에 적은 출처 링크가 살아 있는지 본다 (따로 신청하는 곳 · 알아둘 것).
+# 자료 파일에 적은 출처 링크가 살아 있는지 본다 (오가는 법 · 날짜).
 # 월요일마다 한 번, 그리고 손으로 돌릴 수 있다. 없어진 주소가 있으면 실패로 끝나 눈에 띈다.
 # 자동 접속을 막는 사이트는 "확인 못 함"으로 나온다. 그 줄은 사람이 브라우저로 본다.
 name: 출처 링크 살피기
@@ -24,4 +24,4 @@ jobs:
           rustup default stable
 
       - name: 링크를 하나씩 열어 본다
-        run: cargo run --release -p ces-data -- check-links --in data/separate.json --in data/info.json --in data/transit.json --in data/onsite.json
+        run: cargo run --release -p ces-data -- check-links --in data/info.json --in data/transit.json

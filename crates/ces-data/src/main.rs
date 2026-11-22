@@ -184,7 +184,7 @@ fn run_sessions(a: &Args) -> Result<(), String> {
 /// 자료 파일의 출처 링크를 하나씩 열어 본다.
 fn run_check_links(a: &Args) -> Result<(), String> {
     if a.inputs.is_empty() {
-        return Err("--in <파일>이 있어야 한다 (예: --in data/separate.json)".into());
+        return Err("--in <파일>이 있어야 한다 (예: --in data/transit.json)".into());
     }
     let mut urls = Vec::new();
     for path in &a.inputs {

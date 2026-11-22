@@ -157,10 +157,6 @@ export async function render({ rest, go }) {
       markSent(unsent.map((e) => e.id));
       show(`${unsent.length}개를 파일로 내보냈다. 이 파일을 정리하는 사람에게 건넨다.`);
     } });
-    const fileAll = el('button', { class: 'btn ghost', type: 'button', text: '전부 파일로', disabled: ready.length === 0, onclick: () => {
-      download(fileName(getProfile()), JSON.stringify(bundle(ready, getProfile(), new Date(), talksFor(ready, getTalks(), true)), null, 2));
-      status.textContent = `일기 ${ready.length}개와 폰에 있는 대화를 파일로 내보냈다.`;
-    } });
     const copy = el('button', { class: 'btn ghost', type: 'button', text: '글로 복사', disabled: ready.length === 0, onclick: async () => {
       try { await navigator.clipboard.writeText(asText(ready, getProfile(), tagKo)); status.textContent = '글로 복사했다. 단톡방에 붙여 넣을 수 있다.'; } catch { status.textContent = '복사하지 못했다.'; }
     } });
@@ -175,6 +171,7 @@ export async function render({ rest, go }) {
       el('section', { class: 'panel' },
         el('h1', { text: '일기' }),
         el('p', { class: 'lead', text: '이 폰에만 남고, 보내기를 누른 것만 나간다.' }),
+        el('div', { class: 'segs' }, el('a', { class: 'seg', href: '#/listen', text: '듣기' }), el('a', { class: 'seg', href: '#/talk', text: '대화 칸' }), el('a', { class: 'seg', href: '#/people', text: '만난 사람' })),
         el('p', { class: 'note', text: `일기 ${ready.length}개 · 아직 보내지 않은 것 ${unsent.length}개${drafts.length ? ` · 다듬을 초안 ${drafts.length}개` : ''}` })),
       el('section', { class: 'panel' },
         el('h2', { text: '보내기' }),
@@ -183,7 +180,7 @@ export async function render({ rest, go }) {
           : settings.collector === 'file'
             ? '보내기를 누르면 파일이 내려온다. 그 파일을 정리하는 사람에게 건넨다.'
             : '모으는 곳이 아직 없다. 보내기를 누르면 파일이 내려온다. 정리하는 사람에게 건넨다.' }),
-        el('div', { class: 'actions' }, send, fileAll, copy),
+        el('div', { class: 'actions' }, send, copy),
         drafts.length ? el('p', { class: 'note', text: `초안 ${drafts.length}개는 다듬어 남겨야 보낼 수 있다. 녹음은 안 간다.` }) : null,
         status),
       days.map((d) => el('section', { class: 'panel' },

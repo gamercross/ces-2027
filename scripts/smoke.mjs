@@ -53,31 +53,6 @@ const settings = await json('data/settings.json');
   `폰 안 받아쓰기 모델: 판 · MIT 출처가 고정되고 받기 전에 ${toMB(expected)}MB와 와이파이 권장을 보인다 (${(expected / 1048576).toFixed(1)} MiB)`);
 }
 
-// 따로 신청하는 곳 (깊게 7): 공식 출처만, 줄마다 출처와 확인 날짜, 2027 안내가 없는 줄은 "확인 필요"와 작년 것.
-{
-  const sepData = await json('data/separate.json');
-  const sep = await import('../web/separate.js');
-  const OFFICIAL = /^https:\/\/(www\.ces\.tech|www\.samsung\.com|news\.samsung\.com|www\.nvidia\.com|www\.hyundai\.com|www\.lg\.com|www\.qualcomm\.com|waymo\.com|zoox\.com|www\.vegasmeansbusiness\.com)\//;
-  const isDate = (s) => /^\d{4}-\d\d-\d\d$/.test(s);
-  const groups = new Set(sepData.groups.map((g) => g.k));
-  const ids = new Set(sepData.items.map((it) => it.id));
-  const shapeOk = sepData.items.every((it) => it.id && groups.has(it.group) && it.org && it.what && it.who && ['confirmed', 'check'].includes(it.status) && it.apply && (it.apply.url === null || /^https:\/\//.test(it.apply.url)) && it.apply.ko && (it.date === null || isDate(it.date)) && (it.deadline === null || isDate(it.deadline)) && (it.watchFrom === null || isDate(it.watchFrom)));
-  check(shapeOk && ids.size === sepData.items.length && isDate(sepData.read), `따로 신청 자료: ${sepData.items.length}줄의 꼴이 맞다 (모둠 · 상태 · 날짜 · 신청 링크)`);
-  const sources = sepData.items.flatMap((it) => it.sources);
-  check(sepData.items.every((it) => it.sources.length > 0) && sources.every((s) => isDate(s.read) && s.ko) && sepData.items.filter((it) => it.group !== 'reference').flatMap((it) => it.sources).every((s) => OFFICIAL.test(s.url)), `따로 신청 자료: 줄마다 출처와 확인 날짜가 있고, 공식 모둠은 CES 공식 · 회사 공식 사이트이고 언론 모둠은 공식 확인 아님으로 나뉜다`);
-  const waiting = sepData.items.filter((it) => it.status === 'check');
-  check(['삼성', '엔비디아', '현대차그룹'].every((org) => sepData.items.some((it) => it.org === org && it.group === 'watch' && it.status === 'check' && it.last && it.last.startsWith('작년(CES 2026)') && it.apply.url === null && it.watchFrom)), `삼성 · 엔비디아 · 현대차그룹: 2027 안내가 없어 "확인 필요"로 두고 작년에 한 것과 다시 볼 날을 적었다 (확인 필요 ${waiting.length}줄 · 확인됨 ${sepData.items.length - waiting.length}줄)`);
-  const allText = JSON.stringify(sepData.items);
-  const rides = sepData.items.filter((it) => it.group === 'ride');
-  check(rides.length >= 3 && !/무료/.test(JSON.stringify(rides.filter((it) => it.id !== 'ride-loop')).replace(/무료라는 말은 없다|무료라고 적지 않는다/g, '')) && rides.find((it) => it.id === 'ride-loop').what.includes('운전 방식은 공식 안내 없음') && !/@[a-z]+\.[a-z]/i.test(allText), '이동: 자율주행 택시 줄에는 확인되지 않은 "무료"가 없고, 베가스 루프는 공식 안내에서 운전 방식이 없다고 적었다. 자료에 메일 주소가 없다');
-  const refs = sepData.items.filter((it) => it.group === 'reference');
-  const refNames = ['소니', '파나소닉', '현대모비스', 'SK하이닉스', '롯데', 'HD현대', 'Zoox'];
-  check(refs.length === 7 && refNames.every((name) => refs.some((it) => it.org === name)) && refs.every((it) => it.sources.every((s) => s.official === false) && it.sources.every((s) => /^https:\/\//.test(s.url))), '참고(언론): 소니 · 파나소닉 · 현대모비스 · SK하이닉스 · 롯데 · HD현대 · Zoox 보조 줄이 공식 자료와 나뉘고 모두 공식 확인 아님으로 적었다');
-  const waymo = sepData.items.find((it) => it.id === 'key-waymo');
-  check(waymo.date === '2027-01-05' && waymo.from === '18:30' && waymo.to === '19:45' && /Palazzo/.test(waymo.where), 'Waymo 기조연설은 1/5 18:30 ~ 19:45 베네시안 Palazzo Ballroom이다 (CES 일정표)');
-  const badge = sepData.items.find((it) => it.id === 'ces-badge');
-  check(badge.what.includes('운영팀이 등록') && badge.apply.url === null && badge.apply.ko.includes('따로 할 일 없음') && badge.todo.includes('여권') && badge.deadline === null && !/달러|\$\d/.test(JSON.stringify(badge)), '배지: 연수단은 운영팀이 등록 · 따로 할 일 없음 · 받는 곳에서 여권 보이기로 적고, 값과 마감은 넣지 않았다');
-
 // 오가는 법(교통): 줄마다 CES 공식 출처와 확인 날짜, 2027 안내가 없거나 어긋나는 줄은 "확인 필요".
 {
   const transit = await json('data/transit.json');
@@ -104,8 +79,8 @@ const settings = await json('data/settings.json');
   check(tt.length === 3 && tt[1].parts[0] === '하루 내내 7:30 ~ 18:30 · 10분마다', '교통 자료: Tech Express 시간표가 전단대로 읽힌다 (수 ~ 금 7:30 ~ 18:30, 10분마다)');
   const n = tr.counts(transit);
   const root = (p) => readFile(new URL(`../${p}`, import.meta.url), 'utf8');
-  const [app, homeJs, pagesYml, linksYml] = await Promise.all([root('web/app.js'), root('web/views/home.js'), root('.github/workflows/pages.yml'), root('.github/workflows/links.yml')]);
-  check(/transit: \(\) => import\('\.\/views\/transit\.js'\)/.test(app) && !/from '\.\/transit\.js'/.test(app + homeJs) && homeJs.includes("#/transit") && homeJs.includes("#/apply"), '교통 화면은 누를 때 불러온다 (첫 화면 조각에 고정 import 없음). 첫 화면에는 링크만 있다');
+  const [app, mapJs, pagesYml, linksYml] = await Promise.all([root('web/app.js'), root('web/views/map.js'), root('.github/workflows/pages.yml'), root('.github/workflows/links.yml')]);
+  check(/transit: \(\) => import\('\.\/views\/transit\.js'\)/.test(app) && !/from '\.\/transit\.js'/.test(app + mapJs) && mapJs.includes("#/transit"), '교통 화면은 누를 때 불러온다 (첫 화면 조각에 고정 import 없음). 지도 탭에는 링크만 있다');
   check(pagesYml.includes('data/transit.json') && linksYml.includes('--in data/transit.json'), '교통 자료는 배포에 담기고, 출처 링크 살피기(check-links)가 이 파일도 본다');
   lines.push(`교통 | 줄 ${n.total}개: 2027 확인됨 ${n.confirmed} · 확인 필요 ${n.check} · 읽은 날짜 ${transit.read}`);
 }
@@ -141,104 +116,6 @@ const settings = await json('data/settings.json');
     lines.push(`로고 | 공식 자료에 로고 ${got.length}곳 (${((got.length / ex.ex.length) * 100).toFixed(0)}%) · data/logos.json ${(size / 1024).toFixed(1)} KB`);
   }
 }
-  // 띠와 일정으로 바꾸는 셈 (지어낸 값으로 본다).
-  const fake = [
-    { id: 'a', org: '가', what: '표', status: 'check', deadline: '2027-01-03', watchFrom: '2026-12-01', date: '2027-01-06', from: '17:00', to: '18:30', where: '어디', place: '' },
-    { id: 'b', org: '나', what: '안내', status: 'check', deadline: null, watchFrom: '2026-12-20', date: null, from: null, to: null, where: '', place: '' },
-    { id: 'c', org: '다', what: '끝난 것', status: 'confirmed', deadline: '2026-12-01', watchFrom: '2026-11-01', date: '2027-01-06', from: '11:00', to: null, where: '', place: '' },
-  ];
-  const due = sep.dueSoon(fake, {}, '2026-12-28');
-  check(due.length === 1 && due[0].item.id === 'a' && due[0].left === 6 && sep.dueSoon(fake, {}, '2026-12-26').length === 0 && sep.dueSoon(fake, { a: 'x' }, '2026-12-28').length === 0 && sep.dueSoon(fake, {}, '2027-01-04').length === 0, '마감 띠: 7일 안일 때만 보이고, 신청했다고 표시했거나 지난 것은 뺀다');
-  check(sep.toWatch(fake, '2026-12-05').map((it) => it.id).join() === 'a' && sep.toWatch(fake, '2026-12-25').map((it) => it.id).join() === 'a,b' && sep.toWatch(fake, '2026-11-20').length === 0, '다시 볼 띠: 적어 둔 날이 된 "확인 필요" 줄만 보인다');
-  const on = sep.toggleApplied(fake[0], {}, [{ id: 'mine', date: '2027-01-06', from: '19:00', to: '20:00', name: '내 일정', place: '' }], '2026-12-28');
-  const off = sep.toggleApplied(fake[0], on.applied, on.events, '2026-12-29');
-  const noTime = sep.toggleApplied(fake[2], {}, [], '2026-12-28');
-  check(on.applied.a === '2026-12-28' && on.events.length === 2 && on.events[1].id === 'sep-a' && on.events[1].from === '17:00' && off.events.length === 1 && off.events[0].id === 'mine' && !off.applied.a && noTime.applied.c && noTime.events.length === 0, '신청함 표시: 날짜와 시간이 정해진 것은 내 일정에 들어가고, 풀면 빠진다. 내가 넣은 일정은 건드리지 않는다');
-  const sum = sep.summary(sepData);
-  check(sum.watch.slice(0, 3).join() === '삼성,엔비디아,현대차그룹' && sum.rides[0] === 'Waymo' && sum.apply.some((t) => t.includes('레노버')), `첫 화면 카드: ${sum.watch.join(' · ')} · 따로 표 ${sum.apply.length}곳 · 가기 전에 ${sum.rides[0]} 앱`);
-  const homeJs = await readFile(join(dist, 'views/home.js'), 'utf8');
-  check(homeJs.includes("import('../separate.js')") && !/^import [^;]*separate\.js/m.test(homeJs) && homeJs.includes('separateSeen.v1') && homeJs.includes('따로 신청해야 하는 곳'), '첫 화면: 따로 신청 카드는 처음 한 번 크게 보이고(닫은 것을 폰에 적는다), 그 셈과 자료는 첫 화면을 그린 뒤에 읽는다');
-}
-
-// 물어보기: 앱 안 자료를 한 칸에서 찾는 셈(web/askall.js)과 자주 묻는 것(data/faq.json). 답은 앱 안 자료의 줄과 이어져 있어야 한다.
-{
-  const ask = await import('../web/askall.js');
-  const faq = await json('data/faq.json');
-  const infoD = await json('data/info.json');
-  const sepD = await json('data/separate.json');
-  const docs = { info: infoD, separate: sepD };
-  const isDate = (s) => /^\d{4}-\d\d-\d\d$/.test(s);
-  const entries = ask.buildEntries({ ...docs, sessions: null });
-  const ids = new Set(faq.items.map((it) => it.id));
-  check(faq.items.length >= 10 && ids.size === faq.items.length && isDate(faq.read) && faq.items.every((it) => it.q && it.a && it.keys.length > 0 && it.links.length > 0 && it.links.every((l) => /^#\//.test(l.to) && l.ko) && it.basis.length > 0), `자주 묻는 것: ${faq.items.length}개의 꼴이 맞다 (물음 · 답 · 열쇠말 · 가는 링크 · 근거)`);
-  // 근거: 자료의 줄을 가리키고, 그 줄의 출처와 확인 날짜가 있어야 한다. 앱 안 글은 그 글이 실제로 있어야 한다.
-  const OFFICIAL = /^https:\/\/(www\.ces\.tech|www\.samsung\.com|news\.samsung\.com|www\.nvidia\.com|www\.hyundai\.com|www\.lg\.com|www\.qualcomm\.com|waymo\.com|zoox\.com|www\.vegasmeansbusiness\.com)\//;
-  let basisBad = 0;
-  let basisCount = 0;
-  for (const it of faq.items) {
-    for (const b of it.basis) {
-      basisCount += 1;
-      const r = ask.resolveBasis(b, docs);
-      if (!r.ok) { basisBad += 1; continue; }
-      if (b.app) {
-        let found = isDate(b.read) && Array.isArray(b.check) && b.check.length > 0;
-        for (const c of b.check || []) found = found && (await readFile(join(dist, c.file), 'utf8').catch(() => '')).includes(c.has);
-        if (!found) basisBad += 1;
-      } else if (!(r.sources.length > 0 && r.sources.every((s) => OFFICIAL.test(s.url) && isDate(s.read)))) basisBad += 1;
-    }
-  }
-  check(basisBad === 0, `자주 묻는 것: 근거 ${basisCount}줄이 모두 자료의 줄(또는 앱 안 글)로 이어지고, 자료의 줄은 공식 출처와 확인 날짜가 있다 (안 이어진 것 ${basisBad})`);
-  const factBad = faq.items.flatMap((it) => (it.facts || []).filter((f) => !it.a.includes(f) || !it.basis.some((b) => ask.resolveBasis(b, docs).text.includes(f))).map((f) => `${it.id}:${f}`));
-  check(factBad.length === 0 && faq.items.filter((it) => it.facts.length > 0).length >= 8, `자주 묻는 것: 답에 적은 사실(N107 · Tech Express · 2025-12-04 …)이 근거 줄에도 그대로 있다 ${factBad.length ? `(없는 것 ${factBad.join(' / ')})` : ''}`);
-  // 예시 물음이 맞는 답으로 이어진다.
-  const firstFaq = (q) => ask.searchAll(q, entries, faq).faq[0]?.id;
-  const ASKS = [['배지는 어디서 받나', 'badge-where'], ['베네시안에서 LVCC는 어떻게 가나', 'venetian-to-lvcc'], ['전시는 몇 시에 여나', 'open-hours'], ['삼성은 따로 신청해야 하나', 'samsung-apply'], ['인터넷이 없어도 되나', 'offline'], ['내가 적은 것은 어디에 남나', 'my-data'], ['가격', 'price'], ['셔틀', 'shuttles'], ['삼성', 'samsung-apply'], ['배지', 'badge-where']];
-  const wrong = ASKS.filter(([q, id]) => firstFaq(q) !== id).map(([q]) => q);
-  check(wrong.length === 0, `예시 물음 ${ASKS.length}개가 맞는 답으로 이어진다 ${wrong.length ? `(틀린 것: ${wrong.join(' / ')})` : '(배지 · 셔틀 · 삼성 · 가격 포함)'}`);
-  const samsung = faq.items.find((it) => it.id === 'samsung-apply');
-  const badgeAns = faq.items.find((it) => it.id === 'badge-where');
-  check(samsung.a.includes('확인 필요') && samsung.a.includes('2025-12-04') && !/따로 신청해야 한다\./.test(samsung.a) && badgeAns.a.includes('N107') && badgeAns.a.includes('운영팀이 등록한다') && badgeAns.a.includes('여권'), '삼성: 2027 안내가 없어 "확인 필요"로 답하고 작년 일을 적었다. 배지: 받는 곳 · 운영팀 등록 · 여권이 답에 있다');
-  // 낱말을 넣으면 갈래별로 나오고, 줄마다 가는 링크와 출처(또는 앱에 담은 자료라는 말)가 있다.
-  let linkBad = 0;
-  const kinds = {};
-  for (const q of ['배지', '셔틀', '삼성', '가격']) {
-    const r = ask.searchAll(q, entries, faq);
-    kinds[q] = r.groups.map((g) => g.k).join('+');
-    if (!r.faq.length || !r.groups.length) linkBad += 1;
-    for (const g of r.groups) for (const h of g.hits) if (!/^#\//.test(h.to) || !h.toKo || !(h.src ? h.src.url && isDate(h.src.read) : h.note)) linkBad += 1;
-  }
-  check(linkBad === 0, `"배지" "셔틀" "삼성" "가격": 자주 묻는 것과 갈래별 결과가 나오고, 줄마다 가는 링크와 출처 · 확인 날짜가 있다 (${Object.entries(kinds).map(([q, k]) => `${q}: ${k}`).join(' · ')})`);
-  check(!ask.GROUPS.some((g) => g.k === 'phrases') && !ask.searchAll('가격', entries, faq).groups.some((g) => g.k === 'phrases'), '물어보기 결과에 "부스에서 쓸 질문"(물어볼 말) 갈래가 없다');
-  const nothing = ask.searchAll('점심 맛집 추천', entries, faq);
-  check(nothing.faq.length === 0 && nothing.groups.length === 0 && ask.searchAll('', entries, faq).groups.length === 0 && ask.searchAll('   ', entries, faq).faq.length === 0, '자료에 없는 말과 빈 칸은 결과 0건이다 (지어내지 않는다)');
-  check(ask.words('배지는 어디서 받나').map((w) => w.strong[0]).join() === '배지' && ask.words('Tech Express 9번').map((w) => w.strong[0]).join() === 'tech,express' && ask.words('베네시안에서 LVCC는 어떻게 가나').map((w) => w.strong[0]).join() === '베네시안,lvcc', '낱말 나누기: 조사와 묻는 끝말을 떼고, 영어는 낱말로 나눈다');
-  // 세션 일정: 있으면 찾고 없으면 건너뛴다. 꼴이 달라도 제목 · 때 · 곳 글만 쓰고, 깨져도 던지지 않는다.
-  const fakeSessions = { read: '2026-11-21', source: { ko: '지어낸 일정', url: 'https://www.ces.tech/x', read: '2026-11-21' }, items: [{ id: 's1', name: '지어낸 세션 제목', date: '2027-01-07', from: '10:00', to: '11:00', where: '지어낸 방 100' }, { id: 's2', title: { ko: '둘째 세션', en: 'Second' }, when: '1/8 오후', place: '다른 방' }, { id: 's3' }, 7, null] };
-  const withSessions = ask.buildEntries({ ...docs, sessions: fakeSessions });
-  const sessHit = ask.searchAll('지어낸 세션', withSessions, faq).groups.find((g) => g.k === 'sessions');
-  const sessWhere = ask.searchAll('지어낸 방', withSessions, faq).groups.find((g) => g.k === 'sessions');
-  const broken = [null, undefined, 5, 'x', {}, [], [1, 'a', null], { items: 'x' }, { sessions: [{}] }].map((j) => ask.sessionEntries(j).length);
-  check(sessHit?.hits[0].title === '지어낸 세션 제목' && sessHit.hits[0].show.includes('1/7') && sessHit.hits[0].show.includes('10:00 ~ 11:00') && sessHit.hits[0].show.includes('지어낸 방 100') && sessHit.hits[0].src?.read === '2026-11-21' && sessWhere?.hits[0].title === '지어낸 세션 제목' && ask.sessionEntries(fakeSessions).length === 2 && broken.every((n) => n === 0) && withSessions.length === entries.length + 2, '세션 일정: 있으면 제목 · 때 · 곳으로 찾고, 없거나 꼴이 달라도 깨지지 않고 건너뛴다');
-  // 세션 일정 자료의 실제 꼴(crates/ces-data/src/sessions.rs의 to_json: v · source(ko, url) · items[id, date, from, to, title, place, topics, track, url, live]).
-  // 줄에 확인 날짜(read)가 없으므로 받은 때(v)의 날짜를 확인 날짜로 쓰고, 줄의 url을 출처로 쓴다. (지어낸 값)
-  const realShape = { v: '2026-11-21T03:00:00Z', source: { ko: 'CES 공식 일정', url: 'https://www.ces.tech/schedule/' }, zone: '라스베이거스 시각', days: ['2027-01-07'], skipped: 0, items: [
-    { id: 'x1', date: '2027-01-07', from: '09:30', to: '10:15', title: 'Keynote: 지어낸 기조연설', place: '지어낸 홀 A', topics: ['robotics'], track: 'Keynote', url: 'https://www.ces.tech/schedule/x1', live: true },
-    { id: 'x2', date: '2027-01-08', from: '13:00', to: '13:45', title: 'Fake Mobility Panel', place: '', topics: [], track: 'Conference', url: 'https://www.ces.tech/schedule/x2', live: false },
-    { id: 'x3', date: '2027-01-08', from: '14:00', to: '14:45', title: 'Fake Robot Talk', place: 'Fake Room 7', topics: ['ai'], track: 'Conference', url: 'https://www.ces.tech/schedule/x3', live: false }] };
-  const realEntries = ask.buildEntries({ ...docs, sessions: realShape });
-  const realKey = ask.searchAll('기조연설', realEntries, faq).groups.find((g) => g.k === 'sessions');
-  const realRoom = ask.searchAll('fake room', realEntries, faq).groups.find((g) => g.k === 'sessions');
-  const realEn = ask.searchAll('mobility', realEntries, faq).groups.find((g) => g.k === 'sessions');
-  const k = realKey?.hits.find((h) => h.title.startsWith('Keynote'));
-  check(ask.sessionEntries(realShape).length === 3 && k && k.live === true && k.show === '1/7 09:30 ~ 10:15 · 지어낸 홀 A' && k.src.url === 'https://www.ces.tech/schedule/x1' && k.src.read === '2026-11-21' && k.to === '#/sessions' && realRoom?.hits[0].show === '1/8 14:00 ~ 14:45 · Fake Room 7' && realEn?.hits[0].show === '1/8 13:00 ~ 13:45' && realEn.hits[0].src.read === '2026-11-21', '세션 일정의 실제 꼴(v · items[title · date · from · to · place · url])에서 제목 · 때 · 곳과 라이브 표시를 읽고, 줄의 url과 받은 날짜를 출처로 보이며 #/sessions로 이어진다');
-  // 화면 규칙: 첫 화면에 고정 import를 더하지 않고, "AI" · "챗봇"이라는 말이 없고, 안내 글이 앱 안에 있다.
-  const sources = await Promise.all(['askall.js', 'views/askall.js', 'data/faq.json'].map((p) => readFile(join(dist, p), 'utf8')));
-  const homeSrc = await readFile(join(dist, 'views/home.js'), 'utf8');
-  const appSrc = await readFile(join(dist, 'app.js'), 'utf8');
-  check(sources.every((s) => !/\bAI\b|챗봇|chatbot/i.test(s)) && sources.every((s) => !/innerHTML/.test(s)), '물어보기 화면 · 셈 · 자료 어디에도 "AI" · "챗봇"이라는 말이 없고 innerHTML을 쓰지 않는다');
-  check(/q: \(\) => import\('\.\/views\/askall\.js'\)/.test(appSrc) && !/^import .*askall/m.test(appSrc) && !/askall/.test(html) && homeSrc.includes("href: '#/q'") && !/import .*askall/.test(homeSrc), '들어가는 길: #/q는 누를 때 불러오고(app.js VIEWS), 첫 화면에는 링크 하나뿐이다 (고정 import 없음)');
-}
-
 // 듣기 (깊게 6): 두 길의 자리, 폰이 못 하는 것은 안 된다고 돌려주는지, 일기 초안의 꼴.
 {
   const speech = await import('../web/speech.js');
@@ -275,7 +152,7 @@ const settings = await json('data/settings.json');
 }
 check(['companyIntro', 'collector', 'collectorUrl', 'codysseyIcon', 'companyImage', 'privateOn'].every((k) => k in settings), `정한 것과 아직 정하지 않은 항목의 자리가 설정에 있다 (회사 소개 ${settings.companyIntro} · 모으는 곳 ${settings.collector}${settings.collectorUrl ? ' 주소 있음' : ' 주소 비어 있음'} · 아이콘 ${settings.codysseyIcon} · 로고 ${settings.companyImage} · 비공개 날 ${settings.privateOn})`);
 check(settings.codysseyIcon === false || (typeof settings.codysseyIcon === 'string' && (await exists(settings.codysseyIcon))), `코디세이 아이콘: ${settings.codysseyIcon ? `그림이 있다 (${settings.codysseyIcon})` : '글자만'}`);
-for (const f of ['app.js', 'store.js', 'views/home.js', 'views/settings.js', 'views/info.js', 'theme.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'qr.js', 'route.js']) check(await exists(f), `${f}가 있다`);
+for (const f of ['app.js', 'store.js', 'views/map.js', 'views/settings.js', 'theme.js', 'views/card.js', 'views/plan.js', 'views/rec.js', 'qr.js', 'route.js']) check(await exists(f), `${f}가 있다`);
 
 // 동선: 날짜 채우기와 걷는 차례.
 const { placeTable, sortRoute, fillDays } = await import('../web/route.js');
@@ -472,43 +349,17 @@ check(diary.fileName(who, new Date(2027, 0, 7)) === 'ces2027-일기-물개-20270
   check(text.includes('■ 1/7 (목)\n1. Alpha | Mobility · 웨스트 홀 회의실 W317') && text.includes('목록 코드: eUUaAAN.2,ellagio') && md.includes('| 1 | Alpha / Mobility | W317, 5131 | 웨스트 홀 회의실, 웨스트 홀 |') && md.includes('## 날짜 미정') && csv.startsWith('\ufeff날짜,순서,회사') && csv.includes('"1/7","1","Alpha | Mobility","W317 / 5131","웨스트 홀 회의실 / 웨스트 홀","South Korea","로봇","https://exhibitors.ces.tech/x?exhid=0013000001MeUUaAAN"') && csv.includes('"Bellagio ""Suites"""'), '동선 내보내기: 단톡방 글 · 마크다운 표 · CSV');
 }
 
-// 주제 판: 후보 세우기 · 볼 회사 후보 · 출발 전 판 한 장.
-{
-  const T = await import('../web/topics.js');
-  const fake = { v: '2026-11-20', cats: ['Robotics', 'Health', 'Audio'], ex: [
-    ['A', 'Alpha Robotics', '', 0, '0', 2, 0, ['14731@LVCC_N']],
-    ['B', 'Beta Health', '', 0, '1', 1, 0, []],
-    ['C', 'Core Bots', '', 0, '0.1', 1, 0, ['52011A@VEN_AD']],
-    ['D', 'Delta Sound', '', 0, '2', 0, 0, []],
-    ['E', 'Echo Bots', '', 0, '0', 0, 0, []],
-  ] };
-  const tbl = { ko: { Robotics: '로봇', Health: '헬스케어', Audio: '오디오' }, audiences: { ret: ['Health'] } };
-  const order = (tag, topics) => T.candidates(fake, tbl, tag, topics).map((c) => `${c.ko}${c.mine ? '*' : ''}:${c.awards}/${c.count}`).join(' ');
-  check(order(null, []) === '로봇:2/3 헬스케어:2/2 오디오:0/1' && order('ret', []) === '헬스케어*:2/2 로봇:2/3 오디오:0/1' && order(null, [{ cats: ['Robotics'] }]) === '헬스케어:2/2 오디오:0/1', '주제 후보: 내 태그에 맞는 분야 먼저, 혁신상이 많은 차례, 이미 든 분야는 뺀다');
-  const topic = { ...T.newTopic('로봇 | 팔', ['Robotics']), ex: ['C', 'ZZ'], notes: { stu: '배워 볼 만하다\n둘째 줄', job: '', ret: '', mid: '' } };
-  const sug = T.suggestions(topic, fake);
-  check(sug.awards.map((r) => r[0]).join('') === 'A' && sug.others === 1 && T.pinned(topic, fake).map((r) => r[0]).join('') === 'C', '주제의 볼 회사 후보: 혁신상 받은 곳(최고 혁신상 먼저), 넣은 곳과 자료에서 빠진 곳은 뺀다');
-  const md = T.boardMarkdown([topic], fake, new Map([['VEN_AD', '베네시안 엑스포 홀 A-D']]), [{ k: 'stu', ko: '학생' }, { k: 'job', ko: '취준생' }, { k: 'ret', ko: '정년' }, { k: 'mid', ko: '장년' }], '2026-12-20');
-  check(md.includes('| # | 주제 | 볼 곳 | 학생 | 취준생 | 정년 | 장년 |') && md.includes('| 1 | 로봇 / 팔 | Core Bots (베네시안 엑스포 홀 A-D 52011A) | 배워 볼 만하다 둘째 줄 |  |  |  |') && md.includes('2026-11-20에 받음'), '출발 전 판 한 장: 주제 · 볼 곳 · 네 태그 칸 (docs/기록틀.md 1절의 꼴)');
-  const team = { topics: [{ name: '로봇 | 팔' }, { name: '소리', cats: ['Audio', 'Nope'] }] };
-  const got = T.fromTeam(team, [topic], fake);
-  const full = Array.from({ length: T.MAX_TOPICS }, (_, i) => T.newTopic(`주제 ${i}`));
-  check(got.length === 1 && got[0].name === '소리' && String(got[0].cats) === 'Audio' && T.fromTeam(team, full, fake).length === 0, `팀 주제 가져오기: 없는 것만, 없는 분야는 빼고, ${T.MAX_TOPICS}개를 넘기지 않는다`);
-  const teamFile = await json('data/topics.json');
-  check(Array.isArray(teamFile.topics) && teamFile.topics.length <= T.MAX_TOPICS && teamFile.topics.every((t) => t.name && (t.cats || []).every((c) => c in cats.ko)), `팀 주제 자리(data/topics.json): ${teamFile.topics.length}개`);
-}
-
 // 지도와 오프라인.
 const appJs = await readFile(join(dist, 'app.js'), 'utf8');
 check(!html.includes('map3d') && !appJs.includes('map3d') && (await exists('map3d.js')), '3D 지도는 첫 화면에 싣지 않고 지도 화면에서 그때 불러온다');
 // 첫 화면: 미리 받는 조각이 모두 있고, 3D · 코어 · 큰 자료는 미리 받지 않는다.
 const preloads = [...html.matchAll(/<link rel="(?:modulepreload|preload)" href="([^"]+)"/g)].map((m) => m[1]);
 let preloadOk = preloads.length > 0;
-for (const f of preloads) preloadOk = preloadOk && (await exists(f)) && !/map3d|core\.|exhibitors|search-index|views\/(map|find|plan|diary)/.test(f);
+for (const f of preloads) preloadOk = preloadOk && (await exists(f)) && !/map3d|core\.|exhibitors|search-index|views\/(plan|diary)/.test(f);
 check(preloadOk, `첫 화면이 미리 받는 조각 ${preloads.length}개가 모두 있고, 3D · 코어 · 전시사 자료는 거기에 없다`);
 // 말 기능(듣기)은 누를 때 불러온다: 첫 화면이 싣는 조각 어디에도 고정으로 물려 있지 않다.
 {
-  const firstScreen = (await Promise.all(['app.js', 'store.js', 'data.js', 'offline.js', 'notify.js', 'alerts.js', 'dom.js', 'views/home.js', 'views/card.js'].map((f) => readFile(join(dist, f), 'utf8')))).join('\n');
+  const firstScreen = (await Promise.all(['app.js', 'store.js', 'data.js', 'offline.js', 'notify.js', 'alerts.js', 'dom.js', 'views/map.js', 'views/card.js'].map((f) => readFile(join(dist, f), 'utf8')))).join('\n');
   const fixed = [...firstScreen.matchAll(/^import [^;]*from '([^']+)';/gm)].map((m) => m[1]);
   const lazy = /speech|talk-ui|audio-store|talk\.js|views\/(listen|talk)/;
   check(!fixed.some((f) => lazy.test(f)) && !preloads.some((f) => lazy.test(f)) && appJs.includes("listen: () => import('./views/listen.js')"), '듣기는 첫 화면에 싣지 않고 누를 때 불러온다');
@@ -518,7 +369,7 @@ const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 const version = await json('version.json').catch(() => null);
 const swFiles = JSON.parse(`[${(sw.match(/const FILES = \[(.*)\];/) || [])[1] || ''}]`);
 check(!!version && sw.includes(JSON.stringify(version.v)) && !sw.includes('__VERSION__'), `판 이름이 찍혔다 (${version?.v})`);
-const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'tokens.js', 'frame.js', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'views/map.js', 'views/diary.js', 'views/topics.js', 'views/days.js', 'views/listen.js', 'views/talk.js', 'talk.js', 'views/apply.js', 'separate.js', 'data/separate.json', 'speech.js', 'talk-ui.js', 'audio-store.js', 'topics.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'alerts.js', 'notify.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/topics.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
+const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'tokens.js', 'frame.js', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/card.js', 'views/plan.js', 'views/rec.js', 'views/map.js', 'mapfind.js', 'bands.js', 'views/settings.js', 'views/diary.js', 'views/days.js', 'views/listen.js', 'views/talk.js', 'talk.js', 'speech.js', 'talk-ui.js', 'audio-store.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'alerts.js', 'notify.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
 // 디자인 토큰: tokens.css가 값의 원본이고, 지도 코드가 쓰는 tokens.js의 기본값이 한 글자도 다르지 않아야 한다.
 // 화면 파일(app.css · views · 지도 코드)이 색을 직접 적지 않는 것도 본다 (design.md).
 {
@@ -537,27 +388,60 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
   const html = await readFile(join(dist, 'index.html'), 'utf8');
   const app = await readFile(join(dist, 'app.js'), 'utf8');
   const tabs = (html.match(/data-tab="/g) || []).length;
-  check(tabs === 5 && html.includes('id="back"') && html.includes('id="net"') && html.includes('href="frame.js"'), `메인 틀: 아래 탭 ${tabs}개(다섯까지) · 뒤로 · 인터넷 없음 줄이 있고 frame.js를 첫 화면과 같이 받는다`);
+  check(tabs === 4 && html.includes('id="back"') && html.includes('id="net"') && html.includes('href="frame.js"'), `메인 틀: 아래 탭 ${tabs}개(넷) · 뒤로 · 인터넷 없음 줄이 있고 frame.js를 첫 화면과 같이 받는다`);
+  // 2단계(11/22): 탭 넷 틀. 첫 화면 · 회사 탭이 없고, 열면 지도, 합친 화면은 알맞은 탭 아래에 선다. 지운 화면의 파일은 지은 것에 없다.
+  {
+    const views = [...app.matchAll(/^  (\w+): \(\) => import\('\.\/views\/(\w+)\.js'\),$/gm)].map((m) => m[1]);
+    const tabOf = Object.fromEntries([...(app.match(/const TAB_OF = \{([^}]*)\}/)?.[1] || '').matchAll(/(\w+): '(\w+)'/g)].map((m) => [m[1], m[2]]));
+    const want = { map: 'map', transit: 'map', plan: 'plan', rec: 'plan', days: 'plan', sessions: 'plan', diary: 'diary', listen: 'diary', talk: 'diary', people: 'diary', settings: 'settings', card: 'settings' };
+    const gone = ['views/home.js', 'views/find.js', 'views/topics.js', 'views/askall.js', 'views/apply.js', 'views/onsite.js', 'views/info.js', 'askall.js', 'onsite.js', 'separate.js', 'topics.js', 'data/separate.json', 'data/onsite.json', 'data/topics.json', 'data/faq.json'];
+    const stillThere = [];
+    for (const f of gone) if (await exists(f)) stillThere.push(f);
+    check(Object.entries(want).every(([k, v]) => tabOf[k] === v) && views.length === Object.keys(want).length && /replaceTo\(!getProfile\(\) && !sessionStorage\.getItem\('ces2027\.introLater'\) \? '#\/card' : '#\/map'\)/.test(app) && /new Set\(\['map', 'plan', 'diary', 'settings'\]\)/.test(app) && stillThere.length === 0,
+      `탭 넷 틀: 앱을 열면 지도(명함이 없으면 명함부터), 화면 ${views.length}개가 지도 · 동선 · 일기 · 설정 아래에 서고, 첫 화면 · 회사 · 주제 판 · 알아둘 것 · 따로 신청 · 현장 안내 · 물어보기의 코드와 자료는 지은 것에 없다 (남은 것 ${stillThere.join(' ') || '없음'})`);
+    const planV = await readFile(join(dist, 'views/plan.js'), 'utf8');
+    const diaryV = await readFile(join(dist, 'views/diary.js'), 'utf8');
+    const transitV = await readFile(join(dist, 'views/transit.js'), 'utf8');
+    const mapfindV = await readFile(join(dist, 'mapfind.js'), 'utf8');
+    const mapV3 = await readFile(join(dist, 'views/map.js'), 'utf8');
+    check(planV.includes('지금 갈 곳') && planV.includes('alertBands(') && ['#/rec', '#/days', '#/sessions'].every((h) => planV.includes(h)) && ['#/listen', '#/talk', '#/people'].every((h) => diaryV.includes(h)) && transitV.includes('info.moving') && mapV3.includes('findBox()') && mapV3.includes('#/transit') && mapfindV.includes('getFinder'),
+      '합친 자리: 동선 맨 위에 "지금 갈 곳" 한 줄과 띠, 동선 아래에 추천 · 시간과 일정 · 세션, 일기 안에 듣기 · 대화 칸 · 만난 사람, 지도 위에 찾기 칸과 셔틀 · 오가는 법');
+    // 서비스 워커: 지운 영한 번역 모델이 폰에 남긴 것만 비우고 받아쓰기 모델 파일은 건드리지 않는다.
+    const { default: vm } = await import('node:vm');
+    const handlers = {};
+    const store = new Map([
+      ['ces2027-old', new Map()],
+      ['ces2027keep-speech-v1', new Map([['https://x/vendor/speech/a.js', 1], ['https://x/vendor/translate/source-tokenizer.json', 1]])],
+      ['transformers-cache', new Map([['https://huggingface.co/TigreGotico/opus-mt-en-ko-onnx/resolve/3f/int8/encoder_model.onnx', 1], ['https://huggingface.co/onnx-community/moonshine-tiny-ONNX/resolve/a6/x.onnx', 1]])],
+    ]);
+    const fakeCaches = { keys: async () => [...store.keys()], has: async (n) => store.has(n), delete: async (n) => store.delete(n), open: async (n) => ({ keys: async () => [...store.get(n).keys()].map((url) => ({ url })), delete: async (r) => store.get(n).delete(r.url) }) };
+    const ctx = { self: { addEventListener: (k, f) => { handlers[k] = f; }, clients: { claim: async () => {} }, registration: { scope: 'https://x/' }, location: { origin: 'https://x' } }, caches: fakeCaches, Request: class {}, URL };
+    vm.runInNewContext(sw.replace("'__VERSION__'", "'t'"), ctx);
+    let pending;
+    handlers.activate({ waitUntil: (p) => { pending = p; } });
+    await pending;
+    check(!store.has('ces2027-old') && !store.get('ces2027keep-speech-v1').has('https://x/vendor/translate/source-tokenizer.json') && store.get('ces2027keep-speech-v1').has('https://x/vendor/speech/a.js') && [...store.get('transformers-cache').keys()].length === 1 && [...store.get('transformers-cache').keys()][0].includes('moonshine') && /translationModel\.v1/.test(app),
+      '서비스 워커: 켜질 때 이미 받아 둔 영한 번역 모델과 단어 사전만 폰에서 비우고(받아쓰기 모델 파일은 그대로), 번역 설정 열쇠도 치운다');
+  }
   check(['loading()', 'failed(', 'missing(', 'history.back()'].every((w) => app.includes(w)) && !/p\.textContent = '화면을 불러오지 못했다/.test(app), '메인 틀: 느린 망엔 "불러오는 중", 못 불러오면 "다시 열기", 없는 주소는 첫 화면으로 말없이 보내지 않고 알린다, 뒤로는 앱 안 기록을 따른다');
   // 테마와 짧은 화면 (design.md "테마" · "글과 길이"): 밝게 · 어둡게 · 자동, 탭마다 강조색, 첫 화면은 지금 할 일만.
   const tokCss = await readFile(join(dist, 'tokens.css'), 'utf8');
   const themeJs = await readFile(join(dist, 'theme.js'), 'utf8');
   const settingsJs = await readFile(join(dist, 'views/settings.js'), 'utf8');
-  const homeV2 = await readFile(join(dist, 'views/home.js'), 'utf8');
-  const infoJs = await readFile(join(dist, 'views/info.js'), 'utf8');
+  const mapV2 = await readFile(join(dist, 'views/map.js'), 'utf8');
   const appCss = await readFile(join(dist, 'app.css'), 'utf8');
   const darkBlock = (tokCss.split(':root[data-theme="dark"]')[1] || '').split('/* 탭마다')[0];
   const darkVars = new Set([...darkBlock.matchAll(/--([a-z0-9-]+):/g)].map((m) => m[1]));
   const lightVars = [...tokCss.split(':root[data-theme="dark"]')[0].matchAll(/--((?:bg|panel|panel-2|ink|ink-2|accent|on-accent|mint|peach|lilac|warn|map-[a-z]+|day-\d|group-[a-z]+|tab-[a-z]+(?:-soft)?))\s*:/g)].map((m) => m[1]);
   const lacking = lightVars.filter((v) => !darkVars.has(v));
   check(lacking.length === 0 && /--qr-bg/.test(tokCss) && !darkVars.has('qr-bg') && !darkVars.has('qr-ink'), `어둡게: 밝게의 색 ${lightVars.length}개가 모두 어둡게에도 있다 (빠진 것 ${lacking.join(' ') || '없음'}). QR 색은 어둡게에서도 그대로다`);
-  const tabVars = ['home', 'find', 'plan', 'map', 'diary'].every((t) => tokCss.includes(`--tab-${t}:`) && tokCss.includes(`--tab-${t}-soft:`)) && ['find', 'plan', 'map', 'diary'].every((t) => tokCss.includes(`body[data-tab="${t}"]`));
-  check(tabVars && app.includes('document.body.dataset.tab'), '탭마다 강조색 하나: 홈 · 회사 · 동선 · 지도 · 일기가 각자 색이 있고 app.js가 <body data-tab>을 정한다');
+  const tabVars = ['home', 'plan', 'map', 'diary'].every((t) => tokCss.includes(`--tab-${t}:`) && tokCss.includes(`--tab-${t}-soft:`)) && ['plan', 'map', 'diary'].every((t) => tokCss.includes(`body[data-tab="${t}"]`));
+  check(tabVars && app.includes('document.body.dataset.tab'), '탭마다 강조색 하나: 지도 · 동선 · 일기 · 설정이 각자 색이 있고 app.js가 <body data-tab>을 정한다');
   const headPos = (needle) => html.indexOf(needle);
   check(headPos('src="theme.js"') > 0 && headPos('src="theme.js"') < headPos('href="tokens.css"') + 1000 && /prefers-color-scheme: dark/.test(themeJs) && /'light'/.test(themeJs) && /'dark'/.test(themeJs) && ['자동', '밝게', '어둡게'].every((w) => settingsJs.includes(w)) && /ces2027\.theme\.v1/.test(themeJs) && settingsJs.includes('setTheme') && /settings: \(\) => import/.test(app) && html.includes('href="#/settings"'), '테마: 설정에서 자동 · 밝게 · 어둡게를 고르고, theme.js가 첫 그림 전에 폰 설정(prefers-color-scheme)을 읽어 정한다');
-  check(!/campuses|moving|badge\.spots/.test(homeV2) && !/askPermission|offline\.install/.test(homeV2) && /campuses/.test(infoJs) && /askPermission/.test(settingsJs) && ['알림', '인터넷 없이'].every((w) => settingsJs.includes(w)), '첫 화면은 지금 할 일만: 날짜 · 캠퍼스 · 오가는 법 · 배지는 "알아둘 것"에, 알림 · 인터넷 없이는 "설정"에 있다');
-  const quickN = (homeV2.match(/\{ view: '/g) || []).length;
-  check(quickN <= 12 && /\.segs \{[^}]*overflow-x: auto/.test(appCss), `화면 길이: 바로 가기 ${quickN}칸(열둘까지), 칩 줄은 한 줄 가로 스크롤이다`);
+  check(!/askPermission|offline\.install/.test(mapV2) && /askPermission/.test(settingsJs) && ['명함', '알림', '인터넷 없이', '내보내기'].every((w) => settingsJs.includes(w)), '명함 · 알림 · 인터넷 없이 · 내보내기는 설정 탭에 있다');
+  const tabN = (html.match(/<a href="#\/[a-z]+" data-tab=/g) || []).length;
+  check(tabN === 4 && ['map', 'plan', 'diary', 'settings'].every((k) => html.includes(`data-tab="${k}"`)) && /\.segs \{[^}]*overflow-x: auto/.test(appCss), `아래 탭은 넷(지도 · 동선 · 일기 · 설정, ${tabN}개)이고, 칩 줄은 한 줄 가로 스크롤이다`);
 }
 const missing = mustCache.filter((f) => !swFiles.includes(f));
 const gone = [];
@@ -573,16 +457,16 @@ check(missing.length === 0 && gone.length === 0, `서비스 워커가 담아 둘
   new Function('window', boardData)(win);
   const BD = win.BOARD;
   const reqNos = BD.elements.filter((e) => e.t === 'requirement').map((e) => e.no);
-  const wantNos = [...Array.from({ length: 14 }, (_, i) => `R${18 + i}`).filter((no) => no !== 'R25'), 'R40', 'R41'];
+  const wantNos = [...Array.from({ length: 14 }, (_, i) => `R${18 + i}`).filter((no) => !['R25', 'R29', 'R30', 'R31'].includes(no)), 'R40', 'R41'];
   const frontText = JSON.stringify(BD.elements.filter((e) => e.f === 'v_big' || e.f === 'v_flow'));
-  const frontWords = ['날마다 쓸 시간', '내 일정', '추천', '길 안내', '종이 명함', '이벤트 부스', '명함 알림', '듣기', '녹음 알림', '따로 신청', '첫 화면 카드', '대화 칸'];
-  check(wantNos.every((no) => reqNos.includes(no)) && !reqNos.includes('R25') && !reqNos.includes('R39') && frontWords.every((w) => frontText.includes(w)) && Object.keys(BD.objectMap.objects).length >= 20 && BD.usecases.length >= 7 && BD.usecases.every((u) => !u.prop), `보드에 깊게 4 ~ 7이 보인다: 앞면 두 장에 낱말 ${frontWords.length}개, 뒷면에 요구 ${reqNos.length}개(R18 ~ R31(R25 제외) · R40 · R41, 번역 요구 R25 · R39는 없다) · 객체 ${Object.keys(BD.objectMap.objects).length}개 · 순서도 ${BD.usecases.length}개`);
+  const frontWords = ['날마다 쓸 시간', '내 일정', '추천', '길 안내', '종이 명함', '이벤트 부스', '명함 알림', '듣기', '녹음 알림', '대화 칸'];
+  check(wantNos.every((no) => reqNos.includes(no)) && !reqNos.includes('R25') && !reqNos.includes('R39') && frontWords.every((w) => frontText.includes(w)) && Object.keys(BD.objectMap.objects).length >= 20 && BD.usecases.length >= 7 && BD.usecases.every((u) => !u.prop), `보드에 깊게 4 ~ 7이 보인다: 앞면 두 장에 낱말 ${frontWords.length}개, 뒷면에 요구 ${reqNos.length}개(R18 ~ R31(R25 · R29 ~ R31 제외) · R40 · R41, 지운 요구는 없다) · 객체 ${Object.keys(BD.objectMap.objects).length}개 · 순서도 ${BD.usecases.length}개`);
   const guide = await readFile(join(dist, 'testers/index.html'), 'utf8').catch(() => '');
   const guideWords = ['홈 화면에 추가', '비행기 모드', '켜기', '폰 안에서만', '폰의 음성 인식 서비스', 'QR 두 개', '첫 화면', '안드로이드 크롬', '아이폰 사파리', '이름과 연락처는 적지 않는다', '일정은 바뀔 수 있', 'data-copy'];
   check(guideWords.every((w) => guide.includes(w)) && !/<input|<form|type="email"|type="tel"/.test(guide) && guide.includes('href="../app.css"'), `테스터 안내가 /testers/에 있다: 확인할 것 여덟 · 폰 둘 · 복사할 글, 이름과 연락처를 받는 칸이 없다`);
   // 안내에 적은 단추 · 글귀가 앱에 그대로 있는지 (앱의 글이 바뀌면 안내도 고친다).
-  const appText = (await Promise.all(['views/home.js', 'views/settings.js', 'views/card.js', 'views/map.js', 'views/listen.js', 'views/diary.js', 'views/talk.js', 'talk-ui.js', 'app.js', 'index.html'].map((f) => readFile(join(dist, f), 'utf8')))).join('\n');
-  const labels = ['명함부터 만든다', '명함 만들기', '인터넷 없이', '인터넷 없이 열린다', '켜기', '켜져 있다', '이벤트 있음으로 표시', '가까운 부스 번호', '맞추기', '가까이에 명함 넣는 이벤트 부스', '크게 띄우기', '읽어 주기', '이 폰에서 되는 것', '이 폰에서는 안 됨', '받아쓰기를 어디서 하나', '알겠다 · 이 길로 한다', '그만둔다', '듣고 쓰기', '상대에게 알렸다 · 듣기 시작', '알렸다 · 듣기 시작', '손으로 적기', '줄 넣기', '멈추고 일기 초안 만들기', '적은 것으로 초안 만들기', '일기 초안 다듬기', '나누기', '말한 사람 바꾸기', '초안 만들기', '폰에 남기기', '녹음 듣기', '새 판이 있다'];
+  const appText = (await Promise.all(['views/settings.js', 'views/card.js', 'views/map.js', 'views/listen.js', 'views/diary.js', 'views/talk.js', 'talk-ui.js', 'app.js', 'index.html'].map((f) => readFile(join(dist, f), 'utf8')))).join('\n');
+  const labels = ['명함부터 만든다', '명함 만들기', '인터넷 없이', '인터넷 없이 열린다', '켜기', '켜져 있다', '이벤트 있음으로 표시', '가까운 부스 번호', '맞추기', '가까이에 명함 넣는 이벤트 부스', '크게 띄우기', '읽어 주기', '이 폰에서 되는 것', '이 폰에서는 안 됨', '받아쓰기를 어디서 하나', '알겠다 · 이 길로 한다', '그만둔다', '상대에게 알렸다 · 듣기 시작', '알렸다 · 듣기 시작', '손으로 적기', '줄 넣기', '멈추고 일기 초안 만들기', '적은 것으로 초안 만들기', '일기 초안 다듬기', '나누기', '말한 사람 바꾸기', '초안 만들기', '폰에 남기기', '녹음 듣기', '새 판이 있다'];
   const missingLabels = labels.filter((l) => !appText.includes(l) || !guide.includes(l.replace(/&/g, '&amp;')));
   check(missingLabels.length === 0, `테스터 안내에 적은 단추와 글귀 ${labels.length}개가 앱과 안내에 그대로 있다 (없는 것: ${missingLabels.join(' / ') || '없음'})`);
   const daysJs = await readFile(join(dist, 'views/days.js'), 'utf8');
@@ -634,7 +518,7 @@ check(cats.groups.length === 7 && ['stu', 'job', 'ret', 'mid'].every((k) => cats
   const again = ses.toggle(a, ses.toggle(a, put.events).events);
   const bad = ses.toggle({ ...a, id: 'bad', to: '10:00' }, []);
   check(put.added === true && put.events.length === 1 && put.events[0].id === 'ses-a0000001' && put.events[0].name === a.title && put.events[0].place === a.place && eventsOn(put.events, '2027-01-06').length === 1 && withIt < base && twice.added === false && twice.events.length === 0 && again.events.length === 1 && bad.added === null, `세션 일정: 내 일정에 넣으면 동선이 그 시간을 비우고(들어가는 곳 ${base} → ${withIt}), 다시 누르면 빠지고, 시간이 틀린 줄은 넣지 않는다`);
-  const firstScreen = ['app.js', 'store.js', 'data.js', 'offline.js', 'notify.js', 'alerts.js', 'dom.js', 'views/home.js', 'views/card.js'];
+  const firstScreen = ['app.js', 'store.js', 'data.js', 'offline.js', 'notify.js', 'alerts.js', 'dom.js', 'views/map.js', 'views/card.js'];
   let leaked = [];
   for (const f of firstScreen) if (/^\s*import[^(\n]*sessions/m.test(await readFile(join(dist, f), 'utf8'))) leaked.push(f);
   check(leaked.length === 0 && /sessions: \(\) => import\('\.\/views\/sessions\.js'\)/.test(await readFile(join(dist, 'app.js'), 'utf8')), '세션 일정: 누를 때 불러온다 (첫 화면 조각에 고정 import가 없다)');
@@ -695,14 +579,6 @@ if (await exists('data/meta.json')) {
     check(got.length > 0, `"${q}" → ${got.slice(0, 3).join(' · ') || '없음'}`);
   }
   check(core.search('', 5).length === 0, '빈 말은 0건');
-  {
-    // 물어보기의 회사 갈래: 찾기 코어를 그대로 쓰고, 긴 물음은 낱말마다 찾는다.
-    const ask = await import('../web/askall.js');
-    const finder = { core, data };
-    const a = ask.companyHits('삼성', finder, 5);
-    const b = ask.companyHits('삼성은 어디에 있나', finder, 5);
-    check(a.rows.length === 5 && a.total >= 5 && b.rows.length > 0 && ask.companyHits('', finder).rows.length === 0 && ask.companyHits('zzzzqqqq', finder).rows.length === 0, `물어보기 회사: "삼성" ${a.total}곳(앞 5곳을 보임) · 물음으로도 찾고 · 빈 말과 없는 말은 0건`);
-  }
   lines.push(`자료 | 전시사 ${meta.exhibitors} · 분야 ${meta.categories} · 나라 ${meta.countries} · 한국 ${meta.korea} · 부스 ${meta.booths} (장소 못 정함 ${meta.unplacedBooths}) · 색인 낱말 ${meta.indexWords} · 회사 소개 ${meta.companyIntro}`);
 } else {
   lines.push('주의 | 전시사 자료가 없다 (공식 사이트에서 받지 못했다). 코어만 본다');
@@ -769,7 +645,7 @@ if (await exists('data/meta.json')) {
   check(r4.ok && tr2.stopped === 1, '화면을 떠나 카메라 화면이 사라지면 저절로 카메라를 끈다');
 
   // 지키는 선: 첫 화면 조각은 새 화면을 미리 읽지 않고, 일기 보내기 묶음에는 만난 사람이 없다.
-  const first = ['app.js', 'store.js', 'data.js', 'offline.js', 'notify.js', 'alerts.js', 'dom.js', 'views/home.js', 'views/card.js'];
+  const first = ['app.js', 'store.js', 'data.js', 'offline.js', 'notify.js', 'alerts.js', 'dom.js', 'views/map.js', 'views/card.js'];
   const bad = [];
   for (const f of first) if (/^\s*import[^\n]*from\s+'[^']*\/(people|people-store|scan)\.js'/m.test(await readFile(new URL(`../web/${f}`, import.meta.url), 'utf8'))) bad.push(f);
   const appText = await readFile(new URL('../web/app.js', import.meta.url), 'utf8');
@@ -779,34 +655,12 @@ if (await exists('data/meta.json')) {
   check(bad.length === 0 && /people: \(\) => import\('\.\/views\/people\.js'\)/.test(appText) && !/people/.test(diaryText) && !/people|links|githubUrl/.test(sent), '첫 화면 조각은 새 화면을 미리 읽지 않고(누를 때 불러온다), 일기 보내기 묶음에는 만난 사람이 들어가지 않는다');
 }
 
-// 기준표 채우기 (11/21): 현장 안내 · 일정 고치기 · 날짜와 시간에 맞춘 세션 추천 · 세션 나누기 · 시작 전 알림 · 물어보기의 장소 · 셔틀 · 현장 안내.
+// 기준표 채우기 (11/21): 일정 고치기 · 날짜와 시간에 맞춘 세션 추천 · 세션 나누기 · 시작 전 알림.
 {
-  const on = await import('../web/onsite.js');
-  const ask = await import('../web/askall.js');
   const { updateEvent } = await import('../web/days.js');
   const ses = await import('../web/sessions.js');
   const al = await import('../web/alerts.js');
   const isDate = (v) => /^\d{4}-\d\d-\d\d$/.test(v);
-  const onsite = await json('data/onsite.json');
-  const cleanOnsite = on.clean(onsite);
-  const lineN = onsite.sections.reduce((n, sec) => n + sec.lines.length, 0);
-  const srcOk = Object.values(onsite.sources).every((x) => /^https:\/\/www\.ces\.tech\/attendee-guides\//.test(x.url) && isDate(x.read) && x.ko);
-  const tels = onsite.sections.flatMap((sec) => sec.lines.flatMap((l) => on.telsOf(l)));
-  const rawTels = onsite.sections.flatMap((sec) => sec.lines.flatMap((l) => [l.tel, ...(l.tels || [])].filter(Boolean)));
-  check(!!cleanOnsite && srcOk && isDate(onsite.read) && lineN >= 20 && tels.length === rawTels.length && tels.every((t) => /^tel:\+1\d{10}$/.test(t.href)) && on.telHref('abc') === null && on.telHref('702-590-7911') === 'tel:+17025907911', `현장 안내 자료: ${onsite.sections.length}묶음 ${lineN}줄, 출처는 CES 공식 안내 쪽 · 읽은 날짜가 있고, 전화번호 ${tels.length}개가 모두 걸 수 있는 꼴이다`);
-  check(on.clean({ ...onsite, sections: [{ k: 'x', ko: 'x', src: 'nope', lines: [{ ko: 'a', text: 'b' }] }] }) === null && on.clean(null) === null, '현장 안내: 출처가 없는 줄이나 비어 있는 자료는 쓰지 않는다 (짐작해서 채우지 않는다)');
-  const appT = await readFile(join(dist, 'app.js'), 'utf8');
-  const homeT = await readFile(join(dist, 'views/home.js'), 'utf8');
-  const onsiteT = await readFile(join(dist, 'views/onsite.js'), 'utf8');
-  const pagesY = await readFile(new URL('../.github/workflows/pages.yml', import.meta.url), 'utf8');
-  const linksY = await readFile(new URL('../.github/workflows/links.yml', import.meta.url), 'utf8');
-  check(/onsite: \(\) => import\('\.\/views\/onsite\.js'\)/.test(appT) && !/from '\.\/onsite\.js'/.test(appT + homeT) && homeT.includes('#/onsite') && /신고를 받지 않는다/.test(onsiteT) && pagesY.includes('data/onsite.json') && linksY.includes('--in data/onsite.json'), '현장 안내: 누를 때 불러오고, 신고를 받지 않는다고 화면에 적혀 있고, 배포에 담기며 출처 링크 살피기가 이 파일도 본다');
-  // 물어보기: 현장 안내 · 셔틀 · 장소가 찾힌다.
-  const docs = { info: await json('data/info.json'), separate: await json('data/separate.json'), transit: await json('data/transit.json'), onsite, places: await json('data/places.json') };
-  const entries = ask.buildEntries({ ...docs, sessions: null });
-  const top = (q, kind) => ask.searchAll(q, entries, { items: [] }).groups.find((g) => g.k === kind)?.hits[0];
-  check(/현장/.test(top('분실물', 'onsite')?.title || '') && /휠체어/.test(top('휠체어', 'onsite')?.title || '') && top('가방 크기', 'onsite')?.to === '#/onsite' && top('스피어', 'places')?.to === '#/map' && top('모노레일', 'transit')?.to === '#/transit' && entries.filter((e) => e.kind === 'onsite').length === lineN, '물어보기: 분실물 · 휠체어 · 가방 크기는 현장 안내로, 장소(스피어)는 지도로, 모노레일은 오가는 법으로 이어진다');
-  check(entries.filter((e) => e.kind === 'onsite' || e.kind === 'transit').every((e) => e.src && /^https:\/\/www\.ces\.tech\//.test(e.src.url) && isDate(e.src.read)), '물어보기: 현장 안내와 셔틀 줄은 모두 공식 출처와 읽은 날짜가 이어진다');
   // 일정 제자리 고치기.
   const evs = [{ id: 'e1', date: '2027-01-06', from: '19:00', to: '21:00', name: '저녁 모임', place: '' }, { id: 'ses-x', date: '2027-01-07', from: '09:00', to: '09:40', name: '세션', place: 'LVCC' }];
   const up = updateEvent(evs, 'e1', { from: '18:30', to: '20:00', name: '저녁 모임 (옮김)' });
@@ -832,7 +686,6 @@ if (await exists('data/meta.json')) {
   const soon = al.soonEvents([{ id: 'a', date: '2027-01-06', from: '09:40', to: '10:00', name: 'A' }, { id: 'b', date: '2027-01-06', from: '09:00', to: '09:20', name: 'B' }, { id: 'c', date: '2027-01-06', from: '11:00', to: '11:20', name: 'C' }, { id: 'd', date: '2027-01-07', from: '09:30', to: '10:00', name: 'D' }], vegas, 30);
   const notifyT = await readFile(join(dist, 'notify.js'), 'utf8');
   check(vegas.date === '2027-01-06' && vegas.min === 565 && soon.length === 1 && soon[0].id === 'a' && soon[0].inMin === 15 && /soon:/.test(notifyT) && /setInterval/.test(notifyT), '일정 시작 전 알림: 라스베이거스 시각으로 30분 안에 시작하는 것만 고르고(이미 시작했거나 다른 날은 뺀다), 앱이 열려 있을 때 1분마다 본다');
-  lines.push(`기준표 채우기 | 현장 안내 ${lineN}줄 · 물어보기 현장 ${entries.filter((e) => e.kind === 'onsite').length} · 셔틀 ${entries.filter((e) => e.kind === 'transit').length} · 장소 ${entries.filter((e) => e.kind === 'places').length}`);
 }
 
 // 대화 칸 (R40 · R41): 회사마다 대화 칸, 붙여넣은 대화 기록을 줄마다 나누고 짝짓는다. 번역 앱 열기는 2026-11-22에 지웠다. 예시 글은 지어낸 것이다.
@@ -885,14 +738,14 @@ if (await exists('data/meta.json')) {
 
   // 화면과 첫 화면
   const read = (f) => readFile(join(dist, f), 'utf8');
-  const [talkV, listenV, companyJs, homeV, appT] = await Promise.all(['views/talk.js', 'views/listen.js', 'company.js', 'views/home.js', 'app.js'].map(read));
+  const [talkV, listenV, companyJs, homeV, appT] = await Promise.all(['views/talk.js', 'views/listen.js', 'company.js', 'views/map.js', 'app.js'].map(read));
   check(['듣기', '붙여넣기', '손으로', '나누기', '초안 만들기', '말한 사람 바꾸기'].every((w) => talkV.includes(w)) && !/번역 앱|copyGuide|translator/.test(talkV + listenV + companyJs + homeV) && !/ask: |translate: |deep: /.test(appT) && /talk: \(\) => import\('\.\/views\/talk\.js'\)/.test(appT),
     '대화 칸: 듣기 · 붙여넣기 · 손으로 셋이 있고 번역 앱 열기 · 복사하는 법 안내는 없다. 대화 화면은 누를 때 불러온다');
   check(companyJs.includes("`#/talk/${encodeURIComponent(id)}`") && !homeV.includes("#/ask") && !homeV.includes("#/translate") && !listenV.includes('#/deep') && !listenV.includes('물어볼 말') && !talkV.includes('#/ask'),
-    '회사 카드에는 "대화"만 있고, 첫 화면 · 듣기 · 대화 칸에 번역 앱 · 물어볼 말 · 깊은 설정으로 가는 길이 없다');
+    '회사 카드에는 "대화"만 있고, 지도 · 듣기 · 대화 칸에 번역 앱 · 물어볼 말 · 깊은 설정으로 가는 길이 없다');
   const talkCode2 = (await Promise.all(['talk.js', 'views/talk.js'].map(read))).join('\n');
   check(!/fetch\(|XMLHttpRequest|sendBeacon|WebSocket/.test(talkCode2) && !/innerHTML/.test(talkCode2), '대화 코드는 스스로 어디로도 보내지 않고, 붙인 글을 HTML로 넣지 않는다');
-  const firstScreen2 = (await Promise.all(['app.js', 'store.js', 'data.js', 'offline.js', 'notify.js', 'alerts.js', 'dom.js', 'views/home.js', 'views/card.js'].map(read))).join('\n');
+  const firstScreen2 = (await Promise.all(['app.js', 'store.js', 'data.js', 'offline.js', 'notify.js', 'alerts.js', 'dom.js', 'views/map.js', 'views/card.js'].map(read))).join('\n');
   const fixed2 = [...firstScreen2.matchAll(/^import [^;]*from '([^']+)';/gm)].map((m) => m[1]);
   check(!fixed2.some((f) => /talk\.js|views\/talk/.test(f)) && !preloads.some((f) => /talk/.test(f)), '대화 칸 코드는 첫 화면에 싣지 않는다');
   lines.push(`대화 칸 | 붙여넣기 예시 셋(파파고 ${a.pairs.length}짝 · 구글 ${b.pairs.length}짝 · 섞인 ${c.pairs.length}짝) · 한 덩어리 둘 · 들은 것은 원문 줄만`);

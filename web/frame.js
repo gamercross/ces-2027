@@ -4,7 +4,7 @@
 
 import { el } from './dom.js';
 
-// app.js가 채운다. 첫 화면의 "바로 가기"는 여기 있는 화면만 보인다(아직 없는 화면으로 보내지 않는다).
+// app.js가 채운다. 지금 있는 화면 목록이다.
 export const frame = { views: new Set() };
 export const hasView = (name) => frame.views.has(name);
 
@@ -32,13 +32,13 @@ export function failed({ retry, home = true } = {}) {
     el('p', { text: online() ? '잠깐 망이 끊겼을 수 있다. 다시 열어 본다.' : '인터넷이 없다. 한 번 열어 둔 화면은 인터넷 없이 열린다. 이 화면은 아직 폰에 담기지 않았다.' }),
     el('div', { class: 'actions' },
       retry ? el('button', { class: 'btn', type: 'button', text: '다시 열기', onclick: retry }) : null,
-      home ? el('a', { class: 'btn ghost', href: '#/', text: '첫 화면으로' }) : null));
+      home ? el('a', { class: 'btn ghost', href: '#/map', text: '지도로' }) : null));
 }
 
-// 없는 화면: 주소가 틀렸거나 아직 들어오지 않은 화면. 말없이 첫 화면으로 보내지 않는다.
+// 없는 화면: 주소가 틀렸거나 없어진 화면. 말없이 지도로 보내지 않는다.
 export function missing(name) {
   return el('section', { class: 'panel' },
     el('h1', { text: '없는 화면이다' }),
     el('p', { text: `"${name}" 화면은 이 판에 없다. 새 판에서 생길 수 있다.` }),
-    el('div', { class: 'actions' }, el('a', { class: 'btn', href: '#/', text: '첫 화면으로' })));
+    el('div', { class: 'actions' }, el('a', { class: 'btn', href: '#/map', text: '지도로' })));
 }

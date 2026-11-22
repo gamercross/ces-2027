@@ -142,7 +142,7 @@ async function card(profile, edit, showFrom) {
     el('section', { class: 'panel' },
       el('p', { class: 'note', text: '폰에서 만든 QR이라 인터넷 없이도 보인다.' }),
       el('div', { class: 'actions' },
-        el('a', { class: 'btn', href: '#/find', text: '회사 찾으러 가기' }),
+        el('a', { class: 'btn', href: '#/map', text: '지도에서 회사 찾기' }),
         el('a', { class: 'btn', href: '#/people', text: '남의 명함 받기' }),
         el('button', { class: 'btn ghost', type: 'button', text: '명함 고치기', onclick: edit }))));
 }
@@ -153,7 +153,6 @@ export async function render({ go }) {
   const showCard = async (profile) => {
     holder.replaceChildren(await card(profile, () => holder.replaceChildren(form(profile, showCard, go)), showFrom));
     checkAlerts();
-    document.getElementById('me-chip').textContent = profile.nick;
     window.scrollTo(0, 0);
   };
   const profile = getProfile();

@@ -31,18 +31,18 @@ async (page) => {
   const first = await page.evaluate(async () => { const d = await (await fetch('data/exhibitors.json')).json(); return { id: d.ex[0][0], name: d.ex[0][1] }; });
 
   // 1. 번역 화면은 없다 (번역 앱 준비 · 물어볼 말 · 깊은 설정은 2026-11-22에 지웠다)
-  for (const gone of ['translate', 'ask', 'deep']) {
+  for (const gone of ['translate', 'ask', 'deep', 'find', 'info', 'apply', 'topics', 'q', 'onsite']) {
     await page.goto(`${URL}#/${gone}`);
     await page.getByRole('heading', { name: '없는 화면이다' }).waitFor();
   }
-  check(true, '번역 앱 준비 · 물어볼 말 · 깊은 설정 주소는 "없는 화면이다"로 열린다');
+  check(true, '번역 앱 준비 · 물어볼 말 · 깊은 설정과 지운 화면(회사 · 알아둘 것 · 따로 신청 · 주제 판 · 물어보기 · 현장 안내) 주소는 "없는 화면이다"로 열린다');
 
   // 2. 회사 카드
-  await page.goto(`${URL}#/find`);
+  await page.goto(`${URL}#/map`);
   await page.locator('input[type=search]').fill(first.name);
   await page.locator('#view .hits li').first().waitFor();
   const row = page.locator('#view .hits li').first();
-  check(await row.getByRole('link', { name: '대화' }).count() === 1 && await row.getByRole('button', { name: '번역 앱' }).count() === 0, '회사 카드: "대화" 단추가 있고 "번역 앱" 단추는 없다');
+  check(await row.getByRole('link', { name: '대화' }).count() === 1 && await row.getByRole('button', { name: '번역 앱' }).count() === 0, '지도 위 찾기 칸의 회사 카드: "대화" 단추가 있고 "번역 앱" 단추는 없다');
   await noSideScroll('회사 카드');
 
   // 3. 대화 칸: 붙여넣기 → 나누기 → 일기 초안
@@ -82,10 +82,10 @@ async (page) => {
   await page.getByRole('heading', { name: '이 회사와 한 대화 2개' }).waitFor();
   check(true, '짝을 못 지은 글은 한 덩어리로 보이고, 손으로 넣은 줄을 저장하면 이 회사의 대화가 둘이 된다');
 
-  // 5. 파일로 내려받기에 대화가 든다
-  await page.goto(`${URL}#/diary`);
-  await page.getByRole('button', { name: '전부 파일로' }).waitFor();
-  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: '전부 파일로' }).click()]);
+  // 5. 설정의 내보내기: 파일에 대화가 든다
+  await page.goto(`${URL}#/settings`);
+  await page.getByRole('button', { name: '일기 · 대화 전부 파일로' }).waitFor();
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: '일기 · 대화 전부 파일로' }).click()]);
   const chunks = [];
   for await (const chunk of await download.createReadStream()) chunks.push(chunk);
   const file = JSON.parse(Buffer.concat(chunks).toString('utf8'));
