@@ -151,6 +151,17 @@ mod tests {
     }
 
     #[test]
+    fn 대화가_든_파일도_일기만_읽는다() {
+        // 파일로 내려받은 묶음에는 이어진 대화(talks)가 같이 든다. 네 태그 정리는 일기만 읽고 대화는 지나간다.
+        let mut b = bundle("물개", json!([{ "id": "a1", "date": "2027-01-06", "company": "Alpha Robotics", "saw": "로봇 팔", "felt": "", "for": ["stu"] }]));
+        b["talks"] = json!([{ "id": "t1", "date": "2027-01-06", "exhibitorId": "ID01", "company": "Alpha Robotics", "source": "paste", "kind": "pairs", "pairs": [{ "who": "them", "en": "Hello", "ko": "안녕하세요" }] }]);
+        let got = read_bundle(&b).unwrap();
+        assert_eq!(got.len(), 1);
+        assert_eq!(got[0].saw, "로봇 팔");
+        assert!(!one_page(&got, "2027-01-07").contains("안녕하세요"), "대화는 네 태그 한 장에 들어가지 않는다");
+    }
+
+    #[test]
     fn 다른_파일은_받지_않는다() {
         assert!(read_bundle(&json!({ "app": "something", "v": 1, "entries": [] })).is_err());
         assert!(read_bundle(&json!({ "app": FORMAT, "v": 2, "entries": [] })).is_err());

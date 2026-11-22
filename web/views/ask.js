@@ -1,11 +1,13 @@
 // 물어볼 말: 한국어 질문을 고르면 영어가 보인다. 크게 띄우고 읽어 준다.
 // 묶음의 질문은 미리 번역해 둔 자료(data/phrases.json)라 인터넷 없이도 된다.
-// 직접 적은 글을 옮기는 일과 상대의 답을 받아 적는 일은 폰이 할 수 있을 때만 된다 (안 되면 안 된다고 보인다).
+// 영어 ↔ 한국어 번역은 번역 앱(파파고 · 구글 번역)으로 한다: "번역 앱 열기"가 적은 글을 복사해 두고 앱을 연다.
+// 폰 안에서 옮기는 것(폰 자체 번역기 · 받아 둔 영한 모델)은 되는 폰에서만 덤으로 쓴다 (안 되면 안 된다고 보인다). 영한 모델은 깊은 설정에 있다.
 
 import { el, out } from '../dom.js';
 import { getPhrases, getSettings } from '../data.js';
 import { capabilities, speak, translate, translateLink } from '../speech.js';
-import { capRows, capText, currentMode, modelBox, modePicker, showBig, startDictation, translationModelPicker } from '../talk-ui.js';
+import { capRows, capText, currentMode, modelBox, modePicker, showBig, startDictation } from '../talk-ui.js';
+import { translatorButton } from '../translator-ui.js';
 import { modelStatus } from '../speech-model.js';
 import { translateStatus, translateText } from '../translate-model.js';
 
@@ -13,7 +15,7 @@ export async function render({ rest, go }) {
   const [phrases, settings] = await Promise.all([getPhrases(), getSettings()]);
   const mode = currentMode(settings);
   const caps = await capabilities(mode, undefined, await modelStatus(), await translateStatus());
-  const back = rest[0] ? `#/listen/${rest[0]}` : null;
+  const back = rest[0] ? `#/talk/${rest[0]}` : null;
   let pack = phrases.packs[0];
 
   const sayRow = (en, ko) => el('div', { class: 'row-actions' },
@@ -43,7 +45,8 @@ export async function render({ rest, go }) {
       link.replaceChildren(...(text ? [out(translateLink(text, from, to), '번역 사이트에서 열기'), ' (적은 글이 폰 밖, 구글 번역으로 나간다)'] : []));
     };
     box.addEventListener('input', paintLink);
-    const turn = el('button', { class: 'btn', type: 'button', text: to === 'en' ? '영어로 바꾸기' : '한국어로 바꾸기', disabled: !caps.translate.ok || (caps.translate.engine === 'model' && to !== 'ko'), onclick: async () => {
+    const open = translatorButton({ getText: () => box.value, label: '번역 앱 열기', cls: 'btn' });
+    const turn = !caps.translate.ok || (caps.translate.engine === 'model' && to !== 'ko') ? null : el('button', { class: 'btn ghost', type: 'button', text: to === 'en' ? '폰 안에서 영어로 바꾸기' : '폰 안에서 한국어로 바꾸기', onclick: async () => {
       const text = box.value.trim();
       if (!text) { status.textContent = '먼저 글을 적는다.'; return; }
       status.textContent = '옮기는 중이다. 처음에는 번역 꾸러미를 받느라 오래 걸릴 수 있다.';
@@ -74,17 +77,19 @@ export async function render({ rest, go }) {
     return el('section', { class: 'panel' },
       el('h2', { text: title }),
       el('label', { class: 'field' }, el('span', { class: 'label', text: from === 'ko' ? '한국어로 적는다' : '영어를 적거나 받아 적는다' }), box),
-      caps.translate.ok && !(caps.translate.engine === 'model' && to === 'en') ? null : el('p', { class: 'note', text: caps.translate.ok ? '글 옮기기: 폰 안 번역 모델은 영어를 한국어로만 옮긴다. 위 묶음의 질문은 미리 옮겨 두어 그대로 쓸 수 있다.' : `글 옮기기: ${capText(caps.translate)}.${to === 'en' ? ' 위 묶음의 질문은 미리 옮겨 두어 그대로 쓸 수 있다.' : ''}` }),
+      el('p', { class: 'note', text: `글 옮기기는 번역 앱으로 한다. "번역 앱 열기"를 누르면 적은 글(없으면 고른 글)을 복사해 앱을 연다.${to === 'en' ? ' 위 묶음의 질문은 미리 옮겨 두어 그대로 쓸 수 있다.' : ''}${caps.translate.ok ? ' 이 폰은 폰 안에서도 옮길 수 있다.' : ''}` }),
       withDictation && !caps.dictate.ok ? el('p', { class: 'note', text: `받아 적기: ${capText(caps.dictate)}. 손으로 적어도 된다.` }) : null,
-      el('div', { class: 'actions' }, turn, mic, big),
-      link, status, result);
+      el('div', { class: 'actions' }, open.button, turn, mic, big),
+      open.note, link, status, result);
   }
 
+  const topOpen = translatorButton({ getText: () => '', label: '번역 앱 열기', cls: 'btn' });
   return el('div', { class: 'page' },
     el('section', { class: 'panel' },
       el('h1', { text: '물어볼 말' }),
       el('p', { class: 'lead', text: '한국어 질문을 고르면 영어가 보인다. 크게 띄워 보여 주거나 읽어 준다. 묶음의 질문은 인터넷 없이도 된다.' }),
-      back ? el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: back, text: '듣기로 돌아가기' })) : null),
+      el('div', { class: 'actions' }, topOpen.button, back ? el('a', { class: 'btn ghost', href: back, text: '대화로 돌아가기' }) : null),
+      topOpen.note),
     el('section', { class: 'panel notice' },
       el('h2', { text: '녹음하기 전에 알리는 말' }),
       el('div', { class: 'name', text: phrases.notice.ko }),
@@ -101,5 +106,5 @@ export async function render({ rest, go }) {
       capRows([['읽어 주기', caps.speak], ['글 옮기기', caps.translate], ['받아 적기', caps.dictate]]),
       caps.dictate.engine === 'model' ? modelBox(caps.dictate, () => go(location.hash)) : null,
       modePicker(mode, () => go(location.hash)),
-      translationModelPicker(settings, () => go(location.hash))));
+      el('p', { class: 'note' }, '폰 안 영한 번역 모델은 ', el('a', { href: '#/deep', text: '깊은 설정' }), '으로 옮겼다. 번역은 번역 앱으로 한다 (', el('a', { href: '#/translate', text: '번역 앱 준비' }), ').')));
 }

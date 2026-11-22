@@ -1,11 +1,14 @@
 // 일기를 폰 밖으로 내보내는 꼴. 화면과 따로 두어 Node에서도 시험한다.
-// 내보낸 파일은 자료 도구(`ces-data sort-diary`)가 읽어 네 태그로 나눈다.
+// 내보낸 파일은 자료 도구(`ces-data sort-diary`)가 읽어 네 태그로 나눈다(대화 `talks`는 읽지 않고 지나간다).
+
+import { talkOut } from './talk.js';
 
 export const FORMAT = 'ces-2027-diary';
 export const VERSION = 1;
 
 // 보낼 묶음. 명함에서는 별명과 태그만 넣는다(깃허브 · 디스코드는 넣지 않는다).
-export function bundle(entries, profile, now = new Date()) {
+// talks를 주면(파일로 내려받을 때만) 그 대화가 같이 들어간다. 모으는 곳 주소로 보낼 때는 주지 않는다. 녹음은 어느 때도 넣지 않는다.
+export function bundle(entries, profile, now = new Date(), talks = null) {
   return {
     app: FORMAT,
     v: VERSION,
@@ -21,7 +24,15 @@ export function bundle(entries, profile, now = new Date()) {
       felt: e.felt || '',
       for: Array.isArray(e.for) ? e.for : [],
     })),
+    ...(talks?.length ? { talks: talks.map(talkOut) } : {}),
   };
+}
+
+// 일기에 이어진 대화만 고른다 (일기의 talkId). all이 true면 폰에 있는 대화 전부.
+export function talksFor(entries, talks, all = false) {
+  if (all) return talks;
+  const ids = new Set(entries.map((e) => e.talkId).filter(Boolean));
+  return talks.filter((t) => ids.has(t.id));
 }
 
 // 단톡방에 붙여 넣을 글.

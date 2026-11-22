@@ -1,11 +1,13 @@
-// 듣기: 부스에서 상대의 말을 받아 적고(영어) 한국어로 옮긴다. 멈추면 그 회사의 일기 초안이 된다.
+// 듣기: 부스에서 상대의 말을 받아 적고(영어) 한국어로 옮긴다. 멈추면 그 회사의 일기 초안이 되고, 같은 줄이 그 회사의 "대화" 칸에도 남는다.
+// 번역 앱으로 대화한다면 녹음하지 않고 대화 칸에 번역 앱의 대화 기록을 붙여 넣는다 (#/talk).
 // 소리와 글은 이 폰에만 남는다. 폰이 못 하는 것은 숨기지 않고 "이 폰에서는 안 됨"으로 보인다. 그때는 손으로 적는다.
 
 import { el } from '../dom.js';
 import { getExhibitors, getPhrases, getSettings } from '../data.js';
-import { getDiary, load, save, setDiary } from '../store.js';
+import { getDiary, getTalks, load, save, setDiary, setTalks } from '../store.js';
+import { makeTalk } from '../talk.js';
 import { capabilities, installDictation, makeDraft, summarize, translate } from '../speech.js';
-import { capRows, currentMode, modelBox, modePicker, showBig, startDictation, translationModelPicker } from '../talk-ui.js';
+import { capRows, currentMode, modelBox, modePicker, showBig, startDictation } from '../talk-ui.js';
 import { modelStatus } from '../speech-model.js';
 import { translateStatus, translateText } from '../translate-model.js';
 
@@ -145,6 +147,15 @@ export async function render({ rest, go }) {
       } catch { /* 소리는 못 남겼어도 글은 남긴다 */ }
     }
     if (!setDiary([...getDiary(), entry])) { saved = false; status.textContent = '이 폰에 저장하지 못했다. 사생활 보호 창이면 보통 창으로 다시 연다.'; drawDock(); return; }
+    // 같은 줄이 그 회사의 대화 칸에도 남는다 (폰에만).
+    if (lines.length) {
+      const talk = makeTalk({ src: 'listen', kind: 'pairs', pairs: lines.filter((l) => (l.en || '').trim()).map((l) => ({ who: 'them', en: l.en, ko: l.ko, t: l.t })) }, who, entry.date, newId());
+      talk.draftId = entry.id;
+      if (setTalks([...getTalks(), talk])) {
+        entry.talkId = talk.id;
+        setDiary(getDiary().map((e) => (e.id === entry.id ? { ...e, talkId: talk.id } : e)));
+      }
+    }
     sessionStorage.setItem('ces2027.diaryNote', '');
     if (!stay) go(`#/diary/edit/${entry.id}`);
   }
@@ -196,8 +207,7 @@ export async function render({ rest, go }) {
         drawCaps();
         drawDock();
       }) : null,
-      modePicker(mode, () => { if (running || lines.length) status.textContent = '길을 바꿨다. 지금 듣는 것을 초안으로 남긴 다음부터 쓴다.'; else go(location.hash); }),
-      translationModelPicker(settings, async () => { if (running) return; caps = await getCaps(); drawCaps(); drawDock(); })].filter(Boolean));
+      modePicker(mode, () => { if (running || lines.length) status.textContent = '길을 바꿨다. 지금 듣는 것을 초안으로 남긴 다음부터 쓴다.'; else go(location.hash); })].filter(Boolean));
   }
   keep.addEventListener('change', drawDock);
   const addTyped = () => { const t = typed.value.trim(); if (t) { addLine(t); typed.value = ''; } };
@@ -210,7 +220,10 @@ export async function render({ rest, go }) {
       el('h1', {}, '듣기', company.name ? ` · ${company.name}` : ''),
       el('p', { class: 'lead', text: '상대의 말을 받아 적고 한국어로 옮긴다. 멈추면 이 회사의 일기 초안이 된다. 소리와 글은 이 폰에만 남는다.' }),
       company.id ? (company.booth ? el('p', { class: 'note', text: `부스 ${company.booth.split('@')[0]}` }) : null) : el('label', { class: 'field' }, el('span', { class: 'label', text: '회사' }), nameBox),
-      el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: `#/ask${company.id ? `/${encodeURIComponent(company.id)}` : ''}`, text: '물어볼 말' }))),
+      el('div', { class: 'actions' },
+        el('a', { class: 'btn ghost', href: `#/ask${company.id ? `/${encodeURIComponent(company.id)}` : ''}`, text: '물어볼 말' }),
+        el('a', { class: 'btn ghost', href: `#/talk${company.id ? `/${encodeURIComponent(company.id)}` : ''}`, text: '대화 칸 (붙여넣기 · 손으로)' })),
+      el('p', { class: 'note' }, '번역 앱으로 대화한다면 녹음하지 않고 번역 앱의 대화 기록을 대화 칸에 붙여 넣는다. 폰 안 번역 모델은 ', el('a', { href: '#/deep', text: '깊은 설정' }), '에 있다.')),
     el('section', { class: 'panel notice' },
       el('h2', { text: '먼저 알린다' }),
       el('div', { class: 'name', text: phrases.notice.ko }),

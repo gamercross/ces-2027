@@ -62,6 +62,7 @@ const QUICK = [
   { view: 'listen', href: '#/listen', ko: '듣고 일기 초안', icon: 'M12 4a3 3 0 0 1 3 3v4a3 3 0 0 1-6 0V7a3 3 0 0 1 3-3zM6 11a6 6 0 0 0 12 0M12 17v3' },
   { view: 'people', href: '#/people', ko: '만난 사람', icon: 'M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3.5 19a5.5 5.5 0 0 1 11 0M16 8h5M18.5 5.5v5' },
   { view: 'transit', href: '#/transit', ko: '셔틀', icon: 'M6 5h12v11H6zM6 11h12M8.5 19v-3M15.5 19v-3' },
+  { view: 'translate', href: '#/translate', ko: '번역 앱 준비', icon: 'M4 5h9M8.5 3v2M6 5c0 4 3 7 6 8M12 5c-1 4-4 7-8 8M13 20l4-9 4 9M14.5 17h5' },
   { view: 'apply', href: '#/apply', ko: '따로 신청', icon: 'M7 4h10v16H7zM10 9h4M10 13h4' },
   { view: 'onsite', href: '#/onsite', ko: '현장 안내', icon: 'M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6zM12 8v5M12 15.5v.5' },
   { view: 'topics', href: '#/topics', ko: '주제 판', icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z' },
