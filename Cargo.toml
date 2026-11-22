@@ -1,9 +1,10 @@
 # Rust는 두 자리다.
 #   crates/ces-data : 빌드 때 도는 자료 도구 (GitHub Actions에서 돈다)
 #   crates/ces-core : 폰에 보내는 작은 WASM 코어 (찾기. 동선 · 위치 맞추기는 뒤 세션에서)
+#   crates/ces-diary: 모은 일기를 네 태그 한 장으로 (폰의 diary.wasm + 자료 도구가 같은 코드. 그 화면을 열 때만 받는다)
 [workspace]
 resolver = "2"
-members = ["crates/ces-core", "crates/ces-data"]
+members = ["crates/ces-core", "crates/ces-data", "crates/ces-diary"]
 
 [workspace.package]
 version = "0.1.0"
@@ -18,4 +19,6 @@ strip = true
 
 # 폰에 보내는 쪽은 크기를 먼저 줄인다.
 [profile.release.package.ces-core]
+opt-level = "z"
+[profile.release.package.ces-diary]
 opt-level = "z"

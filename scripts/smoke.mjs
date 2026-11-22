@@ -393,7 +393,7 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
   {
     const views = [...app.matchAll(/^  (\w+): \(\) => import\('\.\/views\/(\w+)\.js'\),$/gm)].map((m) => m[1]);
     const tabOf = Object.fromEntries([...(app.match(/const TAB_OF = \{([^}]*)\}/)?.[1] || '').matchAll(/(\w+): '(\w+)'/g)].map((m) => [m[1], m[2]]));
-    const want = { map: 'map', transit: 'map', plan: 'plan', rec: 'plan', days: 'plan', sessions: 'plan', diary: 'diary', listen: 'diary', talk: 'diary', people: 'diary', settings: 'settings', card: 'settings' };
+    const want = { map: 'map', transit: 'map', plan: 'plan', rec: 'plan', days: 'plan', sessions: 'plan', diary: 'diary', listen: 'diary', talk: 'diary', people: 'diary', settings: 'settings', card: 'settings', collect: 'settings' };
     const gone = ['views/home.js', 'views/find.js', 'views/topics.js', 'views/askall.js', 'views/apply.js', 'views/onsite.js', 'views/info.js', 'askall.js', 'onsite.js', 'separate.js', 'topics.js', 'data/separate.json', 'data/onsite.json', 'data/topics.json', 'data/faq.json'];
     const stillThere = [];
     for (const f of gone) if (await exists(f)) stillThere.push(f);
@@ -913,6 +913,25 @@ if (await exists('data/meta.json')) {
   lines.push(`대화 칸 | 붙여넣기 예시 셋(파파고 ${a.pairs.length}짝 · 구글 ${b.pairs.length}짝 · 섞인 ${c.pairs.length}짝) · 한 덩어리 둘 · 들은 것은 원문 줄만`);
 }
 
+
+// 모은 일기 열기(R46): diary.wasm은 그 화면을 열 때만 받고, 폰에 남기지 않는다.
+{
+  const read = (p) => readFile(join(dist, p), 'utf8');
+  const [appJs, settingsJs, collectJs, diaryCoreJs, sw, html] = await Promise.all(['app.js', 'views/settings.js', 'views/collect.js', 'diarycore.js', 'sw.js', 'index.html'].map(read));
+  const dw = await readFile(join(dist, 'diary.wasm'));
+  const { loadDiaryCore } = await import('../web/diarycore.js');
+  const dcore = await loadDiaryCore(dw);
+  check(dcore.add('{"app":"ces-2027-diary","v":1,"author":{"nick":"가짜"},"entries":[{"id":"1","date":"2027-01-06","company":"Alpha","saw":"본 것","felt":"","for":["stu"]}]}').ok && dcore.count() === 1 && dcore.page('2027-01-15T00:00:00Z').includes('## 학생 (일기 1개 · 회사 1곳)'),
+    `모은 일기 코어(diary.wasm ${(dw.length / 1024).toFixed(0)} KB)가 일기 파일을 읽고 네 태그 한 장을 만든다`);
+  check(appJs.includes("collect: () => import('./views/collect.js')") && /collect: 'settings'/.test(appJs) && settingsJs.includes("href: '#/collect'") && settingsJs.includes('모은 일기 열기'),
+    '설정의 내보내기 묶음에 "모은 일기 열기"가 있고 누르면 모은 일기 화면(설정 탭 아래)이 열린다');
+  const first = (await Promise.all(['app.js', 'store.js', 'data.js', 'offline.js', 'notify.js', 'alerts.js', 'dom.js', 'views/map.js', 'views/card.js'].map(read))).join('\n');
+  check(!/diarycore|diary\.wasm|views\/collect/.test(first.replace("collect: () => import('./views/collect.js'),", '')) && !/diarycore|diary\.wasm|collect\.js/.test(html) && !preloads.some((p) => /collect|diarycore|diary\.wasm/.test(p)),
+    '모은 일기 코드와 diary.wasm은 첫 화면에 싣지 않는다(그 화면을 열 때만 받는다)');
+  check(sw.includes('"diary.wasm"') && sw.includes('"diarycore.js"') && sw.includes('"views/collect.js"'), '모은 일기 화면 · 코어는 인터넷 없이 담아 두는 목록에 있다(비행기 모드에서도 된다)');
+  check(!/localStorage|sessionStorage|indexedDB|caches\.|save\(|setItem|sendBeacon|XMLHttpRequest|innerHTML/.test(collectJs + diaryCoreJs) && (collectJs.match(/fetch\(/g) || []).length === 1 && collectJs.includes("fetch('diary.wasm')"),
+    '모은 일기 화면은 고른 파일과 한 장을 폰에 남기지 않고, 받는 것은 diary.wasm 하나뿐이다');
+}
 
 const table = ['무엇 | 본 것', '--- | ---', ...lines].join('\n');
 console.log(table);

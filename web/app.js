@@ -19,9 +19,10 @@ const VIEWS = {
   talk: () => import('./views/talk.js'),
   people: () => import('./views/people.js'),
   settings: () => import('./views/settings.js'),
+  collect: () => import('./views/collect.js'),
 };
-// 어느 탭 아래의 화면인가: 지도(셔틀 · 오가는 법) · 동선(추천 · 시간과 일정 · 세션) · 일기(듣기 · 대화 칸 · 만난 사람) · 설정(명함).
-const TAB_OF = { map: 'map', transit: 'map', plan: 'plan', rec: 'plan', days: 'plan', sessions: 'plan', diary: 'diary', listen: 'diary', talk: 'diary', people: 'diary', settings: 'settings', card: 'settings' };
+// 어느 탭 아래의 화면인가: 지도(셔틀 · 오가는 법) · 동선(추천 · 시간과 일정 · 세션) · 일기(듣기 · 대화 칸 · 만난 사람) · 설정(명함 · 모은 일기).
+const TAB_OF = { map: 'map', transit: 'map', plan: 'plan', rec: 'plan', days: 'plan', sessions: 'plan', diary: 'diary', listen: 'diary', talk: 'diary', people: 'diary', settings: 'settings', card: 'settings', collect: 'settings' };
 
 // 메인 틀: 아래 탭은 넷(지도 · 동선 · 일기 · 설정). 앱을 열면 지도.
 // 탭이 아닌 화면(명함 · 시간과 일정 · 듣기 …)은 위에 "뒤로"가 생기고, 돌아갈 곳은 TAB_OF의 탭이다.
