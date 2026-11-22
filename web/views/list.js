@@ -39,11 +39,12 @@ export async function render() {
   let heads = new Map(); // 글자 · 위치 묶음 → items 자리
 
   // ---- 위: 제목 · 찾기 · 거르기 칩 · 줄 세우기 · 바로 가기
-  const count = el('p', { class: 'note list-count', role: 'status' });
+  const count = el('p', { class: 'list-count', role: 'status' });
+  const said = el('p', { class: 'sr-only', role: 'status' }); // 관심을 담고 뺀 것을 읽어 주는 곳(단추 글자가 바뀌니 눈에는 따로 안 보인다)
   const input = el('input', { type: 'search', inputmode: 'search', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search', placeholder: '이름 · 부스 번호 · 분야(한글)', 'aria-label': '전시사 이름 · 부스 번호 · 분야로 거르기', value: state.q });
   const chips = el('div', { class: 'chips list-filters', role: 'group', 'aria-label': '거르기' });
   const picker = el('div', { class: 'list-pick', hidden: true });
-  const sortSegs = el('div', { class: 'segs', role: 'group', 'aria-label': '줄 세우기' });
+  const sortSegs = el('div', { class: 'list-sort', role: 'group', 'aria-label': '줄 세우기' });
   const jump = el('div', { class: 'chips list-jump', role: 'group', 'aria-label': '바로 가기' });
   const list = el('ul', { class: 'exlist', 'aria-label': '전시사' });
   const more = el('li', { class: 'ex-more', 'aria-hidden': 'true' });
@@ -78,7 +79,7 @@ export async function render() {
     picker.hidden = false;
   }
   function paintSort() {
-    sortSegs.replaceChildren(...[['name', '이름순'], ['booth', '부스 번호순']].map(([k, ko]) => el('button', { class: 'seg', type: 'button', text: ko, 'aria-pressed': state.by === k ? 'true' : 'false', onclick: () => { if (state.by === k) return; state.by = k; refresh(); } })));
+    sortSegs.replaceChildren(...[['name', '이름순'], ['booth', '부스순']].map(([k, ko]) => el('button', { class: 'pick', type: 'button', text: ko, 'aria-pressed': state.by === k ? 'true' : 'false', onclick: () => { if (state.by === k) return; state.by = k; refresh(); } })));
   }
   function paintJump() {
     if (state.by === 'name') {
@@ -88,7 +89,7 @@ export async function render() {
       jump.setAttribute('aria-label', '위치로 바로 가기');
       jump.replaceChildren(...groups.filter((g) => heads.has(g.ko)).map((g) => el('button', { class: 'chip-go', type: 'button', text: g.ko, onclick: () => goHead(g.ko) })));
     }
-    jump.hidden = !jump.childElementCount;
+    jump.hidden = jump.childElementCount < (state.by === 'name' ? 1 : 2); // 위치 하나만 남으면 바로 가기 줄은 숨긴다
   }
 
   // ---- 줄
@@ -114,7 +115,7 @@ export async function render() {
       tags.length ? el('span', { class: 'stop-tags' }, tags) : null);
     const like = el('button', { class: 'pick ex-like', type: 'button' });
     const paintLike = () => { const on = hasInterest(id); like.textContent = on ? '관심 중' : '관심'; like.setAttribute('aria-pressed', on ? 'true' : 'false'); like.setAttribute('aria-label', `${row[1]} ${on ? '관심에서 빼기' : '관심 담기'}`); };
-    like.addEventListener('click', () => { const added = toggleInterest(id); paintLike(); count.textContent = `${countLine()} · ${row[1]}을(를) ${added ? '관심에 담았다. 동선에 나온다' : '관심에서 뺐다'}.`; });
+    like.addEventListener('click', () => { const added = toggleInterest(id); paintLike(); said.textContent = `${row[1]}을(를) ${added ? '관심에 담았다. 동선에 나온다' : '관심에서 뺐다'}.`; });
     paintLike();
     return el('li', { class: 'ex-row' }, open, like);
   }
@@ -148,9 +149,9 @@ export async function render() {
     drawUpTo(at + STEP);
     list.querySelector(`[data-head="${CSS.escape(key)}"]`)?.scrollIntoView({ block: 'start' });
   }
-  const countLine = () => `${num(sorted.length)}곳${active() || state.q ? ` (전체 ${num(ex.length)}곳 가운데)` : ''}`;
+  const countLine = () => `${num(sorted.length)}곳${active() || state.q.trim() ? ` / ${num(ex.length)}` : ''}`;
   function paintCount() {
-    count.replaceChildren(countLine(), active() ? el('button', { class: 'pick', type: 'button', text: '거르기 풀기', onclick: () => { Object.assign(state, { award: false, korea: false, place: null, country: null, cat: null, open: null }); refresh(); } }) : null);
+    count.replaceChildren(...[el('b', { text: countLine() }), active() ? el('button', { class: 'pick', type: 'button', text: '풀기', 'aria-label': '거르기 풀기', onclick: () => { Object.assign(state, { award: false, korea: false, place: null, country: null, cat: null, open: null }); refresh(); } }) : null].filter(Boolean));
   }
   function paintList(keepScroll) {
     list.replaceChildren(more);
@@ -196,10 +197,10 @@ export async function render() {
   const page = el('div', { class: 'page list-page' },
     el('section', { class: 'list-top' },
       el('h1', { text: '전시사' }),
-      el('p', { class: 'note', text: `${num(ex.length)}곳 · CES 공식 전시사 목록 ${stamp(data.fetchedAt)} 받음 · 줄을 누르면 지도에서 연다` }),
+      el('p', { class: 'note', text: `CES 공식 전시사 목록 · ${stamp(data.fetchedAt)} 받음` }),
       el('label', { class: 'find-field' }, input),
-      chips, picker, sortSegs),
-    jump, count, list);
+      chips, picker),
+    jump, el('div', { class: 'list-bar' }, count, sortSegs), said, list);
 
   const back = state.scrollY;
   if (state.q.trim() && /[ㄱ-힝]/.test(state.q)) { try { const f = await getFinder(); hits = new Set(f.core.search(state.q.trim(), 800)); } catch { hits = new Set(); } }

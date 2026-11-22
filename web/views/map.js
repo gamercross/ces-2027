@@ -710,7 +710,9 @@ export async function render({ rest = [] } = {}) {
       chipBoxes.push(d);
     }
     // 맨 앞: 전시사 목록(공식 앱의 전시사 A–Z 목록 + 거르기). 홀 칩이 아니라 다른 화면으로 가는 칩이다.
-    const listChip = el('a', { class: 'chip-go chip-list', href: '#/list', text: '목록', 'aria-label': '전시사 목록 (이름순 · 거르기)' });
+    const listIcon = svg('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true' });
+    listIcon.append(svg('path', { d: 'M4 6h16M4 12h16M4 18h10' }));
+    const listChip = el('a', { class: 'chip-go chip-list', href: '#/list', 'aria-label': '전시사 목록 (이름순 · 거르기)' }, listIcon, '목록');
     chips.replaceChildren(listChip, ...chipBoxes.map((d) => d.node));
     paintChips();
   }
