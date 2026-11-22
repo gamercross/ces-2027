@@ -1,7 +1,7 @@
 // 지도 맨 위 찾기 칸: 회사 이름 · 부스 번호 · 분야 · 한글 별칭 · 홀 이름으로 찾는다. 고르면 지도가 그 부스로 날아가 카드가 열린다.
 // 찾기 자료(코어 · 색인 · 전시사)는 글자를 칠 때 불러온다. 첫 화면에는 싣지 않는다.
 
-import { el } from './dom.js';
+import { cross, el } from './dom.js';
 import { getFinder, getMeta } from './data.js';
 import { splitBooth } from './route.js';
 
@@ -20,7 +20,9 @@ export function findBox({ places, ranges = [], onCompany, onPlace }) {
   const input = el('input', { type: 'search', inputmode: 'search', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search', placeholder: '회사 · 부스 번호 · 홀 찾기', 'aria-label': '회사 이름 · 부스 번호 · 분야 · 홀 찾기' });
   const list = el('ul', { class: 'results', role: 'listbox', 'aria-label': '찾은 것', hidden: true });
   const note = el('p', { class: 'results-note', role: 'status', hidden: true });
-  const node = el('div', { class: 'find' }, el('label', { class: 'find-field' }, input), el('span', { class: 'tag find-tag', text: '비공식' }), note, list);
+  // 지우기(×): 글자가 있을 때만 보인다(app.css의 :placeholder-shown). 누르면 칸이 비고 결과 줄이 닫힌다.
+  const wipe = el('button', { class: 'find-clear', type: 'button', 'aria-label': '찾는 글자 지우기', onclick: () => { input.value = ''; find(); input.focus(); } }, cross());
+  const node = el('div', { class: 'find' }, el('label', { class: 'find-field' }, input), el('span', { class: 'tag find-tag', text: '비공식' }), wipe, note, list);
   let turn = 0;
   let current = [];
 
