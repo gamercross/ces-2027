@@ -26,7 +26,7 @@ function pagedList(rows, makeRow) {
 
 function planLink() {
   const link = el('a', { class: 'chip', href: '#/plan' });
-  const paint = () => { link.textContent = `관심 ${getInterests().length}곳 · 동선 보기`; };
+  const paint = () => { link.textContent = `관심 ${getInterests().length}곳 · 동선`; };
   paint();
   return { link, paint };
 }
@@ -45,7 +45,7 @@ async function categoryPage(index, go) {
   const count = el('p', { class: 'note' });
   const draw = () => {
     const rows = all.filter((r) => (!onlyKorea.checked || r[3] === korea) && (!onlyAward.checked || r[5] > 0));
-    count.textContent = `${num(rows.length)}곳. 이름 차례다. 부스 자리는 짐작이다.`;
+    count.textContent = `${num(rows.length)}곳 · 이름 차례 · 부스 자리는 짐작`;
     holder.replaceChildren(pagedList(rows, (r) => companyRow(r, data, placeKo, plan.paint)));
   };
   onlyKorea.addEventListener('change', draw);
@@ -53,14 +53,13 @@ async function categoryPage(index, go) {
   draw();
   return el('div', { class: 'page' },
     el('section', { class: 'panel' },
-      el('p', {}, el('a', { href: '#/find', text: '분야 전체' })),
+      el('p', {}, el('a', { href: '#/find', text: '← 분야' })),
       el('h1', { text: table.ko[name] || name }),
-      el('p', { class: 'note', text: `CES 공식 분야: ${name}` }),
       count),
     holder,
     // 한 손으로 닿게 아래에 붙여 둔다.
     el('div', { class: 'dock' },
-      el('label', { class: 'toggle' }, onlyKorea, el('span', { text: '한국 회사만' })),
+      el('label', { class: 'toggle' }, onlyKorea, el('span', { text: '한국만' })),
       el('label', { class: 'toggle' }, onlyAward, el('span', { text: '혁신상만' })),
       plan.link));
 }
@@ -82,66 +81,77 @@ async function frontPage() {
   const plan = planLink();
 
   const input = el('input', { type: 'search', inputmode: 'search', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', placeholder: '삼성, 로봇, 14731', 'aria-label': '회사 이름 · 분야 · 부스 번호 · 장소' });
-  const note = el('p', { class: 'note', text: '이름 · 분야 · 부스 번호 · 장소로 찾는다. 한글로도 된다.' });
+  const note = el('p', { class: 'note', role: 'status' });
   const results = el('div');
+  // 칩 하나 줄: 추천(전체 · 혁신상 · 한국 · 내 분야) 또는 분야. 한 번에 하나만 보인다.
   // 추천: 공식 자료만 근거로(혁신상 · 한국 기업 · 내 분야) 먼저 볼 만한 회사. 까닭을 한 줄로 보이고, 한 곳씩 눌러 담는다.
-  const recBox = el('section', { class: 'panel' });
-  const REC_FILTERS = [['all', '전체'], ['award', '혁신상'], ['korea', '한국'], ['mine', '내 분야']];
-  let recFilter = 'all';
+  const CHIPS = [['all', '추천'], ['award', '혁신상'], ['korea', '한국'], ['mine', '내 분야'], ['fields', '분야']];
+  let chip = 'all';
   let recShown = 6;
   let recs = null;
+  const body = el('div', { class: 'page' });
+  const chips = el('div', { class: 'segs', role: 'group', 'aria-label': '보기' });
   function drawRecs(recount) {
     // 담은 곳이 목록에서 바로 사라지지 않게, 거르기를 바꿀 때만 다시 뽑는다.
-    if (recount || !recs) recs = recommend(data, table, { tag: profile?.tag, topics: getTopics(), have: new Set(getInterests().map((it) => it.id)), filter: recFilter === 'all' ? null : recFilter });
+    if (recount || !recs) recs = recommend(data, table, { tag: profile?.tag, topics: getTopics(), have: new Set(getInterests().map((it) => it.id)), filter: chip === 'all' ? null : chip });
     const more = el('button', { class: 'btn ghost wide', type: 'button', text: `더 보기 (${num(recs.length - recShown)}곳 남음)`, hidden: recShown >= recs.length, onclick: () => { recShown += 6; drawRecs(false); } });
-    recBox.replaceChildren(
-      el('h2', { text: `추천 ${num(recs.length)}곳` }),
-      el('p', { class: 'note', text: '먼저 볼 만한 회사다. 근거는 CES 공식 자료뿐이다(혁신상 표시 · 나라 · 전시사가 고른 분야). 까닭을 보고 한 곳씩 "관심"을 누른다.' }),
-      el('div', { class: 'segs', role: 'group', 'aria-label': '추천 거르기' }, REC_FILTERS.map(([k, ko]) => el('button', { class: 'seg', type: 'button', text: ko, 'aria-pressed': k === recFilter ? 'true' : 'false', onclick: () => { recFilter = k; recShown = 6; drawRecs(true); } }))),
-      recs.length
-        ? el('ol', { class: 'hits' }, recs.slice(0, recShown).map((r) => {
-          const li = companyRow(r.row, data, placeKo, plan.paint);
-          li.prepend(el('div', { class: 'why', text: r.why.join(' · ') }));
-          return li;
-        }))
-        : el('p', { class: 'note', text: recFilter === 'mine' ? '내 분야가 없다. 명함에서 태그를 고르거나 주제 판에 주제를 넣는다.' : '추천할 곳이 없다.' }),
-      more);
+    body.replaceChildren(
+      el('section', { class: 'panel' },
+        el('h2', { text: `${CHIPS.find((c) => c[0] === chip)[1]} ${num(recs.length)}곳` }),
+        recs.length
+          ? el('ol', { class: 'hits' }, recs.slice(0, recShown).map((r) => {
+            const li = companyRow(r.row, data, placeKo, plan.paint);
+            li.prepend(el('div', { class: 'why', text: r.why.join(' · ') }));
+            return li;
+          }))
+          : el('p', { class: 'note', text: chip === 'mine' ? '내 분야가 없다. 명함에서 태그를 고른다.' : '추천할 곳이 없다.' }),
+        more));
+  }
+  function drawFields() {
+    body.replaceChildren(
+      mine ? el('section', { class: 'panel' },
+        el('h2', { text: `${tagKo(profile.tag)}에게 맞는 분야${table.audiencesDraft ? ' (초안)' : ''}` }),
+        fieldLinks(mine, data, counts, table)) : null,
+      ...table.groups.map((g) => el('section', { class: 'panel' }, el('h2', { text: g.ko }), fieldLinks(g.cats, data, counts, table))),
+      el('p', { class: 'foot', text: `분야 ${data.cats.length}개 · 숫자는 전시사 수` }));
+  }
+  function paintChips() {
+    chips.replaceChildren(...CHIPS.map(([k, ko]) => el('button', { class: 'seg', type: 'button', text: ko, 'aria-pressed': k === chip ? 'true' : 'false', onclick: () => {
+      chip = k; recShown = 6;
+      if (k === 'fields') drawFields(); else drawRecs(true);
+      paintChips();
+    } })));
   }
   drawRecs(true);
-  const fields = el('div', { class: 'page' },
-    recBox,
-    mine && el('section', { class: 'panel' },
-      el('h2', { text: `${tagKo(profile.tag)}에게 맞는 분야${table.audiencesDraft ? ' (초안)' : ''}` }),
-      fieldLinks(mine, data, counts, table)),
-    table.groups.map((g) => el('section', { class: 'panel' }, el('h2', { text: g.ko }), fieldLinks(g.cats, data, counts, table))),
-    el('p', { class: 'foot', text: `CES 공식 분야 ${data.cats.length}개를 묶었다. 숫자는 그 분야를 고른 전시사 수다. 분야를 고르지 않은 전시사는 찾기로 찾는다.` }));
+  paintChips();
+  const fields = el('div', { class: 'page' }, chips, body);
 
   let turn = 0;
   async function find() {
     const mineTurn = ++turn;
     const q = input.value.trim();
     fields.hidden = !!q;
-    if (!q) { results.replaceChildren(); note.textContent = '이름 · 분야 · 부스 번호 · 장소로 찾는다. 한글로도 된다.'; return; }
+    if (!q) { results.replaceChildren(); note.textContent = ''; return; }
     let finder;
     try {
       finder = await getFinder();
     } catch {
-      note.textContent = '찾기 자료를 불러오지 못했다. 인터넷을 확인하고 다시 적어 본다.';
+      note.textContent = '찾기 자료를 불러오지 못했다. 인터넷을 확인한다.';
       return;
     }
     if (mineTurn !== turn) return;
     const rows = finder.core.search(q, 200).map((i) => finder.data.ex[i]);
-    note.textContent = rows.length ? `${rows.length === 200 ? '먼저 200곳' : `${rows.length}곳`}. 잘 맞는 차례다.` : '맞는 회사가 없다.';
+    note.textContent = rows.length ? `${rows.length === 200 ? '먼저 200곳' : `${rows.length}곳`}` : '맞는 회사가 없다.';
     results.replaceChildren(pagedList(rows, (r) => companyRow(r, finder.data, finder.placeKo, plan.paint)));
   }
   input.addEventListener('input', find);
 
   return el('div', { class: 'page' },
-    el('section', { class: 'panel' },
+    el('section', { class: 'head' },
       el('h1', { text: '회사' }),
-      note,
       // 주제 판은 아래 탭에서 빠지고 회사 탭 아래에 선다 (탭은 다섯까지).
-      el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: '#/topics', text: '주제 판' }))),
+      el('p', { class: 'lead' }, '이름 · 분야 · 부스 번호로 찾는다. ', el('a', { href: '#/topics', text: '주제 판' }))),
+    note,
     results,
     fields,
     // 한 손으로 닿게 찾기 칸을 아래에 붙여 둔다.

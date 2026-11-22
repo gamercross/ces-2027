@@ -24,7 +24,7 @@ export function companyRow(row, data, placeKo, onChange) {
     const on = hasInterest(id);
     button.setAttribute('aria-pressed', on ? 'true' : 'false');
     button.setAttribute('aria-label', `${name} ${on ? '관심에서 빼기' : '관심에 넣기'}`);
-    button.textContent = on ? '관심에 있음' : '관심';
+    button.textContent = on ? '관심 중' : '관심';
   };
   button.addEventListener('click', () => { toggleInterest(id); paint(); onChange?.(); });
   paint();
@@ -33,11 +33,11 @@ export function companyRow(row, data, placeKo, onChange) {
     el('div', { class: 'name' }, name, award ? el('span', { class: 'tag mint', text: award & 2 ? '최고 혁신상' : '혁신상' }) : null),
     el('div', { class: 'where', text: [booths.length ? whereText(booths, placeKo) : '부스 미정', country >= 0 ? data.countries[country] : null].filter(Boolean).join(' / ') }),
     catKo && el('div', { class: 'where', text: catKo }),
-    intro && el('div', { class: 'where', text: intro }),
+    intro && el('div', { class: 'where intro', text: intro }),
     el('div', { class: 'row-actions' }, button,
       booths.some((b) => placeKo.has(splitBooth(b).place)) ? el('a', { href: `#/map/at/${encodeURIComponent(id)}`, text: '지도' }) : null,
       el('a', { href: `#/talk/${encodeURIComponent(id)}`, text: '대화' }),
-      out(data.link.replace('{id}', encodeURIComponent(id)), '공식 전시사 페이지')));
+      out(data.link.replace('{id}', encodeURIComponent(id)), '공식')));
   // 번역은 번역 앱으로 한다: 고른 글(없으면 회사 이름)을 복사해 두고 앱을 연다.
   const tr = translatorRow(() => name);
   li.querySelector('.row-actions').append(tr.button);

@@ -71,7 +71,7 @@ async (page) => {
   await page.getByRole('button', { name: '말한 사람 바꾸기' }).first().click();
   await noSideScroll('대화 칸');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}57-talk-paste.png`, fullPage: false });
-  await page.getByRole('button', { name: '저장하고 일기 초안 만들기' }).click();
+  await page.getByRole('button', { name: '초안 만들기' }).click();
   await page.getByRole('heading', { name: '일기 초안 다듬기' }).waitFor();
   const saw = await page.locator('textarea[name=saw]').inputValue();
   check(saw.includes('Hello, welcome to our booth. / How much is the base model? / It costs $99.') && !saw.includes('안녕하세요') && !saw.includes('99달러'), '일기 초안: 들은 것 칸에 상대가 한 영어 원문 줄만 들어간다 (번역 줄은 없다)');

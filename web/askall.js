@@ -108,16 +108,16 @@ export function buildEntries({ info, separate, phrases, sessions, transit, onsit
   const where = (spot, to, toKo) => ({ spot, to, toKo });
   if (info) {
     const s = info.show;
-    const at = where('첫 화면', '#/', '첫 화면에서 보기');
+    const at = where('알아둘 것', '#/info', '알아둘 것에서 보기');
     out.push(entry('info', { title: `CES 2027 날짜 · ${s.city}`, text: `${s.from} ~ ${s.to}. 1월 6일 ~ 9일`, show: `${md(s.from)} ~ ${md(s.to)}`, src: s.source, ...at }));
-    for (const d of s.days) out.push(entry('info', { title: `전시 시간 · ${d.ko}`, text: d.hours, show: `${d.hours} (라스베이거스 시각)`, src: s.source, ...where('첫 화면 · 날짜와 시간', '#/', '첫 화면에서 보기') }));
-    out.push(entry('info', { title: '전시 시간 · C Space(아리아)', text: s.note, show: s.note, src: s.noteSource || s.source, ...where('첫 화면 · 날짜와 시간', '#/', '첫 화면에서 보기') }));
-    for (const c of info.campuses) for (const h of c.halls) out.push(entry('info', { title: `${c.ko} · ${h.ko}`, text: `${c.sub}. ${h.what}`, show: h.what, src: c.source, ...where('첫 화면 · 캠퍼스 셋', '#/', '첫 화면에서 보기') }));
-    for (const m of info.moving) out.push(entry('info', { title: `오가는 법 · ${m.ko}`, text: m.what, show: m.what, src: info.movingSource, ...where('첫 화면 · 오가는 법', '#/', '첫 화면에서 보기') }));
+    for (const d of s.days) out.push(entry('info', { title: `전시 시간 · ${d.ko}`, text: d.hours, show: `${d.hours} (라스베이거스 시각)`, src: s.source, ...where('알아둘 것 · 날짜', '#/info', '알아둘 것에서 보기') }));
+    out.push(entry('info', { title: '전시 시간 · C Space(아리아)', text: s.note, show: s.note, src: s.noteSource || s.source, ...where('알아둘 것 · 날짜', '#/info', '알아둘 것에서 보기') }));
+    for (const c of info.campuses) for (const h of c.halls) out.push(entry('info', { title: `${c.ko} · ${h.ko}`, text: `${c.sub}. ${h.what}`, show: h.what, src: c.source, ...where('알아둘 것 · 캠퍼스', '#/info', '알아둘 것에서 보기') }));
+    for (const m of info.moving) out.push(entry('info', { title: `오가는 법 · ${m.ko}`, text: m.what, show: m.what, src: info.movingSource, ...where('알아둘 것 · 오가는 법', '#/info', '알아둘 것에서 보기') }));
     const b = info.badge;
-    out.push(entry('info', { title: '배지 받는 법', text: b.rule, show: b.rule, src: b.source, ...where('첫 화면 · 배지 받는 곳', '#/', '첫 화면에서 보기') }));
-    for (const p of b.spots) out.push(entry('info', { title: `배지 받는 곳 · ${p.ko}`, text: `배지 ${p.hours}`, show: p.hours, src: b.source, ...where('첫 화면 · 배지 받는 곳', '#/', '첫 화면에서 보기') }));
-    out.push(entry('info', { title: '배지 받는 곳 · 호텔', text: b.more, show: b.more, src: b.source, ...where('첫 화면 · 배지 받는 곳', '#/', '첫 화면에서 보기') }));
+    out.push(entry('info', { title: '배지 받는 법', text: b.rule, show: b.rule, src: b.source, ...where('알아둘 것 · 배지', '#/info', '알아둘 것에서 보기') }));
+    for (const p of b.spots) out.push(entry('info', { title: `배지 받는 곳 · ${p.ko}`, text: `배지 ${p.hours}`, show: p.hours, src: b.source, ...where('알아둘 것 · 배지', '#/info', '알아둘 것에서 보기') }));
+    out.push(entry('info', { title: '배지 받는 곳 · 호텔', text: b.more, show: b.more, src: b.source, ...where('알아둘 것 · 배지', '#/info', '알아둘 것에서 보기') }));
   }
   if (separate) {
     const groupKo = new Map(separate.groups.map((g) => [g.k, g.ko]));

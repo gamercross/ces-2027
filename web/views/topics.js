@@ -54,7 +54,7 @@ async function listPage(go) {
     holder.replaceChildren(...[
       el('section', { class: 'panel' },
         el('h1', { text: '주제 판' }),
-        el('p', { class: 'lead', text: `가기 전에 올해 볼 주제를 ${MAX_TOPICS}개까지 정하고, 주제마다 볼 회사와 "누구에게 무엇이 달라지나"를 적는다. 이 판은 이 폰에만 남는다.` }),
+        el('p', { class: 'lead', text: `볼 주제를 ${MAX_TOPICS}개까지 정한다. 이 폰에만 남는다.` }),
         el('p', { class: 'note', text: `주제 ${topics.length}개 · 볼 회사 ${topics.reduce((a, t) => a + pinned(t, data).length, 0)}곳` }),
         status),
       topics.length ? el('section', { class: 'panel' },
@@ -69,12 +69,12 @@ async function listPage(go) {
         }))) : null,
       teamNew.length ? el('section', { class: 'panel' },
         el('h2', { text: '팀 주제' }),
-        el('p', { class: 'note', text: `팀이 같이 정한 주제 가운데 내 판에 없는 것이 ${teamNew.length}개 있다.` }),
+        el('p', { class: 'note', text: `내 판에 없는 팀 주제 ${teamNew.length}개` }),
         el('div', { class: 'actions' }, el('button', { class: 'btn', type: 'button', text: `팀 주제 ${teamNew.length}개 가져오기`, onclick: () => { setTopics([...getTopics(), ...teamNew]); status.textContent = `팀 주제 ${teamNew.length}개를 가져왔다.`; draw(); } }))) : null,
       el('section', { class: 'panel' },
         el('h2', { text: '주제 더하기' }),
         own,
-        el('p', { class: 'note', text: `아래는 후보다: CES 공식 분야를${profile?.tag ? ` ${tagKo(profile.tag)}에게 맞는 것 먼저${table.audiencesDraft ? '(초안)' : ''}, 그다음` : ''} 혁신상이 많은 차례로 세웠다. 누르면 그 분야가 주제가 되고, 이름과 분야는 안에서 고칠 수 있다.` }),
+        el('p', { class: 'note', text: '누르면 그 분야가 주제가 된다. 안에서 고칠 수 있다.' }),
         el('div', { class: 'fields' }, cands.slice(0, 16).map((c) => el('button', { class: c.mine ? 'field-link mine' : 'field-link', type: 'button', onclick: () => {
           const topic = newTopic(c.ko, [c.cat]);
           if (add(topic)) { status.textContent = `"${c.ko}"를 주제로 넣었다.`; draw(); }
@@ -146,20 +146,20 @@ async function topicPage(id, go) {
       el('section', { class: 'panel form' },
         el('p', {}, el('a', { href: '#/topics', text: '주제 판' })),
         el('label', { class: 'field' }, el('span', { class: 'label', text: '주제' }), name),
-        el('p', { class: 'note', text: t.cats.length ? `분야: ${t.cats.map((c) => table.ko[c] || c).join(' · ')}` : '분야를 고르지 않았다. 분야를 고르면 볼 회사 후보가 나온다.' }),
+        el('p', { class: 'note', text: t.cats.length ? `분야: ${t.cats.map((c) => table.ko[c] || c).join(' · ')}` : '분야를 고르면 볼 회사 후보가 나온다.' }),
         el('details', { class: 'more' }, el('summary', { text: '분야 고치기' }), ...catBoxes),
         status),
       el('section', { class: 'panel form' },
         el('h2', { text: '누구에게 무엇이 달라지나' }),
-        el('p', { class: 'note', text: '칸마다 한두 줄. 가기 전에는 생각을, 다녀와서는 본 것으로 고친다.' }),
+        el('p', { class: 'note', text: '칸마다 한두 줄.' }),
         ...notes),
       el('section', { class: 'panel' },
         el('h2', { text: `볼 회사 ${mine.length}곳` }),
-        mine.length ? el('ol', { class: 'hits' }, mine.map((r) => row(r, true))) : el('p', { class: 'note', text: '아직 없다. 아래 후보에서 넣거나, 회사 화면에서 찾아 관심에 넣는다.' })),
+        mine.length ? el('ol', { class: 'hits' }, mine.map((r) => row(r, true))) : el('p', { class: 'note', text: '아직 없다. 아래 후보에서 넣는다.' })),
       el('section', { class: 'panel' },
         el('h2', { text: `후보: 혁신상을 받은 회사 ${awards.length}곳` }),
         t.cats.length
-          ? el('p', { class: 'note', text: `이 주제의 분야에서 혁신상을 받은 곳이다(최고 혁신상 먼저). 혁신상이 없는 회사는 ${num(others)}곳 더 있다.` })
+          ? el('p', { class: 'note', text: `최고 혁신상 먼저 · 혁신상 없는 회사는 ${num(others)}곳 더 있다.` })
           : el('p', { class: 'note', text: '분야를 고르면 후보가 나온다.' }),
         el('ol', { class: 'hits' }, awards.slice(0, shown).map((r) => row(r, false))),
         more,

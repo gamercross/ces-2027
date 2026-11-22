@@ -17,7 +17,6 @@ import { guideTo } from '../guide.js';
 import { markLabel, toggleMark } from '../alerts.js';
 import { getMarks, setMarks } from '../notify.js';
 import { getEvents } from '../store.js';
-import { placeLink } from './days.js';
 import { routeThroughAisle } from '../indoor-path.js';
 import { T, DAY_COLORS, withAlpha } from '../tokens.js';
 
@@ -74,7 +73,7 @@ export async function render({ rest = [] } = {}) {
   const me = svg('g', { id: 'me-layer' });
   const board = svg('svg', { class: 'map', role: 'img', 'aria-label': 'CES 2027 캠퍼스 지도. 홀 안 부스 자리는 짐작이다.' }, roads, decor, links, shapes, campusLabels, labels, marks, pinLayer, me);
 
-  const detail = el('div', { class: 'panel', 'aria-live': 'polite' }, el('p', { class: 'note', text: '장소를 누르면 이름 · 구글맵 링크 · 그 장소의 회사가 나온다. 가까이 보면 부스가 점으로 찍히고, 점을 누르면 그 회사가 나온다. 3D에서도 된다.' }));
+  const detail = el('div', { class: 'panel', 'aria-live': 'polite' }, el('p', { class: 'note', text: '장소나 부스 점을 누르면 회사가 나온다. 가까이 봐야 점이 찍힌다.' }));
   // 그 장소에 부스가 있는 회사 (이름 차례). 많으면 조금씩 보인다.
   function companyList(rows) {
     const list = el('ol', { class: 'hits' });
@@ -107,9 +106,9 @@ export async function render({ rest = [] } = {}) {
       el('h2', { text: p.ko }),
       el('p', { text: p.theme }),
       here.length ? el('p', { class: 'note', text: `내 관심 ${here.length}곳: ${here.map((h) => h.name).slice(0, 4).join(' · ')}${here.length > 4 ? ' …' : ''}` }) : null,
-      el('p', { class: 'note', text: `${p.shapeGuess ? '이 장소는 공식 지도에 그려져 있지 않아 자리와 모양이 어림이다. ' : ''}${p.boothSpots === 'guess' ? '이 안의 부스 자리는 짐작이다 (정식 배치도 전).' : '부스 자리는 공식 배치도다.'}` }),
+      el('p', { class: 'note', text: `${p.shapeGuess ? '모양과 자리는 어림이다. ' : ''}${p.boothSpots === 'guess' ? '부스 자리는 짐작이다.' : '부스 자리는 공식 배치도다.'}` }),
       el('div', { class: 'actions' },
-        in3d() ? el('button', { class: 'btn', type: 'button', text: '2D 지도에서 보기', onclick: () => to2d(box) }) : null,
+        in3d() ? el('button', { class: 'btn', type: 'button', text: '2D로 보기', onclick: () => to2d(box) }) : null,
         link ? out(link, '구글맵에서 열기', in3d() ? 'btn ghost' : 'btn') : null,
         link ? out(route, '걸어서 길찾기', 'btn ghost') : null),
       link ? null : el('p', { class: 'note', text: '구글맵에서 쓸 이름을 아직 모른다.' }),
@@ -127,7 +126,7 @@ export async function render({ rest = [] } = {}) {
     detail.replaceChildren(
       el('h2', { text: c.ko }),
       el('p', { text: c.sub }),
-      el('p', { class: 'note', text: `장소 ${mine.length}곳 · 회사 ${rowsAt(mine.map((p) => p.k)).length}곳. 장소를 누르면 그곳의 회사가 나온다.` }),
+      el('p', { class: 'note', text: `장소 ${mine.length}곳 · 회사 ${rowsAt(mine.map((p) => p.k)).length}곳` }),
       el('div', { class: 'actions' }, el('button', { class: 'btn', type: 'button', text: '2D 지도에서 보기', onclick: () => to2d(pad(c.box, 40)) })),
       el('div', { class: 'fields' }, mine.filter((p) => count.get(p.k) > 0).map((p) => el('button', { class: 'field-link', type: 'button', onclick: () => pick(p, true) },
         el('span', { text: p.ko.replace('LVCC ', '').replace('베네시안 엑스포 ', '') }), el('small', { text: String(count.get(p.k)) })))));
@@ -233,7 +232,7 @@ export async function render({ rest = [] } = {}) {
           three?.redraw();
           pickBooth(key);
         } })),
-      el('p', { class: 'note', text: '공식 자료에는 이벤트가 없다. 현장에서 본 사람이 표시하고, "시간과 일정"의 파일로 팀과 주고받는다. 표시한 부스가 그날 동선에 있으면 명함이 몇 장 필요한지 알린다.' }));
+      el('p', { class: 'note', text: '공식 자료에는 없다. 본 사람이 표시하고 파일로 주고받는다.' }));
   }
   // 여기서 가는 길: 내 자리에서 고른 부스까지. 같은 곳이면 부스 번호 쪽으로, 다른 캠퍼스면 구글맵 길찾기.
   function guideBlock(key, place, spot) {
@@ -246,7 +245,7 @@ export async function render({ rest = [] } = {}) {
     return el('div', { class: 'block guide' },
       el('h3', { text: '여기서 가는 길' }),
       ...g.lines.map((line) => el('p', { class: 'note', text: line })),
-      indoorPaths.halls[place?.k] ? el('p', { class: 'note', text: `홀 안 길은 ${indoorPaths.edition} 공식 지도에서 입구와 큰 통로를 읽어 그린 짐작이다. 실제 통로와 다를 수 있다.` }) : null,
+      indoorPaths.halls[place?.k] ? el('p', { class: 'note', text: '홀 안 길은 짐작이다. 실제 통로와 다를 수 있다.' }) : null,
       el('div', { class: 'actions' },
         g.kind !== 'other-campus' && spot && place && indoorPaths.halls[place.k] ? el('button', { class: 'btn', type: 'button', text: at ? '내 자리에서 길 보기' : '홀 입구에서 길 보기', onclick: () => {
           const hall = indoorPaths.halls[place.k];
@@ -274,7 +273,7 @@ export async function render({ rest = [] } = {}) {
     const query = encodeURIComponent(`${c.maps.query}, ${c.maps.address}`);
     detail.replaceChildren(...[
       el('h2', { text: c.ko }),
-      el('p', { class: 'note', text: `${c.en}. 전시장 밖의 공개 장소다. 캠퍼스 지도에 없는 곳이라 지도 위 자리는 어림이다.${c.maps.addressChecked ? '' : ' 주소는 아직 확인하지 못했다.'}` }),
+      el('p', { class: 'note', text: `${c.en}. 전시장 밖이라 자리는 어림이다.${c.maps.addressChecked ? '' : ' 주소는 확인 전이다.'}` }),
       mine.length ? el('ul', { class: 'stack' }, mine.map((e) => el('li', {}, el('b', { text: e.name }), el('span', { text: `${e.date.slice(5).replace('-', '/')} ${e.from} ~ ${e.to}` })))) : el('p', { class: 'note', text: '여기서 하는 내 일정은 없다.' }),
       el('div', { class: 'actions' },
         out(places.mapsUrls.search.replace('{query}', query), '구글맵에서 열기', 'btn'),
@@ -590,13 +589,13 @@ export async function render({ rest = [] } = {}) {
     fit([hit.x - 160, hit.z - 160, hit.x + 160, hit.z + 160]);
   });
   const mePanel = el('section', { class: 'panel' },
-    el('h2', { text: '내 위치와 다음 갈 곳' }),
+    el('h2', { text: '내 위치' }),
     whereText,
     el('div', { class: 'actions' }, gpsButton, followButton),
     boothForm,
     whereNote,
     nextBox,
-    el('p', { class: 'note', text: '위치는 이 폰 안에서만 쓴다. GPS로는 어느 캠퍼스인지와, 짐작으로 어느 홀 · 건물 근처인지까지 본다(자리가 어림값이다). 홀 안은 부스 번호로 맞춘다.' }));
+    el('p', { class: 'note', text: '위치는 이 폰 안에서만 쓴다. 홀 안은 부스 번호로 맞춘다.' }));
 
   const colorButtons = MODES.map((m) => el('button', { class: 'seg', type: 'button', text: m.k === 'plain' ? '색: 한 색' : m.ko, 'aria-pressed': m.k === colorMode ? 'true' : 'false', onclick: (ev) => {
     colorMode = m.k;
@@ -611,23 +610,6 @@ export async function render({ rest = [] } = {}) {
   } }));
   paintLegend();
 
-  // 내 일정(전시 밖): 장소가 있으면 구글맵으로 연다. 고치는 곳은 "시간과 일정" 화면이다.
-  function eventsPanel() {
-    const events = [...getEvents()].sort((a, b) => a.date.localeCompare(b.date) || a.from.localeCompare(b.from));
-    return el('section', { class: 'panel' },
-      el('h2', { text: `내 일정 ${events.length}개` }),
-      events.length
-        ? el('ul', { class: 'stack' }, events.map((e) => {
-          const link = placeLink(places, e.place);
-          return el('li', { class: 'entry' },
-            el('div', { class: 'name', text: e.name }),
-            el('div', { class: 'where', text: `${e.date.slice(5).replace('-', '/')} ${e.from} ~ ${e.to}${e.place ? ` · ${e.place}` : ''}` }),
-            link ? el('div', { class: 'row-actions' }, out(link, '구글맵에서 열기')) : null);
-        }))
-        : el('p', { class: 'note', text: '전시 밖 일정(모임 · 공연 · 거리 구경 같은 것)을 넣으면 여기에도 보인다.' }),
-      el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: '#/days', text: '시간과 일정 고치기' })));
-  }
-
   const page = el('div', { class: 'page' },
     el('section', { class: 'panel' },
       el('h1', { text: '지도' }),
@@ -640,14 +622,12 @@ export async function render({ rest = [] } = {}) {
         el('button', { class: 'seg', type: 'button', text: '작게', 'aria-label': '지도 작게', onclick: () => (solid.getAttribute('aria-pressed') === 'true' ? three?.zoom(1.25) : zoom(1.4)) })),
       el('div', { class: 'segs', role: 'group', 'aria-label': '부스 점 칠하기' }, colorButtons),
       legendBox,
-      el('p', { class: 'note', text: '붉은 테두리의 점은 사람이 "명함 넣는 이벤트 있음"으로 표시한 부스다.' }),
-      el('p', { class: 'note', text: `홀 안 부스 자리는 짐작이다 (공식 캠퍼스 지도 ${places.edition}판, 정식 배치도 전). 캠퍼스 사이 거리는 줄여서 그렸다.` }),
+      el('p', { class: 'note', text: `부스 자리는 짐작이다 (${places.edition}판, 정식 배치도 전). 붉은 테두리는 명함 넣는 부스.` }),
       pins.length
-        ? el('p', { class: 'note', text: `번호는 내 동선의 차례다. 색은 날짜다: ${info.show.days.map((d, i) => `${d.ko.split(' ')[0]} ${['분홍', '파랑', '초록', '노랑'][i]}`).join(' · ')} · 미정 회색.` })
-        : el('p', { class: 'note' }, '관심 회사를 넣으면 지도에 번호로 찍힌다. ', el('a', { href: '#/find', text: '회사 고르러 가기' }))),
+        ? el('p', { class: 'note', text: `번호는 동선 차례, 색은 날짜: ${info.show.days.map((d, i) => `${d.ko.split(' ')[0]} ${['분홍', '파랑', '초록', '노랑'][i]}`).join(' · ')}.` })
+        : el('p', { class: 'note' }, '관심 회사를 넣으면 번호로 찍힌다. ', el('a', { href: '#/find', text: '회사 고르기' }))),
     detail,
-    mePanel,
-    eventsPanel());
+    mePanel);
   // 화면에 붙은 뒤에야 크기를 알 수 있다.
   requestAnimationFrame(() => {
     fit(all);

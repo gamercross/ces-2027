@@ -32,5 +32,5 @@ export function guideTo(where, target, placeOf) {
     const from = myPlaces.map((k) => placeOf(k)?.ko).filter(Boolean)[0];
     return { kind: 'same-campus', maps: true, lines: [`같은 캠퍼스의 다른 곳이다: ${from ? `${from} → ` : ''}${toName}.`, '지도에 그은 줄 쪽으로 걸어가거나, 구글맵 길찾기를 쓴다.', `도착하면 찾을 부스: ${target.code}.`] };
   }
-  return { kind: 'other-campus', maps: true, lines: [`다른 캠퍼스에 있다: ${toName}.`, '걸어가기에는 멀다. 구글맵 길찾기를 쓰거나 첫 화면 "오가는 법"의 셔틀을 본다.', `도착하면 찾을 부스: ${target.code}.`] };
+  return { kind: 'other-campus', maps: true, lines: [`다른 캠퍼스에 있다: ${toName}.`, '걸어가기에는 멀다. 구글맵 길찾기를 쓰거나 "셔틀"을 본다.', `도착하면 찾을 부스: ${target.code}.`] };
 }

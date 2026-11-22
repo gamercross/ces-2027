@@ -66,13 +66,13 @@ function form(entry, preset, companies, done) {
 
   const node = el('form', { class: 'panel form', novalidate: true },
     el('h1', { text: entry?.draft ? '일기 초안 다듬기' : entry ? '일기 고치기' : '일기 쓰기' }),
-    entry?.draft ? el('p', { class: 'note', text: '듣기나 대화 칸에서 만든 초안이다. "본 것"을 다듬고 느낀 점과 "누구에게"를 채워 남긴다. 남기기 전에는 보내지 않는다.' }) : null,
+    entry?.draft ? el('p', { class: 'note', text: '초안이다. 다듬어 남기기 전에는 보내지 않는다.' }) : null,
     field('회사', pick), field('', other),
     field('날짜', date),
     field('본 것', saw),
     entry ? el('div', { class: 'entry' }, heardBox(entry), entry.audio ? el('p', { class: 'note', text: '녹음은 일기 목록에서 듣는다.' }) : null) : null,
     field('느낀 점', felt),
-    el('div', { class: 'field' }, el('span', { class: 'label', text: '누구에게 (여럿 골라도 된다)' }), tags),
+    el('div', { class: 'field' }, el('span', { class: 'label', text: '누구에게 (여럿 가능)' }), tags),
     error,
     el('div', { class: 'dock' },
       el('button', { class: 'btn', type: 'submit', text: '폰에 남기기' }),
@@ -174,17 +174,17 @@ export async function render({ rest, go }) {
     holder.replaceChildren(el('div', { class: 'page' },
       el('section', { class: 'panel' },
         el('h1', { text: '일기' }),
-        el('p', { class: 'lead', text: '본 회사마다 본 것과 느낀 점을 적는다. 일기는 이 폰에만 남고, 보내기를 누른 것만 밖으로 나간다.' }),
+        el('p', { class: 'lead', text: '이 폰에만 남고, 보내기를 누른 것만 나간다.' }),
         el('p', { class: 'note', text: `일기 ${ready.length}개 · 아직 보내지 않은 것 ${unsent.length}개${drafts.length ? ` · 다듬을 초안 ${drafts.length}개` : ''}` })),
       el('section', { class: 'panel' },
         el('h2', { text: '보내기' }),
         el('p', { class: 'note', text: sendTo
-          ? '보내기를 누르면 아직 보내지 않은 일기와 별명 · 태그가 모으는 곳으로 간다. 깃허브 · 디스코드 · 관심 · 동선은 가지 않는다.'
+          ? '아직 안 보낸 일기와 별명 · 태그가 간다. 연락처 · 동선은 안 간다.'
           : settings.collector === 'file'
-            ? '일기는 파일로 모은다. 보내기를 누르면 아직 보내지 않은 일기가 파일로 내려오고, 그 파일을 정리하는 사람에게 건넨다(단톡방 · 메일). 파일에는 일기와 별명 · 태그, 그리고 그 일기와 이어진 대화(있으면)가 들어간다.'
-            : '모으는 곳이 아직 정해지지 않았다. 지금은 보내기를 누르면 아직 보내지 않은 일기가 파일로 내려온다. 그 파일을 정리하는 사람에게 건넨다. 파일에는 일기와 별명 · 태그, 그리고 그 일기와 이어진 대화(있으면)가 들어간다.' }),
+            ? '보내기를 누르면 파일이 내려온다. 그 파일을 정리하는 사람에게 건넨다.'
+            : '모으는 곳이 아직 없다. 보내기를 누르면 파일이 내려온다. 정리하는 사람에게 건넨다.' }),
         el('div', { class: 'actions' }, send, fileAll, copy),
-        drafts.length ? el('p', { class: 'note', text: `초안 ${drafts.length}개는 보내지 않는다. 다듬어 남기면 보낼 수 있다. 들은 글은 파일로 내려받을 때만 들어가고, 녹음은 어느 때도 보내지 않는다.` }) : null,
+        drafts.length ? el('p', { class: 'note', text: `초안 ${drafts.length}개는 다듬어 남겨야 보낼 수 있다. 녹음은 안 간다.` }) : null,
         status),
       days.map((d) => el('section', { class: 'panel' },
         el('h2', { text: `${d.date} · ${d.items.length}개` }),

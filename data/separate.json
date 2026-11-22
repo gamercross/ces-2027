@@ -85,7 +85,7 @@
     },
     {
       "id": "ces-badge", "group": "badge", "mark": false, "org": "CES", "what": "배지 (연수단은 운영팀이 등록)",
-      "where": "받는 곳은 첫 화면의 \"배지 받는 곳\"", "place": "", "date": null, "from": null, "to": null,
+      "where": "받는 곳은 \"알아둘 것\"의 배지", "place": "", "date": null, "from": null, "to": null,
       "apply": { "url": null, "ko": "따로 할 일 없음. 연수단의 배지는 운영팀이 등록한다 (11/21에 확인)" }, "deadline": null, "watchFrom": null,
       "who": "연수단 모두. 스스로 등록하지 않는다.",
       "status": "confirmed",

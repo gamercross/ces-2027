@@ -1,11 +1,10 @@
-// 첫 화면: 이름 · 며칠 남았나 · CES 2027 알아둘 것(날짜 · 캠퍼스 셋 · 오가는 법 · 배지) · 전시사 자료.
+// 첫 화면: 며칠 남았나 · 지금 갈 곳 · 바로 가기. 날짜 · 캠퍼스 · 오가는 법 · 배지 · 자료는 "알아둘 것", 알림 · 인터넷 없이 · 화면 색은 "설정".
 
-import { el, num, out } from '../dom.js';
-import { getExhibitors, getInfo, getMeta, getPlaces, getSeparate } from '../data.js';
-import { getInterests, getProfile, load, save, setInterests, tagKo } from '../store.js';
-import { offline } from '../offline.js';
+import { el, out } from '../dom.js';
+import { getExhibitors, getInfo, getPlaces, getSeparate } from '../data.js';
+import { getInterests, getProfile, load, save, setInterests } from '../store.js';
 import { dateOf, defaultRemind } from '../alerts.js';
-import { alerts, askPermission, checkAlerts, getPaper, setPaper } from '../notify.js';
+import { alerts, checkAlerts, getPaper, setPaper } from '../notify.js';
 import { hasView } from '../frame.js';
 
 // 지금 갈 곳: 동선의 다음 곳을 첫 화면 맨 위에. 현장에서 앱을 열면 한 번에 길찾기까지 닿게.
@@ -56,16 +55,18 @@ function nowBox() {
 
 // 바로 가기: 탭에 없는 자주 쓰는 일을 한 번에. 다른 화면(세션 · 만난 사람 · 물어보기 · 셔틀)은 그 화면이 앱에 들어오면 저절로 보인다.
 const QUICK = [
-  { view: 'sessions', href: '#/sessions', ko: '세션 일정', icon: 'M5 6h14v13H5zM5 10h14M9 4v4M15 4v4' },
+  { view: 'sessions', href: '#/sessions', ko: '세션', icon: 'M5 6h14v13H5zM5 10h14M9 4v4M15 4v4' },
   { view: 'ask', href: '#/ask', ko: '물어볼 말', icon: 'M5 6h14v9H10l-4 3v-3H5z' },
   { view: 'q', href: '#/q', ko: '물어보기', icon: 'M12 20.5a8.5 8.5 0 1 0 0-17 8.5 8.5 0 0 0 0 17zM9.6 9.6a2.4 2.4 0 1 1 3.4 2.2c-.6.3-1 .8-1 1.5v.5M12 16.6v.4' },
-  { view: 'listen', href: '#/listen', ko: '듣고 일기 초안', icon: 'M12 4a3 3 0 0 1 3 3v4a3 3 0 0 1-6 0V7a3 3 0 0 1 3-3zM6 11a6 6 0 0 0 12 0M12 17v3' },
+  { view: 'listen', href: '#/listen', ko: '듣고 쓰기', icon: 'M12 4a3 3 0 0 1 3 3v4a3 3 0 0 1-6 0V7a3 3 0 0 1 3-3zM6 11a6 6 0 0 0 12 0M12 17v3' },
   { view: 'people', href: '#/people', ko: '만난 사람', icon: 'M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3.5 19a5.5 5.5 0 0 1 11 0M16 8h5M18.5 5.5v5' },
   { view: 'transit', href: '#/transit', ko: '셔틀', icon: 'M6 5h12v11H6zM6 11h12M8.5 19v-3M15.5 19v-3' },
-  { view: 'translate', href: '#/translate', ko: '번역 앱 준비', icon: 'M4 5h9M8.5 3v2M6 5c0 4 3 7 6 8M12 5c-1 4-4 7-8 8M13 20l4-9 4 9M14.5 17h5' },
+  { view: 'translate', href: '#/translate', ko: '번역 앱', icon: 'M4 5h9M8.5 3v2M6 5c0 4 3 7 6 8M12 5c-1 4-4 7-8 8M13 20l4-9 4 9M14.5 17h5' },
   { view: 'apply', href: '#/apply', ko: '따로 신청', icon: 'M7 4h10v16H7zM10 9h4M10 13h4' },
   { view: 'onsite', href: '#/onsite', ko: '현장 안내', icon: 'M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6zM12 8v5M12 15.5v.5' },
   { view: 'topics', href: '#/topics', ko: '주제 판', icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z' },
+  { view: 'info', href: '#/info', ko: '알아둘 것', icon: 'M12 20.5a8.5 8.5 0 1 0 0-17 8.5 8.5 0 0 0 0 17zM12 11v5M12 8v.4' },
+  { view: 'settings', href: '#/settings', ko: '설정', icon: 'M5 7h9M18 7h1M5 17h1M10 17h9M16 5v4M8 15v4' },
 ];
 function quickBox() {
   const ns = 'http://www.w3.org/2000/svg';
@@ -93,23 +94,21 @@ function alertBands(showFrom) {
     const answer = (has) => { setPaper({ remindOn: defaultRemind(showFrom), ...(paper || {}), has, asked: dateOf(new Date()) }); checkAlerts(); };
     box.replaceChildren(...[
       alerts.paper ? el('section', { class: 'panel band ask' },
-        el('h2', { text: alerts.paper === 'again' ? '출발이 가깝다: 종이 명함은 준비됐나요?' : '종이 명함이 있나요?' }),
-        el('p', { class: 'note', text: '이벤트 부스에는 명함을 넣어야 응모가 되는 곳이 있다. 없으면 준비할 것을 알려 준다.' }),
+        el('h2', { text: alerts.paper === 'again' ? '종이 명함은 준비됐나요?' : '종이 명함이 있나요?' }),
+        el('p', { class: 'note', text: '명함을 넣어야 응모되는 부스가 있다.' }),
         el('div', { class: 'actions' },
           el('button', { class: 'btn', type: 'button', text: '있다', onclick: () => answer(true) }),
           el('button', { class: 'btn ghost', type: 'button', text: '없다', onclick: () => { answer(false); location.hash = '#/card'; } }))) : null,
       alerts.soon.length ? el('section', { class: 'panel band' },
         el('h2', { text: `곧 시작하는 일정 ${alerts.soon.length}개` }),
         el('ul', { class: 'dots' }, alerts.soon.slice(0, 3).map((e) => el('li', { text: `${e.inMin}분 뒤 ${e.from} · ${e.name}${e.place ? ` (${e.place})` : ''}` }))),
-        el('p', { class: 'note', text: '라스베이거스 시각이다. 앱이 열려 있을 때만 알려 준다.' }),
-        el('div', { class: 'actions' }, el('a', { class: 'btn', href: '#/days', text: '일정 보기' }))) : null,
+                el('div', { class: 'actions' }, el('a', { class: 'btn', href: '#/days', text: '일정' }))) : null,
       alerts.needs.length ? el('section', { class: 'panel band' },
         el('h2', { text: `오늘 명함 ${alerts.needs.length}장 필요` }),
-        el('p', { text: `오늘 동선에 명함 넣는 이벤트 부스가 있다: ${alerts.needs.slice(0, 4).map((n) => n.name).join(' · ')}${alerts.needs.length > 4 ? ' …' : ''}.` }),
-        el('p', { class: 'note', text: '이벤트 부스는 공식 자료가 아니라 사람이 표시한 것이다.' }),
+        el('p', { text: `${alerts.needs.slice(0, 3).map((n) => n.name).join(' · ')}${alerts.needs.length > 3 ? ' …' : ''}` }),
         el('div', { class: 'actions' },
-          el('a', { class: 'btn', href: '#/plan', text: '동선 보기' }),
-          paper?.has === false ? el('a', { class: 'btn ghost', href: '#/card', text: 'QR 명함 열기' }) : null)) : null,
+          el('a', { class: 'btn', href: '#/plan', text: '동선' }),
+          paper?.has === false ? el('a', { class: 'btn ghost', href: '#/card', text: '명함' }) : null)) : null,
     ].filter(Boolean));
   }
   paint();
@@ -117,12 +116,9 @@ function alertBands(showFrom) {
   return box;
 }
 
-// 따로 신청하는 곳: 처음 한 번은 위에 크게 보이고, 닫으면 "알아둘 것" 아래에 작게 남는다.
-// 마감이 7일 안이거나 2027 안내를 다시 볼 때가 되면 위에 띠로 보인다. 자료는 첫 화면을 그린 뒤에 읽는다.
+// 따로 신청하는 곳: 처음 한 번은 위에 한 줄로 보이고, 마감이 7일 안이거나 2027 안내를 다시 볼 때가 되면 띠로 보인다. 자료는 첫 화면을 그린 뒤에 읽는다.
 function separateBoxes() {
   const top = el('div', { class: 'page' });
-  const kept = el('div', { class: 'page' });
-  const md = (date) => { const [, m, d] = date.split('-').map(Number); return `${m}/${d}`; };
   async function paint() {
     let data, sep;
     try { [data, sep] = await Promise.all([getSeparate(), import('../separate.js')]); } catch { return; }
@@ -133,77 +129,23 @@ function separateBoxes() {
     const first = !load('separateSeen.v1', null);
     top.replaceChildren(...[
       first ? el('section', { class: 'panel band ask' },
-        el('h2', { text: 'CES 배지와 따로 신청해야 하는 곳' }),
-        el('p', { text: `${s.watch.join(' · ')}: 2027 발표와 전시관 안내가 아직 없다. 배지와 따로 신청이나 초대가 있어야 할 수 있다. 작년에는 12월 초 ~ 중순에 안내가 나왔다.` }),
-        el('ul', { class: 'dots' },
-          s.apply.map((t) => el('li', { text: `따로 표가 있어야 한다: ${t} (안내 전)` })),
-          el('li', { text: '배지는 운영팀이 등록한다. 따로 할 일 없음. 받는 곳에서 여권을 보인다.' }),
-          s.rides.length ? el('li', { text: `가기 전에: ${s.rides[0]} 앱 받고 관심 등록 (초대까지 시간이 걸릴 수 있음)` }) : null),
-        el('p', { class: 'note', text: `${md(s.read)}에 CES 공식 사이트와 회사 공식 사이트에서 확인했다. 짐작한 것은 없다.` }),
+        el('h2', { text: '따로 신청해야 하는 곳이 있다' }),
+        el('p', { text: `${s.watch.join(' · ')}: 2027 안내 전이다. 배지 말고 표나 초대가 필요할 수 있다.` }),
         el('div', { class: 'actions' },
-          el('a', { class: 'btn', href: '#/apply', text: '자세히 보기' }),
-          el('button', { class: 'btn ghost', type: 'button', text: '알겠다 · 닫기', onclick: () => { save('separateSeen.v1', today); paint(); } }))) : null,
+          el('a', { class: 'btn', href: '#/apply', text: '보기' }),
+          el('button', { class: 'btn ghost', type: 'button', text: '닫기', onclick: () => { save('separateSeen.v1', today); paint(); } }))) : null,
       due.length ? el('section', { class: 'panel band ask' },
         el('h2', { text: '따로 신청: 마감이 가깝다' }),
         el('ul', { class: 'dots' }, due.map((x) => el('li', { text: `${x.item.org} ${x.item.what}: ${x.left === 0 ? '오늘까지' : `${x.left}일 남음`}` }))),
         el('div', { class: 'actions' }, el('a', { class: 'btn', href: '#/apply', text: '보기' }))) : null,
       !first && watch.length ? el('section', { class: 'panel band' },
-        el('h2', { text: '2027 안내가 나왔는지 볼 때다' }),
-        el('p', { text: `${watch.map((it) => it.org).join(' · ')}: 작년에는 이맘때 안내가 나왔다. 공식 페이지를 다시 본다.` }),
+        el('h2', { text: '2027 안내가 나왔나' }),
+        el('p', { text: `${watch.map((it) => it.org).join(' · ')}: 작년엔 이맘때 나왔다.` }),
         el('div', { class: 'actions' }, el('a', { class: 'btn', href: '#/apply', text: '보기' }))) : null,
     ].filter(Boolean));
-    kept.replaceChildren(el('section', { class: 'panel' },
-      el('h2', { text: '따로 신청하는 곳' }),
-      el('p', { text: `CES 배지와 따로 신청 · 표 · 초대가 있어야 하는 곳 ${data.items.filter((it) => it.group === 'watch' || it.group === 'apply').length}곳, 배지만 있으면 되는 큰 일정, 자율주행 이동을 모았다.` }),
-      el('small', { class: 'proof', text: `${md(s.read)} 확인 · 줄마다 출처가 있다` }),
-      el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: '#/apply', text: '따로 신청하는 곳 보기' }))));
   }
   paint();
-  return { top, kept };
-}
-
-// 알림: 켜기 단추와, 이 폰에서 되는 것 · 안 되는 것.
-function notifyBox() {
-  const state = el('p', { class: 'big' });
-  const error = el('p', { class: 'note', role: 'status' });
-  const button = el('button', { class: 'btn', type: 'button', text: '알림 켜기', hidden: true, onclick: async () => { await askPermission(); checkAlerts(); } });
-  function paint() {
-    state.textContent = { granted: '알림이 켜져 있다.', default: '알림을 켤 수 있다.', denied: '알림을 막아 두었다. 대신 이 화면의 띠로 보인다.', unsupported: '이 브라우저에서는 알림을 쓸 수 없다. 대신 이 화면의 띠로 보인다.' }[alerts.state];
-    error.textContent = alerts.error;
-    button.hidden = alerts.state !== 'default';
-  }
-  paint();
-  window.addEventListener('ces-alerts', paint);
-  return el('section', { class: 'panel' }, el('h2', { text: '알림' }), state,
-    el('p', { class: 'note', text: '알리는 것: 내 일정(세션 포함)이 30분 안에 시작할 때, 오늘 동선에 명함 넣는 이벤트 부스가 있을 때, 그 부스 가까이 갔을 때. 서버가 없어서 앱이 열려 있을 때(1분마다)와 앱을 열 때, 내 자리가 바뀔 때만 확인한다. 앱이 닫혀 있으면 정해진 시각에 울리지 않는다.' }),
-    el('p', { class: 'note', text: '아이폰은 홈 화면에 추가한 뒤에야 알림을 켤 수 있다. 막아 두었으면 폰의 설정에서 이 앱의 알림을 다시 켠다.' }),
-    error,
-    el('div', { class: 'actions' }, button));
-}
-
-// 인터넷 없이 쓰기: 담겼는지 · 판 이름 · 홈 화면에 추가.
-function offlineBox() {
-  const state = el('p', { class: 'big' });
-  const version = el('p', { class: 'note' });
-  const button = el('button', { class: 'btn', type: 'button', text: '홈 화면에 추가', hidden: true, onclick: async () => {
-    const ask = offline.install;
-    if (!ask) return;
-    ask.prompt();
-    await ask.userChoice.catch(() => {});
-    offline.install = null;
-    paint();
-  } });
-  function paint() {
-    const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-    state.textContent = offline.ready ? '인터넷 없이 열 준비가 됐다.' : ('serviceWorker' in navigator ? '한 번 열어 두면 다음부터 인터넷 없이 열린다. 담는 중이다.' : '이 브라우저는 인터넷 없이 여는 것을 돕지 않는다.');
-    version.textContent = offline.version ? `판 이름 ${offline.version}${standalone ? ' · 홈 화면에서 열었다' : ''}` : '';
-    button.hidden = !offline.install;
-  }
-  paint();
-  window.addEventListener('ces-offline', paint);
-  return el('section', { class: 'panel' }, el('h2', { text: '인터넷 없이 쓰기' }), state,
-    el('p', { class: 'note', text: '홈 화면에 추가해 두면 앱처럼 열린다. 아이폰은 사파리의 공유 단추에서, 안드로이드는 크롬 메뉴에서 "홈 화면에 추가"를 누른다.' }),
-    el('div', { class: 'actions' }, button), version);
+  return { top };
 }
 
 function daysLeft(show) {
@@ -216,73 +158,24 @@ function daysLeft(show) {
   return '끝났다';
 }
 
-// 줄마다 붙는 작은 글: 확인한 날짜와 출처 링크. 줄에 source가 없으면 그 묶음의 것을 쓴다.
-function proof(item, fallback) {
-  const s = item?.source || fallback;
-  if (!s) return null;
-  const [, m, d] = s.read.split('-');
-  return el('small', { class: 'proof' }, `${Number(m)}/${Number(d)} 확인 · `, out(s.url, '출처'));
-}
-
-function section(title, ...kids) {
-  return el('section', { class: 'panel' }, el('h2', { text: title }), ...kids);
-}
-
 export async function render() {
-  const [info, meta] = await Promise.all([getInfo(), getMeta()]);
+  const info = await getInfo();
   const profile = getProfile();
   const show = info.show;
 
   const hero = el('section', { class: 'hero' },
-    el('p', { class: 'eyebrow', text: `${show.city} · 2027년 1월 6일 ~ 9일` }),
-    el('h1', { text: 'CES 2027 준비 지도' }),
+    el('p', { class: 'eyebrow', text: `${show.city} · 1/6 ~ 9` }),
+    el('h1', { text: 'CES 2027' }),
     el('p', { class: 'count', text: daysLeft(show) }),
-    el('p', { class: 'lead', text: profile
-      ? `${profile.nick}${profile.tag ? ` · ${tagKo(profile.tag)}` : ''}. 분야를 고르고 관심 회사를 모아 둔다.`
-      : '우리 팀이 정보와 위치를 헷갈리지 않게 하는 준비 지도다. 명함부터 만든다.' }),
     // 명함이 있으면 단추를 두지 않는다: 내 명함은 위 오른쪽, 회사는 아래 탭, 물어보기는 바로 가기에 한 번씩만 있다.
     profile ? null : el('div', { class: 'actions' },
       el('a', { class: 'btn', href: '#/card', text: '명함 만들기' }),
       el('a', { class: 'btn ghost', href: '#/find', text: '회사 찾기' })),
   );
 
-  const days = section('날짜와 시간',
-    el('ul', { class: 'rows' }, show.days.map((d) => el('li', {}, el('b', { text: d.ko }), el('span', {}, d.hours, ' ', proof(d, show.source))))),
-    el('p', { class: 'note' }, show.note, ' ', proof(null, show.noteSource)));
-
-  const campuses = section('캠퍼스 셋',
-    info.campuses.map((c) => el('div', { class: 'block' },
-      el('h3', { text: c.ko }),
-      el('p', { class: 'note', text: c.sub }),
-      el('ul', { class: 'rows' }, c.halls.map((h) => el('li', {}, el('b', { text: h.ko }), el('span', {}, h.what, ' ', proof(h, c.source))))))));
-
-  const moving = section('오가는 법',
-    el('ul', { class: 'stack' }, info.moving.map((m) => el('li', {}, el('b', { text: m.ko }), el('span', { text: m.what }), proof(m, info.movingSource)))),
-    // 셔틀 노선 · 자율주행 이동은 위 바로 가기("셔틀" · "따로 신청")에 한 번씩만 둔다.
-    el('p', { class: 'note', text: '셔틀 노선 · 시간표는 위 바로 가기 "셔틀", 자율주행 이동(Waymo · Zoox)은 "따로 신청"에 있다.' }));
-
-  const badge = section('배지 받는 곳',
-    el('p', {}, info.badge.rule, ' ', proof(null, info.badge.source)),
-    el('ul', { class: 'stack' }, info.badge.spots.map((s) => el('li', {}, el('b', { text: s.ko }), el('span', { text: s.hours }), proof(s, info.badge.source)))),
-    el('p', { class: 'note' }, info.badge.more, ' ', proof(null, info.badge.source)));
-
-  const data = section('전시사 자료',
-    meta
-      ? el('p', { class: 'big', text: `전시사 ${num(meta.exhibitors)}곳 · 분야 ${num(meta.categories)}개 · 한국 ${num(meta.korea)}곳` })
-      : el('p', { class: 'big', text: '전시사 자료를 아직 받지 못했다.' }),
-    meta && el('ul', { class: 'rows' },
-      el('li', {}, el('b', { text: '받은 날짜' }), el('span', { text: meta.v })),
-      el('li', {}, el('b', { text: '출처' }), el('span', {}, out('https://exhibitors.ces.tech/8_0/', 'CES 공식 전시사 검색'))),
-      el('li', {}, el('b', { text: '부스 자리' }), el('span', { text: meta.places.boothSpotsGuess > 0
-        ? `홀 안 자리는 짐작이다 (공식 캠퍼스 지도 ${meta.places.edition}판, 정식 배치도 전)`
-        : `공식 배치도 (${meta.places.edition}판)` }))));
-
-  const recheck = el('section', { class: 'panel notice' }, el('h2', { text: 'CES 2027 알아둘 것' }), el('p', { text: info.recheck }));
-  const sources = el('section', { class: 'foot' },
-    el('p', { text: '알아둘 것은 CES 공식 안내에서 읽은 것이다. 줄마다 확인한 날짜가 있다.' }),
-    el('p', {}, info.sources.flatMap((s, i) => [i ? ' · ' : '', out(s.url, s.ko)])),
-    el('p', { text: '연수에 가는 참가자가 만든 비공식 안내다. CES(CTA)나 코디세이 운영 측의 공식 자료가 아니다.' }));
+  const foot = el('section', { class: 'foot' },
+    el('p', { text: '참가자가 만든 비공식 안내다. CES(CTA)나 코디세이의 공식 자료가 아니다.' }));
 
   const separate = separateBoxes();
-  return el('div', { class: 'page' }, hero, nowBox(), quickBox(), separate.top, alertBands(show.from), recheck, separate.kept, days, campuses, moving, badge, data, notifyBox(), offlineBox(), sources);
+  return el('div', { class: 'page' }, hero, nowBox(), alertBands(show.from), quickBox(), separate.top, foot);
 }
