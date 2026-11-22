@@ -283,6 +283,8 @@ check(diary.fileName(who, new Date(2027, 0, 7)) === 'ces2027-일기-물개-20270
     G.guideTo({ by: 'gps', campus: 'lvcc', area: { places: ['LVCC_N'] } }, { place: 'LVCC_N', code: 'N253' }, placeOf),
   ];
   check(kinds.map((g) => g.kind).join(' ') === 'unknown same-place same-place same-campus other-campus same-place' && kinds[1].lines[1].includes('작아지는') && kinds[1].lines[1].includes('147번대') && kinds[2].lines[1].includes('같은 통로') && !kinds[1].maps && kinds[3].maps && kinds[4].maps && kinds[5].lines[0].includes('짐작'), '부스까지 길 안내: 같은 곳이면 부스 번호 쪽으로, 같은 캠퍼스의 다른 곳 · 다른 캠퍼스면 구글맵, 내 자리를 모르면 묻는다');
+  const far = G.guideTo({ by: 'gps', campus: 'lvcc', inside: false, meters: 9612345 }, { place: 'LVCC_N', code: '11835' }, placeOf);
+  check(far.kind === 'outside' && far.maps && far.lines[0] === '전시장 밖이다 (가장 가까운 전시장까지 약 9,612km).' && !far.lines.join(' ').includes('다른 캠퍼스') && G.farText(420) === '420m' && G.farText(4560) === '4.6km' && kinds[4].lines[0].startsWith('가는 곳이 다른 캠퍼스다'), '전시장 밖(GPS로 어느 캠퍼스 안도 아님)이면 "다른 캠퍼스"가 아니라 "전시장 밖 · 거리"라고 말한다 (폰 확인 2차 D)');
   check((placesAll.cityPlaces || []).length >= 3 && placesAll.cityPlaces.every((p) => p.shapeGuess === true && p.maps.query && p.maps.address && (p.maps.addressChecked === null || /^\d{4}-\d\d-\d\d$/.test(p.maps.addressChecked))), `전시장 밖 공개 장소 ${(placesAll.cityPlaces || []).length}곳: 자리는 어림으로 표시, 주소는 확인한 날 또는 미확인`);
 }
 
