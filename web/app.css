@@ -24,7 +24,7 @@ h1 { font-size: var(--fs-title); line-height: 1.15; font-weight: 800; letter-spa
 h2 { font-size: var(--fs-h2); line-height: 1.35; font-weight: 800; letter-spacing: -0.02em; }
 h3 { font-size: var(--fs-body); }
 .eyebrow { font-size: var(--fs-note); font-weight: 700; color: var(--ink-2); }
-.lead { color: var(--ink-2); }
+.lead { color: var(--ink-2); word-break: keep-all; overflow-wrap: break-word; }
 .big { font-size: var(--fs-h2); font-weight: 700; }
 .note, .hint { font-size: var(--fs-note); color: var(--ink-2); }
 .foot { font-size: var(--fs-fine); color: var(--ink-2); padding: var(--s1); }
@@ -197,6 +197,8 @@ body[data-tab="map"]:not(.sub) .bar { padding-top: env(safe-area-inset-top); pad
   background: var(--panel-2); border: 2px solid transparent; border-radius: var(--radius-ctl);
 }
 .field input:focus, .field textarea:focus, .field select:focus, .times input:focus { outline: none; border-color: var(--accent); }
+/* 날짜 · 시간 칸: iOS Safari는 기본 모양(appearance)일 때 이 칸을 content-box로 바꿔, 안쪽 여백만큼 카드 오른쪽 밖으로 내민다. 기본 모양을 끈다 */
+input[type="date"], input[type="time"] { -webkit-appearance: none; appearance: none; min-width: 0; max-width: 100%; }
 .field textarea { resize: vertical; min-height: 96px; }
 .field input[type="file"] { padding: 10px; }
 .choices { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
@@ -287,6 +289,13 @@ body.pcard-open { overflow: hidden; }
 .find-field input { width: 100%; min-height: 52px; padding: 0 var(--s4); border: 2px solid transparent; border-radius: var(--radius-ctl); background: var(--panel); color: var(--ink); font-size: calc(17px * var(--scale)); font-weight: 700; }
 .find-field input::placeholder { color: var(--ink-2); font-weight: 400; }
 .find-field input:focus { outline: none; border-color: var(--accent); }
+/* 찾기 칸 지우기(×): 글자가 있을 때만 "비공식" 자리에 선다. 브라우저가 그리는 지우기 표시는 끈다(둘이 겹치지 않게) */
+.find-field input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; display: none; }
+.find-clear, .sheet-close { position: absolute; display: flex; align-items: center; justify-content: center; width: var(--tap-min); height: var(--tap-min); padding: 0; border: 0; border-radius: var(--radius-ctl); background: transparent; color: var(--ink); cursor: pointer; touch-action: manipulation; }
+.find-clear svg, .sheet-close svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.find-clear { display: none; right: var(--s1); top: calc(50% - var(--tap-min) / 2); }
+.find:has(input:not(:placeholder-shown)) .find-clear { display: flex; }
+.find:has(input:not(:placeholder-shown)) .find-tag { display: none; }
 .results, .results-note { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 6; border-radius: var(--radius-ctl); background: var(--panel); }
 .results { max-height: min(52vh, 380px); overflow-y: auto; overscroll-behavior: contain; padding: var(--s1); }
 .results-note { padding: var(--s3) var(--s4); font-size: var(--fs-small); font-weight: 700; }
@@ -300,7 +309,7 @@ body.pcard-open { overflow: hidden; }
 .chip-go[aria-pressed="true"] { background: var(--btn); color: var(--on-btn); }
 .ctls { position: absolute; right: var(--s2); bottom: calc(var(--s4) + var(--sheet-h, 0px) + var(--nav-h, 0px)); z-index: 3; display: grid; gap: 6px; transition: bottom 0.22s ease; }
 .mapx[data-sheet="half"] .ctls, .mapx[data-sheet="full"] .ctls { display: none; }
-.ctl { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; padding: 0; border: 0; border-radius: var(--radius-ctl); background: var(--panel); color: var(--ink); font-size: 24px; font-weight: 700; cursor: pointer; }
+.ctl { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; padding: 0; border: 0; border-radius: var(--radius-ctl); background: var(--panel); color: var(--ink); font-size: 24px; font-weight: 700; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
 .ctl svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 .ctl-wide { font-size: calc(15px * min(var(--scale), 1.15)); }
 .daybar { display: flex; align-items: center; gap: var(--s2); padding: var(--s1) var(--s1) var(--s1) var(--s3); border-radius: var(--radius-ctl); background: var(--panel); }
@@ -315,11 +324,15 @@ body.pcard-open { overflow: hidden; }
 .nav-actions { display: flex; gap: var(--s2); }
 .nav-actions .btn { flex: 1 1 0; }
 .mappage:has(.mapx[data-sheet="half"], .mapx[data-sheet="full"]) > .panel { display: none; }
+/* 카드가 열려 있으면 페이지가 위아래로 당겨지지 않는다(iOS에서 화면 전체가 밀려 탭이 Safari 막대 뒤로 숨던 것). 끝까지 펼치면 홀 칩 줄은 카드 위로 비죽 나오지 않게 숨긴다 */
+html:has(.mapx[data-sheet="half"], .mapx[data-sheet="full"]) { overscroll-behavior-y: none; }
+.mapx[data-sheet="full"] .chips { visibility: hidden; }
 .sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; flex-direction: column; height: var(--sheet-h, 0px); background: var(--panel); border-radius: var(--radius-big) var(--radius-big) 0 0; transition: height 0.22s ease; }
 .sheet.drag { transition: none; }
 .sheet[hidden] { display: none; }
 .sheet-grip { flex: none; display: flex; align-items: center; justify-content: center; width: 100%; min-height: 44px; padding: 0; border: 0; background: transparent; cursor: grab; touch-action: none; }
 .sheet-bar { width: 44px; height: 5px; border-radius: 3px; background: var(--ink-2); opacity: 0.5; }
+.sheet-close { top: 0; right: var(--s1); z-index: 1; }
 .sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 var(--s4) var(--s5); }
 .card { display: grid; gap: var(--s2); }
 .card h2 { font-size: calc(24px * var(--scale-head)); line-height: 1.25; overflow-wrap: anywhere; }
@@ -435,7 +448,8 @@ a.link-text { display: inline-flex; align-items: center; min-height: var(--tap-m
 .session .title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-right: var(--s1); }
 .session .tag { margin-right: var(--s1); }
 .session .where.one { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.session .row-actions { margin-top: 0; gap: var(--s1); }
+.session .row-actions { margin-top: 0; gap: var(--s2); }
+.session .row-actions .linkish, .session .row-actions a { justify-content: center; }
 .session .row-actions .pick { min-height: var(--tap-min); }
 .scan-video { display: block; width: 100%; max-height: 48vh; object-fit: cover; border-radius: var(--radius-ctl); background: var(--panel-2); }
 .scan-video[hidden] { display: none; }

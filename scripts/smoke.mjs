@@ -283,6 +283,8 @@ check(diary.fileName(who, new Date(2027, 0, 7)) === 'ces2027-일기-물개-20270
     G.guideTo({ by: 'gps', campus: 'lvcc', area: { places: ['LVCC_N'] } }, { place: 'LVCC_N', code: 'N253' }, placeOf),
   ];
   check(kinds.map((g) => g.kind).join(' ') === 'unknown same-place same-place same-campus other-campus same-place' && kinds[1].lines[1].includes('작아지는') && kinds[1].lines[1].includes('147번대') && kinds[2].lines[1].includes('같은 통로') && !kinds[1].maps && kinds[3].maps && kinds[4].maps && kinds[5].lines[0].includes('짐작'), '부스까지 길 안내: 같은 곳이면 부스 번호 쪽으로, 같은 캠퍼스의 다른 곳 · 다른 캠퍼스면 구글맵, 내 자리를 모르면 묻는다');
+  const far = G.guideTo({ by: 'gps', campus: 'lvcc', inside: false, meters: 9612345 }, { place: 'LVCC_N', code: '11835' }, placeOf);
+  check(far.kind === 'outside' && far.maps && far.lines[0] === '전시장 밖이다 (가장 가까운 전시장까지 약 9,612km).' && !far.lines.join(' ').includes('다른 캠퍼스') && G.farText(420) === '420m' && G.farText(4560) === '4.6km' && kinds[4].lines[0].startsWith('가는 곳이 다른 캠퍼스다'), '전시장 밖(GPS로 어느 캠퍼스 안도 아님)이면 "다른 캠퍼스"가 아니라 "전시장 밖 · 거리"라고 말한다 (폰 확인 2차 D)');
   check((placesAll.cityPlaces || []).length >= 3 && placesAll.cityPlaces.every((p) => p.shapeGuess === true && p.maps.query && p.maps.address && (p.maps.addressChecked === null || /^\d{4}-\d\d-\d\d$/.test(p.maps.addressChecked))), `전시장 밖 공개 장소 ${(placesAll.cityPlaces || []).length}곳: 자리는 어림으로 표시, 주소는 확인한 날 또는 미확인`);
 }
 
@@ -572,6 +574,16 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       && formStart > 0 && cardJs.indexOf("class: 'dock'", formStart) > 0 && cardJs.indexOf("class: 'dock'", formStart) < cardJs.indexOf("field('한 줄 (선택)', line)", formStart)
       && planJs.includes('boothLines(') && (await readFile(join(dist, 'company-extra.js'), 'utf8')).includes('부스 ${booths.length}곳'),
       '디자인 마감: 제목은 24px 한 줄 · 12px 글자가 없다(13px부터) · 아래 도크를 걷고 "일기 쓰기"만 탭 바로 위에 붙는다 · 링크 모양 회색 칩이 없다 · 선택된 탭은 굵은 선 · 지도 탭은 머리를 접고 "비공식"을 찾기 칸에 · 카드가 열리면 지도 아래 묶음을 가린다 · 종이 명함 질문은 동선 띠와 설정에만 · 첫 명함은 필수 둘 다음에 바로 단추 · 부스가 여럿인 회사는 카드에 모두 보인다');
+    // 실제 아이폰에서 찾은 것(11/22 폰 확인): 날짜 · 시간 칸의 기본 모양 끄기 · 카드가 열리면 페이지가 당겨지지 않기 · 카드의 바퀴 쓸기 · × 단추 둘 · + 단추 글자 선택 막기 · 세션 안내 글 줄바꿈과 단추 사이.
+    const sheetJs = await readFile(join(dist, 'mapsheet.js'), 'utf8');
+    const findJs = await readFile(join(dist, 'mapfind.js'), 'utf8');
+    check(/input\[type="date"\], input\[type="time"\] \{[^}]*appearance: none/.test(appCss)
+      && /html:has\(\.mapx\[data-sheet="half"\], \.mapx\[data-sheet="full"\]\) \{ overscroll-behavior-y: none; \}/.test(appCss) && /\.mapx\[data-sheet="full"\] \.chips \{ visibility: hidden; \}/.test(appCss)
+      && /addEventListener\('wheel'/.test(sheetJs) && /passive: false/.test(sheetJs) && sheetJs.includes("'aria-label': '카드 닫기'") && findJs.includes("'aria-label': '찾는 글자 지우기'")
+      && /\.find:has\(input:not\(:placeholder-shown\)\) \.find-clear \{ display: flex; \}/.test(appCss) && /\.find-clear, \.sheet-close \{[^}]*width: var\(--tap-min\); height: var\(--tap-min\)/.test(appCss)
+      && /\.ctl \{[^}]*user-select: none;[^}]*touch-action: manipulation/.test(appCss) && /\.lead \{[^}]*word-break: keep-all/.test(appCss) && /\.session \.row-actions \{[^}]*gap: var\(--s2\)/.test(appCss)
+      && !mapV2.includes("      guide,\n"),
+      '폰에서 찾은 것: 날짜 · 시간 칸은 기본 모양을 꺼 카드 밖으로 나가지 않는다 · 카드가 열리면 페이지가 당겨지지 않고 카드가 바퀴 쓸기를 받는다 · 찾기 칸 지우기와 카드 닫기(×, 44px, 이름 있음) · + 단추 글자가 선택되지 않는다 · 세션 안내 글은 낱말에서 줄을 바꾸고 단추 사이는 8px · 부스 없는 회사 카드에 "null"이 없다');
   }
   // 다시 짓기 7단계: 글자 크기 네 단계(기본 100 · 크게 115 · 더 크게 130 · 가장 크게 150%). 첫 그림 전에 걸리고, 제목은 상한, 지도 글자는 130%까지.
   {

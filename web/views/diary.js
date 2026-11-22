@@ -88,7 +88,7 @@ function form(entry, preset, companies, done) {
   const pick = el('select', { name: 'company', 'aria-label': '회사' },
     el('option', { value: '', text: companies.length ? '회사는 나중에 · 관심 회사에서 고른다' : '회사는 나중에' }),
     companies.map((c) => el('option', { value: c.id, selected: c.id === e.exId, text: c.name })));
-  const other = el('input', { name: 'other', maxlength: 80, placeholder: '목록에 없으면 회사 이름을 적는다', value: known ? '' : e.company || '' });
+  const other = el('input', { name: 'other', maxlength: 80, placeholder: '목록에 없는 회사 이름', value: known ? '' : e.company || '' });
   const date = el('input', { type: 'date', name: 'date', required: true, value: e.date });
   const saw = el('textarea', { name: 'saw', rows: 4, maxlength: 600, placeholder: '무엇을 봤나 (제품 · 시연 · 들은 말)' });
   saw.value = e.saw || '';

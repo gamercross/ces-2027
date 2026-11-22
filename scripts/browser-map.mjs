@@ -158,7 +158,7 @@ async (page) => {
   await page.goto('about:blank');
   await page.goto(`${URL}#/map/at/${encodeURIComponent(two[1].id)}`);
   await page.locator('.sheet .card h2').waitFor({ timeout: 15000 });
-  check((await page.locator('.sheet .card h2').innerText()) === two[1].name, '다른 화면의 "지도" 링크로 오면 그 회사 카드가 열린다');
+  check((await page.locator('.sheet .card h2').textContent()) === two[1].name, '다른 화면의 "지도" 링크로 오면 그 회사 카드가 열린다');
   await page.evaluate(() => localStorage.removeItem('ces2027.interests.v1'));
 
   // 8d. 공식 지도 기준: 길 이름 글자 · 홀 카드의 부스 번호 범위 · 회사 자료에 없는 번호도 홀을 알려 준다
