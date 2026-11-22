@@ -312,6 +312,37 @@ body.pcard-open { overflow: hidden; }
 .chips::-webkit-scrollbar { display: none; }
 .chip-go { flex: none; min-height: var(--tap-min); padding: 0 var(--s4); border: 0; border-radius: var(--radius-ctl); background: var(--panel); color: var(--ink); font-size: calc(15px * var(--scale)); font-weight: 700; cursor: pointer; }
 .chip-go[aria-pressed="true"] { background: var(--btn); color: var(--on-btn); }
+/* 지도 칩 줄 맨 앞의 "목록": 홀 칩이 아니라 다른 화면으로 가는 칩이라 줄 모양 아이콘을 앞에 둔다 */
+a.chip-go { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+.chip-list svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+
+/* ---- 전시사 목록 (#/list) ---- */
+.list-top { display: grid; gap: var(--s3); }
+.list-filters .chip-go[aria-pressed="true"] { max-width: 70vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.list-pick { display: grid; gap: var(--s3); padding: var(--s3) var(--s4); border-radius: var(--radius); background: var(--panel); }
+.list-pick[hidden] { display: none; }
+.pick-wrap { display: flex; flex-wrap: wrap; gap: 6px; max-height: 46vh; overflow-y: auto; overscroll-behavior: contain; }
+.pick-wrap .chip-go { background: var(--panel-2); }
+.pick-wrap .chip-go[aria-pressed="true"] { background: var(--btn); color: var(--on-btn); }
+.chip-n { font-weight: 400; color: inherit; opacity: 0.75; }
+/* 바로 가기(글자 · 위치)는 내려도 위에 붙어 있다 */
+.list-jump { position: sticky; top: 0; z-index: 3; margin: 0 calc(-1 * var(--s4)); padding: 6px var(--s4); background: var(--bg); }
+.list-jump[hidden] { display: none; }
+.jump-key { min-width: var(--tap-min); padding: 0; justify-content: center; }
+.jump-key[disabled] { opacity: 0.35; cursor: default; }
+.list-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s1) var(--s2); }
+.list-count { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); font-size: var(--fs-small); }
+.list-count b { font-size: var(--fs-body); }
+.list-sort { display: flex; gap: 2px; margin-left: auto; }
+.exlist { display: grid; gap: 6px; }
+.ex-head { scroll-margin-top: 64px; padding: var(--s3) var(--s1) var(--s1); font-size: var(--fs-small); font-weight: 800; color: var(--ink-2); }
+.ex-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s1); padding-right: var(--s1); border-radius: var(--radius-ctl); background: var(--panel); content-visibility: auto; contain-intrinsic-size: auto 76px; }
+.ex-open { display: grid; gap: 2px; min-width: 0; min-height: 64px; padding: 10px var(--s3); color: var(--ink); text-decoration: none; }
+.ex-open .name { font-size: calc(17px * var(--scale)); font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+.ex-open .where { font-size: var(--fs-small); color: var(--ink-2); overflow-wrap: anywhere; }
+.ex-like { min-width: 72px; }
+.ex-more { height: 1px; }
+.ex-empty { display: grid; gap: var(--s1); padding: var(--s5) var(--s1); }
 .ctls { position: absolute; right: var(--s2); bottom: calc(var(--s4) + var(--sheet-h, 0px) + var(--nav-h, 0px)); z-index: 3; display: grid; gap: 6px; transition: bottom 0.22s ease; }
 .mapx[data-sheet="half"] .ctls, .mapx[data-sheet="full"] .ctls { display: none; }
 .ctl { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; padding: 0; border: 0; border-radius: var(--radius-ctl); background: var(--panel); color: var(--ink); font-size: 24px; font-weight: 700; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
@@ -506,3 +537,6 @@ a.link-text { display: inline-flex; align-items: center; min-height: var(--tap-m
 .photo-field > * + * { margin-top: var(--s2); }
 .photo-field .row-actions { margin-top: var(--s2); }
 .photo-box > * + * { margin-top: var(--s2); }
+
+/* ---- 설정 "관심 회사 링크" 줄(R48): 오른쪽에 글자 단추 둘(복사 · 파일로) ---- */
+.setrow-btns { display: flex; flex: none; align-items: center; gap: var(--s1); }

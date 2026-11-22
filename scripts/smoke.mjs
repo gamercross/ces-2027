@@ -268,6 +268,35 @@ check(diary.fileName(who, new Date(2027, 0, 7)) === 'ces2027-일기-물개-20270
   check(names(all) === 'ADFC' && all[0].why.join(' · ') === '최고 혁신상 2027 · 한국 기업 · 내 분야: 로봇' && all[1].why[0] === '내 분야: 로봇 · 헬스케어' && names(R.recommend(fake, tbl, { tag: 'stu', filter: 'award' })) === 'AB' && names(R.recommend(fake, tbl, { filter: 'korea' })) === 'AC' && names(R.recommend(fake, tbl, { filter: 'mine' })) === '' && all.every((r) => r.why.length > 0), '추천: 혁신상 · 한국 기업 · 내 분야(태그와 주제 판)로만 뽑고, 까닭을 붙이고, 관심에 있는 곳과 까닭 없는 곳은 뺀다');
 }
 
+// 전시사 목록 (공식 앱의 A–Z 목록 + 거르기): 진짜 자료로 거르기 · 줄 세우기 · 글자 자리 · 위치 묶음을 본다.
+{
+  const X = await import('../web/exlist.js');
+  const { HALL_GROUPS } = await import('../web/hallgroups.js');
+  const doc = await json('data/exhibitors.json');
+  const pl = await json('data/places.json');
+  const ko = new Map(pl.places.map((p) => [p.k, p.ko]));
+  const koreaAt = doc.countries.indexOf('South Korea');
+  const groups = X.placeGroups(HALL_GROUPS, (k) => ko.get(k) || k, doc.ex);
+  const byName = X.sortRows(X.filterRows(doc.ex, {}), 'name');
+  const starts = X.letterStarts(byName);
+  const inOrder = byName.every((r, i) => i === 0 || X.initialOf(byName[i - 1][1]) <= X.initialOf(r[1]) || X.initialOf(r[1]) === '#');
+  const hashLast = byName.slice(starts.get('#') ?? byName.length).every((r) => X.initialOf(r[1]) === '#');
+  const award = X.filterRows(doc.ex, { award: true });
+  const korea = X.filterRows(doc.ex, { korea: true }, { koreaAt });
+  const north = groups.find((g) => g.ko === '노스');
+  const inNorth = X.filterRows(doc.ex, { place: north.keys });
+  const byBooth = X.sortRows(inNorth, 'booth', { placeOrder: new Map(north.keys.map((k) => [k, 0])), place: north.keys });
+  const nums = byBooth.map((r) => Number(/^(\d+)/.exec(r[7].find((b) => north.keys.some((k) => b.endsWith(`@${k}`))).split('@')[0])?.[1] ?? Infinity));
+  const named = X.filterRows(doc.ex, { q: 'samsung' });
+  const booth = X.filterRows(doc.ex, { q: '14731' });
+  const covered = new Set(groups.flatMap((g) => g.keys));
+  const allPlaces = new Set(doc.ex.flatMap((r) => r[7].map((b) => b.slice(b.lastIndexOf('@') + 1))));
+  check(byName.length === doc.ex.length && inOrder && hashLast && starts.get('A') === 0 && award.length > 0 && award.every((r) => r[5]) && korea.length > 0 && korea.every((r) => r[3] === koreaAt)
+    && inNorth.length === north.n && nums.every((n, i) => i === 0 || nums[i - 1] <= n) && named.length > 0 && named.every((r) => /samsung/i.test(r[1])) && booth.some((r) => r[7].includes('14731@LVCC_N'))
+    && [...allPlaces].every((p) => covered.has(p)) && groups.slice(0, 3).map((g) => g.ko).join(' ') === '웨스트 센트럴 노스' && X.countryKo('South Korea') === '한국' && X.countryKo('Narnia') === 'Narnia',
+    `전시사 목록: ${doc.ex.length}곳 이름순(A ~ Z, 숫자 · 기호는 맨 끝 #), 혁신상 ${award.length} · 한국 ${korea.length} · 노스 ${inNorth.length}곳 부스 번호순, 이름 · 부스 번호로 거르기, 위치 묶음 ${groups.length}개가 모든 장소를 덮는다`);
+}
+
 // 부스까지 길 안내.
 {
   const G = await import('../web/guide.js');
@@ -371,7 +400,7 @@ const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 const version = await json('version.json').catch(() => null);
 const swFiles = JSON.parse(`[${(sw.match(/const FILES = \[(.*)\];/) || [])[1] || ''}]`);
 check(!!version && sw.includes(JSON.stringify(version.v)) && !sw.includes('__VERSION__'), `판 이름이 찍혔다 (${version?.v})`);
-const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'tokens.js', 'frame.js', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/card.js', 'views/plan.js', 'plancard.js', 'people-ui.js', 'views/rec.js', 'views/map.js', 'mapfind.js', 'bands.js', 'views/settings.js', 'views/diary.js', 'views/days.js', 'views/listen.js', 'views/talk.js', 'talk.js', 'speech.js', 'talk-ui.js', 'audio-store.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'alerts.js', 'notify.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
+const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'tokens.js', 'frame.js', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/card.js', 'views/plan.js', 'plancard.js', 'people-ui.js', 'views/rec.js', 'views/map.js', 'mapfind.js', 'views/list.js', 'exlist.js', 'hallgroups.js', 'bands.js', 'views/settings.js', 'views/diary.js', 'views/days.js', 'views/listen.js', 'views/talk.js', 'talk.js', 'speech.js', 'talk-ui.js', 'audio-store.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'alerts.js', 'notify.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
 // 디자인 토큰: tokens.css가 값의 원본이고, 지도 코드가 쓰는 tokens.js의 기본값이 한 글자도 다르지 않아야 한다.
 // 화면 파일(app.css · views · 지도 코드)이 색을 직접 적지 않는 것도 본다 (design.md).
 {
@@ -395,7 +424,7 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
   {
     const views = [...app.matchAll(/^  (\w+): \(\) => import\('\.\/views\/(\w+)\.js'\),$/gm)].map((m) => m[1]);
     const tabOf = Object.fromEntries([...(app.match(/const TAB_OF = \{([^}]*)\}/)?.[1] || '').matchAll(/(\w+): '(\w+)'/g)].map((m) => [m[1], m[2]]));
-    const want = { map: 'map', transit: 'map', plan: 'plan', rec: 'plan', days: 'plan', sessions: 'plan', diary: 'diary', listen: 'diary', talk: 'diary', people: 'diary', settings: 'settings', card: 'settings', collect: 'settings' };
+    const want = { map: 'map', list: 'map', transit: 'map', plan: 'plan', rec: 'plan', days: 'plan', sessions: 'plan', diary: 'diary', listen: 'diary', talk: 'diary', people: 'diary', settings: 'settings', card: 'settings', collect: 'settings' };
     const gone = ['views/home.js', 'views/find.js', 'views/topics.js', 'views/askall.js', 'views/apply.js', 'views/onsite.js', 'views/info.js', 'askall.js', 'onsite.js', 'separate.js', 'topics.js', 'data/separate.json', 'data/onsite.json', 'data/topics.json', 'data/faq.json'];
     const stillThere = [];
     for (const f of gone) if (await exists(f)) stillThere.push(f);
@@ -406,8 +435,8 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
     const transitV = await readFile(join(dist, 'views/transit.js'), 'utf8');
     const mapfindV = await readFile(join(dist, 'mapfind.js'), 'utf8');
     const mapV3 = await readFile(join(dist, 'views/map.js'), 'utf8');
-    check(planV.includes('지금 갈 곳') && planV.includes('alertBands(') && ['#/rec', '#/days', '#/sessions'].every((h) => planV.includes(h)) && ['#/listen', '#/talk', '#/people'].every((h) => diaryV.includes(h)) && transitV.includes('info.moving') && mapV3.includes('findBox(') && mapV3.includes('#/transit') && mapfindV.includes('getFinder'),
-      '합친 자리: 동선 맨 위에 "지금 갈 곳" 한 줄과 띠, 동선 아래에 추천 · 시간과 일정 · 세션, 일기 안에 듣기 · 대화 칸 · 만난 사람, 지도 위에 찾기 칸과 셔틀 · 오가는 법');
+    check(planV.includes('지금 갈 곳') && planV.includes('alertBands(') && ['#/rec', '#/days', '#/sessions'].every((h) => planV.includes(h)) && ['#/listen', '#/talk', '#/people'].every((h) => diaryV.includes(h)) && transitV.includes('info.moving') && mapV3.includes('findBox(') && mapV3.includes('#/transit') && mapV3.includes("href: '#/list'") && mapfindV.includes('getFinder'),
+      '합친 자리: 동선 맨 위에 "지금 갈 곳" 한 줄과 띠, 동선 아래에 추천 · 시간과 일정 · 세션, 일기 안에 듣기 · 대화 칸 · 만난 사람, 지도 위에 찾기 칸과 셔틀 · 오가는 법 · 전시사 목록');
     // 다시 짓기 5단계 동선: 날짜 칩 하나에 그 날 차례만, 줄에는 단추 하나(봤다)와 누르면 열리는 큰 카드, 지도와 같은 번호, 도크 없음.
     const pcardV = await readFile(join(dist, 'plancard.js'), 'utf8');
     const rowFn = planV.slice(planV.indexOf('function item('), planV.indexOf('// ---- 회사 카드(큰 창)'));
@@ -513,8 +542,9 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       const gestSrc = await readFile(join(dist, 'mapgesture.js'), 'utf8');
       const sheetSrc = await readFile(join(dist, 'mapsheet.js'), 'utf8');
       const appJs2 = await readFile(join(dist, 'app.js'), 'utf8');
+      const hallSrc = await readFile(join(dist, 'hallgroups.js'), 'utf8');
       const htmlNow = await readFile(join(dist, 'index.html'), 'utf8');
-      check((mapSrc.match(/getExhibitors\(/g) || []).length === 1 && !/getExhibitors\(/.test(appJs2) && !/^import .*map3d/m.test(mapSrc) && mapSrc.includes("import('../map3d.js')") && ['웨스트', '센트럴', '노스', '사우스', '베네시안'].every((w) => mapSrc.includes(w)) && /ensureHall\(/.test(mapSrc) && !htmlNow.includes('map3d'),
+      check((mapSrc.match(/getExhibitors\(/g) || []).length === 1 && !/getExhibitors\(/.test(appJs2) && !/^import .*map3d/m.test(mapSrc) && mapSrc.includes("import('../map3d.js')") && mapSrc.includes('HALL_GROUPS') && ['웨스트', '센트럴', '노스', '사우스', '베네시안'].every((w) => hallSrc.includes(w)) && /ensureHall\(/.test(mapSrc) && !htmlNow.includes('map3d'),
         '지도 첫 열기: 전시사 전체 자료는 찾기 · 3D · 관심 회사가 있을 때만 받고(홀로 가까이 가면 그 홀 것만), 3D는 단추를 누를 때 불러오며, 홀 바로 가기 칩이 있다');
       // 공식 지도 기준: 길 이름 · 홀별 부스 번호 범위
       const pl = await json('data/places.json');
@@ -1044,6 +1074,22 @@ if (await exists('data/meta.json')) {
   check(['"photo.js"', '"photo-store.js"', '"idb.js"'].every((f) => sw.includes(f)), '사진 코드는 인터넷 없이 담아 두는 목록에 있다');
   const firstScreen = (await Promise.all(['app.js', 'store.js', 'data.js', 'offline.js', 'notify.js', 'alerts.js', 'dom.js', 'views/map.js', 'views/card.js'].map(read))).join('\n');
   check(!/photo/.test(firstScreen), '사진 코드는 첫 화면에 싣지 않는다');
+}
+
+// 회사 링크(R48): 관심 회사의 공식 주소를 줄마다 글로. 로그인하지 않고 어디로도 보내지 않는다.
+{
+  const read = (p) => readFile(join(dist, p), 'utf8');
+  const { officialLinks } = await import('../web/share.js');
+  const byId = new Map([['A1', ['A1', 'Alpha Robotics']], ['B/2', ['B/2', 'Beta 가나']]]);
+  const link = 'https://exhibitors.ces.tech/8_0/exhibitor/exhibitor-details.cfm?exhid={id}';
+  const r = officialLinks([{ id: 'B/2' }, { id: 'NOPE' }, { id: 'A1' }], byId, link, '2026-11-22');
+  const lines = r.text.trim().split('\n');
+  check(r.count === 2 && lines.length === 3 && lines[0] === 'CES 2027 관심 회사 2곳의 공식 전시사 쪽 링크 (자료 2026-11-22에 받음)' && lines[1] === 'Beta 가나 — https://exhibitors.ces.tech/8_0/exhibitor/exhibitor-details.cfm?exhid=B%2F2' && lines[2].startsWith('Alpha Robotics — ') && officialLinks([], byId, link, 'x').text === '',
+    '회사 링크: 관심 목록 차례로 줄마다 "회사 이름 — 공식 주소"이고, 자료에서 빠진 회사는 건너뛰고, 주소의 id는 인코딩하고, 관심이 없으면 빈 글이다');
+  const settingsV = await read('views/settings.js');
+  const linksFn = settingsV.slice(settingsV.indexOf('function linksRow'), settingsV.indexOf('// 종이 명함: 있는지'));
+  check(linksFn.includes("row('회사 링크'") && linksFn.includes('navigator.clipboard.writeText') && linksFn.includes('ces2027-관심회사-공식링크.txt') && /make = async \(\) => \{\s*const \[data, meta\] = await Promise\.all\(\[getExhibitors\(\)/.test(linksFn) && !/fetch\(|sendBeacon|XMLHttpRequest|innerHTML|window\.open|location/.test(linksFn),
+    '설정의 "회사 링크": 복사 · 파일로 둘이고, 전시사 자료는 누를 때만 받고, 로그인하거나 어디로 보내는 코드가 없다');
 }
 
 const table = ['무엇 | 본 것', '--- | ---', ...lines].join('\n');
