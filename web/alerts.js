@@ -21,7 +21,7 @@ export function defaultRemind(showFrom) {
 }
 
 // 오늘(그 날짜)의 동선에서 명함 이벤트 부스가 있는 회사들. marks: { '장소|부스 글': { by } }
-// interests: [{ id, day, seen }], dayOfDate(date) → 1..4 또는 null, boothsOf(id) → ['글@장소', …]
+// interests: [{ id, day, seen }], dayOfDate(date) → 날짜 번호(1 ~ 5) 또는 null, boothsOf(id) → ['글@장소', …]
 export function cardsNeeded(interests, marks, date, dayOfDate, boothsOf) {
   const day = dayOfDate(date);
   if (!day) return [];

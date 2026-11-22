@@ -12,7 +12,7 @@ export const DEFAULTS = {
   plain: ['--map-plain', '#8f8f8f'], none: ['--map-none', '#c9c9c9'],
   badge: ['--map-badge', '#5f5f5f'], shuttle: ['--map-shuttle', '#3d3d3d'], transit: ['--map-transit', '#7a7a7a'], city: ['--map-city', '#b4b4b4'],
   korea: ['--map-korea', '#5a6f96'], best: ['--map-best', '#5a6f96'], honoree: ['--map-honoree', '#9fb0cf'],
-  day0: ['--day-0', '#c4c4c4'], day1: ['--day-1', '#c6d0e3'], day2: ['--day-2', '#a5b5d2'], day3: ['--day-3', '#869bc0'], day4: ['--day-4', '#6f87b3'],
+  day0: ['--day-0', '#c4c4c4'], day1: ['--day-1', '#c6d0e3'], day2: ['--day-2', '#a5b5d2'], day3: ['--day-3', '#869bc0'], day4: ['--day-4', '#6f87b3'], day5: ['--day-5', '#dbe1ee'],
   gAi: ['--group-ai', '#94a7c9'], gMob: ['--group-mob', '#c9a48b'], gRob: ['--group-rob', '#c99496'], gHea: ['--group-hea', '#9dbba5'],
   gHom: ['--group-hom', '#cdbd85'], gEnt: ['--group-ent', '#b4a0c8'], gBiz: ['--group-biz', '#8fb8bc'],
 };
@@ -20,8 +20,8 @@ export const DEFAULTS = {
 const style = typeof document !== 'undefined' && document.documentElement ? getComputedStyle(document.documentElement) : null;
 export const T = Object.fromEntries(Object.entries(DEFAULTS).map(([k, [name, base]]) => [k, (style && style.getPropertyValue(name).trim()) || base]));
 
-// 날짜별 색 (미정 · 1/6 · 1/7 · 1/8 · 1/9)
-export const DAY_COLORS = [T.day0, T.day1, T.day2, T.day3, T.day4];
+// 날짜별 색 (미정 · 1/6 · 1/7 · 1/8 · 1/9 · 1/5 사전 일정)
+export const DAY_COLORS = [T.day0, T.day1, T.day2, T.day3, T.day4, T.day5];
 // 분야 묶음 일곱 (data/categories.json의 groups 기호)
 export const GROUP_COLORS = { ai: T.gAi, mob: T.gMob, rob: T.gRob, hea: T.gHea, hom: T.gHom, ent: T.gEnt, biz: T.gBiz };
 

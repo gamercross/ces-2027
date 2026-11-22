@@ -132,7 +132,7 @@ body[data-tab="map"]:not(.sub) .bar { padding-top: env(safe-area-inset-top); pad
 .paste { display: grid; gap: var(--s2); }
 .paste[hidden] { display: none; }
 .planpage .segs[aria-label="날짜"] { position: sticky; top: 0; z-index: 3; padding: var(--s2) 0; background: var(--bg); }
-.seg.daychip { flex-direction: column; gap: 0; min-width: 64px; min-height: 56px; line-height: 1.2; }
+.seg.daychip { flex-direction: column; gap: 0; min-width: 44px; min-height: 56px; line-height: 1.2; }
 .dc-day { font-size: var(--fs-body); font-weight: 800; }
 .dc-n { font-size: var(--fs-note); font-weight: 400; opacity: 0.8; }
 .undo { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); padding: 0 var(--s3); border-radius: var(--radius-ctl); background: var(--panel-2); font-size: var(--fs-small); font-weight: 700; }
@@ -172,6 +172,8 @@ body[data-tab="map"]:not(.sub) .bar { padding-top: env(safe-area-inset-top); pad
 .segs { display: flex; gap: var(--s2); overflow-x: auto; scrollbar-width: none; padding: 2px 0; }
 .segs::-webkit-scrollbar { display: none; }
 .segs .seg { flex: 1 0 auto; }
+/* 날짜 칩은 여섯 개까지(1/5 ~ 1/9 + 미정) 360px 한 줄에 들어가게 칸을 똑같이 나눠 줄인다. 넘치면 칩 줄 안에서 민다. */
+.segs .seg.daychip { flex: 1 1 0; padding: 0 4px; }
 .toggles { display: flex; flex-wrap: wrap; gap: 6px; }
 .toggle { flex: 1 1 auto; justify-content: flex-start; gap: var(--s2); }
 .toggle input { width: 20px; height: 20px; accent-color: var(--accent); }
@@ -333,6 +335,13 @@ body.pcard-open { overflow: hidden; }
 .pick-list { display: grid; gap: 6px; }
 .pick-row { display: grid; gap: 2px; width: 100%; min-height: 56px; padding: var(--s2) var(--s3); border: 0; border-radius: var(--radius-ctl); background: var(--panel-2); color: var(--ink); text-align: left; cursor: pointer; }
 .pick-row b { font-size: calc(16px * var(--scale)); overflow-wrap: anywhere; }
+a.pick-row { text-decoration: none; }
+.card-booths .pick-row { align-content: center; }
+.pick-row.static { cursor: default; font-weight: 700; font-size: calc(16px * var(--scale)); align-content: center; }
+.pick-row[aria-current="true"] { background: var(--mint); }
+.card-booths, .card-sessions { display: grid; gap: var(--s2); }
+.card-sessions[hidden] { display: none; }
+.card-booths .label, .card-sessions .label { margin: 0; }
 .pick-row span { font-size: var(--fs-small); color: var(--ink-2); }
 .legend { display: flex; flex-wrap: wrap; gap: 6px var(--s3); font-size: var(--fs-note); color: var(--ink-2); }
 .swatch { display: inline-flex; align-items: center; gap: 6px; }

@@ -1,6 +1,8 @@
 // 동선: 관심 회사를 날짜 · 캠퍼스 · 걷는 차례로 세운다 (reference/미리보기판의 "동선 순서로"에서 옮겼다).
 // 화면과 따로 두어 Node에서도 시험한다.
 
+import { dayRank } from './days.js';
+
 const CAMPUS_ORDER = { lvcc: 0, ven: 1, cs: 2 };
 
 // 장소 자료에서 장소 기호 → { order(지도에 놓인 차례), campus, campusOrder, ko }.
@@ -39,10 +41,9 @@ export function compareKeys(x, y) {
   return 0;
 }
 
-// 날짜 차례, 그 안에서는 걷는 차례로 세운다. 날짜 미정(0)은 맨 뒤.
+// 날짜 차례(1/5 사전 일정이 맨 앞), 그 안에서는 걷는 차례로 세운다. 날짜 미정(0)은 맨 뒤.
 // firstBooth(id)는 그 회사의 첫 부스("글@장소")나 null을 돌려준다.
 export function sortRoute(items, firstBooth, table) {
-  const dayRank = (d) => (d ? d : 99);
   return items
     .map((it, n) => ({ it, n, key: walkKey(firstBooth(it.id), table) }))
     .sort((a, b) => dayRank(a.it.day) - dayRank(b.it.day) || compareKeys(a.key, b.key) || a.n - b.n)
@@ -68,7 +69,7 @@ export function fillDays(items, firstBooth, table, limit = 0) {
     const next = items.map((it) => (it.day ? it : { ...it, day: baseDay(campusOf(it)) }));
     return { items: sortRoute(next, firstBooth, table), filled: fresh.length, moved: 0, over: 0 };
   }
-  const count = [0, 0, 0, 0, 0];
+  const count = [0, 0, 0, 0, 0, 0];
   for (const it of items) if (it.day) count[it.day] += 1;
   // 새로 채울 곳을 제 날 · 걷는 차례로 세워, 앞에서부터 자리를 준다.
   const queue = fresh
@@ -99,7 +100,7 @@ export function fillDays(items, firstBooth, table, limit = 0) {
 // 다음 갈 곳: 날짜 차례(미정은 맨 뒤), 그 안에서는 목록 차례로 보아 아직 보지 않은 첫 곳.
 // day를 주면 그 날짜 안에서만 찾는다.
 export function nextStop(items, day) {
-  const rank = (d) => (d ? d : 99);
+  const rank = dayRank;
   return items
     .map((it, n) => ({ it, n }))
     .filter((x) => !x.it.seen && (day == null || (x.it.day || 0) === day))

@@ -6,7 +6,8 @@ import { el, out } from '../dom.js';
 import { getEvents, setEvents } from '../store.js';
 import { clean, daysOf, isIn, isKeynote, onDay, recommendWithSkips, search, shareText, toggle } from '../sessions.js';
 import { placeLink } from './days.js';
-import { getPlaces } from '../data.js';
+import { getInfo, getPlaces } from '../data.js';
+import { dayList } from '../days.js';
 import { getTopics } from '../store.js';
 
 const dayKo = (date) => { const [, m, d] = date.split('-').map(Number); return `${m}/${d} (${'일월화수목금토'[new Date(`${date}T00:00:00`).getDay()]})`; };
@@ -30,7 +31,11 @@ export async function render() {
   }
 
   const places = await getPlaces().catch(() => null);
-  const days = daysOf(data.items);
+  // 날짜 칩은 동선과 같다: 1/5(사전 일정) ~ 1/9. 1/4는 매체 전용이라 칩에 넣지 않는다(찾기에서는 나온다).
+  const info = await getInfo().catch(() => null);
+  const planDates = new Set(info ? dayList(info).map((d) => d.date) : []);
+  const allDays = daysOf(data.items);
+  const days = planDates.size && allDays.some((d) => planDates.has(d)) ? allDays.filter((d) => planDates.has(d)) : allDays;
   let day = days.find((d) => d >= '2027-01-06') || days[0];
   let q = '';
   let shown = 7;
@@ -82,7 +87,8 @@ export async function render() {
     const mineCount = data.items.filter((s) => isIn(s, getEvents())).length;
     tabs.replaceChildren(...days.map((d) => {
       const n = onDay(data.items, d).length;
-      return el('button', { class: 'seg', type: 'button', 'aria-pressed': !q && d === day ? 'true' : 'false', text: `${dayKo(d)} ${n}`, onclick: () => { day = d; q = ''; shown = 7; box.value = ''; draw(); } });
+      return el('button', { class: 'seg daychip', type: 'button', 'aria-pressed': !q && d === day ? 'true' : 'false', 'aria-label': `${dayKo(d)} 세션 ${n}개`, onclick: () => { day = d; q = ''; shown = 7; box.value = ''; draw(); } },
+        el('span', { class: 'dc-day', text: dayKo(d).replace(/ \(.*\)/, '') }), el('span', { class: 'dc-n', text: `${n}개` }));
     }));
     const found = q ? search(data.items, q).sort((a, b) => a.date.localeCompare(b.date) || a.from.localeCompare(b.from)) : onDay(data.items, day);
     count.textContent = q ? `찾은 세션 ${found.length}개` : `${dayKo(day)} ${found.length}개${mineCount ? ` · 내 일정 ${mineCount}` : ''}`;

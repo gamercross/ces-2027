@@ -13,6 +13,19 @@
       { "date": "2027-01-08", "ko": "1/8 (금)", "hours": "9 ~ 18시", "open": "09:00", "close": "18:00" },
       { "date": "2027-01-09", "ko": "1/9 (토)", "hours": "9 ~ 16시", "open": "09:00", "close": "16:00" }
     ],
+    "pre": [
+      {
+        "date": "2027-01-05",
+        "ko": "1/5 (화)",
+        "hours": "사전 일정",
+        "note": "전시장은 1/6에 연다. 1/5에는 세션 · 행사만 있다.",
+        "source": {
+          "ko": "공식 일정",
+          "url": "https://www.ces.tech/schedule/",
+          "read": "2026-11-22"
+        }
+      }
+    ],
     "note": "C Space(아리아)는 1/6 ~ 1/8, 9 ~ 18시만 연다. 시각은 라스베이거스 시각이다.",
     "source": { "ko": "날짜와 시간", "url": "https://www.ces.tech/plan-your-visit/dates-and-hours", "read": "2026-11-19" },
     "noteSource": { "ko": "C Space 캠퍼스", "url": "https://www.ces.tech/explore-ces/maps-and-locations/c-space-campus/", "read": "2026-11-20" }

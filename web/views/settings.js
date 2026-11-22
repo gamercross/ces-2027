@@ -3,7 +3,9 @@
 
 import { el, num, out } from '../dom.js';
 import { getInfo, getMeta } from '../data.js';
-import { getDiary, getProfile, getTalks, getTextSize, getTheme, setTextSize, setTheme, tagKo } from '../store.js';
+import { clearMine, getDiary, getInterests, getProfile, getTalks, getTextSize, getTheme, setTextSize, setTheme, tagKo } from '../store.js';
+import { getPeople } from '../people-store.js';
+import { dropAllAudio } from '../audio-store.js';
 import { bundle, fileName, talksFor } from '../diary.js';
 import { offline } from '../offline.js';
 import { alerts, askPermission, checkAlerts, getPaper } from '../notify.js';
@@ -121,9 +123,10 @@ function offlineRow() {
   return el('li', { class: 'setrow' }, main, button);
 }
 
-// 저장 공간: 이 폰에서 앱이 쓰는 크기와 "비우기"(받아 둔 받아쓰기 모델 · 옛 번역 모델 찌꺼기). 일기 · 명함 · 동선은 지우지 않는다.
+// 받아 둔 모델: 이 폰에서 앱이 쓰는 크기와 "비우기"(받아 둔 받아쓰기 모델 · 옛 번역 모델 찌꺼기). 내 자료는 지우지 않는다.
+// 내 자료를 지우는 것은 바로 아래 "이 폰의 내 자료 지우기" 줄이다(둘을 헷갈리지 않게 이름을 나눴다).
 function storageRow() {
-  const { s, main } = rowState('저장 공간');
+  const { s, main } = rowState('받아 둔 모델');
   const note = el('p', { class: 'setrow-hint', role: 'status', hidden: true });
   const button = el('button', { class: 'pick', type: 'button', text: '비우기', hidden: true });
   async function paint() {
@@ -140,7 +143,7 @@ function storageRow() {
       button.dataset.ask = '1';
       button.textContent = '정말 비우기';
       note.hidden = false;
-      note.textContent = '받아 둔 받아쓰기 모델과 옛 번역 모델을 지운다. 일기 · 명함 · 동선은 그대로다.';
+      note.textContent = '받아 둔 받아쓰기 모델과 옛 번역 모델만 지운다. 내 일기 · 명함 · 동선은 그대로다.';
       setTimeout(() => { if (button.isConnected) { delete button.dataset.ask; button.textContent = '비우기'; } }, 5000);
       return;
     }
@@ -157,22 +160,90 @@ function storageRow() {
   return [el('li', { class: 'setrow' }, main, button), el('li', { class: 'setrow-more', hidden: false }, note)];
 }
 
+// 일기 전부와 폰에 있는 대화를 파일 하나로 내려받는다. 녹음은 어느 때도 들어가지 않는다. 내려받은 일기 수를 돌려준다(없으면 0).
+function downloadExport() {
+  const ready = getDiary().filter((e) => !e.draft);
+  if (!ready.length) return 0;
+  const text = JSON.stringify(bundle(ready, getProfile(), new Date(), talksFor(ready, getTalks(), true)), null, 2);
+  const url = URL.createObjectURL(new Blob([text], { type: 'application/json;charset=utf-8' }));
+  const a = el('a', { href: url, download: fileName(getProfile()) });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return ready.length;
+}
+
 // 내보내기: 일기 전부와 폰에 있는 대화를 파일 하나로. 녹음은 어느 때도 들어가지 않는다.
 function exportRow() {
   const ready = getDiary().filter((e) => !e.draft);
   const status = el('p', { class: 'setrow-hint', role: 'status', hidden: true });
   const button = el('button', { class: 'pick', type: 'button', text: '파일로', 'aria-label': '일기 · 대화 전부 파일로', disabled: ready.length === 0, onclick: () => {
-    const text = JSON.stringify(bundle(ready, getProfile(), new Date(), talksFor(ready, getTalks(), true)), null, 2);
-    const url = URL.createObjectURL(new Blob([text], { type: 'application/json;charset=utf-8' }));
-    const a = el('a', { href: url, download: fileName(getProfile()) });
-    document.body.append(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    status.textContent = `일기 ${ready.length}개와 폰에 있는 대화를 파일로 내보냈다. 녹음은 안 간다.`;
+    const n = downloadExport();
+    status.textContent = `일기 ${n}개와 폰에 있는 대화를 파일로 내보냈다. 녹음은 안 간다.`;
     status.hidden = false;
   } });
   return [row('내보내기', ready.length ? `일기 ${ready.length}개 · 대화 ${getTalks().length}개` : '내보낼 일기가 아직 없다', button), el('li', { class: 'setrow-more' }, status)];
+}
+
+// 이 폰의 내 자료 지우기: 두 번 확인한다. 첫 확인에서 먼저 내보내기를 권하고, 둘째 확인 뒤에 지운다.
+// 지우는 것: 명함 · 관심 · 동선 · 일기 · 만난 사람 · 대화 · 일정 · 설정 · 녹음. 남기는 것: 인터넷 없이 열리게 담아 둔 앱 껍데기.
+// 다 지우면 처음 들어온 것처럼 첫 실행 명함부터 시작한다.
+function mineCounts() {
+  const diary = getDiary().length, people = getPeople().length, plan = getInterests().length;
+  const profile = !!getProfile();
+  return { diary, people, plan, profile, any: diary + people + plan > 0 || profile };
+}
+function mineRow(shell) {
+  const c = mineCounts();
+  const parts = [c.diary ? `일기 ${c.diary}` : '', c.people ? `만난 사람 ${c.people}` : '', c.plan ? `동선 ${c.plan}곳` : ''].filter(Boolean);
+  const header = (title) => el('div', { class: 'pcard-top' }, el('h2', { class: 'pcard-tools-title', text: title }), el('button', { class: 'btn ghost pcard-close', type: 'button', text: '닫기', onclick: () => shell.close() }));
+  const list = () => {
+    const n = mineCounts();
+    return el('ul', { class: 'dots', 'aria-label': '지워지는 것' },
+      el('li', { text: `일기 ${n.diary}개 · 만난 사람 ${n.people}명 · 동선 ${n.plan}곳` }),
+      el('li', { text: '내 명함과 설정(글자 크기 · 화면 색 · 표시한 것)' }));
+  };
+  // 첫 확인: 먼저 내보내기를 권한다.
+  const first = () => {
+    const status = el('p', { class: 'note', role: 'status' });
+    const ready = getDiary().filter((e) => !e.draft).length;
+    shell.update([
+      header('이 폰의 내 자료 지우기'),
+      el('p', { class: 'pcard-where', text: '지우기 전에 일기를 내보내 두는 것을 권한다.' }),
+      list(),
+      el('p', { class: 'note', text: '내보내기 파일에는 일기와 대화가 들어간다. 지우면 되돌릴 수 없다. 앱 파일(인터넷 없이 열리는 것)은 그대로다.' }),
+      status,
+      el('div', { class: 'actions' },
+        el('button', { class: 'btn', type: 'button', id: 'mine-export', text: ready ? '일기 내보내기' : '내보낼 일기가 없다', disabled: !ready, onclick: () => { status.textContent = `일기 ${downloadExport()}개를 파일로 내보냈다.`; } }),
+        el('button', { class: 'btn ghost', type: 'button', id: 'mine-next', text: '지우기로 넘어가기', onclick: second })),
+      el('button', { class: 'linkish', type: 'button', text: '그만두기', onclick: () => shell.close() }),
+    ]);
+  };
+  // 둘째 확인: 정말 지울지 한 번 더.
+  const second = () => {
+    const status = el('p', { class: 'note', role: 'status' });
+    const go = el('button', { class: 'btn warn-btn', type: 'button', id: 'mine-wipe', text: '지금 지운다', onclick: async () => {
+      go.disabled = true;
+      const n = clearMine();
+      await dropAllAudio();
+      if (n === null) { status.textContent = '이 폰의 저장 공간이 막혀 있어 지우지 못했다.'; go.disabled = false; return; }
+      window.cesTheme?.apply();
+      window.cesText?.apply();
+      shell.update([el('p', { class: 'pcard-where', role: 'status', text: '지웠다. 처음부터 시작한다.' })]);
+      // 처음 들어온 것처럼 열린다: 명함이 없으니 첫 실행 명함부터.
+      setTimeout(() => { history.replaceState(null, '', location.pathname + location.search + '#/'); location.reload(); }, 900);
+    } });
+    shell.update([
+      header('정말 지울까?'),
+      el('p', { class: 'pcard-where', text: '이 폰의 내 자료를 지운다. 되돌릴 수 없다.' }),
+      list(),
+      status,
+      el('div', { class: 'actions' }, go, el('button', { class: 'btn ghost', type: 'button', text: '그만두기', onclick: () => shell.close() })),
+    ]);
+  };
+  return row('이 폰의 내 자료', parts.length ? parts.join(' · ') : c.profile ? '명함만 있다' : '아직 없다',
+    el('button', { class: 'pick', type: 'button', id: 'mine-open', text: '지우기', 'aria-label': '이 폰의 내 자료 지우기', onclick: (ev) => { shell.open([], ev.currentTarget); first(); } }));
 }
 
 // 종이 명함: 있는지 · 없으면 QR 명함으로 대신. 묻는 곳은 동선 탭 위 띠와 여기 두 곳뿐이다(QR 화면에는 두지 않는다).
@@ -225,7 +296,7 @@ export async function render() {
   window.addEventListener('hashchange', () => shell.close(), { once: true });
   const showFrom = (await getInfo().catch(() => null))?.show.from || '2027-01-06';
   const list = el('ul', { class: 'setlist' },
-    ...cardRow(), paperRow(shell, showFrom), ...notifyRow(), offlineRow(), ...storageRow(), ...exportRow(), permissionRows(), await dataRow(shell));
+    ...cardRow(), paperRow(shell, showFrom), ...notifyRow(), offlineRow(), ...storageRow(), ...exportRow(), mineRow(shell), permissionRows(), await dataRow(shell));
   return el('div', { class: 'page listpage settingspage' },
     el('section', { class: 'head' }, el('h1', { text: '설정' })),
     sizeBox(),
