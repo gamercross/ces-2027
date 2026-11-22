@@ -17,6 +17,7 @@ import { dayByKey, dayKeyOf, dayList, dayRank } from '../days.js';
 import { attachImage } from '../company-image.js';
 import { boothLines, sessionBlock } from '../company-extra.js';
 import { guideTo } from '../guide.js';
+import { HALL_GROUPS, shortName } from '../hallgroups.js';
 import { markLabel, toggleMark } from '../alerts.js';
 import { getMarks, setMarks } from '../notify.js';
 import { getEvents } from '../store.js';
@@ -40,20 +41,8 @@ function svg(tag, attrs, ...kids) {
 const pts = (poly) => poly.map(([x, z]) => `${x.toFixed(1)},${z.toFixed(1)}`).join(' ');
 const boothKey = (booth) => { const { code, place } = splitBooth(booth); return `${place}|${code}`; };
 
-// 홀 바로 가기 칩: [이름, 장소 기호들]. 눌러서 그 홀로 날아간다.
-const HALL_CHIPS = [
-  ['웨스트', ['LVCC_W', 'LVCC_W_MTG']],
-  ['센트럴', ['LVCC_C', 'LVCC_C_MTG', 'LVCC_CP']],
-  ['노스', ['LVCC_N', 'LVCC_N_MTG']],
-  ['사우스', ['LVCC_S1', 'LVCC_S2', 'LVCC_S3', 'LVCC_S_MTG']],
-  ['베네시안 A-D', ['VEN_AD']],
-  ['베네시안 G', ['VEN_G']],
-  ['아리아', ['ARIA']],
-  ['윈', ['WYNN']],
-  ['퐁텐블로', ['FONT']],
-  ['웨스트게이트', ['WESTGATE']],
-];
-const shortName = (ko) => ko.replace('LVCC ', '').replace('베네시안 엑스포 ', '').replace(/ \(.*\)$/, '');
+// 홀 바로 가기 칩: 눌러서 그 홀로 날아간다. 묶음은 전시사 목록의 "위치" 거르기와 같다(`hallgroups.js`).
+const HALL_CHIPS = HALL_GROUPS;
 
 // 관심 회사를 동선 차례대로, 날짜마다 번호를 붙여 돌려준다. rows는 id → 전시사 줄(받은 것만).
 export function interestPins(rows, spots) {
@@ -720,7 +709,9 @@ export async function render({ rest = [] } = {}) {
       d.node = el('button', { class: 'chip-go', type: 'button', text: d.ko, 'aria-pressed': 'false', onclick: () => { sheet.close(); finder.clear(); goBox(d.box || all); } });
       chipBoxes.push(d);
     }
-    chips.replaceChildren(...chipBoxes.map((d) => d.node));
+    // 맨 앞: 전시사 목록(공식 앱의 전시사 A–Z 목록 + 거르기). 홀 칩이 아니라 다른 화면으로 가는 칩이다.
+    const listChip = el('a', { class: 'chip-go chip-list', href: '#/list', text: '목록', 'aria-label': '전시사 목록 (이름순 · 거르기)' });
+    chips.replaceChildren(listChip, ...chipBoxes.map((d) => d.node));
     paintChips();
   }
   buildChips();
