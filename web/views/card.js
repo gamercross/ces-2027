@@ -1,5 +1,6 @@
 // 온라인 명함: 별명 · 나(네 태그 가운데 하나) · 한 줄 · 깃허브 · 디스코드 → QR 두 개.
-// 명함은 이 폰에만 남는다. QR은 폰에서 만든다(인터넷 없이).
+// 처음 들어오면 환영 한 줄 → 명함 한 화면(별명 · 나만 필수, 나머지는 건너뛰어도 된다) → 만든 명함 + QR → "지도로".
+// 설정 탭에서 다시 오면 QR 보기(#/card) · 고치기(#/card/edit). 명함은 이 폰에만 남는다. QR은 폰에서 만든다(인터넷 없이).
 
 import { el } from '../dom.js';
 import { getProfile, setProfile, TAGS, tagKo } from '../store.js';
@@ -65,8 +66,9 @@ function field(label, input, hint) {
 }
 
 function form(profile, done, go) {
+  const first = !profile;
   const p = profile || {};
-  const nick = el('input', { name: 'nick', required: true, maxlength: 20, autocomplete: 'nickname', placeholder: '부르는 이름', value: p.nick || '' });
+  const nick = el('input', { name: 'nick', required: true, maxlength: 20, autocomplete: 'nickname', placeholder: '부르는 이름', enterkeyhint: 'next', value: p.nick || '' });
   const line = el('input', { name: 'line', maxlength: 60, placeholder: '예: 로봇과 AI를 보러 간다', value: p.line || '' });
   const github = el('input', { name: 'github', maxlength: 80, autocapitalize: 'off', spellcheck: 'false', inputmode: 'url', placeholder: '아이디 또는 주소', value: p.github || '' });
   const discord = el('input', { name: 'discord', maxlength: 80, autocapitalize: 'off', spellcheck: 'false', placeholder: '아이디 또는 초대 주소', value: p.discord || '' });
@@ -75,17 +77,18 @@ function form(profile, done, go) {
       el('input', { type: 'radio', name: 'tag', value: t.k, checked: p.tag === t.k }), el('span', { text: t.ko }))));
   const error = el('p', { class: 'error', role: 'alert', hidden: true });
 
-  const node = el('form', { class: 'panel form', novalidate: true },
+  const node = el('form', { class: 'panel form big', novalidate: true },
+    first ? el('p', { class: 'welcome', text: '환영한다. CES 2027 준비 지도다.' }) : null,
     el('h1', { text: profile ? '명함 고치기' : '명함부터 만든다' }),
-    el('p', { class: 'lead', text: '이 폰에만 남는다. QR로 보여 줄 때만 상대가 읽는다.' }),
+    el('p', { class: 'lead', text: first ? '별명과 나만 있으면 된다. 나머지는 건너뛰어도 된다. 이 폰에만 남는다.' : '이 폰에만 남는다. QR로 보여 줄 때만 상대가 읽는다.' }),
     field('별명', nick),
     el('div', { class: 'field' }, el('span', { class: 'label', text: '나' }), tags),
-    field('한 줄', line),
-    field('깃허브', github, '비워 두면 QR이 생기지 않는다'),
-    field('디스코드', discord),
+    field('한 줄 (선택)', line),
+    field('깃허브 (선택)', github, '비워 두면 QR이 생기지 않는다'),
+    field('디스코드 (선택)', discord),
     error,
     el('div', { class: 'dock' },
-      el('button', { class: 'btn', type: 'submit', text: '명함 만들기' }),
+      el('button', { class: 'btn', type: 'submit', text: profile ? '명함 고치기 끝' : '명함 만들기' }),
       profile
         ? el('button', { class: 'btn ghost', type: 'button', text: '그만두기', onclick: () => done(profile) })
         : el('button', { class: 'btn ghost', type: 'button', text: '나중에', onclick: () => { sessionStorage.setItem('ces2027.introLater', '1'); go('#/'); } })));
@@ -105,7 +108,7 @@ function form(profile, done, go) {
     if (githubUrl(next.github) === null) return fail('깃허브는 아이디(영문 · 숫자 · -)나 github.com 주소로 적는다.', github);
     if (discordText(next.discord) === null) return fail('디스코드는 아이디나 discord.gg · discord.com 주소로 적는다.', discord);
     if (!setProfile(next)) return fail('이 폰에 저장하지 못했다. 사생활 보호 창이면 보통 창으로 다시 연다.');
-    done(next);
+    done(next, first);
   });
   return node;
 }
@@ -126,36 +129,40 @@ async function qrBlock(title, text, shown) {
   return box;
 }
 
-async function card(profile, edit, showFrom) {
+async function card(profile, edit, showFrom, first) {
   const gh = githubUrl(profile.github) || '';
   const dc = discordText(profile.discord) || '';
+  const noQr = !gh && !dc;
   return el('div', { class: 'page' },
     el('section', { class: 'panel namecard' },
-      el('p', { class: 'eyebrow', text: '글로벌 어학연수 · CES 2027' }),
+      el('p', { class: 'eyebrow', text: first ? '명함이 만들어졌다' : '글로벌 어학연수 · CES 2027' }),
       el('h1', { text: profile.nick }),
       el('p', {}, el('span', { class: 'tag mint', text: tagKo(profile.tag) })),
       profile.line && el('p', { class: 'lead', text: profile.line }),
       el('div', { class: 'qrs' },
         await qrBlock('깃허브', gh, gh.replace('https://', '')),
         await qrBlock('디스코드', dc))),
-    paperPanel(showFrom),
+    first ? null : paperPanel(showFrom),
     el('section', { class: 'panel' },
-      el('p', { class: 'note', text: '폰에서 만든 QR이라 인터넷 없이도 보인다.' }),
+      el('p', { class: 'note', text: noQr ? '깃허브나 디스코드를 적으면 QR이 생긴다. "명함 고치기"에서 언제든 적는다.' : '폰에서 만든 QR이라 인터넷 없이도 보인다.' }),
       el('div', { class: 'actions' },
-        el('a', { class: 'btn', href: '#/map', text: '지도에서 회사 찾기' }),
-        el('a', { class: 'btn', href: '#/people', text: '남의 명함 받기' }),
+        el('a', { class: 'btn', href: '#/map', text: '지도로' }),
+        first ? null : el('a', { class: 'btn ghost', href: '#/people', text: '남의 명함 받기' }),
         el('button', { class: 'btn ghost', type: 'button', text: '명함 고치기', onclick: edit }))));
 }
 
-export async function render({ go }) {
+export async function render({ go, rest = [] }) {
   const holder = el('div');
   const showFrom = (await getInfo().catch(() => null))?.show.from || '2027-01-06';
-  const showCard = async (profile) => {
-    holder.replaceChildren(await card(profile, () => holder.replaceChildren(form(profile, showCard, go)), showFrom));
+  const edit = (profile) => { holder.replaceChildren(form(profile, showCard, go)); window.scrollTo(0, 0); };
+  const showCard = async (profile, first = false) => {
+    holder.replaceChildren(await card(profile, () => edit(profile), showFrom, first));
     checkAlerts();
     window.scrollTo(0, 0);
   };
   const profile = getProfile();
-  if (profile) await showCard(profile); else holder.replaceChildren(form(null, showCard, go));
+  if (!profile) holder.replaceChildren(form(null, showCard, go));
+  else if (rest[0] === 'edit') edit(profile);
+  else await showCard(profile);
   return holder;
 }

@@ -81,7 +81,10 @@ function cardBox() {
     profile
       ? el('p', {}, el('b', { text: profile.nick }), ' ', el('span', { class: 'tag mint', text: tagKo(profile.tag) }))
       : el('p', { class: 'note', text: '아직 명함이 없다.' }),
-    el('div', { class: 'actions' }, el('a', { class: 'btn', href: '#/card', text: profile ? '명함 보기 · 고치기' : '명함 만들기' })));
+    profile?.line ? el('p', { class: 'note', text: profile.line }) : null,
+    el('div', { class: 'actions' }, profile
+      ? [el('a', { class: 'btn', href: '#/card', text: 'QR 보기' }), el('a', { class: 'btn ghost', href: '#/card/edit', text: '명함 고치기' })]
+      : el('a', { class: 'btn', href: '#/card', text: '명함 만들기' })));
 }
 
 // 내보내기: 일기 전부와 폰에 있는 대화를 파일 하나로. 녹음은 어느 때도 들어가지 않는다.

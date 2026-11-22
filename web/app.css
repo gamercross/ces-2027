@@ -141,6 +141,12 @@ h3 { font-size: var(--fs-body); }
 
 /* ---- 적는 칸 ---- */
 .form { display: grid; gap: 14px; }
+/* 명함 만들기 · 고치기: 큰 글씨, 4개 고르기는 2 × 2, 엄지가 닿는 아래에 단추 */
+.form.big .label { font-size: var(--fs-body); }
+.form.big .field input { font-size: 18px; min-height: 56px; }
+.form.big .choices { grid-template-columns: 1fr 1fr; gap: 10px; }
+.form.big .choice span { min-height: 56px; font-size: 18px; }
+.welcome { font-size: var(--fs-h2); font-weight: 700; color: var(--accent); }
 .form > * + * { margin-top: 0; }
 .field { display: grid; gap: 6px; }
 .label { font-size: var(--fs-small); font-weight: 700; color: var(--ink-2); }

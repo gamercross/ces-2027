@@ -60,8 +60,10 @@ let parent = '#/map';
 backButton.addEventListener('click', () => { if (depth > 0) history.back(); else go(parent); });
 
 function frameFor(name, rest) {
-  const root = ROOTS.has(name) && !rest.length;
-  const tab = TAB_OF[name] || 'map';
+  // 처음 들어와 명함을 만드는 동안(명함이 없을 때의 명함 화면)은 뒤로도 지금 탭 표시도 없다.
+  const intro = name === 'card' && !getProfile();
+  const root = (ROOTS.has(name) && !rest.length) || intro;
+  const tab = intro ? 'intro' : TAB_OF[name] || 'map';
   parent = document.querySelector(`.tabs a[data-tab="${tab}"]`)?.getAttribute('href') || '#/map';
   backButton.hidden = root;
   document.body.dataset.tab = tab;
