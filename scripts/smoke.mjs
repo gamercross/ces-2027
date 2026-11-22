@@ -322,8 +322,8 @@ check(diary.fileName(who, new Date(2027, 0, 7)) === 'ces2027-일기-물개-20270
   const g = paint('group'), k = paint('korea'), a = paint('award'), p = paint('plain');
   check([...groups.values()].join(',') === 'ai,rob,ai,,' && g[0] === C.GROUP_COLORS.ai && g[1] === C.GROUP_COLORS.rob && g[2] === g[3] && g[2] !== g[0] && k[0] !== k[1] && k[1] === k[2] && a[1] !== a[0] && a[0] === a[2] && new Set(p).size === 1 && p[0] === C.PLAIN, '지도 색칠: 분야 묶음(회사가 여럿이면 많은 쪽) · 한국 · 혁신상 · 한 색');
   const colors = [...Object.values(C.GROUP_COLORS), ...C.legend('korea', tbl).map((l) => l.color), ...C.legend('award', tbl).map((l) => l.color), C.PLAIN];
-  const soft = (hex) => { const n = parseInt(hex.slice(1), 16); const [r, gg, b] = [n >> 16, (n >> 8) & 255, n & 255]; return Math.max(r, gg, b) >= 200 && Math.min(r, gg, b) >= 60; };
-  check(colors.every(soft) && C.legend('group', tbl).length === tbl.groups.length + 1 && C.legend('plain', tbl).length === 0 && new Set(Object.values(C.GROUP_COLORS)).size === 7, `지도 색은 모두 파스텔이고(${colors.length}가지) 범례가 칠하기마다 있다`);
+  const muted = (hex) => { const n = parseInt(hex.slice(1), 16); const [r, gg, b] = [n >> 16, (n >> 8) & 255, n & 255]; return (Math.max(r, gg, b) - Math.min(r, gg, b)) / Math.max(r, gg, b, 1) <= 0.45; };
+  check(colors.every(muted) && C.legend('group', tbl).length === tbl.groups.length + 1 && C.legend('plain', tbl).length === 0 && new Set(Object.values(C.GROUP_COLORS)).size === 7, `지도 색은 모두 채도를 낮춘 색이고(${colors.length}가지) 범례가 칠하기마다 있다`);
   const realTable = await json('data/categories.json');
   check(realTable.groups.every((gr) => gr.k in C.GROUP_COLORS), '분야 묶음 일곱에 모두 색이 있다');
 }
@@ -515,8 +515,16 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
   const lightVars = [...tokCss.split(':root[data-theme="dark"]')[0].matchAll(/--((?:bg|panel|panel-2|ink|ink-2|accent|on-accent|mint|peach|lilac|warn|map-[a-z]+|day-\d|group-[a-z]+|tab-[a-z]+(?:-soft)?))\s*:/g)].map((m) => m[1]);
   const lacking = lightVars.filter((v) => !darkVars.has(v));
   check(lacking.length === 0 && /--qr-bg/.test(tokCss) && !darkVars.has('qr-bg') && !darkVars.has('qr-ink'), `어둡게: 밝게의 색 ${lightVars.length}개가 모두 어둡게에도 있다 (빠진 것 ${lacking.join(' ') || '없음'}). QR 색은 어둡게에서도 그대로다`);
-  const tabVars = ['home', 'plan', 'map', 'diary'].every((t) => tokCss.includes(`--tab-${t}:`) && tokCss.includes(`--tab-${t}-soft:`)) && ['plan', 'map', 'diary'].every((t) => tokCss.includes(`body[data-tab="${t}"]`));
-  check(tabVars && app.includes('document.body.dataset.tab'), '탭마다 강조색 하나: 지도 · 동선 · 일기 · 설정이 각자 색이 있고 app.js가 <body data-tab>을 정한다');
+  // 무채색 테마(11/22): 회색 단계 + 강조색 하나. 탭마다 다른 강조색 · 파스텔 면이 없다. 회색이 아닌 값은 강조색 계열 · 상태색 · 고를 때만 쓰는 분야 칠하기뿐이다.
+  const lightCss = tokCss.split(':root[data-theme="dark"]')[0];
+  const tokVal = (css, n) => (css.match(new RegExp(`--${n}:\\s*(#[0-9a-fA-F]{6});`)) || [])[1];
+  const isGray = (hex) => { const n = parseInt(hex.slice(1), 16); return (n >> 16) === ((n >> 8) & 255) && ((n >> 8) & 255) === (n & 255); };
+  const chroma = [...lightCss.matchAll(/--([a-z0-9-]+):\s*(#[0-9a-fA-F]{6});/g)].filter((m) => !isGray(m[2])).map((m) => m[1]);
+  const okChroma = new Set(['accent', 'accent-soft', 'mint', 'warn', 'map-korea', 'map-best', 'map-honoree', 'day-1', 'day-2', 'day-3', 'day-4']);
+  const strayChroma = chroma.filter((n) => !okChroma.has(n) && !n.startsWith('group-'));
+  const accentHue = (hex) => { const n = parseInt(hex.slice(1), 16); const [r, g, b] = [n >> 16, (n >> 8) & 255, n & 255]; return b > g && g >= r; };
+  check(!/--tab-/.test(tokCss) && !/body\[data-tab=/.test(tokCss) && !/--tab:/.test(appCss) && strayChroma.length === 0 && ['accent', 'accent-soft', 'mint', 'map-korea', 'map-best', 'map-honoree', 'day-1', 'day-2', 'day-3', 'day-4'].every((n) => accentHue(tokVal(lightCss, n))) && tokCss.includes('--btn:') && tokCss.includes('--on-btn:') && app.includes('document.body.dataset.tab'),
+    `무채색 테마: 탭마다 다른 강조색이 없고, 회색이 아닌 색은 강조색 하나의 계열 · 상태색 · 분야 칠하기(고를 때만)뿐이다 (그 밖의 색 ${strayChroma.join(' ') || '없음'}), 단추는 검정 칠한 단추 + 글자 단추`);
   const headPos = (needle) => html.indexOf(needle);
   check(headPos('src="theme.js"') > 0 && headPos('src="theme.js"') < headPos('href="tokens.css"') + 1000 && /prefers-color-scheme: dark/.test(themeJs) && /'light'/.test(themeJs) && /'dark'/.test(themeJs) && ['자동', '밝게', '어둡게'].every((w) => settingsJs.includes(w)) && /ces2027\.theme\.v1/.test(themeJs) && settingsJs.includes('setTheme') && /settings: \(\) => import/.test(app) && html.includes('href="#/settings"'), '테마: 설정에서 자동 · 밝게 · 어둡게를 고르고, theme.js가 첫 그림 전에 폰 설정(prefers-color-scheme)을 읽어 정한다');
   check(!/askPermission|offline\.install/.test(mapV2) && /askPermission/.test(settingsJs) && ['명함', '알림', '인터넷 없이', '내보내기'].every((w) => settingsJs.includes(w)), '명함 · 알림 · 인터넷 없이 · 내보내기는 설정 탭에 있다');
