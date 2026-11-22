@@ -1,4 +1,4 @@
-// 말과 글: 읽어 주기 · 받아쓰기 · 번역 · 녹음. 키도 서버도 쓰지 않고 폰(브라우저)이 가진 기능만 쓴다.
+// 말과 글: 읽어 주기 · 받아쓰기 · 녹음. 키도 서버도 쓰지 않고 폰(브라우저)이 가진 기능만 쓴다.
 // 두 길이 있고, 쓰는 사람이 화면에서 고른다 (2026-11-21 정함). 고르기 전의 기본값은 config/settings.json의 speech다:
 //   on-device      폰 안에서만. 소리와 글이 폰 밖으로 나가지 않는다. 안 되는 폰이 많다.
 //   device-service 폰의 음성 인식 서비스를 쓴다. 인터넷이 있어야 하고 소리가 구글 · 애플로 간다.
@@ -15,9 +15,8 @@ const SR = (g) => g.SpeechRecognition || g.webkitSpeechRecognition || null;
 
 // 이 폰에서 무엇이 되는지. env는 시험할 때 넣는다 (기본은 지금 창).
 // model은 폰 안 받아쓰기 모델의 형편이다: { can(돌릴 수 있는 브라우저인가), ready(받아 두었나), mb(받을 크기), name }.
-// tmodel은 폰 안 영한 번역 모델의 형편이다: { ready(받아 두었나), on(쓰는 사람이 켰나), name }. 폰 자체 번역기가 없을 때만 쓴다.
 // 돌려주는 것마다 { ok, why }.
-export async function capabilities(mode, env, model, tmodel) {
+export async function capabilities(mode, env, model) {
   const g = env || globalThis;
   const out = {};
   out.speak = g.speechSynthesis && g.SpeechSynthesisUtterance ? { ok: true, why: '' } : { ok: false, why: '이 브라우저는 글을 읽어 주지 못한다' };
@@ -41,42 +40,7 @@ export async function capabilities(mode, env, model, tmodel) {
       : { ok: false, engine: 'model', downloadable: true, mb: model.mb, why: `폰 안 받아쓰기 모델을 받으면 된다 (약 ${model.mb}MB, 이 화면의 "모델 받기")` };
   }
 
-  const T = g.Translator;
-  if (!T || typeof T.availability !== 'function') out.translate = { ok: false, why: '폰 안에서 하는 번역이 이 브라우저에는 없다' };
-  else {
-    let state = 'unavailable';
-    try { state = await T.availability({ sourceLanguage: 'en', targetLanguage: 'ko' }); } catch { /* 물을 수 없으면 안 되는 것으로 본다 */ }
-    out.translate = state === 'available'
-      ? { ok: true, why: '이미 준비된 폰 안 번역기를 쓴다' }
-      : { ok: false, why: state === 'downloadable' || state === 'downloading' ? '폰 안 번역 꾸러미가 아직 준비되지 않았다. 받는 크기를 확인할 수 없어 자동으로 받지 않는다' : '폰 안에서 하는 번역이 이 폰에는 없다' };
-  }
-  // 폰 자체 번역기가 없으면, 받아 두고 켠 영한 번역 모델로 한다. 영어 → 한국어만 된다.
-  if (!out.translate.ok && tmodel?.ready && tmodel?.on) {
-    out.translate = { ok: true, engine: 'model', only: 'ko', why: `폰 안 번역 모델(${tmodel.name})로 영어를 한국어로만 옮긴다. 글이 폰 밖으로 나가지 않는다. 한 줄에 몇 초 걸리고 틀릴 수 있다` };
-  }
   return out;
-}
-
-// 폰 안의 번역기. 없으면 null을 돌려준다.
-const translators = new Map();
-export async function translate(text, from, to, env) {
-  const g = env || globalThis;
-  const t = String(text || '').trim();
-  if (!t || !g.Translator || typeof g.Translator.create !== 'function') return null;
-  const key = `${from}>${to}`;
-  try {
-    if (typeof g.Translator.availability !== 'function' || (await g.Translator.availability({ sourceLanguage: from, targetLanguage: to })) !== 'available') return null;
-    if (!translators.has(key)) translators.set(key, await g.Translator.create({ sourceLanguage: from, targetLanguage: to }));
-    return await translators.get(key).translate(t);
-  } catch {
-    translators.delete(key);
-    return null;
-  }
-}
-
-// 번역 사이트로 넘기는 주소 (키 없음). 글이 폰 밖으로 나가므로 device-service일 때만 단추를 보인다.
-export function translateLink(text, from, to) {
-  return `https://translate.google.com/?sl=${from}&tl=${to}&op=translate&text=${encodeURIComponent(String(text || '').slice(0, 1500))}`;
 }
 
 // 영어로 읽어 준다. on-device면 폰 안에 있는 목소리만 쓴다. 읽기 시작했으면 true.

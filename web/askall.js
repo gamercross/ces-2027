@@ -23,7 +23,6 @@ export const GROUPS = [
   { k: 'places', ko: '장소 (지도에서 보기)' },
   { k: 'transit', ko: '셔틀 · 오가는 법' },
   { k: 'onsite', ko: '현장 안내 · 급할 때' },
-  { k: 'phrases', ko: '부스에서 쓸 질문' },
 ];
 
 const SESSIONS_LINK = '#/sessions';
@@ -103,7 +102,7 @@ export function resolveBasis(b, docs) {
 
 function entry(kind, o) { return { kind, ...o, t: lower(o.title), x: lower(o.text) }; }
 
-export function buildEntries({ info, separate, phrases, sessions, transit, onsite, places }) {
+export function buildEntries({ info, separate, sessions, transit, onsite, places }) {
   const out = [];
   const where = (spot, to, toKo) => ({ spot, to, toKo });
   if (info) {
@@ -131,9 +130,6 @@ export function buildEntries({ info, separate, phrases, sessions, transit, onsit
         ...where(`따로 신청하는 곳 · ${groupKo.get(it.group) || ''}`, '#/apply', '따로 신청하는 곳에서 보기'),
       }));
     }
-  }
-  if (phrases) {
-    for (const pack of phrases.packs) for (const it of pack.items) out.push(entry('phrases', { title: it.ko, text: `${pack.ko} ${it.en}`, show: it.en, en: true, src: null, note: '앱에 담아 둔 질문 · 영어는 미리 번역한 초안', ...where(`물어볼 말 · ${pack.ko}`, '#/ask', '물어볼 말에서 보기') }));
   }
   if (sessions) out.push(...sessionEntries(sessions));
   if (places) out.push(...placeEntries(places));

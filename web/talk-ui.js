@@ -1,4 +1,4 @@
-// 물어볼 말 · 듣기 화면이 같이 쓰는 조각: 크게 띄우기, "이 폰에서 되는 것" 줄.
+// 듣기 화면이 같이 쓰는 조각: 크게 띄우기, "이 폰에서 되는 것" 줄.
 
 import { el } from './dom.js';
 import { load, save } from './store.js';
@@ -15,8 +15,8 @@ export function modePicker(mode, onChange) {
   const set = (next) => { save('speechMode.v1', next); onChange(); };
   function draw(asking) {
     box.replaceChildren(...[
-      el('div', { class: 'label', text: '받아쓰기 · 번역을 어디서 하나' }),
-      el('div', { class: 'segs', role: 'group', 'aria-label': '받아쓰기와 번역을 하는 곳' },
+      el('div', { class: 'label', text: '받아쓰기를 어디서 하나' }),
+      el('div', { class: 'segs', role: 'group', 'aria-label': '받아쓰기를 하는 곳' },
         el('button', { class: 'seg', type: 'button', text: MODE_KO['on-device'], 'aria-pressed': mode === 'on-device' ? 'true' : 'false', onclick: () => { if (mode !== 'on-device') set('on-device'); else draw(false); } }),
         el('button', { class: 'seg', type: 'button', text: MODE_KO['device-service'], 'aria-pressed': mode === 'device-service' ? 'true' : 'false', onclick: () => {
           if (mode === 'device-service') return;
@@ -27,76 +27,9 @@ export function modePicker(mode, onChange) {
         el('div', { class: 'actions' },
           el('button', { class: 'btn', type: 'button', text: '알겠다 · 이 길로 한다', onclick: () => { save('speechConsent.v1', new Date().toISOString().slice(0, 10)); set('device-service'); } }),
           el('button', { class: 'btn ghost', type: 'button', text: '그만둔다', onclick: () => draw(false) }))) : null,
-      el('p', { class: 'note', text: mode === 'on-device' ? '지금: 폰 안에서만. 소리와 글이 폰 밖으로 나가지 않는다. 안 되는 폰이 많다.' : `지금: 폰의 음성 인식 서비스. ${SERVICE_NOTE} 글 옮기기는 폰 안의 번역기가 없으면 번역 사이트 링크로 한다.` }),
+      el('p', { class: 'note', text: mode === 'on-device' ? '지금: 폰 안에서만. 소리와 글이 폰 밖으로 나가지 않는다. 안 되는 폰이 많다.' : `지금: 폰의 음성 인식 서비스. ${SERVICE_NOTE}.` }),
     ].filter(Boolean));
     if (asking) box.querySelector('[role=alertdialog] button')?.focus();
-  }
-  draw(false);
-  return box;
-}
-
-// 폰 안 영한 번역 모델 칸. 기본 끔: 받기 전에는 아무것도 받지 않는다. 받기 전에 크기 · 예상 시간 · 와이파이 권장 · 받는 곳 · 라이선스를 보이고 확인받는다.
-// 받아 둔 뒤에는 켜기 · 끄기와 지우기가 있다. 영어 → 한국어만 한다. 바꾸면 onChange()를 부른다.
-export function translationModelPicker(settings, onChange) {
-  const box = el('div', { class: 'block' });
-  const status = el('p', { class: 'note', role: 'status' });
-  async function download(button) {
-    button.disabled = true;
-    try {
-      const m = await import('./translate-model.js');
-      await m.downloadTranslation(({ loaded, total }) => { status.textContent = `받는 중이다: ${Math.round(loaded / 1048576)} / ${Math.round(total / 1048576)}MB. 이 화면을 열어 둔다.`; });
-      status.textContent = '다 받았다. 이제 인터넷 없이도 영어를 한국어로 옮긴다.';
-      onChange?.();
-      await draw(false);
-    } catch (e) {
-      button.disabled = false;
-      status.textContent = `받지 못했다 (${String(e.message || e).slice(0, 90)}). 인터넷을 보고 다시 누른다. 받다 만 파일은 처음부터 다시 받고, 다 받은 파일은 이어서 쓴다.`;
-    }
-  }
-  async function draw(asking) {
-    const m = await import('./translate-model.js');
-    const s = await m.translateStatus();
-    const stored = load('translationModel.v1', settings?.translationModel === 'on' ? 'on' : 'off');
-    const head = el('div', { class: 'label', text: '폰 안 영한 번역 모델' });
-    if (!s.name) {
-      box.replaceChildren(head, el('p', { class: 'note', text: '영한 번역 모델: 이 판에서는 쓰지 않는다.' }));
-      return;
-    }
-    if (!s.can) {
-      box.replaceChildren(head, el('p', { class: 'note', text: '이 브라우저에서는 폰 안 번역 모델을 돌릴 수 없다 (WebAssembly · 일꾼 · 저장 공간이 필요하다).' }));
-      return;
-    }
-    const bytes = s.mb * 1048576;
-    const times = `와이파이 50Mbps면 ${m.estimate(bytes, 50)}, 4G 10Mbps면 ${m.estimate(bytes, 10)}이 걸린다 (계산한 값이다)`;
-    if (!s.ready) {
-      box.replaceChildren(...[
-        head,
-        el('p', { class: 'note', text: `기본 끔. 영어를 한국어로 폰 안에서 옮긴다 (영어 → 한국어만). ${s.name}, 약 ${s.mb}MB. 받기 전에는 아무것도 받지 않는다.` }),
-        asking ? el('div', { class: 'panel band ask', role: 'alertdialog', 'aria-label': '폰 안 영한 번역 모델 받기' },
-          el('p', {}, el('b', { text: `약 ${s.mb}MB를 받는다. 와이파이에서 받기를 권한다.` }), ` ${times}. 한 번 받으면 이 폰에 남아 인터넷 없이도 된다.`),
-          el('p', { class: 'note', text: `모델 파일은 huggingface.co에서 받는다. 받는 즉시 크기와 sha256이 정해 둔 것과 같은지 본다. 내 글은 어디로도 보내지 않는다. 폰의 메모리와 배터리를 많이 쓰니 쓰는 동안만 켜 둔다. 받은 것은 이 화면에서 지울 수 있다.` }),
-          el('p', { class: 'note', text: `라이선스: ${s.license} (${s.by}). 출처 ${s.source}` }),
-          el('div', { class: 'actions' },
-            el('button', { class: 'btn', type: 'button', text: '받는다', onclick: (ev) => download(ev.target) }),
-            el('button', { class: 'btn ghost', type: 'button', text: '그만둔다', onclick: () => draw(false) }))) : el('div', { class: 'actions' }, el('button', { class: 'btn ghost', type: 'button', text: `영한 번역 모델 받기 (약 ${s.mb}MB)`, onclick: () => draw(true) })),
-        status,
-      ].filter(Boolean));
-      if (asking) box.querySelector('[role=alertdialog] button')?.focus();
-      return;
-    }
-    const on = stored === 'on';
-    box.replaceChildren(
-      head,
-      el('div', { class: 'segs', role: 'group', 'aria-label': '폰 안 영한 번역 모델' },
-        el('button', { class: 'seg', type: 'button', text: '끄기', 'aria-pressed': !on ? 'true' : 'false', onclick: () => { save('translationModel.v1', 'off'); onChange?.(); draw(false); } }),
-        el('button', { class: 'seg', type: 'button', text: '켜기', 'aria-pressed': on ? 'true' : 'false', onclick: () => { save('translationModel.v1', 'on'); onChange?.(); draw(false); } })),
-      el('p', { class: 'note', text: `${s.name}이 이 폰에 있다. ${on ? '켜져 있다: 폰 자체 번역기가 없으면 영어를 한국어로 옮긴다.' : '꺼져 있다.'} ${s.license}: ${s.by}` }),
-      el('div', { class: 'row-actions' }, el('button', { class: 'linkish', type: 'button', text: '번역 모델 지우기', onclick: async () => {
-        await m.removeTranslation();
-        onChange?.();
-        await draw(false);
-      } })),
-      status);
   }
   draw(false);
   return box;

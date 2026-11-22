@@ -1,6 +1,6 @@
 // 폰 안 받아쓰기 모델: 누를 때만 받고, 한 번 받으면 폰에 남아 인터넷 없이 된다.
 // 받는 것: 실행기(같은 주소의 vendor/speech/)와 모델 파일(huggingface.co). 내 소리와 글은 어디로도 보내지 않는다.
-// 이 조각은 듣기 · 물어볼 말 화면에서 누를 때만 불러온다.
+// 이 조각은 듣기 화면에서 누를 때만 불러온다.
 
 import { resample, RATE, Segmenter } from './pcm.js';
 
@@ -105,10 +105,7 @@ export async function removeModel() {
   worker = null;
   loading = null;
   const info = await getModelInfo();
-  // 영한 번역 모델이 같은 실행기를 쓴다. 번역 모델이 폰에 있으면 실행기를 남긴다 (번역 모델을 지울 때 함께 지운다).
-  const models0 = (await caches.has(MODEL_CACHE)) ? await (await caches.open(MODEL_CACHE)).keys() : [];
-  const translationHeld = !!info.translation && models0.some((req) => req.url.includes(`/${info.translation.id}/`));
-  if (!translationHeld) await caches.delete(KEEP);
+  await caches.delete(KEEP);
   if (!(await caches.has(MODEL_CACHE))) return;
   // 실행기가 스스로 담아 둔 것 가운데 이 모델의 것만 지운다 (판을 못 박지 않고 읽은 설정 한 장도 같이).
   const models = await caches.open(MODEL_CACHE);

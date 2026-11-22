@@ -1,20 +1,20 @@
-// 듣기: 부스에서 상대의 말을 받아 적고(영어) 한국어로 옮긴다. 멈추면 그 회사의 일기 초안이 되고, 같은 줄이 그 회사의 "대화" 칸에도 남는다.
-// 번역 앱으로 대화한다면 녹음하지 않고 대화 칸에 번역 앱의 대화 기록을 붙여 넣는다 (#/talk).
+// 듣기: 부스에서 상대의 말을 받아 적는다(영어). 멈추면 그 회사의 일기 초안이 되고, 같은 줄이 그 회사의 "대화" 칸에도 남는다.
 // 소리와 글은 이 폰에만 남는다. 폰이 못 하는 것은 숨기지 않고 "이 폰에서는 안 됨"으로 보인다. 그때는 손으로 적는다.
 
 import { el } from '../dom.js';
-import { getExhibitors, getPhrases, getSettings } from '../data.js';
+import { getExhibitors, getSettings } from '../data.js';
 import { getDiary, getTalks, load, save, setDiary, setTalks } from '../store.js';
 import { makeTalk } from '../talk.js';
-import { capabilities, installDictation, makeDraft, summarize, translate } from '../speech.js';
+import { capabilities, installDictation, makeDraft, summarize } from '../speech.js';
 import { capRows, currentMode, modelBox, modePicker, showBig, startDictation } from '../talk-ui.js';
 import { modelStatus } from '../speech-model.js';
-import { translateStatus, translateText } from '../translate-model.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
 const clock = (secs) => `${Math.floor(secs / 60)}:${pad(Math.floor(secs % 60))}`;
 const newId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+// 녹음해도 되는지 상대에게 알리는 말 (영어로 크게 띄운다).
+const NOTICE = { ko: '제 메모를 위해 이 대화를 녹음해도 될까요?', en: 'May I record this conversation for my own notes?' };
 const WHY = {
   'not-allowed': '마이크를 허락하지 않았다',
   'service-not-allowed': '이 폰이 받아쓰기를 막아 두었다',
@@ -26,17 +26,14 @@ const WHY = {
 
 export async function render({ rest, go }) {
   const exId = rest[0] ? decodeURIComponent(rest[0]) : '';
-  const [phrases, settings, data] = await Promise.all([getPhrases(), getSettings(), exId ? getExhibitors().catch(() => null) : null]);
+  const [settings, data] = await Promise.all([getSettings(), exId ? getExhibitors().catch(() => null) : null]);
   const row = data?.ex.find((r) => r[0] === exId);
   const company = row ? { id: row[0], name: row[1], booth: row[7][0] || '' } : { id: '', name: '', booth: '' };
   const mode = currentMode(settings);
-  const getCaps = async () => capabilities(mode, undefined, await modelStatus(), await translateStatus());
+  const getCaps = async () => capabilities(mode, undefined, await modelStatus());
   let caps = await getCaps();
-  // 폰 자체 번역기가 있으면 그것을, 없고 영한 번역 모델을 켜 두었으면 그것을 쓴다.
-  const toKo = (text) => (caps.translate.engine === 'model' ? translateText(text) : translate(text, 'en', 'ko'));
 
   const lines = [];
-  const pending = [];
   let running = false;
   let startAt = 0;
   let session = null;
@@ -61,10 +58,8 @@ export async function render({ rest, go }) {
   function addLine(text) {
     const line = { t: startAt ? (Date.now() - startAt) / 1000 : 0, en: text, ko: '' };
     lines.push(line);
-    const ko = el('small', { text: caps.translate.ok ? '옮기는 중' : '' });
-    heard.append(el('li', {}, el('span', { lang: 'en', text }), ko));
+    heard.append(el('li', {}, el('span', { lang: 'en', text })));
     count.textContent = `받아 적은 글 ${lines.length}줄`;
-    if (caps.translate.ok) pending.push(toKo(text).then((got) => { line.ko = got || ''; ko.textContent = got || '(옮기지 못함)'; }));
     drawDock();
   }
 
@@ -133,10 +128,7 @@ export async function render({ rest, go }) {
     lock = null;
     if (!lines.length && !blob) { saved = false; status.textContent = '받아 적은 글도 녹음도 없다. 초안을 만들지 않았다.'; drawDock(); return; }
     status.textContent = '일기 초안을 만드는 중이다.';
-    // 폰 안 번역 모델은 한 줄에 몇 초 걸리니 더 기다린다.
-    await Promise.race([Promise.allSettled(pending), new Promise((r) => setTimeout(r, caps.translate.engine === 'model' ? 60000 : 4000))]);
-    let summary = await summarize(lines.map((l) => l.en).join(' '));
-    if (summary && caps.translate.ok) summary = (await toKo(summary)) || summary;
+    const summary = await summarize(lines.map((l) => l.en).join(' '));
     const who = company.id ? company : { id: '', name: nameBox.value.trim() || '회사 이름 없음', booth: '' };
     const entry = makeDraft(who, lines, today(), newId(), summary);
     if (blob) {
@@ -173,7 +165,7 @@ export async function render({ rest, go }) {
       el('p', { text: '받아 적거나 녹음하기 전에 알린다. 싫다고 하면 손으로 적는다.' }),
       el('div', { class: 'actions' },
         el('button', { class: 'btn', type: 'button', text: '알렸다 · 듣기 시작', onclick: () => { save('listenAsked.v1', today()); box.remove(); begin(); } }),
-        el('button', { class: 'btn ghost', type: 'button', text: '알리는 말', onclick: () => showBig(phrases.notice.en, phrases.notice.ko, mode, caps.speak) })));
+        el('button', { class: 'btn ghost', type: 'button', text: '알리는 말', onclick: () => showBig(NOTICE.en, NOTICE.ko, mode, caps.speak) })));
     dock.before(box);
     box.querySelector('button').focus();
   }
@@ -191,7 +183,7 @@ export async function render({ rest, go }) {
 
   function drawCaps() {
     capsBox.replaceChildren(...[
-      capRows([['받아쓰기', caps.dictate], ['한국어로', caps.translate], ['녹음', caps.record]]),
+      capRows([['받아쓰기', caps.dictate], ['녹음', caps.record]]),
       caps.dictate.installable ? el('div', { class: 'actions' }, el('button', { class: 'btn ghost', type: 'button', text: '받아쓰기 말 꾸러미 받기', onclick: async (ev) => {
         ev.target.disabled = true;
         status.textContent = '말 꾸러미를 받는 중이다. 와이파이에서 받는다.';
@@ -221,14 +213,12 @@ export async function render({ rest, go }) {
       el('p', { class: 'lead', text: '받아 적고 멈추면 일기 초안이 된다. 이 폰에만 남는다.' }),
       company.id ? (company.booth ? el('p', { class: 'note', text: `부스 ${company.booth.split('@')[0]}` }) : null) : el('label', { class: 'field' }, el('span', { class: 'label', text: '회사' }), nameBox),
       el('div', { class: 'actions' },
-        el('a', { class: 'btn ghost', href: `#/ask${company.id ? `/${encodeURIComponent(company.id)}` : ''}`, text: '물어볼 말' }),
-        el('a', { class: 'btn ghost', href: `#/talk${company.id ? `/${encodeURIComponent(company.id)}` : ''}`, text: '대화 칸' })),
-      el('p', { class: 'note' }, '번역 앱으로 대화했다면 기록을 대화 칸에 붙여 넣는다. 폰 안 모델은 ', el('a', { href: '#/deep', text: '깊은 설정' }), '.')),
+        el('a', { class: 'btn ghost', href: `#/talk${company.id ? `/${encodeURIComponent(company.id)}` : ''}`, text: '대화 칸' }))),
     el('section', { class: 'panel notice' },
       el('h2', { text: '알리는 말' }),
-      el('div', { class: 'name', text: phrases.notice.ko }),
-      el('p', { class: 'en', lang: 'en', text: phrases.notice.en }),
-      el('div', { class: 'row-actions' }, el('button', { class: 'say', type: 'button', text: '크게 띄우기', onclick: () => showBig(phrases.notice.en, phrases.notice.ko, mode, caps.speak) }))),
+      el('div', { class: 'name', text: NOTICE.ko }),
+      el('p', { class: 'en', lang: 'en', text: NOTICE.en }),
+      el('div', { class: 'row-actions' }, el('button', { class: 'say', type: 'button', text: '크게 띄우기', onclick: () => showBig(NOTICE.en, NOTICE.ko, mode, caps.speak) }))),
     el('section', { class: 'panel' },
       el('h2', { text: '이 폰에서 되는 것' }),
       capsBox,
