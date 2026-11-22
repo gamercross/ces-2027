@@ -509,7 +509,7 @@ export async function render({ rest = [] } = {}) {
     paint();
     box.append(head,
       el('div', { class: 'card-actions' }, interestBtn, el('p', { class: 'label', text: '동선에 넣기' }), dayRow),
-      guide,
+      guide || '', // 부스가 없는 회사는 길 안내 칸이 없다 (null을 그대로 붙이면 "null" 글자가 보인다)
       sessionBlock(name),
       el('div', { class: 'row-actions' }, meta?.link ? out(meta.link.replace('{id}', encodeURIComponent(id)), '공식 링크') : null, el('a', { href: `#/talk/${encodeURIComponent(id)}`, text: '대화' }), markBlock(bk)),
       logoBox);
