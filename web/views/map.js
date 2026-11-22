@@ -93,6 +93,7 @@ export async function render({ rest = [] } = {}) {
   let fullOnce = null;
   const pending = new Map();
   let pins = [];
+  let dayFocus = rest[0] === 'day' && rest[1] != null && Number.isFinite(Number(rest[1])) ? Number(rest[1]) : null; // 동선에서 "지도에서 보기"로 왔을 때 그 날
   let colorMode = MODES.some((m) => m.k === load('mapColor.v1', 'plain')) ? load('mapColor.v1', 'plain') : 'plain';
   const mapx = el('div', { class: 'mapx', 'data-level': 'campus' });
   const page = el('div', { class: 'page mappage' });
@@ -373,7 +374,7 @@ export async function render({ rest = [] } = {}) {
   function drawPins() {
     pinLayer.replaceChildren(...pins.map((pin) => {
       const g = svg('g', { 'data-pin': pin.id, role: 'button', tabindex: 0, 'aria-label': `${pin.no}번 ${pin.name}` },
-        svg('circle', { cx: pin.x, cy: pin.z, fill: T.accent, stroke: T.panel, 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke', opacity: pin.seen ? 0.5 : 1 }));
+        svg('circle', { cx: pin.x, cy: pin.z, fill: T.accent, stroke: T.panel, 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke', opacity: dayFocus != null && pin.day !== dayFocus ? 0.25 : pin.seen ? 0.5 : 1 }));
       const text = svg('text', { x: pin.x, y: pin.z, 'text-anchor': 'middle', 'dominant-baseline': 'central', fill: T.panel, 'font-weight': 800, 'pointer-events': 'none' });
       text.textContent = String(pin.no);
       g.append(text);
@@ -385,13 +386,14 @@ export async function render({ rest = [] } = {}) {
     const byDay = new Map();
     for (const p of pins) if (p.day) { if (!byDay.has(p.day)) byDay.set(p.day, []); byDay.get(p.day).push(p); }
     routeLayer.replaceChildren(...[...byDay].filter(([, list]) => list.length > 1).map(([day, list]) => {
-      const line = svg('polyline', { points: pts(list.map((p) => [p.x, p.z])), stroke: T.accent, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'vector-effect': 'non-scaling-stroke', opacity: day === today ? 0.95 : 0.45, 'stroke-dasharray': day === today ? null : '7 6' });
+      const line = svg('polyline', { points: pts(list.map((p) => [p.x, p.z])), stroke: T.accent, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'vector-effect': 'non-scaling-stroke', opacity: day === today ? 0.95 : dayFocus != null ? 0.15 : 0.45, 'stroke-dasharray': day === today ? null : '7 6' });
       if (day === today) line.dataset.today = '1';
       return line;
     }));
     sizeMarks();
   }
   function todayIndex() {
+    if (dayFocus != null) return dayFocus;
     const d = new Date();
     const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const at = info?.show?.days?.findIndex((x) => x.date === iso) ?? -1;
@@ -1037,9 +1039,21 @@ export async function render({ rest = [] } = {}) {
   paintLegend();
   if (colorMode === 'group') getCategories().then((t) => { table = t; colorOf = null; paintLegend(); drawBooths(); }).catch(() => {});
 
+  // ---- 동선에서 온 날: 그 날의 번호만 진하게 보이고, 위에 한 줄로 알린다.
+  const daybar = el('div', { class: 'daybar', hidden: true });
+  function paintDayBar() {
+    if (dayFocus == null) { daybar.hidden = true; return; }
+    const n = pins.filter((p) => p.day === dayFocus).length;
+    const ko = dayFocus ? (info?.show?.days?.[dayFocus - 1]?.ko || '') : '날짜 미정';
+    daybar.replaceChildren(
+      el('span', { class: 'daybar-text', text: `${ko} 동선 ${n}곳` }),
+      el('button', { class: 'chip-go', type: 'button', text: '모든 날', onclick: () => { dayFocus = null; paintDayBar(); drawPins(); } }),
+      el('a', { class: 'chip-go', href: '#/plan', text: '동선' }));
+    daybar.hidden = false;
+  }
   // ---- 조립
   mapx.append(el('h1', { class: 'sr-only', text: '지도' }), frame,
-    el('div', { class: 'mapx-top' }, finder.node, chips),
+    el('div', { class: 'mapx-top' }, finder.node, chips, daybar),
     el('div', { class: 'ctls' }, plus, minus, locate, solid),
     navbar,
     sheet.node);
@@ -1076,6 +1090,7 @@ export async function render({ rest = [] } = {}) {
     if (getInterests().length) idle(() => { ensureFull().catch(() => {}); });
     // 다른 화면의 "지도" 단추로 왔으면 그 회사로 간다.
     if (rest[0] === 'at' && rest[1]) ensureFull().then(() => openCompany(rows.get(rest[1]))).catch(() => {});
+    if (dayFocus != null) ensureFull().then(async () => { info ||= await getInfo().catch(() => null); const list = pins.filter((p) => p.day === dayFocus); paintDayBar(); drawPins(); if (list.length) goBox(pad(bbox(list.map((p) => [p.x, p.z])), 110)); }).catch(() => {});
     if (rest[0] === 'go' && rest[1]) ensureFull().then(() => { const row = rows.get(rest[1]); const b = row?.[7]?.[0]; if (row && b) startNav(row, boothKey(b)); }).catch(() => {});
   });
   page.mapApi = {

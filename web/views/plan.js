@@ -1,15 +1,18 @@
-// 동선: 관심 회사를 날짜 · 캠퍼스 · 걷는 차례로 세운다. 날짜는 바꿀 수 있다. 폰에만 남는다.
+// 동선: 관심 회사를 날짜 · 캠퍼스 · 걷는 차례로 세운다. 날짜 칩 하나에 그 날 차례만 보이고, 번호는 지도의 번호와 같다.
+// 줄은 가볍게(번호 · 이름 · 때와 곳 · 봤다), 자세한 것과 고치기는 회사 카드(큰 창)에 둔다. 날짜는 바꿀 수 있고 폰에만 남는다.
 
 import { el, out } from '../dom.js';
 import { getExhibitors, getInfo, getMeta, getPlaces } from '../data.js';
 import { getDayLimit, getEvents, getHours, getInterests, getPace, setDayLimit, setInterests } from '../store.js';
-import { capacity, clock, dayLimits, eventsOn, hoursFor, timeline } from '../days.js';
+import { clock, dayLimits, eventsOn, hoursFor, timeline } from '../days.js';
 import { placeLink } from './days.js';
 import { markLabel, toggleMark } from '../alerts.js';
 import { getMarks, setMarks } from '../notify.js';
 import { fillDays, nextStop, placeTable, sortRoute, splitBooth } from '../route.js';
 import { mapsLink } from '../maps.js';
 import { alertBands } from '../bands.js';
+import { attachImage } from '../company-image.js';
+import { createCardShell } from '../plancard.js';
 import { mergeItems, planCode, planCsv, planMd, planText, readCode, shareLink } from '../share.js';
 
 function download(name, text, type) {
@@ -21,7 +24,11 @@ function download(name, text, type) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+const DAY_KEY = 'ces2027.planDay';
+const shortDay = (ko) => ko.split(' ').join('');
+
 export async function render() {
+  document.body.classList.remove('pcard-open');
   const meta = await getMeta();
   if (!meta) {
     return el('section', { class: 'panel' }, el('h1', { text: '동선' }), el('p', { text: '전시사 자료를 아직 받지 못했다.' }));
@@ -34,116 +41,211 @@ export async function render() {
   const placeOf = (id) => { const b = byId.get(id)?.[7]?.[0]; return b ? placeBy.get(splitBooth(b).place) : null; };
   const firstBooth = (id) => byId.get(id)?.[7]?.[0] || null;
   const days = [...info.show.days.map((d, i) => ({ key: i + 1, ko: d.ko, hours: d.hours, date: d.date })), { key: 0, ko: '날짜 미정', hours: '', date: null }];
+  const dayOf = (key) => days.find((d) => d.key === key);
+  const koreaAt = data.countries?.indexOf('South Korea');
+  const nameOf = (id) => byId.get(id)?.[1] || '자료에서 빠진 회사';
 
   const holder = el('div', { class: 'page' });
   const nowHolder = el('div', { class: 'page' });
-  const status = el('p', { class: 'note', role: 'status' });
-
-  // at: 그 곳을 볼 때쯤(분). null이면 그 날 쓸 시간 밖이다. undefined면 시간을 보이지 않는다(날짜 미정).
-  function item(it, no, at) {
-    const row = byId.get(it.id);
-    const booth = firstBooth(it.id);
-    const place = booth ? table.get(splitBooth(booth).place) : null;
-    const select = el('select', { 'aria-label': `${row ? row[1] : '회사'} 날짜` },
-      days.map((d) => el('option', { value: d.key, selected: d.key === (it.day || 0), text: d.key ? d.ko : '미정' })));
-    select.addEventListener('change', () => {
-      setInterests(getInterests().map((x) => (x.id === it.id ? { ...x, day: Number(select.value) } : x)));
-      status.textContent = '날짜를 바꿨다.';
-      draw();
-    });
-    const remove = el('button', { class: 'pick', type: 'button', text: '빼기', 'aria-label': `${row ? row[1] : '회사'} 관심에서 빼기`, onclick: () => {
-      setInterests(getInterests().filter((x) => x.id !== it.id));
-      status.textContent = '관심에서 뺐다.';
-      draw();
-    } });
-    // 이 회사의 부스 가운데 "명함 넣는 이벤트 있음"으로 표시한 것 (없으면 첫 부스에 표시한다).
-    const keysOf = (row?.[7] || []).map((b) => { const at = b.lastIndexOf('@'); return `${b.slice(at + 1)}|${b.slice(0, at)}`; });
-    const markKey = keysOf.find((k) => getMarks()[k]) || null;
-    const eventButton = keysOf.length ? el('button', { class: 'pick', type: 'button', text: '명함 이벤트', 'aria-pressed': markKey ? 'true' : 'false', 'aria-label': `${row[1]} 명함 넣는 이벤트 ${markKey ? '표시 지우기' : '있음으로 표시'}`, onclick: () => {
-      setMarks(toggleMark(getMarks(), markKey || keysOf[0]));
-      status.textContent = markKey ? '표시를 지웠다.' : '명함 넣는 부스로 표시했다. 내가 표시한 것이다.';
-      draw();
-    } }) : null;
-    const seen = el('button', { class: 'pick', type: 'button', text: it.seen ? '봤다' : '아직', 'aria-pressed': it.seen ? 'true' : 'false', 'aria-label': `${row ? row[1] : '회사'} 봤다고 표시`, onclick: () => {
-      setInterests(getInterests().map((x) => (x.id === it.id ? { ...x, seen: !x.seen } : x)));
-      status.textContent = it.seen ? '아직 안 본 곳으로 돌렸다.' : '봤다. 다음 갈 곳이 바뀐다.';
-      draw();
-    } });
-    const route = mapsLink(places, placeOf(it.id), 'directions');
-    // 같은 날짜 안에서 한 칸 위 · 아래로 옮긴다 (걷는 차례를 손으로 고칠 때).
-    const move = (step) => {
+  const chipHolder = el('div', { class: 'segs', role: 'group', 'aria-label': '날짜' });
+  const pageNote = el('p', { class: 'note', role: 'status' });
+  const toolNote = el('p', { class: 'note', role: 'status' });
+  // 알림 글은 화면 위 줄과 "차례 정리" 카드 안 줄에 함께 쓴다(카드가 덮고 있어도 보이게).
+  const status = { set textContent(t) { pageNote.textContent = t; toolNote.textContent = t; } };
+  let undo = null; // 방금 뺀 회사를 되돌리는 한 줄
+  const undoBar = el('div', { class: 'undo', hidden: true });
+  const showUndo = (id, at, it) => {
+    undo = { id, at, it };
+    undoBar.replaceChildren(el('span', { text: `${nameOf(id)} 뺐다` }), el('button', { class: 'pick', type: 'button', text: '되돌리기', onclick: () => {
       const list = getInterests();
-      const same = list.map((x, n) => ({ x, n })).filter((v) => (v.x.day || 0) === (it.day || 0));
-      const at = same.findIndex((v) => v.x.id === it.id);
-      const other = same[at + step];
-      if (at < 0 || !other) return;
-      [list[same[at].n], list[other.n]] = [list[other.n], list[same[at].n]];
-      setInterests(list);
-      status.textContent = '차례를 바꿨다.';
-      draw();
-    };
-    const up = el('button', { class: 'pick', type: 'button', text: '위로', 'aria-label': `${row ? row[1] : '회사'} 한 칸 위로`, onclick: () => move(-1) });
-    const down = el('button', { class: 'pick', type: 'button', text: '아래로', 'aria-label': `${row ? row[1] : '회사'} 한 칸 아래로`, onclick: () => move(1) });
-    return el('li', { class: it.seen ? 'stop seen' : 'stop' },
+      if (!list.some((x) => x.id === id)) list.splice(Math.min(undo.at, list.length), 0, undo.it);
+      undo = null; undoBar.hidden = true;
+      setInterests(list); draw();
+    } }));
+    undoBar.hidden = false;
+    clearTimeout(showUndo.t);
+    showUndo.t = setTimeout(() => { undo = null; undoBar.hidden = true; }, 6000);
+  };
+  const shell = createCardShell();
+  window.addEventListener('hashchange', () => shell.close(), { once: true });
+
+  // 지금 보는 날: 저장해 둔 날 → 오늘 → 동선이 있는 첫 날.
+  const today = () => { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
+  let shown = null;
+  function chooseDay(list, events) {
+    const has = (k) => list.some((it) => (it.day || 0) === k) || (dayOf(k)?.date && eventsOn(events, dayOf(k).date).length > 0);
+    const saved = Number(sessionStorage.getItem(DAY_KEY));
+    if (shown !== null && has(shown)) return shown;
+    if (Number.isFinite(saved) && sessionStorage.getItem(DAY_KEY) !== null && has(saved)) return saved;
+    const now = days.find((d) => d.date === today());
+    if (now && has(now.key)) return now.key;
+    return days.find((d) => has(d.key))?.key ?? 1;
+  }
+  const showDay = (key) => { shown = key; try { sessionStorage.setItem(DAY_KEY, String(key)); } catch { /* 저장이 막혀도 화면은 된다 */ } };
+
+  // 카드와 줄이 함께 쓰는 고치기. 고친 뒤에는 줄과 (열려 있으면) 카드를 다시 그린다.
+  let openId = null;
+  const change = (fn, note) => { setInterests(fn(getInterests())); if (note) status.textContent = note; draw(); };
+  const setSeen = (id) => change((l) => l.map((x) => (x.id === id ? { ...x, seen: !x.seen } : x)), '');
+  const setDay = (id, key) => { showDay(key); change((l) => l.map((x) => (x.id === id ? { ...x, day: key } : x)), '날짜를 바꿨다.'); };
+  const removeItem = (id) => {
+    const at = getInterests().findIndex((x) => x.id === id);
+    const it = getInterests()[at];
+    shell.close(); openId = null;
+    change((l) => l.filter((x) => x.id !== id), '');
+    if (it) showUndo(id, at, it);
+  };
+  // 같은 날짜 안에서 한 칸 위 · 아래로 옮긴다 (걷는 차례를 손으로 고칠 때).
+  const move = (id, step) => {
+    const list = getInterests();
+    const it = list.find((x) => x.id === id);
+    const same = list.map((x, n) => ({ x, n })).filter((v) => (v.x.day || 0) === (it.day || 0));
+    const at = same.findIndex((v) => v.x.id === id);
+    const other = same[at + step];
+    if (at < 0 || !other) return;
+    [list[same[at].n], list[other.n]] = [list[other.n], list[same[at].n]];
+    change(() => list, '차례를 바꿨다.');
+  };
+
+  // 때(분): 날마다 draw가 채운다. null이면 쓸 시간 밖, 없으면 날짜 미정.
+  const whenOf = new Map();
+  const whenText = (id) => { if (!whenOf.has(id)) return ''; const at = whenOf.get(id); return at === null ? '시간 밖' : `${clock(at)}쯤`; };
+  const tagsOf = (row) => [
+    row?.[5] ? el('span', { class: 'tag mint', text: row[5] & 2 ? '최고 혁신상' : '혁신상' }) : null,
+    row && koreaAt >= 0 && row[3] === koreaAt ? el('span', { class: 'tag mint', text: '한국' }) : null,
+  ].filter(Boolean);
+  const catsOf = (row, n) => (row?.[4] ? row[4].split('.').map((c) => data.catsKo?.[c] || data.cats?.[c]).filter(Boolean).slice(0, n).join(' · ') : '');
+  const whereOf = (id) => {
+    const booth = firstBooth(id);
+    const row = byId.get(id);
+    const place = booth ? table.get(splitBooth(booth).place) : null;
+    return booth ? `${place ? place.ko : '장소 모름'} · 부스 ${splitBooth(booth).code}` : (row ? '부스 미정' : '새로 받은 자료에 없다');
+  };
+
+  // ---- 줄: 번호 · 이름 · 때와 곳 · 봤다. 누르면 카드.
+  function item(it, no) {
+    const row = byId.get(it.id);
+    const when = whenText(it.id);
+    const booth = firstBooth(it.id);
+    const open = el('button', { class: 'stop-open', type: 'button', 'aria-label': `${no}번 ${nameOf(it.id)} 카드 열기`, onclick: (ev) => { openId = it.id; shell.open(card(it.id), ev.currentTarget); } },
       el('span', { class: 'no', text: String(no) }),
-      el('div', { class: 'stop-main' },
-        el('div', { class: 'name' }, row ? row[1] : '자료에서 빠진 회사', markKey ? el('span', { class: 'tag', text: `명함 이벤트 (${markLabel(getMarks()[markKey])})` }) : null),
-        el('div', { class: 'where', text: (at === undefined ? '' : at === null ? '시간 밖 · ' : `${clock(at)}쯤 · `) + (booth ? `${place ? place.ko : '장소 모름'} ${splitBooth(booth).code}${row[7].length > 1 ? ` 밖에 ${row[7].length - 1}곳` : ''}` : (row ? '부스 미정' : '새로 받은 자료에 없다')) })),
-      el('div', { class: 'stop-side' }, seen, eventButton, select, up, down, remove, route ? out(route, '길찾기') : null, row ? el('a', { href: `#/diary/new/${it.id}`, text: '일기' }) : null));
+      el('span', { class: 'stop-main' },
+        el('span', { class: 'name', text: nameOf(it.id) }),
+        el('span', { class: 'where', text: [when, whereOf(it.id).replace(' · 부스', ' ·')].filter(Boolean).join(' · ') }),
+        tagsOf(row).length ? el('span', { class: 'stop-tags' }, tagsOf(row)) : null));
+    const seen = el('button', { class: 'pick seen-btn', type: 'button', text: it.seen ? '봤다' : '아직', 'aria-pressed': it.seen ? 'true' : 'false', 'aria-label': `${nameOf(it.id)} 봤다고 표시`, onclick: () => { status.textContent = it.seen ? '아직 안 본 곳으로 돌렸다.' : '봤다. 다음 갈 곳이 바뀐다.'; setSeen(it.id); } });
+    return el('li', { class: it.seen ? 'stop seen' : 'stop', 'data-booth': booth ? 'y' : 'n' }, open, seen);
+  }
+
+  // ---- 회사 카드(큰 창): 크게 · 자세히, 그리고 이 회사를 고치는 단추 전부
+  function card(id) {
+    const it = getInterests().find((x) => x.id === id);
+    if (!it) { shell.close(); return null; }
+    const row = byId.get(id);
+    const booth = firstBooth(id);
+    const place = placeOf(id);
+    const same = getInterests().filter((x) => (x.day || 0) === (it.day || 0));
+    const at = same.findIndex((x) => x.id === id);
+    const route = mapsLink(places, place, 'directions');
+    const keys = (row?.[7] || []).map((b) => { const a = b.lastIndexOf('@'); return `${b.slice(a + 1)}|${b.slice(0, a)}`; });
+    const markKey = keys.find((k) => getMarks()[k]) || null;
+    const day = dayOf(it.day || 0);
+    const cats = catsOf(row, 4);
+    const logoBox = el('div', { class: 'card-logo' });
+    if (row) attachImage(logoBox, id, row[1], data);
+    return [
+      el('div', { class: 'pcard-top' },
+        el('span', { class: 'no big-no', text: String(at + 1) }),
+        el('span', { class: 'pcard-sub', text: `${day ? day.ko : ''} ${at + 1}번째${whenOf.has(id) ? ` · ${whenText(id)}` : ''}` }),
+        el('button', { class: 'btn ghost pcard-close', type: 'button', text: '닫기', onclick: () => shell.close() })),
+      el('h2', { class: 'pcard-name', text: nameOf(id) }),
+      el('p', { class: 'pcard-where', text: whereOf(id) }),
+      el('p', { class: 'card-tags' }, ...tagsOf(row), booth ? el('span', { class: 'tag', text: '자리 짐작' }) : null),
+      cats ? el('p', { class: 'pcard-cats', text: cats }) : null,
+      row ? el('div', { class: 'actions' },
+        el('a', { class: 'btn', href: `#/map/at/${encodeURIComponent(id)}`, text: '지도에서 보기' }),
+        el('a', { class: 'btn ghost', href: `#/map/go/${encodeURIComponent(id)}`, text: '길 안내' })) : null,
+      el('div', { class: 'actions' },
+        el('button', { class: 'btn ghost', type: 'button', text: it.seen ? '봤다 · 되돌리기' : '봤다', 'aria-pressed': it.seen ? 'true' : 'false', onclick: () => setSeen(id) }),
+        route ? out(route, '구글맵 길찾기', 'btn ghost') : null),
+      el('p', { class: 'label', text: '날짜' }),
+      el('div', { class: 'segs', role: 'group', 'aria-label': `${nameOf(id)} 날짜` },
+        days.map((d) => el('button', { class: 'seg', type: 'button', text: d.key ? shortDay(d.ko).replace(/\(.*\)/, '') : '미정', 'aria-pressed': d.key === (it.day || 0) ? 'true' : 'false', 'aria-label': `${nameOf(id)} ${d.ko}로`, onclick: () => setDay(id, d.key) }))),
+      el('p', { class: 'label', text: `차례 ${at + 1} / ${same.length}` }),
+      el('div', { class: 'actions' },
+        el('button', { class: 'btn ghost', type: 'button', text: '위로', disabled: at <= 0, 'aria-label': `${nameOf(id)} 한 칸 위로`, onclick: () => move(id, -1) }),
+        el('button', { class: 'btn ghost', type: 'button', text: '아래로', disabled: at >= same.length - 1, 'aria-label': `${nameOf(id)} 한 칸 아래로`, onclick: () => move(id, 1) })),
+      el('div', { class: 'row-actions' },
+        row ? el('a', { href: `#/diary/new/${id}`, text: '일기' }) : null,
+        row ? el('a', { href: `#/talk/${encodeURIComponent(id)}`, text: '대화' }) : null,
+        row && data.link ? out(data.link.replace('{id}', encodeURIComponent(id)), '공식 링크') : null,
+        keys.length ? el('button', { class: 'linkish', type: 'button', 'aria-pressed': markKey ? 'true' : 'false', 'aria-label': `${nameOf(id)} 명함 넣는 이벤트 ${markKey ? '표시 지우기' : '있음으로 표시'}`, text: markKey ? `명함 이벤트 (${markLabel(getMarks()[markKey])})` : '명함 이벤트', onclick: () => { setMarks(toggleMark(getMarks(), markKey || keys[0])); status.textContent = markKey ? '표시를 지웠다.' : '명함 넣는 부스로 표시했다. 내가 표시한 것이다.'; draw(); } }) : null),
+      logoBox,
+      el('button', { class: 'btn ghost warn-btn', type: 'button', text: '관심에서 빼기', 'aria-label': `${nameOf(id)} 관심에서 빼기`, onclick: () => removeItem(id) }),
+    ];
   }
 
   function draw() {
     const list = getInterests();
+    const events = getEvents();
+    const savedHours = getHours();
+    const pace = getPace();
+    const limits = dayLimits(info, savedHours, events, pace, getDayLimit());
     const sections = [];
+    const next = nextStop(list);
+    const eventRow = (e) => {
+      const link = placeLink(places, e.place);
+      return el('li', { class: 'stop event' },
+        el('span', { class: 'no', text: '일' }),
+        el('span', { class: 'stop-main' },
+          el('span', { class: 'name', text: e.name }),
+          el('span', { class: 'where', text: `${e.from} ~ ${e.to}${e.place ? ` · ${e.place}` : ''} · 내 일정` })),
+        link ? out(link, '지도', 'pick') : null);
+    };
+
+    // 지금 갈 곳(맨 위 한 줄)
     if (!list.length) {
       sections.push(el('section', { class: 'panel' },
         el('p', { text: '관심 회사를 고르면 동선이 생긴다.' }),
         el('div', { class: 'actions' }, el('a', { class: 'btn', href: '#/map', text: '지도에서 회사 찾기' }))));
     }
-    const next = nextStop(list);
-    if (!list.length) {
-      // 관심이 없어도 내 일정은 아래에 보인다.
-    } else if (next) {
-      const row = byId.get(next.id);
+    let now = null;
+    if (next) {
       const booth = firstBooth(next.id);
-      const place = placeOf(next.id);
-      const route = mapsLink(places, place, 'directions');
-      const day = days.find((d) => d.key === (next.day || 0));
-      sections.push(el('section', { class: 'panel next now' },
-        el('p', { class: 'note', text: '지금 갈 곳' }),
-        el('p', { class: 'big', text: row ? row[1] : '자료에서 빠진 회사' }),
-        el('p', { class: 'note', text: [day?.ko, booth ? `${place ? place.ko : '장소 모름'} · 부스 ${splitBooth(booth).code} (자리는 짐작)` : '부스 미정'].filter(Boolean).join(' · ') }),
-        el('div', { class: 'actions' },
-          route ? out(route, '길찾기', 'btn') : null,
-          el('a', { class: 'btn ghost', href: `#/map/go/${encodeURIComponent(next.id)}`, text: '길 안내' }),
-          el('button', { class: 'btn ghost', type: 'button', text: '봤다', onclick: () => {
-            setInterests(getInterests().map((x) => (x.id === next.id ? { ...x, seen: true } : x)));
-            status.textContent = '봤다.';
-            draw();
-          } }))));
-    } else {
-      sections.push(el('section', { class: 'panel next now' }, el('p', { class: 'note', text: '지금 갈 곳' }), el('p', { text: '동선의 회사를 다 봤다.' })));
+      const route = mapsLink(places, placeOf(next.id), 'directions');
+      now = el('section', { class: 'panel next now' },
+        el('div', { class: 'now-text' },
+          el('p', { class: 'note', text: `지금 갈 곳 · ${dayOf(next.day || 0)?.ko || ''}` }),
+          el('p', { class: 'big', text: nameOf(next.id) }),
+          el('p', { class: 'note', text: booth ? whereOf(next.id) : '부스 미정' })),
+        el('div', { class: 'now-go' },
+          el('a', { class: 'btn', href: `#/map/go/${encodeURIComponent(next.id)}`, text: '길 안내' }),
+          route ? out(route, '길찾기', 'pick') : null));
+    } else if (list.length) {
+      now = el('section', { class: 'panel next now' }, el('p', { class: 'note', text: '지금 갈 곳' }), el('p', { text: '동선의 회사를 다 봤다.' }));
     }
-    // 내 일정 한 줄.
-    const eventRow = (e) => {
-      const link = placeLink(places, e.place);
-      return el('li', { class: 'stop event' },
-        el('span', { class: 'no', text: '일' }),
-        el('div', { class: 'stop-main' },
-          el('div', { class: 'name', text: e.name }),
-          el('div', { class: 'where', text: `${e.from} ~ ${e.to}${e.place ? ` · ${e.place}` : ''} · 내 일정` })),
-        el('div', { class: 'stop-side' }, link ? out(link, '지도') : null));
-    };
-    const events = getEvents();
-    const savedHours = getHours();
-    const pace = getPace();
-    const limits = dayLimits(info, savedHours, events, pace, getDayLimit());
-    for (const d of days) {
+
+    // 날짜 칩: 날마다 몇 곳인지 보이고, 하나를 누르면 그 날 차례만 보인다.
+    whenOf.clear();
+    const live = days.filter((d) => list.some((it) => (it.day || 0) === d.key) || (d.date && eventsOn(events, d.date).length));
+    if (live.length) {
+      showDay(chooseDay(list, events));
+      chipHolder.replaceChildren(...live.map((d) => {
+        const n = list.filter((it) => (it.day || 0) === d.key).length;
+        return el('button', { class: 'seg daychip', type: 'button', 'aria-pressed': d.key === shown ? 'true' : 'false', 'aria-label': `${d.ko} ${n}곳 보기`, onclick: () => { showDay(d.key); draw(); } },
+          el('span', { class: 'dc-day', text: d.key ? shortDay(d.ko).replace(/\(.*\)/, '') : '미정' }), el('span', { class: 'dc-n', text: `${n}곳` }));
+      }));
+    } else chipHolder.replaceChildren();
+    chipHolder.hidden = !live.length;
+
+    // 그 날의 줄
+    const d = live.length ? dayOf(shown) : null;
+    if (d) {
       const items = list.filter((it) => (it.day || 0) === d.key);
       const evs = d.date ? eventsOn(events, d.date) : [];
-      if (!items.length && !evs.length) continue;
       const hours = d.date ? hoursFor(d.date, savedHours, info) : null;
       const when = hours ? timeline(items.length, hours, evs, pace) : [];
+      items.forEach((it, i) => { if (hours) whenOf.set(it.id, when[i]); });
       const kids = evs.map(eventRow);
       let lastCampus = null;
       items.forEach((it, i) => {
@@ -153,7 +255,7 @@ export async function render() {
           kids.push(el('li', { class: 'campus', text: campus ? campusKo.get(campus) : '장소를 모르는 곳' }));
           lastCampus = campus;
         }
-        kids.push(item(it, i + 1, hours ? when[i] : undefined));
+        kids.push(item(it, i + 1));
       });
       const room = hours ? limits[d.key] : null;
       const allMarks = getMarks();
@@ -165,20 +267,21 @@ export async function render() {
           : `${cardCount ? `명함 ${cardCount}장 필요 · ` : ''}${clock(hours.from)} ~ ${clock(hours.to)} · 한 곳 ${pace}분 · ${room}곳까지` }) : null,
         // 그 날에 들어가는 수를 넘으면 알려 준다 (막지는 않는다).
         hours && items.length > room ? el('p', { class: 'note warn', text: `${items.length - room}곳이 넘친다. 날짜를 옮기거나 시간을 늘린다.` }) : null,
-        el('ol', { class: 'stops' }, kids)));
+        items.length ? el('ol', { class: 'stops' }, kids) : el('p', { class: 'note', text: '이 날 넣은 회사가 없다. 지도에서 회사 카드의 날짜로 넣는다.' }),
+        items.length ? el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: `#/map/day/${d.key}`, text: '이 날 지도에서 보기' })) : null));
     }
     // 전시 기간 밖의 내 일정 (공항 이동 같은 것).
-    const showDates = new Set(info.show.days.map((d) => d.date));
+    const showDates = new Set(info.show.days.map((x) => x.date));
     const others = events.filter((e) => !showDates.has(e.date)).sort((a, b) => a.date.localeCompare(b.date) || a.from.localeCompare(b.from));
     if (others.length) {
       sections.push(el('section', { class: 'panel' },
         el('h2', { text: `전시 밖 일정 ${others.length}개` }),
         el('ol', { class: 'stops' }, others.map((e) => eventRow({ ...e, name: `${e.date.slice(5).replace('-', '/')} ${e.name}` })))));
     }
-    // 지금 갈 곳은 맨 위 한 줄로 따로 둔다.
-    const first = sections[0]?.classList.contains('now') ? sections.shift() : null;
-    nowHolder.replaceChildren(...(first ? [first] : []));
+    nowHolder.replaceChildren(...(now ? [now] : []));
     holder.replaceChildren(...sections);
+    // 카드가 열려 있으면 바뀐 모습으로 다시 그린다.
+    if (shell.isOpen && openId) { const c = card(openId); if (c) shell.update(c); }
   }
 
   // 하루에 볼 곳은 사람마다 다르다. 여기서 정한 수를 "날짜 채우기"가 지킨다. 폰에만 남는다.
@@ -199,18 +302,20 @@ export async function render() {
     setInterests(items);
     status.textContent = !filled ? '채울 곳이 없다. 걷는 차례로 다시 세웠다.'
       : `${filled}곳을 캠퍼스로 채웠다.${moved ? ` ${moved}곳은 다음 날로 넘겼다.` : ''}${over ? ` ${over}곳은 들어갈 날이 없다.` : ''}`;
+    shell.close();
     draw();
   } });
   const sort = el('button', { class: 'btn ghost', type: 'button', text: '걷는 차례로', onclick: () => {
     setInterests(sortRoute(getInterests(), firstBooth, table));
     status.textContent = '걷는 차례로 세웠다.';
+    shell.close();
     draw();
   } });
 
   // 나누기와 내보내기 (미리 보기 판의 "목록 코드 · 링크 · 글 · 마크다운 · CSV"에서 옮겼다).
   const shareDays = days.map((d) => ({ key: d.key, ko: d.key ? `${d.ko} ${d.hours}` : d.ko, short: d.key ? d.ko.split(' ')[0] : '미정' }));
   const placeKo = new Map(places.places.map((p) => [p.k, p.ko]));
-  const todayText = () => { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
+  const todayText = today;
   const copy = async (text, ok) => { try { await navigator.clipboard.writeText(text); status.textContent = ok; } catch { status.textContent = '복사하지 못했다.'; } };
   const need = (fn) => () => { const list = getInterests(); if (!list.length) { status.textContent = '아직 관심 회사가 없다.'; return; } fn(list); };
   const incoming = el('div');
@@ -234,8 +339,15 @@ export async function render() {
   }
   const codeInput = el('input', { autocapitalize: 'off', autocomplete: 'off', spellcheck: 'false', placeholder: '받은 코드나 링크', 'aria-label': '받은 목록 코드나 링크' });
   const codeForm = el('form', { class: 'inline' }, el('label', { class: 'field' }, codeInput), el('button', { class: 'btn ghost', type: 'submit', text: '넣기' }));
-  codeForm.addEventListener('submit', (ev) => { ev.preventDefault(); if (codeInput.value.trim()) offer(codeInput.value); });
-  const sharePanel = el('section', { class: 'panel' },
+  codeForm.addEventListener('submit', (ev) => { ev.preventDefault(); if (codeInput.value.trim()) { shell.close(); offer(codeInput.value); } });
+  const tools = () => [
+    el('div', { class: 'pcard-top' }, el('h2', { class: 'pcard-tools-title', text: '차례 정리' }), el('button', { class: 'btn ghost pcard-close', type: 'button', text: '닫기', onclick: () => shell.close() })),
+    el('div', { class: 'actions' }, fill, sort),
+    toolNote,
+    sharePanel,
+  ];
+  const sharePanel = el('div', { class: 'tools' },
+    el('label', { class: 'field' }, el('span', { class: 'label', text: '하루에 볼 곳' }), limitSelect),
     el('h2', { text: '나누기' }),
     el('p', { class: 'note', text: '회사와 날짜만 담긴다. 명함 · 일기는 안 간다.' }),
     el('div', { class: 'actions' },
@@ -251,18 +363,17 @@ export async function render() {
   if (arrived) { sessionStorage.removeItem('ces2027.incoming'); offer(arrived); }
 
   draw();
-  return el('div', { class: 'page' },
+  const toolsBtn = el('button', { class: 'btn ghost', type: 'button', text: '차례 정리', onclick: (ev) => { openId = null; toolNote.textContent = ''; shell.open(tools(), ev.currentTarget); } });
+  return el('div', { class: 'page planpage' },
     incoming,
     nowHolder,
-    el('section', { class: 'head' },
-      el('h1', { text: '동선' }),
-      el('p', { class: 'lead', text: '일정은 바뀔 수 있다 — 운영팀 안내가 먼저. 걷는 차례는 짐작이다.' })),
     alertBands(info.show.from),
-    el('div', { class: 'segs' }, el('a', { class: 'seg', href: '#/rec', text: '추천' }), el('a', { class: 'seg', href: '#/days', text: '시간 · 내 일정' }), el('a', { class: 'seg', href: '#/sessions', text: '세션' })),
-    el('label', { class: 'field' }, el('span', { class: 'label', text: '하루에 볼 곳' }), limitSelect),
-    status,
+    el('section', { class: 'head head-row' }, el('h1', { text: '동선' }), toolsBtn),
+    pageNote,
+    undoBar,
+    chipHolder,
     holder,
-    sharePanel,
-    // 한 손으로 닿게 아래에 붙여 둔다.
-    el('div', { class: 'dock' }, fill, sort));
+    el('div', { class: 'segs', role: 'group', 'aria-label': '동선 더 보기' }, el('a', { class: 'seg', href: '#/rec', text: '추천' }), el('a', { class: 'seg', href: '#/days', text: '시간 · 내 일정' }), el('a', { class: 'seg', href: '#/sessions', text: '세션' })),
+    el('p', { class: 'note', text: '일정은 바뀔 수 있다 — 운영팀 안내가 먼저.' }),
+    shell.node);
 }
