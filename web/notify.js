@@ -3,6 +3,7 @@
 // 한계: 앱이 닫혀 있을 때 정해진 시각에 알리지는 못한다(푸시 서버가 없다). 그래서 아침 알림은 그날 앱을 처음 열 때 뜬다.
 
 import { load, save, getEvents, getInterests, getProfile, getWhere } from './store.js';
+import { dayKeyOf } from './days.js';
 import { cardsNeeded, dateOf, fresh, nearMarks, notifyState, shouldAskPaper, soonEvents, vegasNow } from './alerts.js';
 
 export const getPaper = () => load('paper.v1', null);
@@ -79,7 +80,7 @@ async function checkAlertsNow() {
   if (Object.keys(marks).length) {
     try {
       const { byId, info } = await exhibitors();
-      const dayOfDate = (date) => { const i = info.show.days.findIndex((d) => d.date === date); return i < 0 ? null : i + 1; };
+      const dayOfDate = (date) => dayKeyOf(info, date);
       alerts.needs = cardsNeeded(getInterests(), marks, today, dayOfDate, (id) => byId.get(id)?.[7]).map((n) => ({ ...n, name: byId.get(n.id)?.[1] || '회사' }));
       alerts.near = nearMarks(getWhere(), marks);
       const noPaper = getPaper()?.has === false;

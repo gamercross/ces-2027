@@ -4,7 +4,7 @@
 import { el, out } from '../dom.js';
 import { getExhibitors, getInfo, getMeta, getPlaces } from '../data.js';
 import { getDayLimit, getEvents, getHours, getInterests, getPace, setDayLimit, setInterests } from '../store.js';
-import { clock, dayLimits, eventsOn, hoursFor, timeline } from '../days.js';
+import { clock, dayLimits, dayList, eventsOn, hoursFor, timeline } from '../days.js';
 import { placeLink } from './days.js';
 import { markLabel, toggleMark } from '../alerts.js';
 import { getMarks, setMarks } from '../notify.js';
@@ -13,6 +13,7 @@ import { mapsLink } from '../maps.js';
 import { alertBands } from '../bands.js';
 import { attachImage } from '../company-image.js';
 import { createCardShell } from '../plancard.js';
+import { boothLines, sessionBlock } from '../company-extra.js';
 import { mergeItems, planCode, planCsv, planMd, planText, readCode, shareLink } from '../share.js';
 
 function download(name, text, type) {
@@ -41,7 +42,8 @@ export async function render() {
   const placeBy = new Map(places.places.map((p) => [p.k, p]));
   const placeOf = (id) => { const b = byId.get(id)?.[7]?.[0]; return b ? placeBy.get(splitBooth(b).place) : null; };
   const firstBooth = (id) => byId.get(id)?.[7]?.[0] || null;
-  const days = [...info.show.days.map((d, i) => ({ key: i + 1, ko: d.ko, hours: d.hours, date: d.date })), { key: 0, ko: '날짜 미정', hours: '', date: null }];
+  // 날짜 칩: 1/5(사전 일정) · 1/6 ~ 1/9 · 날짜 미정. 번호는 저장된 것과 같다(1/5만 5번이고, 보이는 차례는 맨 앞).
+  const days = [...dayList(info), { key: 0, ko: '날짜 미정', hours: '', date: null }];
   const dayOf = (key) => days.find((d) => d.key === key);
   const koreaAt = data.countries?.indexOf('South Korea');
   const nameOf = (id) => byId.get(id)?.[1] || '자료에서 빠진 회사';
@@ -160,11 +162,12 @@ export async function render() {
         el('span', { class: 'pcard-sub', text: `${day ? day.ko : ''} ${at + 1}번째${whenOf.has(id) ? ` · ${whenText(id)}` : ''}` }),
         el('button', { class: 'btn ghost pcard-close', type: 'button', text: '닫기', onclick: () => shell.close() })),
       el('h2', { class: 'pcard-name', text: nameOf(id) }),
-      el('p', { class: 'pcard-where', text: whereOf(id) }),
-      // 여러 부스가 있는 회사: 나머지 자리도 모두 보인다(지도 · 길 안내는 첫 부스 기준)
-      (row?.[7] || []).length > 1 ? el('p', { class: 'pcard-cats', text: `부스 ${row[7].length}곳: ${row[7].map((b) => { const sb = splitBooth(b); return `${table.get(sb.place)?.ko || sb.place} ${sb.code}`; }).join(' · ')}` }) : null,
+      // 부스가 둘 이상인 회사는 자리마다 한 줄(눌러서 지도의 그 자리로), 하나뿐이면 한 줄
+      boothLines(row?.[7], (k) => table.get(k)?.ko || '', { pick: (b) => { const sb = splitBooth(b); location.hash = `#/map/at/${encodeURIComponent(id)}/${encodeURIComponent(`${sb.place}|${sb.code}`)}`; } })
+        || el('p', { class: 'pcard-where', text: whereOf(id) }),
       el('p', { class: 'card-tags' }, ...tagsOf(row), booth ? el('span', { class: 'tag', text: '자리 짐작' }) : null),
       cats ? el('p', { class: 'pcard-cats', text: cats }) : null,
+      row ? sessionBlock(nameOf(id)) : null,
       row ? el('div', { class: 'actions' },
         el('a', { class: 'btn', href: `#/map/at/${encodeURIComponent(id)}`, text: '지도에서 보기' }),
         el('a', { class: 'btn ghost', href: `#/map/go/${encodeURIComponent(id)}`, text: '길 안내' })) : null,
@@ -246,7 +249,8 @@ export async function render() {
     if (d) {
       const items = list.filter((it) => (it.day || 0) === d.key);
       const evs = d.date ? eventsOn(events, d.date) : [];
-      const hours = d.date ? hoursFor(d.date, savedHours, info) : null;
+      // 1/5는 전시장을 열기 전이라 걷는 시간을 어림하지 않는다(쓸 시간 · 몇 곳까지가 없다).
+      const hours = d.date && !d.pre ? hoursFor(d.date, savedHours, info) : null;
       const when = hours ? timeline(items.length, hours, evs, pace) : [];
       items.forEach((it, i) => { if (hours) whenOf.set(it.id, when[i]); });
       const kids = evs.map(eventRow);
@@ -265,6 +269,7 @@ export async function render() {
       const cardCount = items.filter((it) => (byId.get(it.id)?.[7] || []).some((b) => { const at = b.lastIndexOf('@'); return allMarks[`${b.slice(at + 1)}|${b.slice(0, at)}`]; })).length;
       sections.push(el('section', { class: 'panel' },
         el('h2', { text: `${d.ko} · ${items.length}곳` }),
+        d.pre ? el('p', { class: 'note', text: d.note }) : null,
         hours ? el('p', { class: 'note', text: hours.off
           ? '이 날은 안 보는 날이다.'
           : `${cardCount ? `명함 ${cardCount}장 필요 · ` : ''}${clock(hours.from)} ~ ${clock(hours.to)} · 한 곳 ${pace}분 · ${room}곳까지` }) : null,
@@ -274,7 +279,7 @@ export async function render() {
         items.length ? el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: `#/map/day/${d.key}`, text: '이 날 지도에서 보기' })) : null));
     }
     // 전시 기간 밖의 내 일정 (공항 이동 같은 것).
-    const showDates = new Set(info.show.days.map((x) => x.date));
+    const showDates = new Set(days.map((x) => x.date).filter(Boolean));
     const others = events.filter((e) => !showDates.has(e.date)).sort((a, b) => a.date.localeCompare(b.date) || a.from.localeCompare(b.from));
     if (others.length) {
       sections.push(el('section', { class: 'panel' },

@@ -13,7 +13,9 @@ import { boothSpots, spotOf } from '../spots.js';
 import { mapsLink } from '../maps.js';
 import { findBooth, fixProblem, nearBooth, nearestArea, nearestCampus } from '../locate.js';
 import { nextStop, splitBooth } from '../route.js';
+import { dayByKey, dayKeyOf, dayList, dayRank } from '../days.js';
 import { attachImage } from '../company-image.js';
+import { boothLines, sessionBlock } from '../company-extra.js';
 import { guideTo } from '../guide.js';
 import { markLabel, toggleMark } from '../alerts.js';
 import { getMarks, setMarks } from '../notify.js';
@@ -397,9 +399,9 @@ export async function render({ rest = [] } = {}) {
     if (dayFocus != null) return dayFocus;
     const d = new Date();
     const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const at = info?.show?.days?.findIndex((x) => x.date === iso) ?? -1;
-    if (at >= 0) return at + 1;
-    return Math.min(...pins.filter((p) => p.day).map((p) => p.day), 9);
+    const key = info ? dayKeyOf(info, iso) : null;
+    if (key) return key;
+    return pins.filter((p) => p.day).map((p) => p.day).sort((a, b) => dayRank(a) - dayRank(b))[0] ?? 9;
   }
   function drawMarks() {
     const nodes = [];
@@ -444,7 +446,7 @@ export async function render({ rest = [] } = {}) {
   const wrapBox = (list) => { const b = bbox(list.flatMap((p) => p.world)); return pad(b, 28); };
 
   // 회사 한 곳의 카드
-  const infoDays = () => (info?.show?.days || []).map((d, i) => ({ key: i + 1, ko: d.ko.split(' ')[0] }));
+  const infoDays = () => (info ? dayList(info) : []).map((d) => ({ key: d.key, ko: d.ko.split(' ')[0] }));
   async function openCompany(row, key) {
     if (!row) return;
     const id = row[0];
@@ -496,7 +498,9 @@ export async function render({ rest = [] } = {}) {
     attachImage(logoBox, id, name, meta);
     const head = el('div', { class: 'card-head' },
       el('h2', { text: name }),
-      el('p', { class: 'card-where', text: bk ? `부스 ${code} · ${place ? shortName(place.ko) : '장소 모름'}` : '부스 미정' }),
+      // 부스가 둘 이상인 회사는 자리마다 한 줄(눌러서 그 자리로), 하나뿐이면 한 줄
+      boothLines(row[7], (k) => { const p = placeBy.get(k); return p ? shortName(p.ko) : ''; }, { now: bk ? row[7].find((b) => boothKey(b) === bk) : null, pick: (b) => openCompany(rows.get(id) || row, boothKey(b)) })
+        || el('p', { class: 'card-where', text: bk ? `부스 ${code} · ${place ? shortName(place.ko) : '장소 모름'}` : '부스 미정' }),
       el('p', { class: 'card-tags' },
         spot && !spot.official ? el('span', { class: 'tag', text: '자리 짐작' }) : null,
         award ? el('span', { class: 'tag mint', text: award & 2 ? '최고 혁신상' : '혁신상' }) : null,
@@ -506,6 +510,7 @@ export async function render({ rest = [] } = {}) {
     box.append(head,
       el('div', { class: 'card-actions' }, interestBtn, el('p', { class: 'label', text: '동선에 넣기' }), dayRow),
       guide,
+      sessionBlock(name),
       el('div', { class: 'row-actions' }, meta?.link ? out(meta.link.replace('{id}', encodeURIComponent(id)), '공식 링크') : null, el('a', { href: `#/talk/${encodeURIComponent(id)}`, text: '대화' }), markBlock(bk)),
       logoBox);
     return box;
@@ -1045,7 +1050,7 @@ export async function render({ rest = [] } = {}) {
   function paintDayBar() {
     if (dayFocus == null) { daybar.hidden = true; return; }
     const n = pins.filter((p) => p.day === dayFocus).length;
-    const ko = dayFocus ? (info?.show?.days?.[dayFocus - 1]?.ko || '') : '날짜 미정';
+    const ko = dayFocus ? (info ? dayByKey(info, dayFocus)?.ko : '') || '' : '날짜 미정';
     daybar.replaceChildren(
       el('span', { class: 'daybar-text', text: `${ko} 동선 ${n}곳` }),
       el('button', { class: 'pick', type: 'button', text: '모든 날', onclick: () => { dayFocus = null; paintDayBar(); drawPins(); } }),
@@ -1092,7 +1097,7 @@ export async function render({ rest = [] } = {}) {
     // 관심 회사가 있으면 번호 점을 그리려고 전체 자료를 첫 그림 뒤에 받는다.
     if (getInterests().length) idle(() => { ensureFull().catch(() => {}); });
     // 다른 화면의 "지도" 단추로 왔으면 그 회사로 간다.
-    if (rest[0] === 'at' && rest[1]) ensureFull().then(() => openCompany(rows.get(rest[1]))).catch(() => {});
+    if (rest[0] === 'at' && rest[1]) ensureFull().then(() => { const row = rows.get(rest[1]); const want = rest[2] ? decodeURIComponent(rest[2]) : null; openCompany(row, row && want && row[7].some((b) => boothKey(b) === want) ? want : undefined); }).catch(() => {});
     if (dayFocus != null) ensureFull().then(async () => { info ||= await getInfo().catch(() => null); const list = pins.filter((p) => p.day === dayFocus); paintDayBar(); drawPins(); if (list.length) goBox(pad(bbox(list.map((p) => [p.x, p.z])), 110)); }).catch(() => {});
     if (rest[0] === 'go' && rest[1]) ensureFull().then(() => { const row = rows.get(rest[1]); const b = row?.[7]?.[0]; if (row && b) startNav(row, boothKey(b)); }).catch(() => {});
   });

@@ -7,6 +7,20 @@ export const VERSION = 1;
 export const PACES = [15, 20, 30, 45, 60];
 export const DEFAULT_PACE = 30;
 
+// 날짜 번호(key): 1 ~ 4는 전시 첫날 ~ 넷째 날(show.days 차례), 5는 1/5 사전 일정(show.pre), 0은 날짜 미정.
+// 번호는 관심 목록 · 나눈 코드에 폰마다 남아 있으므로 바꾸지 않는다. 1/5를 맨 앞에 놓는 것은 보이는 차례(dayRank)뿐이다.
+// 1/4(매체 전용)는 날짜로 넣지 않는다.
+export const PRE_KEY = 5;
+export const dayRank = (key) => (key ? (key === PRE_KEY ? 0 : key) : 99);
+
+// 날짜 칩에 보일 날들, 보이는 차례대로: [{ key, date, ko, hours, pre?, note? }] (미정은 넣지 않는다).
+export function dayList(info) {
+  const pre = (info.show.pre || []).slice(0, 1).map((d) => ({ ...d, key: PRE_KEY, pre: true }));
+  return [...pre, ...info.show.days.map((d, i) => ({ ...d, key: i + 1 }))];
+}
+export const dayByKey = (info, key) => dayList(info).find((d) => d.key === key) || null;
+export const dayKeyOf = (info, date) => dayList(info).find((d) => d.date === date)?.key ?? null;
+
 const HHMM = /^([01]?\d|2[0-3]):([0-5]\d)$/;
 const DATE = /^\d{4}-\d\d-\d\d$/;
 export const toMin = (s) => { const m = HHMM.exec(String(s || '').trim()); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
