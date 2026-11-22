@@ -183,7 +183,8 @@ function exportRow() {
     status.textContent = `일기 ${n}개와 폰에 있는 대화를 파일로 내보냈다. 녹음은 안 간다.`;
     status.hidden = false;
   } });
-  return [row('내보내기', ready.length ? `일기 ${ready.length}개 · 대화 ${getTalks().length}개` : '내보낼 일기가 아직 없다', button), el('li', { class: 'setrow-more' }, status)];
+  const collect = row('모은 일기 열기', '받은 일기 파일 여러 개를 한 장으로', el('a', { class: 'pick', href: '#/collect', text: '열기' }));
+  return [row('내보내기', ready.length ? `일기 ${ready.length}개 · 대화 ${getTalks().length}개` : '내보낼 일기가 아직 없다', button), el('li', { class: 'setrow-more' }, status), collect];
 }
 
 // 이 폰의 내 자료 지우기: 두 번 확인한다. 첫 확인에서 먼저 내보내기를 권하고, 둘째 확인 뒤에 지운다.

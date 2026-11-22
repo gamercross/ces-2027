@@ -462,3 +462,22 @@ a.link-text { display: inline-flex; align-items: center; min-height: var(--tap-m
 :root[data-text="3"] .textsegs .seg, :root[data-text="4"] .textsegs .seg { flex: 1 1 calc(50% - var(--s2)); }
 /* 글자가 커져도 줄의 보조 글자는 잘리지 않고 두 줄까지 보인다 */
 :root[data-text="3"] .where.clamp, :root[data-text="4"] .where.clamp { -webkit-line-clamp: 2; }
+
+/* ---- 모은 일기 열기 (R46): 받은 파일 → 네 태그 × 회사 한 장 ---- */
+.coll-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.coll-pick { margin-top: var(--s3); }
+.coll-summary { font-size: var(--fs-small); font-weight: 700; }
+.coll-skipped { display: grid; gap: var(--s1); padding: 0; list-style: none; overflow-wrap: anywhere; }
+.coll-skipped:empty { display: none; }
+.collectpage .segs { margin: var(--s3) 0; }
+.coll-panel > * + * { margin-top: var(--s4); }
+.coll-body > * + * { margin-top: var(--s4); }
+.coll-co { padding: var(--s3); border-radius: var(--radius-ctl); background: var(--panel-2); }
+.coll-co > * + * { margin-top: var(--s2); }
+.coll-co-head { display: grid; gap: 2px; }
+.coll-co h3 { font-size: calc(17px * var(--scale)); line-height: 1.3; overflow-wrap: anywhere; }
+.coll-co .where { font-size: var(--fs-small); color: var(--ink-2); }
+.coll-part ul { display: grid; gap: var(--s1); padding: 0; list-style: none; }
+.coll-part li { font-size: var(--fs-body); overflow-wrap: anywhere; }
+.coll-actions { margin-top: var(--s3); }
+.coll-actions .btn { flex: 1 1 auto; }

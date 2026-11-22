@@ -39,8 +39,16 @@ name = "ces-data"
 version = "0.1.0"
 dependencies = [
  "ces-core",
+ "ces-diary",
  "serde_json",
  "ureq",
+]
+
+[[package]]
+name = "ces-diary"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
 ]
 
 [[package]]

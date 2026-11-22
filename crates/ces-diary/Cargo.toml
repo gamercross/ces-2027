@@ -1,0 +1,13 @@
+[package]
+name = "ces-diary"
+description = "모은 일기를 네 태그로 나눠 한 장으로 만든다: 폰에 보내는 diary.wasm(설정 > 모은 일기 열기)이자 자료 도구(sort-diary)가 같이 쓰는 한 벌"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# cdylib: 폰용 diary.wasm(모은 일기 화면을 열 때만 받는다). rlib: 자료 도구가 같은 코드로 한 장을 만든다.
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+serde_json = "1"
