@@ -4,9 +4,9 @@
 
 import { el, out } from '../dom.js';
 import { getEvents, setEvents } from '../store.js';
-import { clean, daysOf, isIn, isKeynote, onDay, recommendWithSkips, search, shareText, toggle } from '../sessions.js';
+import { clean, daysOf, filterSessions, isIn, isKeynote, onDay, recommendWithSkips, search, shareText, toggle, topicGroups } from '../sessions.js';
 import { placeLink } from './days.js';
-import { getInfo, getPlaces } from '../data.js';
+import { getCategories, getInfo, getPlaces } from '../data.js';
 import { dayList } from '../days.js';
 import { getTopics } from '../store.js';
 
@@ -20,7 +20,7 @@ async function load() {
   return clean(await res.json());
 }
 
-export async function render() {
+export async function render({ rest = [] } = {}) {
   let data = null;
   try { data = await load(); } catch { data = null; }
   if (!data) {
@@ -37,15 +37,44 @@ export async function render() {
   const allDays = daysOf(data.items);
   const days = planDates.size && allDays.some((d) => planDates.has(d)) ? allDays.filter((d) => planDates.has(d)) : allDays;
   let day = days.find((d) => d >= '2027-01-06') || days[0];
-  let q = '';
+  // 지도 찾기 칸에서 세션을 골라 왔으면(#/sessions/q/<낱말>) 그 낱말로 찾은 채 연다.
+  let q = rest[0] === 'q' && rest[1] ? decodeURIComponent(rest[1]).slice(0, 120) : '';
   let shown = 7;
   let recShown = 2;
+  // 거르기 칩(공식 앱 일정의 "거르기 · 주요"): 기조연설 · 생중계 · 내 일정 · 분야 묶음. 이 화면 안에서만 쓴다.
+  const filt = { keynote: false, live: false, mine: false, topics: null };
+  let topicKey = null;
+  let pickerOpen = false;
+  const groups = topicGroups(data.items, (await getCategories().catch(() => null))?.groups || []);
   const status = el('p', { class: 'note', role: 'status' });
   const list = el('ul', { class: 'stack' });
   const tabs = el('div', { class: 'segs', role: 'group', 'aria-label': '날짜' });
+  const chips = el('div', { class: 'chips', role: 'group', 'aria-label': '세션 거르기' });
+  const picker = el('div', { class: 'list-pick', hidden: true });
   const count = el('h2');
-  const box = el('input', { type: 'search', placeholder: '찾기 (예: AI, robot)', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', 'aria-label': '세션 찾기' });
+  const box = el('input', { type: 'search', placeholder: '찾기 (예: AI, robot)', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', 'aria-label': '세션 찾기', value: q });
   const recBox = el('div', { class: 'page' });
+
+  function paintChips() {
+    const chip = (text, on, onclick, label) => el('button', { class: 'chip-go', type: 'button', text, 'aria-pressed': on ? 'true' : 'false', 'aria-label': label, onclick });
+    const topicKo = groups.find((g) => g.k === topicKey)?.ko;
+    chips.replaceChildren(
+      chip('기조연설', filt.keynote, () => { filt.keynote = !filt.keynote; shown = 7; draw(); }),
+      chip('생중계', filt.live, () => { filt.live = !filt.live; shown = 7; draw(); }),
+      chip('내 일정', filt.mine, () => { filt.mine = !filt.mine; shown = 7; draw(); }),
+      groups.length ? chip(topicKo ? `분야: ${topicKo}` : '분야 ▾', !!topicKo || pickerOpen, () => { pickerOpen = !pickerOpen; paintPicker(); paintChips(); }, `분야 고르기${topicKo ? ` (지금 ${topicKo})` : ''}`) : null);
+  }
+  function paintPicker() {
+    if (!pickerOpen) { picker.hidden = true; picker.replaceChildren(); return; }
+    const choose = (g) => { topicKey = g ? g.k : null; filt.topics = g ? g.topics : null; pickerOpen = false; shown = 7; draw(); };
+    picker.replaceChildren(
+      el('div', { class: 'panel-head' }, el('h2', { text: '분야 고르기' }), el('button', { class: 'pick', type: 'button', text: '닫기', onclick: () => { pickerOpen = false; paintPicker(); paintChips(); } })),
+      el('div', { class: 'pick-wrap' },
+        el('button', { class: 'chip-go', type: 'button', text: '모든 분야', 'aria-pressed': topicKey ? 'false' : 'true', onclick: () => choose(null) }),
+        groups.map((g) => el('button', { class: 'chip-go', type: 'button', 'aria-pressed': g.k === topicKey ? 'true' : 'false', 'aria-label': `${g.ko} 세션 ${g.n}개`, onclick: () => choose(g) }, g.ko, el('span', { class: 'chip-n', text: ` ${g.n}` })))));
+    picker.hidden = false;
+  }
+  const filtering = () => filt.keynote || filt.live || filt.mine || !!filt.topics;
 
   // 세션을 남에게 건넨다: 폰의 나누기 창이 있으면 그것, 없으면 글을 복사한다. 우리 서버는 거치지 않는다.
   async function share(s) {
@@ -84,20 +113,24 @@ export async function render() {
   }
 
   function draw() {
-    const mineCount = data.items.filter((s) => isIn(s, getEvents())).length;
+    const events = getEvents();
+    const mineCount = data.items.filter((s) => isIn(s, events)).length;
+    const pool = filterSessions(data.items, filt, events);
+    paintChips();
+    paintPicker();
     tabs.replaceChildren(...days.map((d) => {
-      const n = onDay(data.items, d).length;
+      const n = onDay(pool, d).length;
       return el('button', { class: 'seg daychip', type: 'button', 'aria-pressed': !q && d === day ? 'true' : 'false', 'aria-label': `${dayKo(d)} 세션 ${n}개`, onclick: () => { day = d; q = ''; shown = 7; box.value = ''; draw(); } },
         el('span', { class: 'dc-day', text: dayKo(d).replace(/ \(.*\)/, '') }), el('span', { class: 'dc-n', text: `${n}개` }));
     }));
-    const found = q ? search(data.items, q).sort((a, b) => a.date.localeCompare(b.date) || a.from.localeCompare(b.from)) : onDay(data.items, day);
-    count.textContent = q ? `찾은 세션 ${found.length}개` : `${dayKo(day)} ${found.length}개${mineCount ? ` · 내 일정 ${mineCount}` : ''}`;
+    const found = q ? search(pool, q).sort((a, b) => a.date.localeCompare(b.date) || a.from.localeCompare(b.from)) : onDay(pool, day);
+    count.textContent = q ? `찾은 세션 ${found.length}개` : `${dayKo(day)} ${found.length}개${filtering() ? ' (거름)' : mineCount ? ` · 내 일정 ${mineCount}` : ''}`;
     const { picks, skipped } = recommendWithSkips(data.items, getTopics(), getEvents());
     recBox.replaceChildren(...(picks.length ? [el('section', { class: 'panel' },
       el('h2', { text: `내 주제 세션 ${picks.length}곳${skipped ? ` · 겹쳐 ${skipped}곳 뺌` : ''}` }),
       el('ul', { class: 'stack' }, picks.slice(0, recShown).map((s) => row(s, true))),
       picks.length > recShown ? el('button', { class: 'btn ghost wide', type: 'button', text: `더 보기 (${picks.length - recShown}곳 남음)`, onclick: () => { recShown += 4; draw(); } }) : null)] : []));
-    list.replaceChildren(...(found.length ? found.slice(0, shown).map((s) => row(s, !!q)) : [el('li', { class: 'note', text: '맞는 세션이 없다. 다른 낱말로 찾는다.' })]),
+    list.replaceChildren(...(found.length ? found.slice(0, shown).map((s) => row(s, !!q)) : [el('li', { class: 'note', text: filtering() ? '맞는 세션이 없다. 거르기 칩을 끄거나 다른 날을 본다.' : '맞는 세션이 없다. 다른 낱말로 찾는다.' })]),
       ...(found.length > shown ? [el('li', {}, el('button', { class: 'btn ghost wide', type: 'button', text: `더 보기 (${found.length - shown}개 남음)`, onclick: () => { shown += 10; draw(); } }))] : []));
   }
   box.addEventListener('input', () => { q = box.value.trim(); shown = 7; draw(); });
@@ -107,7 +140,7 @@ export async function render() {
     el('section', { class: 'head' },
       el('h1', { text: '세션 일정' }),
       el('p', { class: 'lead', text: '넣으면 동선과 지도에도 보인다. 시각은 라스베이거스 기준이다.' })),
-    el('div', { class: 'page' }, box, tabs, status),
+    el('div', { class: 'page' }, box, tabs, chips, picker, status),
     recBox,
     el('section', { class: 'panel' }, count, list),
     el('section', { class: 'foot' },

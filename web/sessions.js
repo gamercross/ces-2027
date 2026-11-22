@@ -83,6 +83,23 @@ export function shareText(s) {
 // 기조연설 먼저 보려면: 제목이 "Keynote"로 시작하는 것 (공식 제목 규칙).
 export const isKeynote = (s) => /^keynote\b/i.test(s.title);
 
+// ---- 거르기 (공식 앱 일정의 "거르기 · 주요" 칩에 맞춘 것)
+// f: { keynote, live, mine, topics: [주제 이름] | null }. 내 일정(mine)은 events로 본다.
+export function filterSessions(items, f = {}, events = []) {
+  return items.filter((s) => (!f.keynote || isKeynote(s)) && (!f.live || s.live) && (!f.mine || isIn(s, events))
+    && (!f.topics || (s.topics || []).some((t) => f.topics.includes(t))));
+}
+// 분야 묶음: 분야표(data/categories.json)의 묶음 차례대로, 묶음에 없는 주제는 끝의 "그 밖"으로. 세션이 없는 묶음은 뺀다.
+// 돌려주는 것: [{ k, ko, topics, n }] (n은 그 묶음 주제가 하나라도 있는 세션 수)
+export function topicGroups(items, groups = []) {
+  const all = [...new Set(items.flatMap((s) => s.topics || []))];
+  const used = new Set(groups.flatMap((g) => g.cats || []));
+  const out = groups.map((g) => ({ k: g.k, ko: g.ko, topics: (g.cats || []).filter((t) => all.includes(t)) }));
+  const rest = all.filter((t) => !used.has(t)).sort();
+  if (rest.length) out.push({ k: 'etc', ko: '그 밖', topics: rest });
+  return out.map((g) => ({ ...g, n: items.filter((s) => (s.topics || []).some((t) => g.topics.includes(t))).length })).filter((g) => g.n > 0);
+}
+
 // ---- 회사와 세션 잇기
 // 공식 자료에는 회사와 세션을 잇는 값이 없다. 그래서 짐작하지 않고, 세션 제목이 스스로 밝힌 이름이 회사 이름과 "같을 때만" 잇는다.
 // 제목이 이름을 밝히는 자리는 셋이다: 끝의 "presented by 이름" · "hosted by 이름", 끝의 괄호 "(이름 and 이름)", 기조연설 제목("Keynote - 이름 Keynote").
