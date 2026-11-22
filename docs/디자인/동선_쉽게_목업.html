@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>동선 쉽게 목업</title>
+<!-- 동선 탭을 처음 보는 사람도 알게 하는 안 셋(2026-11-23). 그림일 뿐 앱 코드가 아니다. 색 · 글꼴 · 간격은 web/tokens.css와 같은 값이다. -->
+<style>
+  :root { --font: system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif; }
+  .phone {
+    --bg: #f2f2f2; --panel: #ffffff; --panel-2: #ebebeb; --ink: #111111; --ink-2: #5c5c5c;
+    --accent: #5a6f96; --on-accent: #ffffff; --accent-soft: #e8ecf3; --btn: #111111; --on-btn: #ffffff;
+  }
+  .phone[data-theme="dark"] {
+    --bg: #161616; --panel: #222222; --panel-2: #2e2e2e; --ink: #f2f2f2; --ink-2: #a6a6a6;
+    --accent: #9db2da; --on-accent: #161616; --accent-soft: #2b3446; --btn: #f2f2f2; --on-btn: #161616;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px; background: #e4e4e4; color: #111111; font-family: var(--font); }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .lead { margin: 0 0 24px; color: #5c5c5c; }
+  .plan { margin: 0 0 40px; }
+  .plan h2 { font-size: 20px; margin: 0 0 4px; }
+  .plan > p { margin: 0 0 12px; color: #5c5c5c; max-width: 760px; }
+  .row { display: flex; flex-wrap: wrap; gap: 16px; }
+
+  .phone { position: relative; width: 360px; height: 740px; overflow: hidden; background: var(--bg); color: var(--ink); border-radius: 20px; font-size: 16px; line-height: 1.55; word-break: keep-all; }
+  .scroll { position: absolute; inset: 0 0 68px 0; overflow: hidden; padding: 12px 16px; }
+  .top { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 15px; font-weight: 600; }
+  .top .logo { width: 22px; height: 22px; border-radius: 6px; background: var(--accent); }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 8px; background: var(--panel-2); color: var(--ink-2); font-size: 13px; font-weight: 600; }
+  .tag.soft { background: var(--accent-soft); color: var(--ink); }
+  .panel { background: var(--panel); border-radius: 12px; padding: 16px; margin-top: 12px; }
+  .note { margin: 0; color: var(--ink-2); font-size: 14px; }
+  .big { margin: 2px 0 0; font-size: 24px; font-weight: 700; line-height: 1.3; }
+  .btn { display: flex; align-items: center; justify-content: center; min-height: 52px; border-radius: 10px; background: var(--btn); color: var(--on-btn); font-weight: 700; font-size: 17px; border: 0; width: 100%; }
+  .link { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; padding: 0 4px; color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
+  .two { display: flex; gap: 12px; align-items: center; margin-top: 12px; }
+  .two .btn { flex: 1; }
+  .day { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+  .day b { font-size: 22px; }
+  .arrow { width: 44px; height: 44px; border-radius: 10px; background: var(--panel); display: grid; place-items: center; font-size: 20px; color: var(--ink); }
+  h3 { margin: 16px 0 4px; font-size: 15px; color: var(--ink-2); font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  ol { list-style: none; margin: 0; padding: 0; }
+  li.stop { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 12px; margin-top: 8px; border-radius: 10px; background: var(--panel-2); }
+  .no { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; font-weight: 700; font-size: 15px; }
+  .done .no { background: transparent; border: 2px solid var(--ink-2); color: var(--ink-2); }
+  .done .nm { color: var(--ink-2); text-decoration: line-through; }
+  .main { flex: 1; min-width: 0; }
+  .nm { display: block; font-weight: 700; }
+  .sub { display: block; color: var(--ink-2); font-size: 14px; }
+  .check { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 52px; min-height: 44px; font-size: 13px; color: var(--ink-2); font-weight: 600; }
+  .check i { width: 26px; height: 26px; border-radius: 8px; border: 2px solid var(--ink-2); display: grid; place-items: center; font-style: normal; }
+  .check.on i { background: var(--accent); border-color: var(--accent); }
+  .check svg { width: 16px; height: 16px; }
+  .meal { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; margin-top: 8px; border-radius: 10px; border: 2px dashed var(--panel-2); color: var(--ink-2); font-size: 15px; }
+  li.hall { margin-top: 12px; font-size: 14px; font-weight: 700; color: var(--ink-2); }
+  .fold { display: flex; justify-content: space-between; align-items: center; min-height: 48px; margin-top: 8px; color: var(--ink-2); font-size: 15px; }
+  .chips { display: flex; gap: 6px; margin-top: 12px; }
+  .chip { flex: 1; min-width: 44px; min-height: 52px; border-radius: 10px; background: var(--panel-2); display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; line-height: 1.2; }
+  .chip small { font-weight: 500; font-size: 13px; color: var(--ink-2); }
+  .chip.on { background: var(--btn); color: var(--on-btn); }
+  .chip.on small { color: var(--on-btn); }
+  .head-row { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+  .head-row h1 { font-size: 24px; margin: 0; }
+  .toast { position: absolute; left: 16px; right: 16px; bottom: 80px; background: var(--btn); color: var(--on-btn); border-radius: 12px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
+  .toast .link { color: var(--on-btn); }
+  .tabs { position: absolute; left: 0; right: 0; bottom: 0; height: 68px; background: var(--panel); display: flex; }
+  .tabs span { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 13px; color: var(--ink-2); }
+  .tabs span.on { color: var(--ink); font-weight: 700; }
+  .tabs span.on svg { background: var(--panel-2); border-radius: 10px; }
+  .tabs svg { width: 44px; height: 28px; padding: 3px 11px; stroke: currentColor; fill: none; stroke-width: 2; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 64px; background: var(--panel); border-radius: 16px 16px 0 0; padding: 16px; }
+  .dim { position: absolute; inset: 0; background: rgba(0,0,0,.35); }
+  .sec { margin-top: 12px; padding: 12px; border-radius: 10px; background: var(--panel-2); }
+  .cap { width: 360px; margin: 6px 0 0; font-size: 14px; color: #5c5c5c; }
+</style>
+</head>
+<body>
+<h1>동선 쉽게: 안 셋</h1>
+<p class="lead">처음 보는 사람이 설명 없이 "오늘 어디부터 가지?"에 답을 얻게. 무채색 + 강조색 하나, 단추는 검정 하나 + 글자 단추. 회사 이름은 공식 전시사 자료의 실제 이름이고 시간 · 점심은 지어낸 예시다.</p>
+
+<template id="tabs">
+  <nav class="tabs">
+    <span><svg viewBox="0 0 22 22"><path d="M11 20s7-6 7-11a7 7 0 0 0-14 0c0 5 7 11 7 11z"/><circle cx="11" cy="9" r="2.5"/></svg>지도</span>
+    <span class="on"><svg viewBox="0 0 22 22"><circle cx="6" cy="5" r="2.5"/><circle cx="16" cy="17" r="2.5"/><path d="M8 6h6a3 3 0 0 1 0 6H8a3 3 0 0 0 0 6h6"/></svg>갈 곳</span>
+    <span><svg viewBox="0 0 22 22"><rect x="5" y="3" width="12" height="16" rx="2"/><path d="M8 8h6M8 12h6"/></svg>일기</span>
+    <span><svg viewBox="0 0 22 22"><path d="M4 7h14M4 15h14"/><circle cx="14" cy="7" r="2"/><circle cx="8" cy="15" r="2"/></svg>설정</span>
+  </nav>
+</template>
+<template id="tick"><svg viewBox="0 0 16 16"><path d="M3 8.5l3.2 3L13 4.5" stroke="var(--on-accent)" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></template>
+
+<!-- ============ 안 1 ============ -->
+<section class="plan" id="a">
+  <h2>안 1. 다음 한 곳 크게 + 오늘 목록 하나</h2>
+  <p>화면의 질문은 하나: "지금 어디로 가지?". 가장 큰 것이 다음 한 곳이고, 그 아래 오늘 남은 곳, 다녀온 곳은 맨 아래 한 줄로 접힌다. 날짜는 칩 여섯 대신 "‹ 1월 6일 (수) ›" 한 줄. 크기: 중간.</p>
+  <div class="row">
+  <div>
+  <div class="phone" data-theme="light" data-shot="a-light">
+    <div class="scroll">
+      <div class="top"><span class="logo"></span>CES 2027 갈 곳 <span class="tag">비공식</span></div>
+      <div class="day"><span class="arrow">‹</span><b>1월 6일 (수)</b><span class="arrow">›</span></div>
+      <section class="panel">
+        <p class="note">다음에 갈 곳 · 10:30쯤</p>
+        <p class="big">1NCE</p>
+        <p class="note">LVCC 노스 홀 · 부스 14731</p>
+        <div class="two"><span class="btn">길 안내</span><span class="link">다녀왔다</span></div>
+      </section>
+      <h3>그다음 3곳</h3>
+      <ol>
+        <li class="stop"><span class="no">3</span><span class="main"><span class="nm">2J Antennas</span><span class="sub">11:00쯤 · 노스 홀 · 부스 15935</span></span></li>
+        <li class="stop"><span class="no">4</span><span class="main"><span class="nm">276 HOLDINGS Inc.</span><span class="sub">11:30쯤 · 베네시안 · 부스 63401</span></span></li>
+        <li class="meal">12:00 ~ 13:00 · 팀 점심 (내 일정)</li>
+        <li class="stop"><span class="no">5</span><span class="main"><span class="nm">2Pi</span><span class="sub">13:00쯤 · 센트럴 홀 · 부스 21860</span></span></li>
+      </ol>
+      <div class="fold"><span>다녀온 곳 1 (Abbott)</span><span class="link">보기</span></div>
+      <div class="fold"><span class="link">목록 고치기</span><span class="link">지도에서 보기</span></div>
+    </div>
+  </div>
+  <p class="cap">밝게. 첫 화면의 누를 곳 9개(지금 13개). 조금 굴리면 맨 아래에 "목록 고치기 · 지도에서 보기".</p>
+  </div>
+  <div>
+  <div class="phone" data-theme="dark" data-shot="a-dark">
+    <div class="scroll">
+      <div class="top"><span class="logo"></span>CES 2027 갈 곳 <span class="tag">비공식</span></div>
+      <div class="day"><span class="arrow">‹</span><b>1월 6일 (수)</b><span class="arrow">›</span></div>
+      <section class="panel">
+        <p class="note">다음에 갈 곳 · 10:30쯤</p>
+        <p class="big">1NCE</p>
+        <p class="note">LVCC 노스 홀 · 부스 14731</p>
+        <div class="two"><span class="btn">길 안내</span><span class="link">다녀왔다</span></div>
+      </section>
+      <h3>그다음 3곳</h3>
+      <ol>
+        <li class="stop"><span class="no">3</span><span class="main"><span class="nm">2J Antennas</span><span class="sub">11:00쯤 · 노스 홀 · 부스 15935</span></span></li>
+        <li class="stop"><span class="no">4</span><span class="main"><span class="nm">276 HOLDINGS Inc.</span><span class="sub">11:30쯤 · 베네시안 · 부스 63401</span></span></li>
+        <li class="meal">12:00 ~ 13:00 · 팀 점심 (내 일정)</li>
+        <li class="stop"><span class="no">5</span><span class="main"><span class="nm">2Pi</span><span class="sub">13:00쯤 · 센트럴 홀 · 부스 21860</span></span></li>
+      </ol>
+      <div class="fold"><span>다녀온 곳 1 (Abbott)</span><span class="link">보기</span></div>
+      <div class="fold"><span class="link">목록 고치기</span><span class="link">지도에서 보기</span></div>
+    </div>
+    <div class="toast"><span>Abbott 다녀왔다.</span><span class="link">일기 쓰기</span></div>
+  </div>
+  <p class="cap">어둡게. "다녀왔다"를 누른 바로 뒤: 아래에 "일기 쓰기"가 6초 뜬다.</p>
+  </div>
+  </div>
+</section>
+
+<!-- ============ 안 2 ============ -->
+<section class="plan" id="b">
+  <h2>안 2. 아침 · 점심 · 오후 세 칸</h2>
+  <p>하루를 세 칸으로 나눠 "지금 칸"에 표시만 붙인다. 내 일정(점심)이 칸 사이에 자연스럽게 앉는다. 시간을 모르는 날(날짜 안 정함)은 칸 없이 목록 하나. 크기: 크다.</p>
+  <div class="row">
+  <div>
+  <div class="phone" data-theme="light" data-shot="b-light">
+    <div class="scroll">
+      <div class="top"><span class="logo"></span>CES 2027 갈 곳 <span class="tag">비공식</span></div>
+      <div class="day"><span class="arrow">‹</span><b>1월 6일 (수)</b><span class="arrow">›</span></div>
+      <section class="panel" style="padding:12px 16px">
+        <div style="display:flex;align-items:center;gap:12px"><span class="main"><span class="note">다음</span><span class="nm" style="font-size:20px">1NCE · 부스 14731</span></span><span class="btn" style="width:auto;padding:0 16px">길 안내</span></div>
+      </section>
+      <h3>아침 10 ~ 12시 <span class="tag soft">지금</span></h3>
+      <ol>
+        <li class="stop done"><span class="no">1</span><span class="main"><span class="nm">Abbott</span><span class="sub">노스 홀 · 부스 11506</span></span><span class="check on"><i></i>다녀옴</span></li>
+        <li class="stop"><span class="no">2</span><span class="main"><span class="nm">1NCE</span><span class="sub">노스 홀 · 부스 14731</span></span><span class="check"><i></i>다녀옴</span></li>
+        <li class="stop"><span class="no">3</span><span class="main"><span class="nm">2J Antennas</span><span class="sub">노스 홀 · 부스 15935</span></span><span class="check"><i></i>다녀옴</span></li>
+      </ol>
+      <h3>점심 12 ~ 13시</h3>
+      <ol><li class="meal">팀 점심 (내 일정)</li></ol>
+      <h3>오후 13 ~ 18시</h3>
+      <ol>
+        <li class="stop"><span class="no">4</span><span class="main"><span class="nm">276 HOLDINGS Inc.</span><span class="sub">베네시안 · 부스 63401</span></span><span class="check"><i></i>다녀옴</span></li>
+      </ol>
+    </div>
+  </div>
+  <p class="cap">밝게. 칸 이름이 곧 때라서 줄마다 "10:30쯤"을 안 쓴다.</p>
+  </div>
+  <div>
+  <div class="phone" data-theme="dark" data-shot="b-dark">
+    <div class="scroll">
+      <div class="top"><span class="logo"></span>CES 2027 갈 곳 <span class="tag">비공식</span></div>
+      <div class="day"><span class="arrow">‹</span><b>1월 6일 (수)</b><span class="arrow">›</span></div>
+      <section class="panel" style="padding:12px 16px">
+        <div style="display:flex;align-items:center;gap:12px"><span class="main"><span class="note">다음</span><span class="nm" style="font-size:20px">1NCE · 부스 14731</span></span><span class="btn" style="width:auto;padding:0 16px">길 안내</span></div>
+      </section>
+      <h3>아침 10 ~ 12시 <span class="tag soft">지금</span></h3>
+      <ol>
+        <li class="stop done"><span class="no">1</span><span class="main"><span class="nm">Abbott</span><span class="sub">노스 홀 · 부스 11506</span></span><span class="check on"><i></i>다녀옴</span></li>
+        <li class="stop"><span class="no">2</span><span class="main"><span class="nm">1NCE</span><span class="sub">노스 홀 · 부스 14731</span></span><span class="check"><i></i>다녀옴</span></li>
+        <li class="stop"><span class="no">3</span><span class="main"><span class="nm">2J Antennas</span><span class="sub">노스 홀 · 부스 15935</span></span><span class="check"><i></i>다녀옴</span></li>
+      </ol>
+      <h3>점심 12 ~ 13시</h3>
+      <ol><li class="meal">팀 점심 (내 일정)</li></ol>
+      <h3>오후 13 ~ 18시</h3>
+      <ol>
+        <li class="stop"><span class="no">4</span><span class="main"><span class="nm">276 HOLDINGS Inc.</span><span class="sub">베네시안 · 부스 63401</span></span><span class="check"><i></i>다녀옴</span></li>
+      </ol>
+    </div>
+  </div>
+  <p class="cap">어둡게.</p>
+  </div>
+  </div>
+</section>
+
+<!-- ============ 안 3 ============ -->
+<section class="plan" id="c">
+  <h2>안 3. 지금 틀 그대로, 말 · 단추만 줄이기</h2>
+  <p>칩 · 줄 · 카드 틀은 그대로 두고 뜻 모를 말을 바꾸고 겹친 단추를 뺀다. 종이 명함 물음은 동선에서 빼고, "지금 갈 곳"은 고른 날의 것만, 줄 오른쪽 "아직"은 네모 칸 "다녀옴"으로. 크기: 작다.</p>
+  <div class="row">
+  <div>
+  <div class="phone" data-theme="light" data-shot="c-light">
+    <div class="scroll">
+      <div class="top"><span class="logo"></span>글로벌 어학연수 <span class="tag">비공식</span></div>
+      <section class="panel" style="margin-top:4px">
+        <div style="display:flex;align-items:center;gap:12px"><span class="main"><span class="note">1/6 다음에 갈 곳</span><span class="nm" style="font-size:20px">1NCE</span><span class="sub">LVCC 노스 홀 · 부스 14731</span></span><span class="btn" style="width:auto;padding:0 16px">길 안내</span></div>
+      </section>
+      <div class="head-row"><h1>갈 곳</h1><span class="link">목록 고치기</span></div>
+      <div class="chips">
+        <span class="chip on">1/6<small>5곳</small></span><span class="chip">1/7<small>2곳</small></span><span class="chip">1/8<small>1곳</small></span><span class="chip">1/9<small>1곳</small></span><span class="chip" style="flex:1.4">날짜 없음<small>2곳</small></span>
+      </div>
+      <section class="panel">
+        <b>1월 6일 (수) · 5곳</b>
+        <p class="note">10시 ~ 18시 · 하루에 14곳쯤 볼 수 있다</p>
+        <ol>
+          <li class="meal">12:00 ~ 13:00 · 팀 점심 (내 일정)</li>
+          <li class="hall">LVCC 노스 홀</li><li class="stop done"><span class="no">1</span><span class="main"><span class="nm">Abbott</span><span class="sub">10:00쯤 · 부스 11506</span></span><span class="check on"><i></i>다녀옴</span></li>
+          <li class="stop"><span class="no">2</span><span class="main"><span class="nm">1NCE</span><span class="sub">10:30쯤 · 부스 14731</span></span><span class="check"><i></i>다녀옴</span></li>
+          <li class="stop"><span class="no">3</span><span class="main"><span class="nm">2J Antennas</span><span class="sub">11:00쯤 · 부스 15935</span></span><span class="check"><i></i>다녀옴</span></li>
+        </ol>
+      </section>
+    </div>
+  </div>
+  <p class="cap">밝게. 1/5 칩은 그 날 넣은 것이 있을 때만 보인다(전시장은 1/6에 연다).</p>
+  </div>
+  <div>
+  <div class="phone" data-theme="dark" data-shot="c-dark">
+    <div class="scroll">
+      <div class="top"><span class="logo"></span>글로벌 어학연수 <span class="tag">비공식</span></div>
+      <section class="panel" style="margin-top:4px">
+        <div style="display:flex;align-items:center;gap:12px"><span class="main"><span class="note">1/6 다음에 갈 곳</span><span class="nm" style="font-size:20px">1NCE</span><span class="sub">LVCC 노스 홀 · 부스 14731</span></span><span class="btn" style="width:auto;padding:0 16px">길 안내</span></div>
+      </section>
+      <div class="head-row"><h1>갈 곳</h1><span class="link">목록 고치기</span></div>
+      <div class="chips">
+        <span class="chip on">1/6<small>5곳</small></span><span class="chip">1/7<small>2곳</small></span><span class="chip">1/8<small>1곳</small></span><span class="chip">1/9<small>1곳</small></span><span class="chip" style="flex:1.4">날짜 없음<small>2곳</small></span>
+      </div>
+      <section class="panel">
+        <b>1월 6일 (수) · 5곳</b>
+        <p class="note">10시 ~ 18시 · 하루에 14곳쯤 볼 수 있다</p>
+        <ol>
+          <li class="meal">12:00 ~ 13:00 · 팀 점심 (내 일정)</li>
+          <li class="hall">LVCC 노스 홀</li><li class="stop done"><span class="no">1</span><span class="main"><span class="nm">Abbott</span><span class="sub">10:00쯤 · 부스 11506</span></span><span class="check on"><i></i>다녀옴</span></li>
+          <li class="stop"><span class="no">2</span><span class="main"><span class="nm">1NCE</span><span class="sub">10:30쯤 · 부스 14731</span></span><span class="check"><i></i>다녀옴</span></li>
+          <li class="stop"><span class="no">3</span><span class="main"><span class="nm">2J Antennas</span><span class="sub">11:00쯤 · 부스 15935</span></span><span class="check"><i></i>다녀옴</span></li>
+        </ol>
+      </section>
+    </div>
+  </div>
+  <p class="cap">어둡게.</p>
+  </div>
+  </div>
+</section>
+
+<!-- ============ 회사 카드 (안 1 · 3 같이) ============ -->
+<section class="plan" id="card">
+  <h2>회사 카드 줄이기 (안 1 · 안 3 같이)</h2>
+  <p>지금 카드의 누를 곳 23개를 11개로. 앞에 "길 안내 · 다녀왔다 · 일기 쓰기", 그 아래 날짜 고르기, 맨 아래 빼기. 위로 · 아래로 · 대화 · 명함 이벤트 · 로고 보기는 카드에서 뺀다(차례는 "목록 고치기"에서).</p>
+  <div class="row">
+  <div>
+  <div class="phone" data-theme="light" data-shot="card-light">
+    <div class="scroll"><div class="top"><span class="logo"></span>CES 2027 갈 곳</div></div>
+    <div class="dim"></div>
+    <div class="sheet">
+      <div style="display:flex;justify-content:space-between;align-items:center"><span class="note">1월 6일 2번째 · 10:30쯤</span><span class="link">닫기</span></div>
+      <p class="big" style="font-size:28px">1NCE</p>
+      <p class="note">LVCC 노스 홀 · 부스 14731 <span class="tag">자리는 짐작</span></p>
+      <div class="two"><span class="btn">길 안내</span></div>
+      <div class="two" style="justify-content:space-around"><span class="link">다녀왔다</span><span class="link">일기 쓰기</span><span class="link">공식 쪽</span></div>
+      <div class="sec"><b style="font-size:15px">이 회사 강연 1개</b><p class="note">1/6 (수) 13:35 ~ 14:05 · 베네시안 1층</p></div>
+      <p class="note" style="margin-top:12px">다른 날로 옮기기</p>
+      <div class="chips" style="margin-top:4px"><span class="chip on">1/6</span><span class="chip">1/7</span><span class="chip">1/8</span><span class="chip">1/9</span><span class="chip" style="flex:1.4">날짜 없음</span></div>
+      <div style="margin-top:16px"><span class="link" style="color:#a3342a">갈 곳에서 빼기</span></div>
+    </div>
+  </div>
+  <p class="cap">밝게.</p>
+  </div>
+  <div>
+  <div class="phone" data-theme="dark" data-shot="card-dark">
+    <div class="scroll"><div class="top"><span class="logo"></span>CES 2027 갈 곳</div></div>
+    <div class="dim"></div>
+    <div class="sheet">
+      <div style="display:flex;justify-content:space-between;align-items:center"><span class="note">1월 6일 2번째 · 10:30쯤</span><span class="link">닫기</span></div>
+      <p class="big" style="font-size:28px">1NCE</p>
+      <p class="note">LVCC 노스 홀 · 부스 14731 <span class="tag">자리는 짐작</span></p>
+      <div class="two"><span class="btn">길 안내</span></div>
+      <div class="two" style="justify-content:space-around"><span class="link">다녀왔다</span><span class="link">일기 쓰기</span><span class="link">공식 쪽</span></div>
+      <div class="sec"><b style="font-size:15px">이 회사 강연 1개</b><p class="note">1/6 (수) 13:35 ~ 14:05 · 베네시안 1층</p></div>
+      <p class="note" style="margin-top:12px">다른 날로 옮기기</p>
+      <div class="chips" style="margin-top:4px"><span class="chip on">1/6</span><span class="chip">1/7</span><span class="chip">1/8</span><span class="chip">1/9</span><span class="chip" style="flex:1.4">날짜 없음</span></div>
+      <div style="margin-top:16px"><span class="link" style="color:#f0988c">갈 곳에서 빼기</span></div>
+    </div>
+  </div>
+  <p class="cap">어둡게.</p>
+  </div>
+  </div>
+</section>
+
+<script>
+  // 탭 막대와 체크 그림을 틀에서 꽂는다(같은 것을 여러 번 쓰지 않으려고).
+  const tabs = document.getElementById('tabs');
+  const tick = document.getElementById('tick');
+  document.querySelectorAll('.phone').forEach((p) => p.append(tabs.content.cloneNode(true)));
+  document.querySelectorAll('.check.on i').forEach((i) => i.append(tick.content.cloneNode(true)));
+</script>
+</body>
+</html>
