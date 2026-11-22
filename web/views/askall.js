@@ -88,8 +88,7 @@ export async function render({ rest }) {
     results.replaceChildren(
       el('section', { class: 'panel' },
         el('h2', { text: '자주 묻는 것' }),
-        el('p', { class: 'note', text: '누르면 답과 근거가 나온다.' }),
-        el('div', { class: 'fields' }, faq.items.map((it) => el('button', { class: 'field-link', type: 'button', onclick: () => ask(it.q) }, el('span', { text: it.q }))))),
+                el('div', { class: 'fields' }, faq.items.map((it) => el('button', { class: 'field-link', type: 'button', onclick: () => ask(it.q) }, el('span', { text: it.q }))))),
       el('section', { class: 'panel' },
         el('h2', { text: '이런 말로 찾아 본다' }),
         el('div', { class: 'segs' }, IDEAS.map((w) => el('button', { class: 'seg', type: 'button', text: w, onclick: () => ask(w) })))));
@@ -104,8 +103,8 @@ export async function render({ rest }) {
     const companyBox = el('section', { class: 'panel', hidden: true });
     const empty = el('section', { class: 'panel', hidden: true },
       el('h2', { text: '맞는 것이 없다' }),
-      el('p', { text: '앱 안 자료에 없는 말이다. 낱말을 바꿔 본다(예: 배지 · 셔틀 · 삼성 · 가격).' }),
-      el('p', { class: 'note' }, '모르는 것은 ', out('https://www.ces.tech/', 'CES 공식 사이트'), '에서 확인한다. 짐작해서 답하지 않는다.'));
+      el('p', { text: '앱 안 자료에 없다. 낱말을 바꿔 본다(예: 배지 · 셔틀).' }),
+      el('p', { class: 'note' }, out('https://www.ces.tech/', 'CES 공식 사이트'), '에서 확인한다.'));
     const parts = [];
     if (found.faq.length) {
       const top = found.faq.slice(0, 3);
@@ -132,8 +131,7 @@ export async function render({ rest }) {
       companyBox.hidden = false;
       companyBox.replaceChildren(
         el('h2', { text: `회사 ${num(total)}` }),
-        el('p', { class: 'note', text: '공식 전시사 자료에서 찾은 곳이다. 관심을 누르면 동선에 들어간다.' }),
-        el('ol', { class: 'hits' }, rows.map((r) => companyRow(r, finder.data, finder.placeKo, paintCount))),
+                el('ol', { class: 'hits' }, rows.map((r) => companyRow(r, finder.data, finder.placeKo, paintCount))),
         el('div', { class: 'row-actions' }, el('a', { href: '#/find', text: `회사 화면에서 더 보기 (관심 ${getInterests().length}곳)` })));
     }
     if (!some && !rows.length) {
@@ -150,8 +148,7 @@ export async function render({ rest }) {
   return el('div', { class: 'page' },
     el('section', { class: 'panel' },
       el('h1', { text: '물어보기' }),
-      el('p', { class: 'lead', text: '앱 안에 있는 자료를 한 칸에서 찾는다: 알아둘 것 · 따로 신청하는 곳 · 세션 · 부스 질문 · 회사.' }),
-      el('p', { class: 'note' }, '답은 앱 안 자료에서 온 것만 적었고, 자료에 없는 것은 없다고 말한다. 인터넷 없이도 된다. 부스에서 영어로 묻는 말은 ', el('a', { href: '#/ask', text: '물어볼 말' }), '에 있다.'),
+      el('p', { class: 'lead' }, '앱 안 자료에서만 찾는다. 인터넷 없이도 된다. 영어로 묻는 말은 ', el('a', { href: '#/ask', text: '물어볼 말' }), '.'),
       note),
     results,
     // 한 손으로 닿게 찾기 칸을 아래에 붙여 둔다.

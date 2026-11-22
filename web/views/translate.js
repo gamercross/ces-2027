@@ -20,7 +20,7 @@ export async function render() {
     el('h2', { text: app.ko }),
     el('ol', { class: 'dots' },
       el('li', {}, el('b', { text: '앱 깔기' }), ' 안드로이드 ', out(app.android, '플레이 스토어'), ' · 아이폰 ', out(app.ios, '앱 스토어')),
-      el('li', {}, el('b', { text: '한국어 · 영어 오프라인 팩 받기' }), ` (와이파이에서). ${app.offline}.`),
+      el('li', {}, el('b', { text: '오프라인 팩' }), ` (와이파이에서). ${app.offline}.`),
       el('li', {}, el('b', { text: '공식 도움말' }), ' ', out(app.help.url, app.help.ko))),
     check(`${app.k}App`, `${app.ko} 앱을 깔았다`),
     check(`${app.k}Pack`, `${app.ko} 한국어 · 영어 오프라인 팩을 받았다`)));
@@ -34,8 +34,8 @@ export async function render() {
   return el('div', { class: 'page' },
     el('section', { class: 'panel' },
       el('h1', { text: '번역 앱 준비' }),
-      el('p', { class: 'lead', text: '영어 ↔ 한국어 번역은 번역 앱(파파고 · 구글 번역)으로 한다. 출발 전에 앱을 깔고 한국어 · 영어 오프라인 팩을 받아 둔다. 현장에서는 인터넷이 약할 수 있다.' }),
-      el('p', { class: 'note', text: '이 앱은 번역하지 않는다. 회사 · 부스 카드와 물어볼 말의 "번역 앱 열기"는 고른 글을 복사해 두고 번역 앱을 연다. 앱을 못 열면 웹 번역으로 간다. 글은 이 폰의 복사 칸과 번역 앱으로만 간다.' })),
+      el('p', { class: 'lead', text: '번역은 파파고 · 구글 번역으로 한다. 출발 전에 깔고 오프라인 팩을 받아 둔다.' }),
+      el('p', { class: 'note', text: '이 앱은 번역하지 않는다. 단추가 글을 복사하고 번역 앱을 연다.' })),
     cards,
     el('section', { class: 'panel' },
       el('h2', { text: '지금 열어 보기' }),
@@ -44,9 +44,9 @@ export async function render() {
       ...trial.map((t) => t.note),
       el('div', { class: 'field' }, el('span', { class: 'label', text: '카드의 "번역 앱" 단추가 여는 앱' }), pref)),
     el('section', { class: 'panel' },
-      el('h2', { text: '대화 기록은 붙여 넣는다' }),
-      el('p', { class: 'note', text: '번역 앱으로 대화한 뒤, 그 기록을 회사의 "대화" 칸에 붙여 넣으면 원문 · 번역 짝으로 나뉘고 일기 초안이 된다. 녹음은 하지 않는다.' }),
+      el('h2', { text: '대화 기록' }),
+      el('p', { class: 'note', text: '대화한 뒤 기록을 회사의 "대화" 칸에 붙여 넣는다.' }),
       copyGuide(),
       el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: '#/find', text: '회사에서 대화 넣기' }))),
-    el('p', { class: 'foot' }, '앱 안 번역 모델은 쓰지 않는다(기본 꺼짐). 실험으로 켜려면 ', el('a', { href: '#/deep', text: '깊은 설정' }), '.'));
+    el('p', { class: 'foot' }, '앱 안 번역 모델은 ', el('a', { href: '#/deep', text: '깊은 설정' }), '(기본 꺼짐).'));
 }

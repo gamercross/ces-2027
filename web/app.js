@@ -26,8 +26,10 @@ const VIEWS = {
   talk: () => import('./views/talk.js'),
   translate: () => import('./views/translate.js'),
   deep: () => import('./views/deep.js'),
+  settings: () => import('./views/settings.js'),
+  info: () => import('./views/info.js'),
 };
-const TAB_OF = { '': 'home', find: 'find', plan: 'plan', map: 'map', diary: 'diary', topics: 'topics', days: 'plan', ask: 'find', listen: 'diary', apply: 'home', transit: 'home', sessions: 'plan', onsite: 'home', talk: 'find', translate: 'home', deep: 'home' };
+const TAB_OF = { '': 'home', find: 'find', plan: 'plan', map: 'map', diary: 'diary', topics: 'topics', days: 'plan', ask: 'find', listen: 'diary', apply: 'home', transit: 'home', sessions: 'plan', onsite: 'home', talk: 'find', translate: 'home', deep: 'home', settings: 'home', info: 'home' };
 
 // 메인 틀: 아래 탭은 다섯(홈 · 회사 · 동선 · 지도 · 일기). 주제 판은 회사 탭 아래에 선다.
 // 탭이 아닌 화면(명함 · 시간과 일정 · 물어볼 말 …)은 위에 "뒤로"가 생기고, 돌아갈 곳은 TAB_OF의 탭이다.
@@ -67,6 +69,7 @@ function frameFor(name, rest) {
   const tab = TAB_OF[name] || 'home';
   parent = document.querySelector(`.tabs a[data-tab="${tab}"]`)?.getAttribute('href') || '#/';
   backButton.hidden = root;
+  document.body.dataset.tab = tab;
   document.body.classList.toggle('sub', !root);
   for (const a of document.querySelectorAll('.tabs a')) {
     if (a.dataset.tab === tab) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');

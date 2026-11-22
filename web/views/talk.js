@@ -40,7 +40,7 @@ export async function render({ rest, go }) {
     const head = el('h2', { text: staged.kind === 'block' ? '붙인 글 (짝을 못 지어 한 덩어리)' : `넣을 대화 ${staged.pairs.length}줄` });
     const body = [];
     if (staged.kind === 'block') {
-      body.push(el('p', { class: 'note', text: '줄이 번갈아 나오지 않거나 한쪽 말뿐이라 원문 · 번역 짝을 짓지 못했다. 짝을 지으려면 번역 앱에서 원문과 번역이 번갈아 나오게 복사해 다시 붙인다. 이대로 저장해도 된다. 영어 줄만 일기 초안의 들은 것이 된다.' }),
+      body.push(el('p', { class: 'note', text: '짝을 짓지 못했다. 이대로 저장해도 된다.' }),
         el('ol', { class: 'heard' }, staged.lines.map((l) => el('li', {}, el('span', { lang: l.lang, text: l.text }), el('small', { text: l.lang === 'en' ? '영어' : '한국어' })))));
     } else {
       body.push(el('p', { class: 'note', text: `${staged.app ? `${staged.app === 'papago' ? '파파고' : '구글 번역'}에서 온 글로 보인다. ` : ''}위 줄을 원문, 아래 줄을 번역으로 읽었다. 거꾸로 읽었으면 "말한 사람 바꾸기"를 누른다. 일기 초안의 들은 것에는 상대가 한 말의 영어 원문만 들어간다.` }),
@@ -54,7 +54,7 @@ export async function render({ rest, go }) {
     }
     stagedBox.replaceChildren(el('section', { class: 'panel' }, head, ...body,
       el('div', { class: 'actions' },
-        el('button', { class: 'btn', type: 'button', text: '저장하고 일기 초안 만들기', onclick: () => save(true) }),
+        el('button', { class: 'btn', type: 'button', text: '초안 만들기', onclick: () => save(true) }),
         el('button', { class: 'btn ghost', type: 'button', text: '대화만 저장', onclick: () => save(false) }),
         el('button', { class: 'btn ghost', type: 'button', text: '비우기', onclick: () => { staged = null; drawStaged(); status.textContent = ''; } }))));
   }
@@ -84,7 +84,7 @@ export async function render({ rest, go }) {
     let panel;
     if (mode === 'listen') {
       panel = el('div', { class: 'block' },
-        el('p', { class: 'note', text: '마이크로 상대의 말을 받아 적는다(영어). 멈추면 대화가 여기 남고 일기 초안이 된다. 번역 앱으로 대화한다면 녹음하지 않고 "붙여넣기"를 쓴다.' }),
+        el('p', { class: 'note', text: '마이크로 상대의 영어를 받아 적는다. 멈추면 초안이 된다.' }),
         el('div', { class: 'actions' }, el('a', { class: 'btn', href: `#/listen${company.id ? `/${encodeURIComponent(company.id)}` : ''}`, text: '듣기 열기' })));
     } else if (mode === 'hand') {
       const orig = el('input', { maxlength: 500, placeholder: '들은 말이나 한 말', 'aria-label': '원문' });
@@ -107,7 +107,7 @@ export async function render({ rest, go }) {
       orig.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); add(); } });
       trans.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); add(); } });
       panel = el('div', { class: 'block' },
-        el('p', { class: 'note', text: '한 줄씩 적는다. 영어로 적으면 상대가 한 말, 한국어로 적으면 내가 한 말로 읽는다. 번역은 번역 앱에서 본 것을 옮겨 적는다(없으면 비운다).' }),
+        el('p', { class: 'note', text: '영어는 상대 말, 한국어는 내 말로 읽는다.' }),
         el('label', { class: 'field' }, el('span', { class: 'label', text: '원문' }), orig),
         el('label', { class: 'field' }, el('span', { class: 'label', text: '번역' }), trans),
         el('div', { class: 'field' }, el('span', { class: 'label', text: '누가 한 말' }), picks),
@@ -159,7 +159,7 @@ export async function render({ rest, go }) {
     listBox.replaceChildren(el('section', { class: 'panel' },
       el('h2', { text: `이 회사와 한 대화 ${talks.length}개` }),
       items.length ? el('ul', { class: 'stack' }, items) : el('p', { class: 'note', text: '아직 없다. 위에서 넣는다.' }),
-      el('p', { class: 'note', text: '대화는 이 폰에만 남는다. 일기를 파일로 내려받을 때 그 파일에 든 일기와 이어진 대화가 같이 들어간다. 녹음은 어느 때도 가지 않는다.' })));
+      el('p', { class: 'note', text: '이 폰에만 남는다. 녹음은 안 간다.' })));
   }
 
   nameBox.addEventListener('change', drawList);
@@ -170,7 +170,7 @@ export async function render({ rest, go }) {
   return el('div', { class: 'page' },
     el('section', { class: 'panel' },
       el('h1', {}, '대화', company.name ? ` · ${company.name}` : ''),
-      el('p', { class: 'lead', text: '이 회사와 한 대화를 넣는다. 번역은 번역 앱으로 하고, 대화 기록을 여기에 붙여 넣는다. 넣은 대화는 일기 초안이 된다.' }),
+      el('p', { class: 'lead', text: '대화 기록을 붙여 넣으면 일기 초안이 된다.' }),
       company.id ? (company.booth ? el('p', { class: 'note', text: `부스 ${company.booth.split('@')[0]}` }) : null) : el('label', { class: 'field' }, el('span', { class: 'label', text: '회사' }), nameBox),
       el('div', { class: 'actions' }, open.button, el('a', { class: 'btn ghost', href: `#/ask${company.id ? `/${encodeURIComponent(company.id)}` : ''}`, text: '물어볼 말' })),
       open.note),

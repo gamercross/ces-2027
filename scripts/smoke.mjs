@@ -157,7 +157,7 @@ const settings = await json('data/settings.json');
   const sum = sep.summary(sepData);
   check(sum.watch.slice(0, 3).join() === '삼성,엔비디아,현대차그룹' && sum.rides[0] === 'Waymo' && sum.apply.some((t) => t.includes('레노버')), `첫 화면 카드: ${sum.watch.join(' · ')} · 따로 표 ${sum.apply.length}곳 · 가기 전에 ${sum.rides[0]} 앱`);
   const homeJs = await readFile(join(dist, 'views/home.js'), 'utf8');
-  check(homeJs.includes("import('../separate.js')") && !/^import [^;]*separate\.js/m.test(homeJs) && homeJs.includes('separateSeen.v1') && homeJs.includes('CES 배지와 따로 신청해야 하는 곳'), '첫 화면: 따로 신청 카드는 처음 한 번 크게 보이고(닫은 것을 폰에 적는다), 그 셈과 자료는 첫 화면을 그린 뒤에 읽는다');
+  check(homeJs.includes("import('../separate.js')") && !/^import [^;]*separate\.js/m.test(homeJs) && homeJs.includes('separateSeen.v1') && homeJs.includes('따로 신청해야 하는 곳'), '첫 화면: 따로 신청 카드는 처음 한 번 크게 보이고(닫은 것을 폰에 적는다), 그 셈과 자료는 첫 화면을 그린 뒤에 읽는다');
 }
 
 // 물어보기: 앱 안 자료를 한 칸에서 찾는 셈(web/askall.js)과 자주 묻는 것(data/faq.json). 답은 앱 안 자료의 줄과 이어져 있어야 한다.
@@ -316,7 +316,7 @@ const settings = await json('data/settings.json');
 }
 check(['companyIntro', 'collector', 'collectorUrl', 'codysseyIcon', 'companyImage', 'translationModel', 'privateOn'].every((k) => k in settings), `정한 것과 아직 정하지 않은 항목의 자리가 설정에 있다 (회사 소개 ${settings.companyIntro} · 모으는 곳 ${settings.collector}${settings.collectorUrl ? ' 주소 있음' : ' 주소 비어 있음'} · 아이콘 ${settings.codysseyIcon} · 로고 ${settings.companyImage} · 영한 번역 ${settings.translationModel} · 비공개 날 ${settings.privateOn})`);
 check(settings.codysseyIcon === false || (typeof settings.codysseyIcon === 'string' && (await exists(settings.codysseyIcon))), `코디세이 아이콘: ${settings.codysseyIcon ? `그림이 있다 (${settings.codysseyIcon})` : '글자만'}`);
-for (const f of ['app.js', 'store.js', 'views/home.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'qr.js', 'route.js']) check(await exists(f), `${f}가 있다`);
+for (const f of ['app.js', 'store.js', 'views/home.js', 'views/settings.js', 'views/info.js', 'theme.js', 'views/card.js', 'views/find.js', 'views/plan.js', 'qr.js', 'route.js']) check(await exists(f), `${f}가 있다`);
 
 // 동선: 날짜 채우기와 걷는 차례.
 const { placeTable, sortRoute, fillDays } = await import('../web/route.js');
@@ -580,6 +580,25 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
   const tabs = (html.match(/data-tab="/g) || []).length;
   check(tabs === 5 && html.includes('id="back"') && html.includes('id="net"') && html.includes('href="frame.js"'), `메인 틀: 아래 탭 ${tabs}개(다섯까지) · 뒤로 · 인터넷 없음 줄이 있고 frame.js를 첫 화면과 같이 받는다`);
   check(['loading()', 'failed(', 'missing(', 'history.back()'].every((w) => app.includes(w)) && !/p\.textContent = '화면을 불러오지 못했다/.test(app), '메인 틀: 느린 망엔 "불러오는 중", 못 불러오면 "다시 열기", 없는 주소는 첫 화면으로 말없이 보내지 않고 알린다, 뒤로는 앱 안 기록을 따른다');
+  // 테마와 짧은 화면 (design.md "테마" · "글과 길이"): 밝게 · 어둡게 · 자동, 탭마다 강조색, 첫 화면은 지금 할 일만.
+  const tokCss = await readFile(join(dist, 'tokens.css'), 'utf8');
+  const themeJs = await readFile(join(dist, 'theme.js'), 'utf8');
+  const settingsJs = await readFile(join(dist, 'views/settings.js'), 'utf8');
+  const homeV2 = await readFile(join(dist, 'views/home.js'), 'utf8');
+  const infoJs = await readFile(join(dist, 'views/info.js'), 'utf8');
+  const appCss = await readFile(join(dist, 'app.css'), 'utf8');
+  const darkBlock = (tokCss.split(':root[data-theme="dark"]')[1] || '').split('/* 탭마다')[0];
+  const darkVars = new Set([...darkBlock.matchAll(/--([a-z0-9-]+):/g)].map((m) => m[1]));
+  const lightVars = [...tokCss.split(':root[data-theme="dark"]')[0].matchAll(/--((?:bg|panel|panel-2|ink|ink-2|accent|on-accent|mint|peach|lilac|warn|map-[a-z]+|day-\d|group-[a-z]+|tab-[a-z]+(?:-soft)?))\s*:/g)].map((m) => m[1]);
+  const lacking = lightVars.filter((v) => !darkVars.has(v));
+  check(lacking.length === 0 && /--qr-bg/.test(tokCss) && !darkVars.has('qr-bg') && !darkVars.has('qr-ink'), `어둡게: 밝게의 색 ${lightVars.length}개가 모두 어둡게에도 있다 (빠진 것 ${lacking.join(' ') || '없음'}). QR 색은 어둡게에서도 그대로다`);
+  const tabVars = ['home', 'find', 'plan', 'map', 'diary'].every((t) => tokCss.includes(`--tab-${t}:`) && tokCss.includes(`--tab-${t}-soft:`)) && ['find', 'plan', 'map', 'diary'].every((t) => tokCss.includes(`body[data-tab="${t}"]`));
+  check(tabVars && app.includes('document.body.dataset.tab'), '탭마다 강조색 하나: 홈 · 회사 · 동선 · 지도 · 일기가 각자 색이 있고 app.js가 <body data-tab>을 정한다');
+  const headPos = (needle) => html.indexOf(needle);
+  check(headPos('src="theme.js"') > 0 && headPos('src="theme.js"') < headPos('href="tokens.css"') + 1000 && /prefers-color-scheme: dark/.test(themeJs) && /'light'/.test(themeJs) && /'dark'/.test(themeJs) && ['자동', '밝게', '어둡게'].every((w) => settingsJs.includes(w)) && /ces2027\.theme\.v1/.test(themeJs) && settingsJs.includes('setTheme') && /settings: \(\) => import/.test(app) && html.includes('href="#/settings"'), '테마: 설정에서 자동 · 밝게 · 어둡게를 고르고, theme.js가 첫 그림 전에 폰 설정(prefers-color-scheme)을 읽어 정한다');
+  check(!/campuses|moving|badge\.spots/.test(homeV2) && !/askPermission|offline\.install/.test(homeV2) && /campuses/.test(infoJs) && /askPermission/.test(settingsJs) && ['알림', '인터넷 없이'].every((w) => settingsJs.includes(w)), '첫 화면은 지금 할 일만: 날짜 · 캠퍼스 · 오가는 법 · 배지는 "알아둘 것"에, 알림 · 인터넷 없이는 "설정"에 있다');
+  const quickN = (homeV2.match(/\{ view: '/g) || []).length;
+  check(quickN <= 12 && /\.segs \{[^}]*overflow-x: auto/.test(appCss), `화면 길이: 바로 가기 ${quickN}칸(열둘까지), 칩 줄은 한 줄 가로 스크롤이다`);
 }
 const missing = mustCache.filter((f) => !swFiles.includes(f));
 const gone = [];
@@ -600,11 +619,11 @@ check(missing.length === 0 && gone.length === 0, `서비스 워커가 담아 둘
   const frontWords = ['날마다 쓸 시간', '내 일정', '추천', '길 안내', '종이 명함', '이벤트 부스', '명함 알림', '물어볼 말', '듣기', '녹음 알림', '따로 신청', '첫 화면 카드', '번역 앱', '대화 칸'];
   check(wantNos.every((no) => reqNos.includes(no)) && frontWords.every((w) => frontText.includes(w)) && Object.keys(BD.objectMap.objects).length >= 20 && BD.usecases.length >= 7 && BD.usecases.every((u) => !u.prop), `보드에 깊게 4 ~ 7이 보인다: 앞면 두 장에 낱말 ${frontWords.length}개, 뒷면에 요구 ${reqNos.length}개(R18 ~ R31 · R39 ~ R41) · 객체 ${Object.keys(BD.objectMap.objects).length}개 · 순서도 ${BD.usecases.length}개`);
   const guide = await readFile(join(dist, 'testers/index.html'), 'utf8').catch(() => '');
-  const guideWords = ['홈 화면에 추가', '비행기 모드', '알림 켜기', '폰 안에서만', '폰의 음성 인식 서비스', '번역', 'QR 두 개', '첫 화면', '안드로이드 크롬', '아이폰 사파리', '이름과 연락처는 적지 않는다', '일정은 바뀔 수 있', 'data-copy'];
+  const guideWords = ['홈 화면에 추가', '비행기 모드', '켜기', '폰 안에서만', '폰의 음성 인식 서비스', '번역', 'QR 두 개', '첫 화면', '안드로이드 크롬', '아이폰 사파리', '이름과 연락처는 적지 않는다', '일정은 바뀔 수 있', 'data-copy'];
   check(guideWords.every((w) => guide.includes(w)) && !/<input|<form|type="email"|type="tel"/.test(guide) && guide.includes('href="../app.css"'), `테스터 안내가 /testers/에 있다: 확인할 것 여덟 · 폰 둘 · 복사할 글, 이름과 연락처를 받는 칸이 없다`);
   // 안내에 적은 단추 · 글귀가 앱에 그대로 있는지 (앱의 글이 바뀌면 안내도 고친다).
-  const appText = (await Promise.all(['views/home.js', 'views/card.js', 'views/map.js', 'views/ask.js', 'views/listen.js', 'views/diary.js', 'views/talk.js', 'views/translate.js', 'views/deep.js', 'translator-ui.js', 'talk-ui.js', 'app.js', 'index.html'].map((f) => readFile(join(dist, f), 'utf8')))).join('\n');
-  const labels = ['명함부터 만든다', '명함 만들기', '인터넷 없이 쓰기', '인터넷 없이 열 준비가 됐다.', '알림 켜기', '알림이 켜져 있다.', '이벤트 있음으로 표시', '가까운 부스 번호', '맞추기', '가까이에 명함 넣는 이벤트 부스', '크게 띄우기', '읽어 주기', '이 폰에서 되는 것', '이 폰에서는 안 됨', '받아쓰기 · 번역을 어디서 하나', '알겠다 · 이 길로 한다', '그만둔다', '상대의 답', '직접 적어 묻기', '번역 사이트에서 열기', '듣고 일기 초안', '상대에게 알렸다 · 듣기 시작', '알렸다 · 듣기 시작', '손으로 적기', '줄 넣기', '멈추고 일기 초안 만들기', '적은 것으로 초안 만들기', '일기 초안 다듬기', '번역 앱 열기', '번역 앱 준비', '나누기', '말한 사람 바꾸기', '저장하고 일기 초안 만들기', '깊은 설정', '폰에 남기기', '녹음 듣기', '새 판이 있다'];
+  const appText = (await Promise.all(['views/home.js', 'views/settings.js', 'views/card.js', 'views/map.js', 'views/ask.js', 'views/listen.js', 'views/diary.js', 'views/talk.js', 'views/translate.js', 'views/deep.js', 'translator-ui.js', 'talk-ui.js', 'app.js', 'index.html'].map((f) => readFile(join(dist, f), 'utf8')))).join('\n');
+  const labels = ['명함부터 만든다', '명함 만들기', '인터넷 없이', '인터넷 없이 열린다', '켜기', '켜져 있다', '이벤트 있음으로 표시', '가까운 부스 번호', '맞추기', '가까이에 명함 넣는 이벤트 부스', '크게 띄우기', '읽어 주기', '이 폰에서 되는 것', '이 폰에서는 안 됨', '받아쓰기 · 번역을 어디서 하나', '알겠다 · 이 길로 한다', '그만둔다', '상대의 답', '직접 적어 묻기', '번역 사이트에서 열기', '듣고 쓰기', '상대에게 알렸다 · 듣기 시작', '알렸다 · 듣기 시작', '손으로 적기', '줄 넣기', '멈추고 일기 초안 만들기', '적은 것으로 초안 만들기', '일기 초안 다듬기', '번역 앱 열기', '번역 앱 준비', '나누기', '말한 사람 바꾸기', '초안 만들기', '깊은 설정', '폰에 남기기', '녹음 듣기', '새 판이 있다'];
   const missingLabels = labels.filter((l) => !appText.includes(l) || !guide.includes(l.replace(/&/g, '&amp;')));
   check(missingLabels.length === 0, `테스터 안내에 적은 단추와 글귀 ${labels.length}개가 앱과 안내에 그대로 있다 (없는 것: ${missingLabels.join(' / ') || '없음'})`);
   const daysJs = await readFile(join(dist, 'views/days.js'), 'utf8');
@@ -822,7 +841,7 @@ if (await exists('data/meta.json')) {
   const onsiteT = await readFile(join(dist, 'views/onsite.js'), 'utf8');
   const pagesY = await readFile(new URL('../.github/workflows/pages.yml', import.meta.url), 'utf8');
   const linksY = await readFile(new URL('../.github/workflows/links.yml', import.meta.url), 'utf8');
-  check(/onsite: \(\) => import\('\.\/views\/onsite\.js'\)/.test(appT) && !/from '\.\/onsite\.js'/.test(appT + homeT) && homeT.includes('#/onsite') && /신고를 받지 않는다/.test(onsiteT) && /\.notice/.test(onsiteT) && pagesY.includes('data/onsite.json') && linksY.includes('--in data/onsite.json'), '현장 안내: 누를 때 불러오고, 신고를 받지 않는다고 화면에 적혀 있고, 배포에 담기며 출처 링크 살피기가 이 파일도 본다');
+  check(/onsite: \(\) => import\('\.\/views\/onsite\.js'\)/.test(appT) && !/from '\.\/onsite\.js'/.test(appT + homeT) && homeT.includes('#/onsite') && /신고를 받지 않는다/.test(onsiteT) && pagesY.includes('data/onsite.json') && linksY.includes('--in data/onsite.json'), '현장 안내: 누를 때 불러오고, 신고를 받지 않는다고 화면에 적혀 있고, 배포에 담기며 출처 링크 살피기가 이 파일도 본다');
   // 물어보기: 현장 안내 · 셔틀 · 장소가 찾힌다.
   const docs = { info: await json('data/info.json'), separate: await json('data/separate.json'), phrases: await json('data/phrases.json'), transit: await json('data/transit.json'), onsite, places: await json('data/places.json') };
   const entries = ask.buildEntries({ ...docs, sessions: null });
@@ -836,7 +855,7 @@ if (await exists('data/meta.json')) {
   const upNone = updateEvent(evs, 'nope', { name: 'x' });
   check(up.ok && up.events.length === 2 && up.events[0].id === 'e1' && up.events[0].from === '18:30' && up.events[0].name === '저녁 모임 (옮김)' && up.events[1] === evs[1] && !upBad.ok && upBad.events === evs && !upNone.ok, '내 일정 고치기: 이름표는 그대로 두고 시간 · 이름 · 장소만 바꾼다 (끝이 시작보다 이르거나 없는 일정이면 그대로)');
   const daysT = await readFile(join(dist, 'views/days.js'), 'utf8');
-  check(/고친 것 남기기/.test(daysT) && /고치기 그만두기/.test(daysT), '시간과 일정 화면에 "고치기" 단추가 있다');
+  check(/'고치기'/.test(daysT) && /'그만두기'/.test(daysT), '시간과 일정 화면에 "고치기" 단추가 있다');
   // 날짜와 시간에 맞춘 세션 추천.
   const mk = (id, date, from, to, title, topics) => ({ id, date, from, to, title, place: '', topics, track: '', live: false, url: `https://www.ces.tech/schedule/s-${id}/` });
   const items = [mk('r1', '2027-01-06', '09:00', '10:00', 'Robotics One', ['Robotics']), mk('r2', '2027-01-06', '09:30', '10:30', 'Robotics Two', ['Robotics']), mk('r3', '2027-01-06', '10:00', '11:00', 'Robot Three', []), mk('r4', '2027-01-07', '09:00', '10:00', 'Robotics Four', ['Robotics'])];
@@ -929,7 +948,7 @@ if (await exists('data/meta.json')) {
   // 화면과 첫 화면
   const read = (f) => readFile(join(dist, f), 'utf8');
   const [talkV, transV, deepV, askV, listenV, companyJs, homeV, appT] = await Promise.all(['views/talk.js', 'views/translate.js', 'views/deep.js', 'views/ask.js', 'views/listen.js', 'company.js', 'views/home.js', 'app.js'].map(read));
-  check(['듣기', '붙여넣기', '손으로', '나누기', '저장하고 일기 초안 만들기', '말한 사람 바꾸기', '번역 앱 열기'].every((w) => talkV.includes(w)) && talkV.includes('copyGuide()') && /talk: \(\) => import\('\.\/views\/talk\.js'\)/.test(appT) && /translate: \(\) => import\('\.\/views\/translate\.js'\)/.test(appT) && /deep: \(\) => import\('\.\/views\/deep\.js'\)/.test(appT),
+  check(['듣기', '붙여넣기', '손으로', '나누기', '초안 만들기', '말한 사람 바꾸기', '번역 앱 열기'].every((w) => talkV.includes(w)) && talkV.includes('copyGuide()') && /talk: \(\) => import\('\.\/views\/talk\.js'\)/.test(appT) && /translate: \(\) => import\('\.\/views\/translate\.js'\)/.test(appT) && /deep: \(\) => import\('\.\/views\/deep\.js'\)/.test(appT),
     '대화 칸: 듣기 · 붙여넣기 · 손으로 셋과 복사하는 법 안내가 있고, 대화 · 번역 앱 · 깊은 설정 화면은 누를 때 불러온다');
   check(companyJs.includes("`#/talk/${encodeURIComponent(id)}`") && companyJs.includes('translatorRow(') && homeV.includes("view: 'translate'") && askV.includes('translatorButton(') && transV.includes('오프라인 팩') && transV.includes('app.android') && transV.includes('app.help.url'),
     '번역 앱 열기 단추는 회사 · 부스 카드와 물어볼 말에 있고, 출발 전 준비(깔기 · 한국어 영어 오프라인 팩 · 공식 도움말)는 번역 앱 준비 화면에 있다');

@@ -30,21 +30,25 @@ export async function render() {
   }
   const proof = (src) => el('small', { class: 'proof wrap' }, `${md(src.read)} 확인 · `, out(src.url, src.ko));
 
-  return el('div', { class: 'page' },
-    el('section', { class: 'panel' },
-      el('h1', { text: '현장 안내' }),
-      el('p', { class: 'lead', text: '급할 때 · 들어갈 때 · 도움이 필요할 때를 한곳에 모았다.' }),
-      el('p', { class: 'tag', text: '이 앱은 신고를 받지 않는다' }),
-      el('p', { class: 'note', text: data.notice })),
-    ...data.sections.map((s) => el('section', { class: 'panel', id: `onsite-${s.k}` },
+  let now = data.sections[0].k;
+  const tabs = el('div', { class: 'segs', role: 'group', 'aria-label': '묶음' });
+  const body = el('section', { class: 'panel', 'aria-live': 'polite' });
+  function draw() {
+    tabs.replaceChildren(...data.sections.map((s) => el('button', { class: 'seg', type: 'button', 'aria-pressed': s.k === now ? 'true' : 'false', text: s.ko.split(' · ')[0], onclick: () => { now = s.k; draw(); } })));
+    const s = data.sections.find((x) => x.k === now);
+    body.replaceChildren(
       el('h2', { text: s.ko }),
       s.note ? el('p', { class: 'note', text: s.note }) : null,
       s.k === 'urgent' ? el('p', { class: 'note', text: data.urgent.extra }) : null,
       el('ul', { class: 'stack' }, s.lines.map((l) => line(s, l))),
-      proof(data.sources[s.src]))),
-    el('section', { class: 'panel' },
-      el('h2', { text: '이 글을 읽는 법' }),
-      el('p', { class: 'note', text: `${md(data.read)}에 CES 공식 안내 두 쪽에서 읽은 것이다. 공식 안내가 말한 것만 적었고, 줄마다 출처가 있다.` }),
-      el('p', { class: 'note', text: data.recheck })),
-    el('div', { class: 'dock' }, el('a', { class: 'btn', href: '#/', text: '첫 화면으로' }), el('a', { class: 'btn ghost', href: '#/q', text: '물어보기' })));
+      proof(data.sources[s.src]));
+  }
+  draw();
+
+  return el('div', { class: 'page' },
+    el('section', { class: 'head' },
+      el('h1', { text: '현장 안내' }),
+      el('p', { class: 'lead', text: '이 앱은 신고를 받지 않는다. 번호를 누르면 전화가 걸린다.' })),
+    tabs, body,
+    el('section', { class: 'foot' }, el('p', { text: `${md(data.read)} CES 공식 안내에서 읽었다. ${String(data.recheck).split(/(?<=[.다])\s+/)[0]}` })));
 }

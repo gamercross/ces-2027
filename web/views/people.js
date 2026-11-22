@@ -51,12 +51,12 @@ export async function render() {
     holder.replaceChildren(el('div', { class: 'page' },
       el('section', { class: 'panel' },
         el('h1', { text: '만난 사람' }),
-        el('p', { class: 'lead', text: '남의 명함 QR을 읽거나 주소를 적어 남긴다. 이 폰에만 남고 밖으로 보내지 않는다. 일기를 보낼 때도 들어가지 않는다.' }),
+        el('p', { class: 'lead', text: '이 폰에만 남는다. 일기와 함께 가지 않는다.' }),
         el('p', { class: 'note', text: `만난 사람 ${people.length}명` }),
         status),
       people.length
         ? el('section', { class: 'panel' }, el('ul', { class: 'stack' }, rows))
-        : el('section', { class: 'panel' }, el('p', { class: 'note', text: '아직 없다. 아래 단추로 첫 사람을 남긴다.' })),
+        : el('section', { class: 'panel' }, el('p', { class: 'note', text: '아직 없다.' })),
       el('div', { class: 'dock' },
         el('button', { class: 'btn', type: 'button', text: '남의 명함 받기', onclick: () => form(null) }),
         el('a', { class: 'btn ghost', href: '#/card', text: '내 명함' }))));
@@ -110,7 +110,7 @@ export async function render() {
     // 카메라로 읽기
     const can = cameraSupport(envOf(window));
     const video = el('video', { class: 'scan-video', playsinline: true, muted: true, hidden: true, 'aria-label': '카메라 화면' });
-    const camNote = el('p', { class: can.ok ? 'note' : 'note warn', role: 'status', text: can.ok ? '카메라는 단추를 누를 때만 켠다. 상대의 QR을 화면 가운데에 둔다.' : `이 폰에서는 카메라로 읽을 수 없다. ${can.why} 아래 "손으로 넣기"를 쓴다.` });
+    const camNote = el('p', { class: can.ok ? 'note' : 'note warn', role: 'status', text: can.ok ? '누를 때만 켠다. QR을 화면 가운데에.' : `카메라로 읽을 수 없다. ${can.why} 손으로 넣는다.` });
     const camBtn = el('button', { class: 'btn', type: 'button', text: '카메라로 읽기', disabled: !can.ok });
     async function toggleCam() {
       if (scanner) { stopCam(); video.hidden = true; camBtn.textContent = '카메라로 읽기'; camNote.textContent = '카메라를 껐다.'; return; }
@@ -135,10 +135,10 @@ export async function render() {
 
     const node = el('form', { class: 'panel form', novalidate: true },
       el('h1', { text: person ? '만난 사람 고치기' : '남의 명함 받기' }),
-      el('p', { class: 'lead', text: '남의 QR을 읽거나 주소를 적는다. 깃허브 · 디스코드 · 링크드인 · 웹 주소(https)를 받는다. 이 폰에만 남는다.' }),
+      el('p', { class: 'lead', text: '깃허브 · 디스코드 · 링크드인 · 웹 주소를 받는다.' }),
       el('h2', { text: '카메라로 읽기' }), camNote, camBtn, video,
       el('h2', { text: '손으로 넣기' }),
-      el('p', { class: 'note', text: '주소를 적거나 붙여 넣는다. 아이디만 적으면 오른쪽 고름대로 본다.' }),
+      el('p', { class: 'note', text: '주소를 붙여 넣는다. 아이디만이면 오른쪽 고름대로 본다.' }),
       el('div', { class: 'inline' }, addr, hint),
       el('button', { class: 'btn ghost', type: 'button', text: '주소 더하기', onclick: addByHand }),
       el('h2', { text: '읽은 주소' }), chips, addStatus,

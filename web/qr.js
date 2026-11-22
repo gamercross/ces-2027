@@ -244,10 +244,10 @@ export function qrSvg(text, label) {
   const bg = document.createElementNS(ns, 'rect');
   bg.setAttribute('width', size);
   bg.setAttribute('height', size);
-  bg.setAttribute('fill', T.panel);
+  bg.setAttribute('fill', T.qrBg);
   const fg = document.createElementNS(ns, 'path');
   fg.setAttribute('d', path);
-  fg.setAttribute('fill', T.ink);
+  fg.setAttribute('fill', T.qrInk);
   svg.append(bg, fg);
   return svg;
 }

@@ -170,10 +170,10 @@ export async function render({ rest, go }) {
   function askFirst() {
     const box = el('section', { class: 'panel band ask', role: 'alertdialog', 'aria-label': '상대에게 알렸나요' },
       el('h2', { text: '상대에게 알렸나요?' }),
-      el('p', { text: '말을 받아 적거나 녹음하기 전에 상대에게 먼저 알린다. 싫다고 하면 듣기를 쓰지 않고 손으로 적는다.' }),
+      el('p', { text: '받아 적거나 녹음하기 전에 알린다. 싫다고 하면 손으로 적는다.' }),
       el('div', { class: 'actions' },
         el('button', { class: 'btn', type: 'button', text: '알렸다 · 듣기 시작', onclick: () => { save('listenAsked.v1', today()); box.remove(); begin(); } }),
-        el('button', { class: 'btn ghost', type: 'button', text: '아직 · 알리는 말 띄우기', onclick: () => showBig(phrases.notice.en, phrases.notice.ko, mode, caps.speak) })));
+        el('button', { class: 'btn ghost', type: 'button', text: '알리는 말', onclick: () => showBig(phrases.notice.en, phrases.notice.ko, mode, caps.speak) })));
     dock.before(box);
     box.querySelector('button').focus();
   }
@@ -218,21 +218,21 @@ export async function render({ rest, go }) {
   return el('div', { class: 'page' },
     el('section', { class: 'panel' },
       el('h1', {}, '듣기', company.name ? ` · ${company.name}` : ''),
-      el('p', { class: 'lead', text: '상대의 말을 받아 적고 한국어로 옮긴다. 멈추면 이 회사의 일기 초안이 된다. 소리와 글은 이 폰에만 남는다.' }),
+      el('p', { class: 'lead', text: '받아 적고 멈추면 일기 초안이 된다. 이 폰에만 남는다.' }),
       company.id ? (company.booth ? el('p', { class: 'note', text: `부스 ${company.booth.split('@')[0]}` }) : null) : el('label', { class: 'field' }, el('span', { class: 'label', text: '회사' }), nameBox),
       el('div', { class: 'actions' },
         el('a', { class: 'btn ghost', href: `#/ask${company.id ? `/${encodeURIComponent(company.id)}` : ''}`, text: '물어볼 말' }),
-        el('a', { class: 'btn ghost', href: `#/talk${company.id ? `/${encodeURIComponent(company.id)}` : ''}`, text: '대화 칸 (붙여넣기 · 손으로)' })),
-      el('p', { class: 'note' }, '번역 앱으로 대화한다면 녹음하지 않고 번역 앱의 대화 기록을 대화 칸에 붙여 넣는다. 폰 안 번역 모델은 ', el('a', { href: '#/deep', text: '깊은 설정' }), '에 있다.')),
+        el('a', { class: 'btn ghost', href: `#/talk${company.id ? `/${encodeURIComponent(company.id)}` : ''}`, text: '대화 칸' })),
+      el('p', { class: 'note' }, '번역 앱으로 대화했다면 기록을 대화 칸에 붙여 넣는다. 폰 안 모델은 ', el('a', { href: '#/deep', text: '깊은 설정' }), '.')),
     el('section', { class: 'panel notice' },
-      el('h2', { text: '먼저 알린다' }),
+      el('h2', { text: '알리는 말' }),
       el('div', { class: 'name', text: phrases.notice.ko }),
       el('p', { class: 'en', lang: 'en', text: phrases.notice.en }),
       el('div', { class: 'row-actions' }, el('button', { class: 'say', type: 'button', text: '크게 띄우기', onclick: () => showBig(phrases.notice.en, phrases.notice.ko, mode, caps.speak) }))),
     el('section', { class: 'panel' },
       el('h2', { text: '이 폰에서 되는 것' }),
       capsBox,
-      el('label', { class: 'toggle' }, keep, el('span', { text: caps.record.ok ? '소리도 남기기 (이 폰에만, 한 시간에 14MB쯤)' : '소리 남기기: 이 폰에서는 안 됨' }))),
+      el('label', { class: 'toggle' }, keep, el('span', { text: caps.record.ok ? '소리도 남기기 (1시간 14MB쯤)' : '소리 남기기: 안 됨' }))),
     el('section', { class: 'panel' },
       el('div', { class: 'name' }, count, time),
       live, heard,
