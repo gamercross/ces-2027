@@ -23,7 +23,7 @@ export async function render() {
   const summary = el('p', { class: 'coll-summary', hidden: true });
   const chips = el('div', { class: 'segs', role: 'group', 'aria-label': '누구에게', hidden: true });
   const body = el('div', { class: 'coll-body' });
-  const input = el('input', { type: 'file', multiple: true, accept: '.json,application/json', class: 'coll-input', 'aria-label': '일기 파일 고르기', tabindex: '-1' });
+  const input = el('input', { type: 'file', multiple: true, accept: '.json,application/json', class: 'file-hidden', 'aria-label': '일기 파일 고르기', tabindex: '-1' });
   const pickBtn = el('button', { class: 'btn', type: 'button', text: '파일 고르기', onclick: () => input.click() });
   const saveBtn = el('button', { class: 'btn', type: 'button', text: '한장.md 내려받기', hidden: true });
   const copyBtn = el('button', { class: 'pick', type: 'button', text: '복사', hidden: true });

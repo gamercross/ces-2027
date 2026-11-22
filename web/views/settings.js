@@ -160,31 +160,32 @@ function storageRow() {
   return [el('li', { class: 'setrow' }, main, button), el('li', { class: 'setrow-more', hidden: false }, note)];
 }
 
-// 일기 전부와 폰에 있는 대화를 파일 하나로 내려받는다. 녹음은 어느 때도 들어가지 않는다. 내려받은 일기 수를 돌려준다(없으면 0).
-function downloadExport() {
+// 일기 전부와 폰에 있는 대화를(일기 사진과 함께) 파일 하나로 내려받는다. 녹음은 어느 때도 들어가지 않는다. { count: 내려받은 일기 수(없으면 0), photos: 든 사진 수 }.
+async function downloadExport() {
   const ready = getDiary().filter((e) => !e.draft);
-  if (!ready.length) return 0;
-  const text = JSON.stringify(bundle(ready, getProfile(), new Date(), talksFor(ready, getTalks(), true)), null, 2);
+  if (!ready.length) return { count: 0, photos: 0 };
+  const photos = ready.some((e) => e.photo) ? await (await import('../photo-store.js')).photosFor(ready) : null;
+  const text = JSON.stringify(bundle(ready, getProfile(), new Date(), talksFor(ready, getTalks(), true), photos), null, 2);
   const url = URL.createObjectURL(new Blob([text], { type: 'application/json;charset=utf-8' }));
   const a = el('a', { href: url, download: fileName(getProfile()) });
   document.body.append(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  return ready.length;
+  return { count: ready.length, photos: Object.keys(photos || {}).length };
 }
 
 // 내보내기: 일기 전부와 폰에 있는 대화를 파일 하나로. 녹음은 어느 때도 들어가지 않는다.
 function exportRow() {
   const ready = getDiary().filter((e) => !e.draft);
   const status = el('p', { class: 'setrow-hint', role: 'status', hidden: true });
-  const button = el('button', { class: 'pick', type: 'button', text: '파일로', 'aria-label': '일기 · 대화 전부 파일로', disabled: ready.length === 0, onclick: () => {
-    const n = downloadExport();
-    status.textContent = `일기 ${n}개와 폰에 있는 대화를 파일로 내보냈다. 녹음은 안 간다.`;
+  const button = el('button', { class: 'pick', type: 'button', text: '파일로', 'aria-label': '일기 · 대화 · 사진 전부 파일로', disabled: ready.length === 0, onclick: async () => {
+    const { count, photos } = await downloadExport();
+    status.textContent = `일기 ${count}개와 폰에 있는 대화${photos ? ` · 사진 ${photos}장` : ''}를 파일로 내보냈다. 녹음은 안 간다.`;
     status.hidden = false;
   } });
   const collect = row('모은 일기 열기', '받은 일기 파일 여러 개를 한 장으로', el('a', { class: 'pick', href: '#/collect', text: '열기' }));
-  return [row('내보내기', ready.length ? `일기 ${ready.length}개 · 대화 ${getTalks().length}개` : '내보낼 일기가 아직 없다', button), el('li', { class: 'setrow-more' }, status), collect];
+  return [row('내보내기', ready.length ? `일기 ${ready.length}개 · 대화 ${getTalks().length}개${ready.some((e) => e.photo) ? ` · 사진 ${ready.filter((e) => e.photo).length}장` : ''}` : '내보낼 일기가 아직 없다', button), el('li', { class: 'setrow-more' }, status), collect];
 }
 
 // 이 폰의 내 자료 지우기: 두 번 확인한다. 첫 확인에서 먼저 내보내기를 권하고, 둘째 확인 뒤에 지운다.
@@ -202,7 +203,7 @@ function mineRow(shell) {
   const list = () => {
     const n = mineCounts();
     return el('ul', { class: 'dots', 'aria-label': '지워지는 것' },
-      el('li', { text: `일기 ${n.diary}개 · 만난 사람 ${n.people}명 · 동선 ${n.plan}곳` }),
+      el('li', { text: `일기 ${n.diary}개(넣은 사진 포함) · 만난 사람 ${n.people}명 · 동선 ${n.plan}곳` }),
       el('li', { text: '내 명함과 설정(글자 크기 · 화면 색 · 표시한 것)' }));
   };
   // 첫 확인: 먼저 내보내기를 권한다.
@@ -213,10 +214,10 @@ function mineRow(shell) {
       header('이 폰의 내 자료 지우기'),
       el('p', { class: 'pcard-where', text: '지우기 전에 일기를 내보내 두는 것을 권한다.' }),
       list(),
-      el('p', { class: 'note', text: '내보내기 파일에는 일기와 대화가 들어간다. 지우면 되돌릴 수 없다. 앱 파일(인터넷 없이 열리는 것)은 그대로다.' }),
+      el('p', { class: 'note', text: '내보내기 파일에는 일기와 대화와 일기 사진이 들어간다. 지우면 되돌릴 수 없다. 앱 파일(인터넷 없이 열리는 것)은 그대로다.' }),
       status,
       el('div', { class: 'actions' },
-        el('button', { class: 'btn', type: 'button', id: 'mine-export', text: ready ? '일기 내보내기' : '내보낼 일기가 없다', disabled: !ready, onclick: () => { status.textContent = `일기 ${downloadExport()}개를 파일로 내보냈다.`; } }),
+        el('button', { class: 'btn', type: 'button', id: 'mine-export', text: ready ? '일기 내보내기' : '내보낼 일기가 없다', disabled: !ready, onclick: async () => { const { count, photos } = await downloadExport(); status.textContent = `일기 ${count}개${photos ? ` · 사진 ${photos}장` : ''}를 파일로 내보냈다.`; } }),
         el('button', { class: 'btn ghost', type: 'button', id: 'mine-next', text: '지우기로 넘어가기', onclick: second })),
       el('button', { class: 'linkish', type: 'button', text: '그만두기', onclick: () => shell.close() }),
     ]);
