@@ -422,7 +422,7 @@ export async function render({ rest = [] } = {}) {
   drawMarks();
 
   // ---- 카드(아래에서 올라온다)와 날아가기
-  const sheet = createSheet(mapx, { onChange: () => paintNav(), onClose: () => { if (chosenBooth) { chosenBooth = null; routeTarget = null; drawBooths(); three?.chooseBooth(null); drawMe(); } } });
+  const sheet = createSheet(mapx, { onChange: () => { paintNav(); requestAnimationFrame(() => setHeight()); }, onClose: () => { if (chosenBooth) { chosenBooth = null; routeTarget = null; drawBooths(); three?.chooseBooth(null); drawMe(); } } });
   const frame = el('div', { class: 'map-frame' }, board);
   let three = null;
   const in3d = () => solid.getAttribute('aria-pressed') === 'true';
@@ -1048,8 +1048,8 @@ export async function render({ rest = [] } = {}) {
     const ko = dayFocus ? (info?.show?.days?.[dayFocus - 1]?.ko || '') : '날짜 미정';
     daybar.replaceChildren(
       el('span', { class: 'daybar-text', text: `${ko} 동선 ${n}곳` }),
-      el('button', { class: 'chip-go', type: 'button', text: '모든 날', onclick: () => { dayFocus = null; paintDayBar(); drawPins(); } }),
-      el('a', { class: 'chip-go', href: '#/plan', text: '동선' }));
+      el('button', { class: 'pick', type: 'button', text: '모든 날', onclick: () => { dayFocus = null; paintDayBar(); drawPins(); } }),
+      el('a', { class: 'pick', href: '#/plan', text: '동선' }));
     daybar.hidden = false;
   }
   // ---- 조립
@@ -1062,7 +1062,9 @@ export async function render({ rest = [] } = {}) {
     const tabs = document.querySelector('.tabs');
     const top = mapx.getBoundingClientRect().top + window.scrollY;
     // 지도 칸은 화면에서 위 머리와 아래 탭을 뺀 만큼. 아래에 다음 묶음이 한 줄쯤 보여 끌어내릴 곳을 남긴다.
-    mapx.style.height = `${Math.max(440, Math.round(window.innerHeight - top - (tabs?.offsetHeight || 68) - 64))}px`;
+    // 카드가 열려 있으면 아래 묶음이 가려지므로 탭 바로 위까지 닿는다
+    const peek = mapx.dataset.sheet === 'half' || mapx.dataset.sheet === 'full' ? 8 : 64;
+    mapx.style.height = `${Math.max(440, Math.round(window.innerHeight - top - (tabs?.offsetHeight || 68) - peek))}px`;
     mapx.dispatchEvent(new Event('resize-sheet'));
   };
   page.append(mapx,

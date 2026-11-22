@@ -94,7 +94,7 @@ export async function render({ rest = [] } = {}) {
     holder.append(
       el('section', { class: 'head' }, el('h1', { text: '남의 명함 받기' })),
       el('section', { class: 'panel' }, camNote, camBtn, video, scanNote, pasteBtn, pasteForm),
-      el('div', { class: 'segs', role: 'group', 'aria-label': '만난 사람' }, el('a', { class: 'seg', href: '#/people', text: '만난 사람 보기' })),
+      el('div', { class: 'row-actions' }, el('a', { href: '#/people', text: '만난 사람 보기' })),
       shell.node);
   } else {
     drawList();

@@ -6,7 +6,8 @@ import { getInfo, getMeta } from '../data.js';
 import { getDiary, getProfile, getTalks, getTextSize, getTheme, setTextSize, setTheme, tagKo } from '../store.js';
 import { bundle, fileName, talksFor } from '../diary.js';
 import { offline } from '../offline.js';
-import { alerts, askPermission, checkAlerts } from '../notify.js';
+import { alerts, askPermission, checkAlerts, getPaper } from '../notify.js';
+import { paperPanel } from './card.js';
 import { createCardShell } from '../plancard.js';
 
 const THEMES = [
@@ -174,6 +175,19 @@ function exportRow() {
   return [row('내보내기', ready.length ? `일기 ${ready.length}개 · 대화 ${getTalks().length}개` : '내보낼 일기가 아직 없다', button), el('li', { class: 'setrow-more' }, status)];
 }
 
+// 종이 명함: 있는지 · 없으면 QR 명함으로 대신. 묻는 곳은 동선 탭 위 띠와 여기 두 곳뿐이다(QR 화면에는 두지 않는다).
+function paperRow(shell, showFrom) {
+  const { s, main } = rowState('종이 명함');
+  const paint = () => { const p = getPaper(); s.textContent = p?.has === true ? '있다' : p?.has === false ? '없다 · QR 명함으로 대신' : '아직 안 정했다'; };
+  paint();
+  window.addEventListener('ces-alerts', paint);
+  const open = (ev) => shell.open([
+    el('div', { class: 'pcard-top' }, el('h2', { class: 'pcard-tools-title', text: '종이 명함' }), el('button', { class: 'btn ghost pcard-close', type: 'button', text: '닫기', onclick: () => { shell.close(); paint(); } })),
+    paperPanel(showFrom),
+  ], ev.currentTarget);
+  return el('li', { class: 'setrow' }, main, el('button', { class: 'pick', type: 'button', text: '바꾸기', onclick: open }));
+}
+
 // 권한: 막혀 있는 것만 한 줄(왜 안 되고 어디서 켜는가). 물어볼 수 없는 브라우저에서는 줄이 안 보인다.
 function permissionRows() {
   const box = el('li', { class: 'setrow-more', hidden: true });
@@ -199,6 +213,7 @@ async function dataRow(shell) {
     meta ? el('p', {}, `전시사 ${num(meta.exhibitors)}곳 · 받은 날 ${meta.v} · `, out('https://exhibitors.ces.tech/8_0/', 'CES 공식 전시사 검색')) : el('p', { class: 'note', text: '전시사 자료를 아직 받지 못했다.' }),
     info ? el('p', {}, `날짜와 시간 · 오가는 법: ${md(info.show.source.read)} 확인 · `, out(info.show.source.url, '출처')) : null,
     el('p', { class: 'note', text: '부스 자리는 정식 배치도 전이라 홀 안은 짐작이다.' }),
+    el('p', { class: 'note', text: '이 앱은 사용 기록을 보내지 않는다. 명함 · 일기 · 동선은 이 폰에만 남는다.' }),
   ], ev.currentTarget);
   const when = meta ? `${md(meta.v)} 받음` : '받지 못했다';
   return row('자료', `${when} · CES 공식`, el('button', { class: 'pick', type: 'button', text: '출처', onclick: open }));
@@ -208,8 +223,9 @@ export async function render() {
   document.body.classList.remove('pcard-open');
   const shell = createCardShell();
   window.addEventListener('hashchange', () => shell.close(), { once: true });
+  const showFrom = (await getInfo().catch(() => null))?.show.from || '2027-01-06';
   const list = el('ul', { class: 'setlist' },
-    ...cardRow(), ...notifyRow(), offlineRow(), ...storageRow(), ...exportRow(), permissionRows(), await dataRow(shell));
+    ...cardRow(), paperRow(shell, showFrom), ...notifyRow(), offlineRow(), ...storageRow(), ...exportRow(), permissionRows(), await dataRow(shell));
   return el('div', { class: 'page listpage settingspage' },
     el('section', { class: 'head' }, el('h1', { text: '설정' })),
     sizeBox(),

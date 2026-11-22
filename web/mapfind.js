@@ -20,7 +20,7 @@ export function findBox({ places, ranges = [], onCompany, onPlace }) {
   const input = el('input', { type: 'search', inputmode: 'search', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search', placeholder: '회사 · 부스 번호 · 홀 찾기', 'aria-label': '회사 이름 · 부스 번호 · 분야 · 홀 찾기' });
   const list = el('ul', { class: 'results', role: 'listbox', 'aria-label': '찾은 것', hidden: true });
   const note = el('p', { class: 'results-note', role: 'status', hidden: true });
-  const node = el('div', { class: 'find' }, el('label', { class: 'find-field' }, input), note, list);
+  const node = el('div', { class: 'find' }, el('label', { class: 'find-field' }, input), el('span', { class: 'tag find-tag', text: '비공식' }), note, list);
   let turn = 0;
   let current = [];
 

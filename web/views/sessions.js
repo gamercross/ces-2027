@@ -100,7 +100,7 @@ export async function render() {
   return el('div', { class: 'page' },
     el('section', { class: 'head' },
       el('h1', { text: '세션 일정' }),
-      el('p', { class: 'lead', text: '넣으면 동선과 지도에도 보인다.' })),
+      el('p', { class: 'lead', text: '넣으면 동선과 지도에도 보인다. 시각은 라스베이거스 기준이다.' })),
     el('div', { class: 'page' }, box, tabs, status),
     recBox,
     el('section', { class: 'panel' }, count, list),

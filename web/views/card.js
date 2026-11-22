@@ -83,15 +83,17 @@ function form(profile, done, go) {
     el('p', { class: 'lead', text: first ? '별명과 나만 있으면 된다. 나머지는 건너뛰어도 된다. 이 폰에만 남는다.' : '이 폰에만 남는다. QR로 보여 줄 때만 상대가 읽는다.' }),
     field('별명', nick),
     el('div', { class: 'field' }, el('span', { class: 'label', text: '나' }), tags),
-    field('한 줄 (선택)', line),
-    field('깃허브 (선택)', github, '비워 두면 QR이 생기지 않는다'),
-    field('디스코드 (선택)', discord),
     error,
+    // 필수 둘 다음에 바로 단추: 스크롤 없이 한 화면에서 만든다. 선택 칸은 그 아래에 둔다.
     el('div', { class: 'dock' },
       el('button', { class: 'btn', type: 'submit', text: profile ? '명함 고치기 끝' : '명함 만들기' }),
       profile
         ? el('button', { class: 'btn ghost', type: 'button', text: '그만두기', onclick: () => done(profile) })
-        : el('button', { class: 'btn ghost', type: 'button', text: '나중에', onclick: () => { sessionStorage.setItem('ces2027.introLater', '1'); go('#/'); } })));
+        : el('button', { class: 'btn ghost', type: 'button', text: '나중에', onclick: () => { sessionStorage.setItem('ces2027.introLater', '1'); go('#/'); } })),
+    el('h2', { class: 'optional', text: '더 적기 (선택)' }),
+    field('한 줄 (선택)', line),
+    field('깃허브 (선택)', github, '비워 두면 QR이 생기지 않는다'),
+    field('디스코드 (선택)', discord));
 
   node.addEventListener('submit', (ev) => {
     ev.preventDefault();
@@ -142,12 +144,10 @@ async function card(profile, edit, showFrom, first) {
       el('div', { class: 'qrs' },
         await qrBlock('깃허브', gh, gh.replace('https://', '')),
         await qrBlock('디스코드', dc))),
-    first ? null : paperPanel(showFrom),
     el('section', { class: 'panel' },
       el('p', { class: 'note', text: noQr ? '깃허브나 디스코드를 적으면 QR이 생긴다. "명함 고치기"에서 언제든 적는다.' : '폰에서 만든 QR이라 인터넷 없이도 보인다.' }),
       el('div', { class: 'actions' },
         el('a', { class: 'btn', href: '#/map', text: '지도로' }),
-        first ? null : el('a', { class: 'btn ghost', href: '#/people', text: '남의 명함 받기' }),
         el('button', { class: 'btn ghost', type: 'button', text: '명함 고치기', onclick: edit }))));
 }
 

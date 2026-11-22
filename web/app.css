@@ -67,6 +67,11 @@ h3 { font-size: var(--fs-body); }
 .sub .brand-name { display: none; }
 .sub .brand { margin-right: auto; }
 .bar { flex-wrap: wrap; }
+/* 지도 탭: 머리를 줄이고 이름 · 비공식은 찾기 칸 안으로 합친다 */
+body[data-tab="map"]:not(.sub) .brand { display: none; }
+body[data-tab="map"]:not(.sub) .bar { padding-top: env(safe-area-inset-top); padding-bottom: 0; }
+.find-tag { position: absolute; right: var(--s3); top: 50%; transform: translateY(-50%); pointer-events: none; }
+.find-field input { padding-right: 76px; }
 /* 인터넷이 끊기면 위에 한 줄 */
 .net { flex: 1 1 100%; margin: 0; padding: var(--s1) var(--s3); border-radius: var(--radius-ctl); background: var(--peach); font-size: var(--fs-small); font-weight: 700; }
 .tag { display: inline-block; font-size: var(--fs-fine); font-weight: 700; line-height: 1.5; padding: 1px var(--s2); border-radius: var(--radius-tag); background: var(--peach); color: var(--ink); white-space: nowrap; }
@@ -172,7 +177,7 @@ h3 { font-size: var(--fs-body); }
 .toggle input { width: 20px; height: 20px; accent-color: var(--accent); }
 .linkish { display: inline-flex; align-items: center; min-height: var(--tap-min); min-width: var(--tap-min); padding: 0 var(--s1); border: 0; background: none; text-decoration: underline; text-underline-offset: 3px; font-size: var(--fs-note); cursor: pointer; }
 .row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); margin-top: var(--s1); }
-.row-actions a { white-space: nowrap; display: inline-flex; align-items: center; min-height: var(--tap-min); min-width: var(--tap-min); padding: 0 var(--s1); font-size: var(--fs-note); }
+.row-actions a { text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; display: inline-flex; align-items: center; min-height: var(--tap-min); min-width: var(--tap-min); padding: 0 var(--s1); font-size: var(--fs-note); }
 
 /* ---- 적는 칸 ---- */
 .form { display: grid; gap: 14px; }
@@ -241,7 +246,7 @@ details.more[open] > summary { margin-bottom: var(--s2); }
 .stop .name { font-size: calc(17px * var(--scale)); font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
 .stop .where, .entry .where { font-size: var(--fs-small); color: var(--ink-2); overflow-wrap: anywhere; }
 .stop-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-.seen-btn { min-width: 56px; background: var(--panel); }
+.seen-btn { min-width: 56px; }
 .stop.seen .no { opacity: 0.5; }
 /* 회사 카드(큰 창): 아래에서 화면 대부분을 덮는다 */
 body.pcard-open { overflow: hidden; }
@@ -274,7 +279,7 @@ body.pcard-open { overflow: hidden; }
 .map polygon:focus-visible { outline: none; stroke-width: 4; }
 .map text { transition: opacity 0.12s ease; }
 .map-wait { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: var(--s5) var(--s3); }
-.mapx-top { position: absolute; left: 0; right: 0; top: 0; z-index: 4; display: grid; gap: 6px; padding: var(--s2); pointer-events: none; }
+.mapx-top { position: absolute; left: 0; right: 0; top: 0; z-index: 4; display: grid; gap: 6px; padding: var(--s2); background: var(--bg); pointer-events: none; }
 .mapx-top > * { pointer-events: auto; }
 .find { position: relative; }
 .find-field input { width: 100%; min-height: 52px; padding: 0 var(--s4); border: 2px solid transparent; border-radius: var(--radius-ctl); background: var(--panel); color: var(--ink); font-size: calc(17px * var(--scale)); font-weight: 700; }
@@ -299,7 +304,7 @@ body.pcard-open { overflow: hidden; }
 .daybar { display: flex; align-items: center; gap: var(--s2); padding: var(--s1) var(--s1) var(--s1) var(--s3); border-radius: var(--radius-ctl); background: var(--panel); }
 .daybar[hidden] { display: none; }
 .daybar-text { flex: 1 1 auto; min-width: 0; font-size: var(--fs-small); font-weight: 700; line-height: 1.3; }
-.daybar .chip-go { display: inline-flex; align-items: center; background: var(--panel-2); text-decoration: none; }
+.daybar .pick { white-space: nowrap; }
 .navbar { position: absolute; left: var(--s2); right: var(--s2); bottom: var(--s2); z-index: 4; display: grid; gap: var(--s2); padding: var(--s3) var(--s4); border-radius: var(--radius); background: var(--panel); }
 .navbar[hidden] { display: none; }
 .nav-head { display: grid; gap: 2px; }
@@ -307,6 +312,7 @@ body.pcard-open { overflow: hidden; }
 .nav-sub { font-size: var(--fs-body); font-weight: 700; color: var(--ink-2); }
 .nav-actions { display: flex; gap: var(--s2); }
 .nav-actions .btn { flex: 1 1 0; }
+.mappage:has(.mapx[data-sheet="half"], .mapx[data-sheet="full"]) > .panel { display: none; }
 .sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; flex-direction: column; height: var(--sheet-h, 0px); background: var(--panel); border-radius: var(--radius-big) var(--radius-big) 0 0; transition: height 0.22s ease; }
 .sheet.drag { transition: none; }
 .sheet[hidden] { display: none; }
@@ -351,17 +357,13 @@ body.pcard-open { overflow: hidden; }
 .heard li { display: grid; gap: 2px; font-size: var(--fs-small); overflow-wrap: anywhere; }
 .heard small { color: var(--ink-2); font-size: var(--fs-note); }
 
-/* ---- 한 손으로 닿게: 주요 단추는 아래(탭 바로 위)에 붙여 둔다 ---- */
-.dock {
-  position: sticky; bottom: calc(var(--tabs) + env(safe-area-inset-bottom) + var(--s2)); z-index: 4;
-  display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2);
-  padding: var(--s2); border-radius: var(--radius); background: var(--panel-2);
-}
+/* ---- 한 손으로 닿게: 주요 단추 줄. 막대를 두 겹으로 쌓지 않는다 — 내용 끝에 서고, solo(일기 쓰기)만 탭 바로 위에 붙는다 ---- */
+.dock { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin-top: var(--s3); }
 .dock .btn { flex: 1 1 auto; }
 .dock .field { flex: 1 1 100%; }
-.dock .field input { background: var(--panel); }
+.dock .field input { background: var(--panel-2); }
 .dock .chip { flex: 1 1 auto; max-width: none; background: var(--panel); }
-.form .dock { margin-top: var(--s1); }
+.dock.solo { position: sticky; bottom: calc(var(--tabs) + env(safe-area-inset-bottom) + var(--s2)); z-index: 4; margin-top: 0; }
 
 /* ---- 아래: 화면 고르기 ---- */
 .tabs {
@@ -379,7 +381,7 @@ body.pcard-open { overflow: hidden; }
 .tabs svg { box-sizing: content-box; padding: 4px 16px; border-radius: var(--radius-ctl); }
 .tabs svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .tabs a[aria-current="page"] { color: var(--ink); }
-.tabs a[aria-current="page"] svg { background: var(--panel-2); }
+.tabs a[aria-current="page"] svg { background: var(--panel-2); stroke-width: 2.8; }
 
 /* 넓은 화면에서도 탭은 한 줄(가운데)에 선다 */
 @media (min-width: 600px) {
@@ -423,7 +425,7 @@ a.link-text { display: inline-flex; align-items: center; min-height: var(--tap-m
 .session .name { display: block; }
 .session .title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-right: var(--s1); }
 .session .tag { margin-right: var(--s1); }
-.session .where.one { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.session .where.one { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .session .row-actions { margin-top: 0; gap: var(--s1); }
 .session .row-actions .pick { min-height: var(--tap-min); }
 .scan-video { display: block; width: 100%; max-height: 48vh; object-fit: cover; border-radius: var(--radius-ctl); background: var(--panel-2); }

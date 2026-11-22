@@ -32,13 +32,13 @@
   --scale: 1;
   --scale-head: 1;
   --scale-map: 1;
-  --fs-title: calc(34px * var(--scale-head));
+  --fs-title: calc(24px * var(--scale-head));
   --fs-now: calc(24px * var(--scale-head));
   --fs-h2: calc(18px * var(--scale));
   --fs-body: calc(16px * var(--scale));
   --fs-small: calc(14px * var(--scale));
   --fs-note: calc(13px * var(--scale));
-  --fs-fine: calc(12px * var(--scale));
+  --fs-fine: calc(13px * var(--scale));
   --lh: 1.55;
 
   /* 간격: 4 단위 */
