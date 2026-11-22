@@ -33,7 +33,8 @@ export async function render() {
   const days = daysOf(data.items);
   let day = days.find((d) => d >= '2027-01-06') || days[0];
   let q = '';
-  let shown = 10;
+  let shown = 7;
+  let recShown = 2;
   const status = el('p', { class: 'note', role: 'status' });
   const list = el('ul', { class: 'stack' });
   const tabs = el('div', { class: 'segs', role: 'group', 'aria-label': '날짜' });
@@ -58,12 +59,12 @@ export async function render() {
   function row(s, withDate) {
     const mine = isIn(s, getEvents());
     const link = places && s.place ? placeLink(places, s.place) : null;
-    return el('li', { class: 'entry' },
-      el('div', { class: 'name' }, s.title,
+    return el('li', { class: 'entry session' },
+      el('div', { class: 'name' }, el('span', { class: 'title', text: s.title }),
         isKeynote(s) ? el('span', { class: 'tag mint', text: '기조연설' }) : null,
         s.live ? el('span', { class: 'tag', text: '생중계' }) : null),
-      el('div', { class: 'where', text: `${withDate ? `${dayKo(s.date)} ` : ''}${s.from} ~ ${s.to}${s.place ? ` · ${s.place}` : ' · 장소 미정'}` }),
-      s.track || s.topics?.length ? el('div', { class: 'where', text: [s.track, ...(s.topics || [])].filter(Boolean).join(' · ') }) : null,
+      el('div', { class: 'where one', text: `${withDate ? `${dayKo(s.date)} ` : ''}${s.from} ~ ${s.to}${s.place ? ` · ${s.place}` : ' · 장소 미정'}` }),
+      s.track || s.topics?.length ? el('div', { class: 'where one', text: [s.track, ...(s.topics || [])].filter(Boolean).join(' · ') }) : null,
       el('div', { class: 'row-actions' },
         el('button', { class: 'pick', type: 'button', 'aria-pressed': mine ? 'true' : 'false', text: mine ? '빼기' : '넣기', onclick: () => {
           const next = toggle(s, getEvents());
@@ -81,19 +82,19 @@ export async function render() {
     const mineCount = data.items.filter((s) => isIn(s, getEvents())).length;
     tabs.replaceChildren(...days.map((d) => {
       const n = onDay(data.items, d).length;
-      return el('button', { class: 'seg', type: 'button', 'aria-pressed': !q && d === day ? 'true' : 'false', text: `${dayKo(d)} ${n}`, onclick: () => { day = d; q = ''; shown = 10; box.value = ''; draw(); } });
+      return el('button', { class: 'seg', type: 'button', 'aria-pressed': !q && d === day ? 'true' : 'false', text: `${dayKo(d)} ${n}`, onclick: () => { day = d; q = ''; shown = 7; box.value = ''; draw(); } });
     }));
     const found = q ? search(data.items, q).sort((a, b) => a.date.localeCompare(b.date) || a.from.localeCompare(b.from)) : onDay(data.items, day);
     count.textContent = q ? `찾은 세션 ${found.length}개` : `${dayKo(day)} ${found.length}개${mineCount ? ` · 내 일정 ${mineCount}` : ''}`;
     const { picks, skipped } = recommendWithSkips(data.items, getTopics(), getEvents());
     recBox.replaceChildren(...(picks.length ? [el('section', { class: 'panel' },
-      el('h2', { text: '내 주제 세션' }),
-      el('p', { class: 'note', text: `${picks.length}곳${skipped ? ` · 시간이 겹쳐 ${skipped}곳 뺐다` : ''}` }),
-      el('ul', { class: 'stack' }, picks.map((s) => row(s, true))))] : []));
+      el('h2', { text: `내 주제 세션 ${picks.length}곳${skipped ? ` · 겹쳐 ${skipped}곳 뺌` : ''}` }),
+      el('ul', { class: 'stack' }, picks.slice(0, recShown).map((s) => row(s, true))),
+      picks.length > recShown ? el('button', { class: 'btn ghost wide', type: 'button', text: `더 보기 (${picks.length - recShown}곳 남음)`, onclick: () => { recShown += 4; draw(); } }) : null)] : []));
     list.replaceChildren(...(found.length ? found.slice(0, shown).map((s) => row(s, !!q)) : [el('li', { class: 'note', text: '맞는 세션이 없다. 다른 낱말로 찾는다.' })]),
-      ...(found.length > shown ? [el('li', {}, el('button', { class: 'btn ghost wide', type: 'button', text: `더 보기 (${found.length - shown}개 남음)`, onclick: () => { shown += 15; draw(); } }))] : []));
+      ...(found.length > shown ? [el('li', {}, el('button', { class: 'btn ghost wide', type: 'button', text: `더 보기 (${found.length - shown}개 남음)`, onclick: () => { shown += 10; draw(); } }))] : []));
   }
-  box.addEventListener('input', () => { q = box.value.trim(); shown = 10; draw(); });
+  box.addEventListener('input', () => { q = box.value.trim(); shown = 7; draw(); });
 
   draw();
   return el('div', { class: 'page' },
