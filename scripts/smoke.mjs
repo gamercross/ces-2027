@@ -504,6 +504,21 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       check(['Las Vegas Blvd', 'Paradise Rd', 'Desert Inn Rd', 'Convention Center Dr', 'Sierra Vista Dr', 'Elvis Presley Dr', 'North Rd', 'Joe W. Brown Dr'].every((n) => named.has(n)) && mapSrc.includes('roadLabels') && mapSrc.includes('boothRange(')
         && mf.hallOfNumber('14731', pl.boothRules.numbers)?.place === 'LVCC_N' && mf.hallOfNumber('30001', pl.boothRules.numbers)?.place === 'LVCC_S1' && mf.hallOfNumber('5000A', pl.boothRules.numbers)?.place === 'LVCC_W' && mf.hallOfNumber('2999', pl.boothRules.numbers) === null && mf.hallOfNumber('삼성', pl.boothRules.numbers) === null,
       '공식 LVCC 지도의 길 이름 여덟이 지도에 글자로 나오고, 홀 카드에 부스 번호 범위가 있으며, 회사 자료에 없는 부스 번호도 번호 범위로 어느 홀인지 알려 준다');
+      // 정식 배치도 자동 반영의 셈 (scripts/floorplan-lib.mjs · check-floorplan.mjs · import-booth-spots.mjs)
+      const fp = await import('../scripts/floorplan-lib.mjs');
+      const place = { k: 'T', poly: [[100, 200], [300, 200], [300, 260], [100, 260]] };
+      const got = fp.convert({ plan: { bbox: [0, 0, 1000, 300] }, booths: { A1: [0, 0], A2: [1000, 300], A3: [500, 150], B1: [2000, 150], bad: ['x', 1] } }, place);
+      const swapped = fp.convert({ booths: { A1: [0, 0], A2: [300, 1000] } }, place, { swap: true });
+      const merged = fp.merge({ about: 'x', edition: null, source: null, places: { OLD: { 1: [1, 2] }, T: { A1: [9, 9], Z: [5, 5] } } }, 'T', { A1: [1, 1] }, { edition: '2026-12-01', source: 'u' });
+      const cov = fp.coverage(['A1', 'A2', 'A2', 'A9'], { A1: [1, 1], A2: [2, 2] });
+      const text = '{ "k": "T", "c": "x", "boothSpots": "guess", "maps": {} },\n{ "k": "U", "boothSpots": "guess" }';
+      const marked = fp.markOfficial(text, 'T');
+      check(fp.parseValidHalls('var validHalls = [];') !== null && fp.parseValidHalls('validHalls = []').length === 0 && fp.parseValidHalls("validHalls = ['a', 'b']").join() === 'a,b' && fp.parseValidHalls('<p>없음</p>') === null && !fp.isOpen([]) && fp.isOpen(['LVCC_N']) && !fp.isOpen(null)
+        && got.spots.A1.join() === '100,200' && got.spots.A2.join() === '300,260' && got.spots.A3.join() === '200,230' && got.outside.join() === 'B1' && !('bad' in got.spots) && swapped.spots.A2.join() === '300,260' && merged.places.OLD[1].join() === '1,2' && merged.places.T.A1.join() === '1,1' && merged.places.T.Z.join() === '5,5' && merged.edition === '2026-12-01'
+        && cov.total === 3 && cov.have === 2 && cov.missing.join() === 'A9' && marked.includes('"boothSpots": "official"') && marked.split('official').length === 2 && fp.markOfficial(text, 'Q') === null,
+      '정식 배치도 자동 반영의 셈: validHalls 읽기 · 배치도 좌표를 장소 상자에 맞춰 옮기기(방향 바꿈 포함) · 벗어난 것 거르기 · booth-spots.json에 합치기 · 모자라는 부스 세기 · 한 장소만 official로 바꾸기');
+      const wf = await readFile(new URL('../.github/workflows/floorplan-watch.yml', import.meta.url), 'utf8');
+      check(wf.includes('cron:') && wf.includes('check-floorplan.mjs') && wf.includes("steps.plan.outputs.state == 'open'") && wf.includes('gh issue create') && wf.includes('issues: write') && wf.includes('gh issue list --label floorplan --state open'), '정식 배치도 감시: 매일 한 번 공식 사이트를 보고, 열렸을 때만 이슈 하나를 만든다(이미 열린 이슈가 있으면 또 만들지 않는다)');
       check(/startNav\(/.test(mapSrc) && /길 안내 시작/.test(mapSrc) && /function endNav/.test(mapSrc) && /navFollow/.test(mapSrc) && /map\/go|rest\[0\] === 'go'/.test(mapSrc) && /estimate\(/.test(mapSrc) && /\/\/ ---- 길 안내/.test(mapSrc),
         '길 안내: 카드의 "길 안내 시작" · 아래 띠(남은 거리 · 걷는 시간 · 방향 · 끝내기) · 걸으면 지도가 따라오고 손으로 끌면 멈춘다 · 다음 갈 곳에서도 시작한다(#/map/go/<회사>)');
       check(/pointerType|pointers\.size === 2/.test(gestSrc) && /DOUBLE_MS/.test(gestSrc) && /addEventListener\('wheel'/.test(gestSrc) && /requestAnimationFrame/.test(gestSrc) && /swallow/.test(gestSrc) && /sheet-grip/.test(sheetSrc) && /'half'/.test(sheetSrc) && /'full'/.test(sheetSrc) && /closed/.test(sheetSrc),

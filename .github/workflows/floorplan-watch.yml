@@ -1,0 +1,35 @@
+# 공식 전시사 검색의 정식 배치도가 열렸는지 매일 한 번 본다. 열리면 이슈를 하나 만들어 알린다(이미 열린 이슈가 있으면 또 만들지 않는다).
+# 부스의 진짜 자리는 배치도가 열려야 넣을 수 있다 (docs/정식배치도_넣는법.md). 사이트를 못 읽은 날은 "모름"으로 끝낸다.
+name: 정식 배치도 열렸나
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 2 * * *'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  watch:
+    name: 배치도 보기
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: 열렸는지 본다
+        id: plan
+        run: node scripts/check-floorplan.mjs
+
+      - name: 열렸으면 이슈로 알린다
+        if: steps.plan.outputs.state == 'open'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create floorplan --description "정식 배치도 열림" --color 6e7781 || true
+          if [ -z "$(gh issue list --label floorplan --state open --json number --jq '.[0].number')" ]; then
+            gh issue create --label floorplan \
+              --title "정식 배치도가 열렸다: 부스의 진짜 자리를 넣는다" \
+              --body "공식 전시사 검색(https://exhibitors.ces.tech/8_0/)의 홀 목록이 비어 있지 않다. docs/정식배치도_넣는법.md 차례로 부스 좌표를 받아 \`node scripts/import-booth-spots.mjs\`로 넣는다. 매일 보는 자동 확인이 연 이슈다."
+          fi
