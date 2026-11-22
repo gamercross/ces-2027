@@ -2,7 +2,7 @@
 // 쓰는 법: node scripts/smoke.mjs dist
 // 전시사 자료가 없으면(공식 사이트에서 받지 못한 날) 코어만 지어낸 색인으로 본다.
 
-import { readFile, appendFile, stat } from 'node:fs/promises';
+import { readFile, appendFile, stat , readdir} from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadCore } from '../web/core.js';
 
@@ -554,6 +554,25 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
   const lightVars = [...tokCss.split(':root[data-theme="dark"]')[0].matchAll(/--((?:bg|panel|panel-2|ink|ink-2|accent|on-accent|mint|peach|lilac|warn|map-[a-z]+|day-\d|group-[a-z]+|tab-[a-z]+(?:-soft)?))\s*:/g)].map((m) => m[1]);
   const lacking = lightVars.filter((v) => !darkVars.has(v));
   check(lacking.length === 0 && /--qr-bg/.test(tokCss) && !darkVars.has('qr-bg') && !darkVars.has('qr-ink'), `어둡게: 밝게의 색 ${lightVars.length}개가 모두 어둡게에도 있다 (빠진 것 ${lacking.join(' ') || '없음'}). QR 색은 어둡게에서도 그대로다`);
+  // 다시 짓기 8단계 디자인 마감: 제목 24px 한 줄 · 12px 글자 없음 · 두 겹 도크 없음(solo만 탭 위) · 링크 모양 회색 칩 없음 · 선택된 탭은 굵은 선 · 지도 머리 접기 · 카드가 열리면 아래 묶음 가림 · 종이 명함 질문은 동선 띠와 설정에만 · 첫 명함은 필수 둘 다음에 바로 단추.
+  {
+    const cardJs = await readFile(join(dist, 'views/card.js'), 'utf8');
+    const planJs = await readFile(join(dist, 'views/plan.js'), 'utf8');
+    const viewsDir = await readdir(join(dist, 'views'));
+    let linkChips = 0;
+    for (const f of viewsDir.filter((x) => x.endsWith('.js'))) linkChips += ((await readFile(join(dist, 'views', f), 'utf8')).match(/class: 'seg', href|class: 'chip-go', href/g) || []).length;
+    const dockRule = appCss.match(/(?:^|\n)\.dock \{[^}]*\}/)?.[0] || '';
+    const formStart = cardJs.indexOf("el('div', { class: 'field' }, el('span', { class: 'label', text: '나' }), tags)");
+    check(/--fs-title: calc\(24px \* var\(--scale-head\)\)/.test(tokCss) && /--fs-fine: calc\(13px \* var\(--scale\)\)/.test(tokCss)
+      && !/position: sticky/.test(dockRule) && /\.dock\.solo \{[^}]*position: sticky/.test(appCss) && linkChips === 0
+      && /\.tabs a\[aria-current="page"\] svg \{[^}]*stroke-width: 2\.[5-9]/.test(appCss)
+      && /body\[data-tab="map"\]:not\(\.sub\) \.brand \{ display: none; \}/.test(appCss) && mapV2.includes('find-tag') === false && (await readFile(join(dist, 'mapfind.js'), 'utf8')).includes('find-tag')
+      && appCss.includes('.mappage:has(.mapx[data-sheet="half"]') && /\.mapx-top \{[^}]*background: var\(--bg\)/.test(appCss)
+      && !cardJs.includes('paperPanel(showFrom),\n') && settingsJs.includes('paperPanel(showFrom)') && (await readFile(join(dist, 'bands.js'), 'utf8')).includes('종이 명함이 있나요?')
+      && formStart > 0 && cardJs.indexOf("class: 'dock'", formStart) > 0 && cardJs.indexOf("class: 'dock'", formStart) < cardJs.indexOf("field('한 줄 (선택)', line)", formStart)
+      && planJs.includes('부스 ${row[7].length}곳'),
+      '디자인 마감: 제목은 24px 한 줄 · 12px 글자가 없다(13px부터) · 아래 도크를 걷고 "일기 쓰기"만 탭 바로 위에 붙는다 · 링크 모양 회색 칩이 없다 · 선택된 탭은 굵은 선 · 지도 탭은 머리를 접고 "비공식"을 찾기 칸에 · 카드가 열리면 지도 아래 묶음을 가린다 · 종이 명함 질문은 동선 띠와 설정에만 · 첫 명함은 필수 둘 다음에 바로 단추 · 부스가 여럿인 회사는 카드에 모두 보인다');
+  }
   // 다시 짓기 7단계: 글자 크기 네 단계(기본 100 · 크게 115 · 더 크게 130 · 가장 크게 150%). 첫 그림 전에 걸리고, 제목은 상한, 지도 글자는 130%까지.
   {
     const scales = ['2', '3', '4'].map((n) => tokCss.match(new RegExp(':root\\[data-text="' + n + '"\\] \\{([^}]*)\\}'))?.[1] || '');

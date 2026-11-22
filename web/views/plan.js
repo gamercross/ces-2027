@@ -31,7 +31,8 @@ export async function render() {
   document.body.classList.remove('pcard-open');
   const meta = await getMeta();
   if (!meta) {
-    return el('section', { class: 'panel' }, el('h1', { text: '동선' }), el('p', { text: '전시사 자료를 아직 받지 못했다.' }));
+    return el('section', { class: 'panel' }, el('h1', { text: '동선' }), el('p', { text: '전시사 자료를 아직 받지 못했다. 인터넷에 닿으면 다시 열어 본다.' }),
+      el('div', { class: 'actions' }, el('button', { class: 'btn', type: 'button', text: '다시 열기', onclick: () => location.reload() }), el('a', { class: 'btn ghost', href: '#/map', text: '지도로' })));
   }
   const [data, places, info] = await Promise.all([getExhibitors(), getPlaces(), getInfo()]);
   const table = placeTable(places);
@@ -160,6 +161,8 @@ export async function render() {
         el('button', { class: 'btn ghost pcard-close', type: 'button', text: '닫기', onclick: () => shell.close() })),
       el('h2', { class: 'pcard-name', text: nameOf(id) }),
       el('p', { class: 'pcard-where', text: whereOf(id) }),
+      // 여러 부스가 있는 회사: 나머지 자리도 모두 보인다(지도 · 길 안내는 첫 부스 기준)
+      (row?.[7] || []).length > 1 ? el('p', { class: 'pcard-cats', text: `부스 ${row[7].length}곳: ${row[7].map((b) => { const sb = splitBooth(b); return `${table.get(sb.place)?.ko || sb.place} ${sb.code}`; }).join(' · ')}` }) : null,
       el('p', { class: 'card-tags' }, ...tagsOf(row), booth ? el('span', { class: 'tag', text: '자리 짐작' }) : null),
       cats ? el('p', { class: 'pcard-cats', text: cats }) : null,
       row ? el('div', { class: 'actions' },
@@ -373,7 +376,7 @@ export async function render() {
     undoBar,
     chipHolder,
     holder,
-    el('div', { class: 'segs', role: 'group', 'aria-label': '동선 더 보기' }, el('a', { class: 'seg', href: '#/rec', text: '추천' }), el('a', { class: 'seg', href: '#/days', text: '시간 · 내 일정' }), el('a', { class: 'seg', href: '#/sessions', text: '세션' })),
+    el('div', { class: 'row-actions', role: 'group', 'aria-label': '동선 더 보기' }, el('a', { href: '#/rec', text: '추천' }), el('a', { href: '#/days', text: '시간 · 내 일정' }), el('a', { href: '#/sessions', text: '세션' })),
     el('p', { class: 'note', text: '일정은 바뀔 수 있다 — 운영팀 안내가 먼저.' }),
     shell.node);
 }
