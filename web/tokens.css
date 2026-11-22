@@ -27,13 +27,18 @@
 
   /* 글꼴: 시스템 한글 고딕 하나 */
   --font: system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
-  --fs-title: 34px;
-  --fs-now: 24px;
-  --fs-h2: 18px;
-  --fs-body: 16px;
-  --fs-small: 14px;
-  --fs-note: 13px;
-  --fs-fine: 12px;
+  /* 글자 크기 네 단계(설정): 기본 100% · 크게 115% · 더 크게 130% · 가장 크게 150%. <html data-text="1|2|3|4">는 theme.js가 첫 그림 전에 건다.
+     제목은 배율을 다 받지 않고(--scale-head, 가장 크게도 125%까지), 지도 안 글자는 130%까지만 키운다(--scale-map). 누르는 곳(--tap)은 글자가 커져도 줄지 않는다. */
+  --scale: 1;
+  --scale-head: 1;
+  --scale-map: 1;
+  --fs-title: calc(34px * var(--scale-head));
+  --fs-now: calc(24px * var(--scale-head));
+  --fs-h2: calc(18px * var(--scale));
+  --fs-body: calc(16px * var(--scale));
+  --fs-small: calc(14px * var(--scale));
+  --fs-note: calc(13px * var(--scale));
+  --fs-fine: calc(12px * var(--scale));
   --lh: 1.55;
 
   /* 간격: 4 단위 */
@@ -89,6 +94,10 @@
   --group-ent: #b4a0c8;
   --group-biz: #8fb8bc;
 }
+
+:root[data-text="2"] { --scale: 1.15; --scale-head: 1.083; --scale-map: 1.15; }
+:root[data-text="3"] { --scale: 1.3; --scale-head: 1.167; --scale-map: 1.3; }
+:root[data-text="4"] { --scale: 1.5; --scale-head: 1.25; --scale-map: 1.3; }
 
 /* 어둡게: 순검정이 아닌 짙은 회색 바탕, 카드는 한 단계 밝은 회색. theme.js가 <html data-theme="dark|light">를 정한다(설정의 밝게 · 어둡게 · 자동). */
 :root[data-theme="dark"] {

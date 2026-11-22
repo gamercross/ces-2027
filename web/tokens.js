@@ -29,3 +29,10 @@ export const GROUP_COLORS = { ai: T.gAi, mob: T.gMob, rob: T.gRob, hea: T.gHea, 
 export const rgbOf = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 // #rrggbb + 투명도 → 'rgba(…)'
 export const withAlpha = (hex, a) => `rgba(${rgbOf(hex).join(',')},${a})`;
+
+// 글자 크기 단계가 지도 글자에 주는 배율(1 ~ 1.3). 지도는 캔버스 · SVG라 CSS 글자를 따르지 않아 불러올 때 읽는다.
+export function mapScale() {
+  if (typeof document === 'undefined' || !document.documentElement) return 1;
+  const v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--scale-map'));
+  return Number.isFinite(v) && v >= 1 && v <= 1.5 ? v : 1;
+}

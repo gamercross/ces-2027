@@ -25,6 +25,9 @@ export function save(name, value) {
 // 화면 테마: 'auto'(폰 설정 따름) · 'light' · 'dark'. theme.js가 첫 그림 전에 읽는다.
 export const getTheme = () => { const v = load('theme.v1', 'auto'); return v === 'light' || v === 'dark' ? v : 'auto'; };
 export const setTheme = (v) => save('theme.v1', v);
+// 글자 크기 네 단계(1 기본 · 2 크게 · 3 더 크게 · 4 가장 크게). 첫 그림 전에는 theme.js가 같은 열쇠를 읽는다.
+export const getTextSize = () => { const n = Number(load('text.v1', 1)); return n >= 1 && n <= 4 && Number.isInteger(n) ? n : 1; };
+export const setTextSize = (n) => save('text.v1', n);
 
 // 네 태그. 명함의 "나"와 일기의 "누구에게"에 쓴다.
 export const TAGS = [

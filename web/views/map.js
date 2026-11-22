@@ -19,7 +19,7 @@ import { markLabel, toggleMark } from '../alerts.js';
 import { getMarks, setMarks } from '../notify.js';
 import { getEvents } from '../store.js';
 import { routeThroughAisle } from '../indoor-path.js';
-import { T, withAlpha } from '../tokens.js';
+import { T, mapScale, withAlpha } from '../tokens.js';
 import { findBox } from '../mapfind.js';
 import { createSheet } from '../mapsheet.js';
 import { attachGestures } from '../mapgesture.js';
@@ -76,6 +76,7 @@ export async function render({ rest = [] } = {}) {
   const placeKo = new Map(places.places.map((p) => [p.k, p.ko]));
   const pad = (b, m) => [b[0] - m, b[1] - m, b[2] + m, b[3] + m];
   const all = pad(L.boxAll, 120);
+  const LABEL = MIN_FONT * mapScale(); // 글자 크기 단계가 크면 지도 글자도 130%까지 키운다
   let view = [...all];
 
   // ---- 늦게 받는 자료: 처음에는 장소(places)만으로 그린다. 홀로 가까이 가면 그 홀의 전시사 줄을 받는다.
@@ -192,9 +193,9 @@ export async function render({ rest = [] } = {}) {
     lastUnit = unit;
     for (const g of marks.children) g.querySelector('circle').setAttribute('r', (unit * (g.dataset.city ? 8 : 5)).toFixed(2));
     for (const g of pinLayer.children) {
-      g.querySelector('circle').setAttribute('r', (unit * 11).toFixed(2));
+      g.querySelector('circle').setAttribute('r', (unit * 11 * (LABEL / MIN_FONT)).toFixed(2));
       const t = g.querySelector('text');
-      t.setAttribute('font-size', (unit * MIN_FONT).toFixed(2));
+      t.setAttribute('font-size', (unit * LABEL).toFixed(2));
     }
     for (const node of routeLayer.children) node.setAttribute('stroke-width', node.dataset.today ? 4 : 2.5);
   }
@@ -253,32 +254,32 @@ export async function render({ rest = [] } = {}) {
     const marksOn = getMarks();
     const mine = new Map(pins.map((p) => [p.id, p]));
     if (level === 'campus') {
-      for (const c of L.campuses) { const x = (c.box[0] + c.box[2]) / 2; cs.push({ id: `c:${c.k}`, x: sx(x), y: sy(c.box[1] - 55), text: c.ko, size: 14, prio: 100, anchor: 'middle' }); }
+      for (const c of L.campuses) { const x = (c.box[0] + c.box[2]) / 2; cs.push({ id: `c:${c.k}`, x: sx(x), y: sy(c.box[1] - 55), text: c.ko, size: LABEL + 1, prio: 100, anchor: 'middle' }); }
     }
     for (const p of L.list) {
       if (!near(p.center[0], p.center[1], 40)) continue;
       const big = p.kind === 'hall' || p.kind === 'hotel';
       if (level === 'campus' && !big) continue;
       if (level !== 'campus' && !big && w > 900) continue;
-      cs.push({ id: `p:${p.k}`, x: sx(p.center[0]), y: sy(p.center[1]), text: shortName(p.ko), size: MIN_FONT, prio: big ? (level === 'hall' ? 60 : level === 'campus' ? 50 : 30) : 20, anchor: 'middle' });
+      cs.push({ id: `p:${p.k}`, x: sx(p.center[0]), y: sy(p.center[1]), text: shortName(p.ko), size: LABEL, prio: big ? (level === 'hall' ? 60 : level === 'campus' ? 50 : 30) : 20, anchor: 'middle' });
     }
     for (const r of roadLabels) {
       if (level === 'booth' || !near(r.x, r.z, 20)) continue;
-      cs.push({ id: `r:${r.name}:${r.x | 0}`, x: sx(r.x), y: sy(r.z), text: r.name, size: MIN_FONT, prio: 12, anchor: 'middle', road: true });
+      cs.push({ id: `r:${r.name}:${r.x | 0}`, x: sx(r.x), y: sy(r.z), text: r.name, size: LABEL, prio: 12, anchor: 'middle', road: true });
     }
     for (const c of L.city) {
       if (!near(c.center[0], c.center[1], 40)) continue;
-      cs.push({ id: `y:${c.k}`, x: sx(c.center[0]), y: sy(c.center[1]), text: c.ko, size: MIN_FONT, prio: 70, anchor: 'start', dx: 12 });
+      cs.push({ id: `y:${c.k}`, x: sx(c.center[0]), y: sy(c.center[1]), text: c.ko, size: LABEL, prio: 70, anchor: 'start', dx: 12 });
     }
     for (const m of places.landmarks) {
       if (level === 'campus') break;
       const at = landmarkAt(m);
       if (!at || !near(at[0], at[1], 40)) continue;
-      cs.push({ id: `m:${m.ko}`, x: sx(at[0]), y: sy(at[1]), text: m.ko, size: MIN_FONT, prio: 65, anchor: 'start', dx: 9 });
+      cs.push({ id: `m:${m.ko}`, x: sx(at[0]), y: sy(at[1]), text: m.ko, size: LABEL, prio: 65, anchor: 'start', dx: 9 });
     }
     if (level !== 'campus') {
       // 관심 · 동선 회사는 늘 이름이 보인다.
-      for (const p of pins) if (near(p.x, p.z, 60)) cs.push({ id: `n:${p.id}`, x: sx(p.x), y: sy(p.z), text: clip(p.name, 12), size: MIN_FONT, prio: 95, anchor: 'start', dx: 15, pin: true });
+      for (const p of pins) if (near(p.x, p.z, 60)) cs.push({ id: `n:${p.id}`, x: sx(p.x), y: sy(p.z), text: clip(p.name, 12), size: LABEL, prio: 95, anchor: 'start', dx: 15, pin: true });
     }
     if (level === 'hall') {
       // 홀 단계: 혁신상 · 명함 이벤트 · 한국 회사 가운데 큰 회사 이름 (겹치면 숨는다).
@@ -287,7 +288,7 @@ export async function render({ rest = [] } = {}) {
         const marked = !!marksOn[b.key];
         const prio = marked ? 80 : b.award & 2 ? 55 : b.award ? 45 : 0;
         if (!prio) continue;
-        cs.push({ id: `b:${b.key}`, x: sx(b.x), y: sy(b.z), text: clip(b.name, 12), size: MIN_FONT, prio, anchor: 'start', dx: 8, dot: true });
+        cs.push({ id: `b:${b.key}`, x: sx(b.x), y: sy(b.z), text: clip(b.name, 12), size: LABEL, prio, anchor: 'start', dx: 8, dot: true });
       }
     }
     if (level === 'booth') {
@@ -298,7 +299,7 @@ export async function render({ rest = [] } = {}) {
         const marked = !!marksOn[b.key];
         const prio = interest ? 90 : marked ? 80 : b.key === chosenBooth ? 85 : b.award & 2 ? 50 : b.award ? 40 : 10;
         const label = interest ? interest[1] : b.name;
-        cs.push({ id: `b:${b.key}`, x: sx(b.x), y: sy(b.z), text: `${b.code} ${clip(label, 9)}${b.n > 1 ? ` +${b.n - 1}` : ''}`, alts: [`${b.code} ${clip(label, 5)}`, b.code], size: MIN_FONT, prio, anchor: 'start', dx: 9 });
+        cs.push({ id: `b:${b.key}`, x: sx(b.x), y: sy(b.z), text: `${b.code} ${clip(label, 9)}${b.n > 1 ? ` +${b.n - 1}` : ''}`, alts: [`${b.code} ${clip(label, 5)}`, b.code], size: LABEL, prio, anchor: 'start', dx: 9 });
       }
     }
     return cs;
