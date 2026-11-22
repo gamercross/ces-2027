@@ -114,6 +114,7 @@ window.BOARD = {
     {f: 'req', id: 'rq_40', t: 'requirement', n: '회사마다 대화 칸', s: 'part', no: 'R40', kind: 'func', accept: '회사마다 "대화" 칸에 듣기 · 붙여넣기 · 손으로 대화를 넣고, 넣은 대화는 그 회사 일기 초안으로 이어진다. 폰에만 저장하고 파일로 내려받을 때 그 파일에 든 일기와 이어진 대화가 들어간다. 녹음은 가지 않는다.', verify: 'test', tests: ['scripts/smoke.mjs', 'scripts/browser-talk.mjs']},
     {f: 'req', id: 'rq_42', t: 'requirement', n: '화면은 짧고 깔끔하게, 테마 셋', s: 'done', no: 'R42', kind: 'nonfunc', accept: '화면마다 제목 한 줄 + 꼭 필요한 한두 줄, 폰에서 스크롤 서너 번 안. 밝게 · 어둡게 · 자동을 설정에서 고르고 무채색에 강조색 하나다. 360px에서 가로 넘침이 없고 누르는 곳은 44px 이상이다.', verify: 'test', tests: ['scripts/smoke.mjs'], ch: '11/22 · 폰 크기 전후 사진은 docs/screens · 11/22 무채색 테마(강조색 하나)'},
     {f: 'req', id: 'rq_46', t: 'requirement', n: '모은 일기 한 번에 정리 (앱 안)', s: 'done', no: 'R46', kind: 'func', accept: '일기 파일 여러 개를 한 번에 고르면 네 태그 × 회사 한 장이 나오고 한장.md로 받는다. 비행기 모드에서도 되고 폰에 남기지 않는다.', verify: 'test', tests: ['scripts/diary-wasm.mjs', 'scripts/browser-collect.mjs', 'scripts/smoke.mjs'], ch: '11/22 · 설정 > 모은 일기 열기(M2)'},
+    {f: 'req', id: 'rq_49', t: 'requirement', n: '일기 사진 한 장', s: 'done', no: 'R49', kind: 'func', accept: '일기에 사진 한 장을 폰에서 줄여 이 폰에 두고, 파일로 내보낼 때만 같이 넣는다. 한 장에는 "사진 있음"만.', verify: 'test', tests: ['scripts/browser-photo.mjs', 'scripts/diary-wasm.mjs', 'scripts/smoke.mjs'], ch: '11/22 · 긴 변 1024px · 150KB (M2)'},
     {f: 'req', id: 'rq_41', t: 'requirement', n: '대화 기록 붙여넣기', s: 'part', no: 'R41', kind: 'func', accept: '복사한 대화를 붙이면 줄마다 영어 / 한국어로 나누고 위 줄 · 아래 줄 짝을 지어 보인다. 짝을 못 지으면 한 덩어리로 둔다. 일기 초안의 들은 것은 상대가 한 영어 원문 줄만으로 채운다.', verify: 'test', tests: ['scripts/smoke.mjs', 'scripts/browser-talk.mjs'], ch: '11/22 · 번역 앱 말을 뺐다. 실제 폰 확인 전'},
     {f: 'parts', id: 'ba_me', t: 'bactor', n: '나 (연수에 가는 사람)', s: 'todo', d: '폰 하나로 준비하고 현장에서 쓴다'},
     {f: 'parts', id: 'ba_peer', t: 'bactor', n: '부스의 상대', s: 'todo', d: '영어로 묻고 듣는 상대. 녹음은 먼저 알린다'},
@@ -137,6 +138,7 @@ window.BOARD = {
     {f: 'parts', id: 'ac_core', t: 'acomp', n: '찾기 코어 (WASM)', s: 'done', c: 'crates/ces-core', d: '색인을 읽어 낱말로 찾는다'},
     {f: 'parts', id: 'ac_tool', t: 'acomp', n: '자료 도구 (ces-data)', s: 'done', c: 'crates/ces-data', d: '받기 · 줄이기 · 일기 정리 · 링크 살피기'},
     {f: 'parts', id: 'ac_diary', t: 'acomp', n: '일기 정리 코어 (WASM)', s: 'done', c: 'crates/ces-diary · web/diarycore.js · web/views/collect.js', d: '받은 일기 파일을 합쳐 네 태그 × 회사 한 장으로. 그 화면을 열 때만 받는다', ch: '11/22 · R46'},
+    {f: 'parts', id: 'ac_photo', t: 'acomp', n: '일기 사진 줄이기 · 담기', s: 'done', c: 'web/photo.js · web/photo-store.js · web/idb.js', d: '긴 변 1024px · 150KB 안으로 줄여 이 폰(IndexedDB)에만 둔다', ch: '11/22 · R49'},
     {f: 'parts', id: 'ts_store', t: 'tservice', n: '폰 저장', s: 'done', c: 'web/store.js', d: 'localStorage · IndexedDB'},
     {f: 'parts', id: 'ts_sw', t: 'tservice', n: '서비스 워커', s: 'done', c: 'web/sw.js · web/offline.js', d: '오프라인 · 새 판 안내 · 알림 누르기'},
     {f: 'parts', id: 'ts_phone', t: 'tservice', n: '폰이 가진 기능', s: 'part', d: '알림 · GPS · 말 · 녹음. 폰마다 다르다'},
@@ -200,12 +202,16 @@ window.BOARD = {
     ['ac_talk', 'rq_41', 'realization'],
     ['ac_speech', 'rq_26', 'realization'],
     ['ai_diary', 'rq_26', 'realization'],
+    ['ai_diary', 'rq_49', 'realization'],
     ['ai_talk', 'rq_27', 'realization'],
     ['ac_speech', 'rq_28', 'realization'],
     ['ai_plan', 'rq_42', 'realization'],
     ['ai_settings', 'rq_42', 'realization'],
     ['ac_diary', 'rq_46', 'realization'],
     ['ai_settings', 'rq_46', 'realization'],
+    ['ac_photo', 'rq_49', 'realization'],
+    ['ac_diary', 'rq_49', 'realization'],
+    ['ac_photo', 'ai_diary', 'serving'],
     ['ac_diary', 'ai_settings', 'serving'],
     ['ac_diary', 'ts_pages', 'serving'],
     ['ac_alerts', 'rq_38', 'realization'],
@@ -328,7 +334,7 @@ window.BOARD = {
     packages: [
       {id: 'p_people', row: 0, l: 'bus', n: '사람', d: '쓰는 사람과 마주치는 사람.', ids: ['ba_me', 'ba_peer', 'ba_lead']},
       {id: 'p_screens', row: 1, l: 'app', n: '화면', d: '주소(#/…)마다 그때 불러온다. 아래 탭은 지도 · 동선 · 일기 · 설정 넷이고 지도만 미리 받는다.', ids: ['ai_plan', 'ai_card', 'ai_people', 'ai_find', 'ai_map', 'ai_talk', 'ai_talkbox', 'ai_diary', 'ai_transit', 'ai_settings']},
-      {id: 'p_logic', row: 2, l: 'app', n: '화면 뒤의 셈', d: '화면과 따로 두어 Node에서도 시험한다.', ids: ['ac_route', 'ac_rec', 'ac_guide', 'ac_alerts', 'ac_speech', 'ac_talk', 'ac_core', 'ac_diary']},
+      {id: 'p_logic', row: 2, l: 'app', n: '화면 뒤의 셈', d: '화면과 따로 두어 Node에서도 시험한다.', ids: ['ac_route', 'ac_rec', 'ac_guide', 'ac_alerts', 'ac_speech', 'ac_talk', 'ac_core', 'ac_diary', 'ac_photo']},
       {id: 'p_phone', row: 3, l: 'tec', n: '폰', d: '폰이 가진 것만 쓴다. 키와 서버가 없다.', ids: ['ts_store', 'ts_sw', 'ts_phone']},
       {id: 'p_out', row: 3, l: 'tec', n: '바깥', d: '짓는 곳과 내주는 곳.', ids: ['ac_tool', 'ts_pages', 'ts_maps']}
     ],
@@ -353,6 +359,7 @@ window.BOARD = {
       ac_alerts: {name: '명함 알림', kind: '셈', one: '종이 명함과 이벤트 부스를 챙긴다', what: '물을 때인지, 오늘 몇 장인지, 가까운지 세는 셈과 알림 띄우기.', why: '명함을 넣어야 응모가 되는 부스가 있다.', how: ['앱을 열 때와 내 자리가 바뀔 때만 확인한다', '알림이 꺼져 있으면 화면의 띠로 보인다', '하루에 한 번만 알린다'], api: ['shouldAskPaper · cardsNeeded · nearMarks', 'checkAlerts · askPermission'], rules: ['서버가 없다. 푸시 구독을 쓰지 않는다', '이벤트 부스는 공식 자료가 아니라 사람이 표시한 것이다'], fails: ['권한 거부·앱 복귀·오프라인·중복 알림을 브라우저에서 시험했다', '실제 폰에서는 아직 확인하지 못했다'], files: ['web/alerts.js', 'web/notify.js']},
       ac_speech: {name: '말 기능', kind: '셈', one: '확인 뒤 영어 받아쓰기 모델을 받아 초안을 만든다', what: '폰 안 모델로 영어 받아쓰기를 한다.', why: '키도 서버도 없이 하려면 폰이 가진 것만 써야 한다.', how: ['폰에서 되는 기능과 안 되는 까닭을 보인다', '모델은 크기와 와이파이 안내를 보고 확인한 뒤 받는다 (약 45 MB)', '받아 적은 줄로 일기 초안을 만든다'], api: ['capabilities · speak · dictate', 'makeDraft · modeOf · allowedMode'], holds: ['고른 길과 확인 (speechMode.v1 · speechConsent.v1)', '녹음 (IndexedDB)'], rules: ['스스로 어디로도 보내지 않는다', '폰 안에서만 길에서는 폰 밖 목소리도 쓰지 않는다'], fails: ['데스크톱 Chromium 외 브라우저와 실제 폰은 미확인이다 (메모리)'], files: ['web/speech.js', 'web/speech-model.js', 'web/talk-ui.js', 'web/audio-store.js', 'data/speech-model.json'], ch: '2026-11-22 · 번역(영한 모델 포함)을 지웠다'},
       ac_core: {name: '찾기 코어 (WASM)', kind: '코어', one: '색인을 읽어 낱말로 찾는다', what: 'Rust로 쓴 작은 코어. 의존하는 것이 없다.', why: '폰에서도 전시사 수천 곳을 바로 찾게.', rules: ['첫 화면(지도)에 싣지 않는다. 찾기 칸에서 글자를 칠 때 불러온다'], files: ['crates/ces-core', 'web/core.js']},
+      ac_photo: {name: '일기 사진 줄이기 · 담기', kind: '셈', one: '사진 한 장을 폰에서 줄여 이 폰에만 둔다', what: '고른 사진을 긴 변 1024px · 150KB 안의 JPEG로 줄이고(화질 0.72 → 0.4, 그래도 크면 크기를 80%씩) 이 폰의 IndexedDB에 둔다. 글에는 크기 표시만 남는다.', why: '사진이 커서 글이 못 남거나 파일이 무거워지지 않게. 서버가 없다.', how: ['일기 쓰기 칸에서 고르면 바로 줄여 미리 보인다', '남기기를 누를 때 이 폰에 담고, 저장 공간이 모자라면 한 줄로 알리고 글도 남기지 않는다', '일기를 지우면 사진도 지운다'], rules: ['파일로 내려받을 때만 그 일기의 photo 칸으로 들어간다. 모으는 곳 주소로는 가지 않는다', '첫 화면에 싣지 않는다'], files: ['web/photo.js', 'web/photo-store.js', 'web/idb.js']},
       ac_diary: {name: '일기 정리 코어 (WASM)', kind: '코어', one: '받은 일기 파일을 네 태그 × 회사 한 장으로', what: 'Rust로 쓴 작은 코어(diary.wasm). 자료 도구의 sort-diary와 같은 코드라 한 장이 어긋나지 않는다.', why: '단톡방에서 받은 일기를 폰에서 바로 한 장으로 보려고. 서버가 없다.', how: ['설정 > 모은 일기 열기 화면에서 파일 여러 개를 한 번에 고른다', '같은 사람의 같은 일기는 한 번만 센다', '한 장은 화면에 나오고 한장.md로 내려받는다'], rules: ['첫 화면에 싣지 않는다. 그 화면을 열 때만 받는다(인터넷 없이 담아 두기는 한다)', '고른 파일과 한 장은 폰 저장소에 남기지 않는다', 'CI가 폰 코어의 한 장과 sort-diary의 한 장이 글자 하나까지 같은지 견준다'], files: ['crates/ces-diary', 'web/diarycore.js', 'web/views/collect.js', 'scripts/diary-wasm.mjs']},
       ac_tool: {name: '자료 도구 (ces-data)', kind: '도구', one: '지을 때 자료를 받아 줄인다', what: 'Rust 명령줄 도구. Actions에서 돈다.', why: '공식 자료를 받은 날짜와 함께 그대로 쓰려고.', api: ['build — 전시사 자료와 찾기 색인', 'check-places — 장소 자료 살피기', 'sort-diary — 모은 일기를 네 태그 한 장으로(코드는 ces-diary와 같은 것)', 'check-links — 출처 링크가 살아 있는지'], rules: ['공식 사이트에는 하루에 한 번만 묻는다'], files: ['crates/ces-data']},
       ts_store: {name: '폰 저장', kind: '저장', one: '내 것을 폰에만 둔다', what: 'localStorage(ces2027.*)와 IndexedDB(녹음).', why: '서버가 없다. 내 것은 내 폰에만.', rules: ['열쇠에 판 번호(v1)를 넣는다', '밖으로 보내는 길이 없다'], files: ['web/store.js', 'web/audio-store.js']},
@@ -390,7 +397,7 @@ window.BOARD = {
       {id: 'd_ces', st: 'site', n: 'CES 전시사 자료', one: '공식 검색에서 받아 줄인 것', shape: ['이름', '부스@장소', '분야', '나라', '혁신상', '공식 링크', '받은 날짜'], w: [['ac_tool', '지을 때 공식 전시사 검색에서 받는다 (홀마다 나눈 사본 data/halls/도 만든다)']], r: [['ai_find', '찾기 · 분야 · 추천'], ['ac_route', '동선'], ['ai_map', '지도: 홀로 가까이 갈 때 그 홀의 것만']], life: '자료를 새로 받을 때 판 이름(받은 날짜)이 바뀐다', never: '회사 소개 글은 설정(companyIntro)이 링크만이면 싣지 않는다'},
       {id: 'd_index', st: 'site', n: '찾기 색인', one: '낱말 → 전시사 줄 번호', shape: ['이름 낱말', '부스 · 장소 · 분야 · 나라 낱말', '한글 별칭'], w: [['ac_tool', '줄이면서 만든다']], r: [['ac_core', '읽고 찾는다']]},
       {id: 'd_places', st: 'site', n: '장소 자료', one: '홀 · 캠퍼스 모양과 구글맵 이름 · 주소', shape: ['캠퍼스 셋', '장소 31곳의 모양', '부스 → 장소 규칙', '구글맵 이름 · 주소', '부스 자리 짐작 표시', 'GPS 어림 자리(캠퍼스 · 홀 근처)'], w: [[null, 'data/places.json을 손으로 고친다 (공식 캠퍼스 지도 2026-09-29판)']], r: [['ac_tool', '부스에 장소 붙이기'], ['ai_map', '지도'], ['ac_guide', '길 안내 · 구글맵 주소']], life: '정식 배치도가 열리면 홀마다 짐작 표시를 고친다'},
-      {id: 'd_pool', st: 'hub', n: '모인 일기', one: '보내기를 누른 일기만', never: '보내지 않은 일기', w: [['ai_diary', '보내기를 누를 때 파일(ces-2027-diary 1판)로 내려온다']], r: [['ac_tool', 'sort-diary로 네 태그 한 장 초안을 만든다'], ['ac_diary', '폰의 "모은 일기 열기"가 같은 한 장을 화면에 낸다']], shape: ['별명 · 태그', '일기(날짜 · 회사 · 부스 · 본 것 · 느낀 점 · 누구에게)']}
+      {id: 'd_pool', st: 'hub', n: '모인 일기', one: '보내기를 누른 일기만', never: '보내지 않은 일기', w: [['ai_diary', '보내기를 누를 때 파일(ces-2027-diary 1판)로 내려온다']], r: [['ac_tool', 'sort-diary로 네 태그 한 장 초안을 만든다'], ['ac_photo', '사진이 든 파일도 깨지지 않고 읽는다(한 장에는 "사진 있음"만)'], ['ac_diary', '폰의 "모은 일기 열기"가 같은 한 장을 화면에 낸다']], shape: ['별명 · 태그', '일기(날짜 · 회사 · 부스 · 본 것 · 느낀 점 · 누구에게)']}
     ],
     flow: [
       {o: 'ac_tool', t: '받기', d: 'Rust 도구가 공식 자료를 받아 줄인다', dm: ['d_ces', 'd_index', 'd_places']},

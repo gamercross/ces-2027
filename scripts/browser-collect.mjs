@@ -30,7 +30,7 @@ async (page) => {
     const view = document.querySelector('#view');
     const tabs = document.querySelector('.tabs').getBoundingClientRect();
     const visible = (n) => { const r = n.getBoundingClientRect(); const s = getComputedStyle(n); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none'; };
-    const small = [...view.querySelectorAll('button, a.btn, a.pick, a.seg')].filter((n) => visible(n) && !n.closest('.coll-pick .coll-input')).filter((n) => { const r = n.getBoundingClientRect(); return r.height < 43.5 || r.width < 43.5; }).map((n) => `${n.className}:${Math.round(n.getBoundingClientRect().width)}x${Math.round(n.getBoundingClientRect().height)}`);
+    const small = [...view.querySelectorAll('button, a.btn, a.pick, a.seg')].filter((n) => visible(n) && !n.closest('.coll-pick .file-hidden')).filter((n) => { const r = n.getBoundingClientRect(); return r.height < 43.5 || r.width < 43.5; }).map((n) => `${n.className}:${Math.round(n.getBoundingClientRect().width)}x${Math.round(n.getBoundingClientRect().height)}`);
     const tiny = [...view.querySelectorAll('*')].filter((n) => visible(n) && n.childNodes.length && [...n.childNodes].some((c) => c.nodeType === 3 && c.textContent.trim()) && parseFloat(getComputedStyle(n).fontSize) < 12.5).length;
     window.scrollTo(0, document.documentElement.scrollHeight);
     const last = [...view.querySelectorAll('.page > *')].filter(visible).map((n) => n.getBoundingClientRect().bottom).sort((a, b) => b - a)[0] || 0;
@@ -72,7 +72,7 @@ async (page) => {
   const before = await snap();
 
   // 2. 파일 넷(일기 파일 셋 + 일기 파일이 아닌 것 하나)을 한 번에 고른다
-  await page.locator('.coll-input').setInputFiles([...FILES, JUNK]);
+  await page.locator('.file-hidden').setInputFiles([...FILES, JUNK]);
   await page.locator('.coll-summary:not([hidden])').waitFor();
   await settle();
   check(requested.some((u) => /diary\.wasm/.test(u)), 'diary.wasm은 파일을 고른 뒤에 받았다');
@@ -106,10 +106,10 @@ async (page) => {
   check(before.ls === after.ls && before.ss === after.ss && before.caches === after.caches && before.idb === after.idb, '고른 파일과 한 장은 폰 저장소(localStorage · sessionStorage · 캐시 · IndexedDB)에 아무것도 쓰지 않았다');
   check(!(await page.evaluate(() => JSON.stringify(Object.entries(localStorage)).includes('가짜'))), '폰 저장소 어디에도 가짜 별명이 없다');
   // 다시 고르면 처음 고른 것은 지워지고 새로 고른 것만 남는다
-  await page.locator('.coll-input').setInputFiles([FILES[1]]);
+  await page.locator('.file-hidden').setInputFiles([FILES[1]]);
   await settle(300);
   check(/^일기 2개 · 쓴 사람 1명/.test(await page.locator('.coll-summary').textContent()), '다시 고르면 앞에 고른 파일은 빠지고 새로 고른 것만 센다');
-  await page.locator('.coll-input').setInputFiles([JUNK]);
+  await page.locator('.file-hidden').setInputFiles([JUNK]);
   await settle(300);
   check((await page.locator('.coll-summary').isHidden()) && (await page.locator('.coll-co').count()) === 0 && /일기 파일을 읽지 못했다/.test(await page.locator('.collectpage [role=status]').first().textContent()), '일기 파일이 하나도 없으면 한 장을 보이지 않고 어떤 파일을 고를지 알려 준다');
   await shot('134-collect-none.png');
@@ -124,7 +124,7 @@ async (page) => {
       await page.goto(`${URL}#/collect`);
       await page.locator('.collectpage').waitFor();
       await settle(400);
-      await page.locator('.coll-input').setInputFiles([...FILES, JUNK]);
+      await page.locator('.file-hidden').setInputFiles([...FILES, JUNK]);
       await page.locator('.coll-summary:not([hidden])').waitFor();
       await settle(300);
       const r = await audit(`${W}px · 글자 ${n}단계`, W);
@@ -149,7 +149,7 @@ async (page) => {
   await page.context().setOffline(true);
   await page.evaluate(() => { location.hash = '#/collect'; });
   await page.locator('.collectpage').waitFor({ timeout: 10000 });
-  await page.locator('.coll-input').setInputFiles(FILES);
+  await page.locator('.file-hidden').setInputFiles(FILES);
   await page.locator('.coll-summary:not([hidden])').waitFor({ timeout: 10000 });
   check(/^일기 4개 · 쓴 사람 2명/.test(await page.locator('.coll-summary').textContent()) && !(await page.locator('.collectpage [role=status]').first().textContent()).includes('받지 못했다'), '인터넷을 끈 채로(비행기 모드) 파일을 고르면 한 장이 나온다');
   await shot('136-collect-offline.png');

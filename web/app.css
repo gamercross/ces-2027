@@ -464,7 +464,7 @@ a.link-text { display: inline-flex; align-items: center; min-height: var(--tap-m
 :root[data-text="3"] .where.clamp, :root[data-text="4"] .where.clamp { -webkit-line-clamp: 2; }
 
 /* ---- 모은 일기 열기 (R46): 받은 파일 → 네 태그 × 회사 한 장 ---- */
-.coll-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.file-hidden { position: fixed; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; overflow: hidden; clip-path: inset(50%); pointer-events: none; }
 .coll-pick { margin-top: var(--s3); }
 .coll-summary { font-size: var(--fs-small); font-weight: 700; }
 .coll-skipped { display: grid; gap: var(--s1); padding: 0; list-style: none; overflow-wrap: anywhere; }
@@ -481,3 +481,9 @@ a.link-text { display: inline-flex; align-items: center; min-height: var(--tap-m
 .coll-part li { font-size: var(--fs-body); overflow-wrap: anywhere; }
 .coll-actions { margin-top: var(--s3); }
 .coll-actions .btn { flex: 1 1 auto; }
+
+/* ---- 일기 사진 한 장 (R49): 쓰기 칸 · 카드 ---- */
+.photo { display: block; max-width: 100%; height: auto; border-radius: var(--radius-ctl); background: var(--panel-2); }
+.photo-field > * + * { margin-top: var(--s2); }
+.photo-field .row-actions { margin-top: var(--s2); }
+.photo-box > * + * { margin-top: var(--s2); }

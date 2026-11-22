@@ -991,6 +991,37 @@ if (await exists('data/meta.json')) {
     '모은 일기 화면은 고른 파일과 한 장을 폰에 남기지 않고, 받는 것은 diary.wasm 하나뿐이다');
 }
 
+// 일기 사진 한 장(R49): 폰에서 줄이고, 이 폰에만 두고, 파일로 내보낼 때만 넣는다.
+{
+  const read = (p) => readFile(join(dist, p), 'utf8');
+  const { fitSize, steps, MAX_EDGE, MAX_BYTES, MIN_EDGE } = await import('../web/photo.js');
+  const { bundle, asText } = await import('../web/diary.js');
+  const { isFull } = await import('../web/photo-store.js');
+  const big = fitSize(4032, 3024);
+  const tall = fitSize(3024, 4032);
+  const small = fitSize(600, 400);
+  const ladder = steps();
+  check(MAX_EDGE === 1024 && MAX_BYTES === 150 * 1024 && big.w === 1024 && big.h === 768 && tall.w === 768 && tall.h === 1024 && small.w === 600 && small.h === 400 && fitSize(0, 0).w === 0,
+    '일기 사진 줄이기: 긴 변 1024px 안으로 비율을 지켜 줄이고(4032x3024 → 1024x768) 작은 사진은 늘리지 않는다');
+  check(ladder[0].edge === 1024 && ladder[0].q === 0.72 && ladder.at(-1).edge >= MIN_EDGE && ladder.at(-1).q === 0.4 && ladder.every((s, i) => i === 0 || s.edge < ladder[i - 1].edge || s.q < ladder[i - 1].q),
+    `일기 사진 줄이기: 150KB 안에 들 때까지 화질(0.72 → 0.4) 다음 크기(80%, ${MIN_EDGE}px까지) 차례로 줄인다 (${ladder.length}단계)`);
+  const entry = { id: 'e1', date: '2027-01-06', company: 'A', saw: '본 것', for: ['stu'], photo: { bytes: 1, w: 1, h: 1 } };
+  const plain = bundle([entry], { nick: 'a' });
+  const withPhoto = bundle([entry], { nick: 'a' }, new Date(), null, { e1: 'data:image/jpeg;base64,QUJD' });
+  check(!('photo' in plain.entries[0]) && withPhoto.entries[0].photo === 'data:image/jpeg;base64,QUJD' && withPhoto.v === 1 && !JSON.stringify(plain).includes('bytes') && asText([entry], { nick: 'a' }, (k) => k).includes('사진 있음'),
+    '내보내기 파일: 사진은 주었을 때만 그 일기의 photo 칸으로 들어가고(판 번호는 그대로 1), 글로 복사에는 "사진 있음"만 적힌다');
+  check(isFull({ name: 'QuotaExceededError' }) && isFull({ code: 22 }) && !isFull(new Error('다른 오류')), '저장 공간이 모자란 오류를 알아본다');
+  const [diaryV, settingsV, idbJs, sw] = await Promise.all(['views/diary.js', 'views/settings.js', 'idb.js', 'sw.js'].map(read));
+  check(/bundle\(unsent, getProfile\(\)\);\s*\n\s*if \(sendTo\)/.test(diaryV) && diaryV.includes('talksFor(unsent, getTalks()), photos)') && settingsV.includes('talksFor(ready, getTalks(), true), photos)'),
+    '사진은 파일로 내려받을 때만 들어가고, 모으는 곳 주소로 보내는 묶음에는 없다');
+  check(diaryV.includes("await savePhoto(id, photoNew.blob)") && diaryV.includes('저장 공간이 모자라 사진을 못 담았다') && diaryV.includes('dropPhoto(e.id)') && idbJs.includes("indexedDB.open('ces2027', 2)") && idbJs.includes("'photo'"),
+    '일기 사진: 이 폰(IndexedDB)에 담고, 저장 공간이 모자라면 한 줄로 알리고, 일기를 지우면 사진도 지운다');
+  check(!/fetch\(|sendBeacon|XMLHttpRequest|innerHTML/.test((await Promise.all(['photo.js', 'photo-store.js'].map(read))).join('\n')), '사진 코드는 스스로 어디로도 보내지 않는다');
+  check(['"photo.js"', '"photo-store.js"', '"idb.js"'].every((f) => sw.includes(f)), '사진 코드는 인터넷 없이 담아 두는 목록에 있다');
+  const firstScreen = (await Promise.all(['app.js', 'store.js', 'data.js', 'offline.js', 'notify.js', 'alerts.js', 'dom.js', 'views/map.js', 'views/card.js'].map(read))).join('\n');
+  check(!/photo/.test(firstScreen), '사진 코드는 첫 화면에 싣지 않는다');
+}
+
 const table = ['무엇 | 본 것', '--- | ---', ...lines].join('\n');
 console.log(table);
 if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `### 지은 것 살피기\n\n${table}\n`);
