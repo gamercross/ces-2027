@@ -533,3 +533,6 @@ a.link-text { display: inline-flex; align-items: center; min-height: var(--tap-m
 .photo-field > * + * { margin-top: var(--s2); }
 .photo-field .row-actions { margin-top: var(--s2); }
 .photo-box > * + * { margin-top: var(--s2); }
+
+/* ---- 설정 "관심 회사 링크" 줄(R48): 오른쪽에 글자 단추 둘(복사 · 파일로) ---- */
+.setrow-btns { display: flex; flex: none; align-items: center; gap: var(--s1); }
