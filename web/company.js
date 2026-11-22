@@ -1,10 +1,9 @@
-// 회사 한 줄: 이름 · 혁신상 · 부스와 장소 · 나라 · 공식 링크 · 관심 단추 · 대화(듣기 · 붙여넣기 · 손으로, 일기 초안으로 이어짐) · 번역 앱 열기. 찾기와 분야 목록이 같이 쓴다.
+// 회사 한 줄: 이름 · 혁신상 · 부스와 장소 · 나라 · 공식 링크 · 관심 단추 · 대화(듣기 · 붙여넣기 · 손으로, 일기 초안으로 이어짐). 찾기와 분야 목록이 같이 쓴다.
 
 import { el, out } from './dom.js';
 import { hasInterest, toggleInterest } from './store.js';
 import { splitBooth } from './route.js';
 import { attachImage } from './company-image.js';
-import { translatorRow } from './translator-ui.js';
 
 // 같은 장소의 부스는 한 줄로 모은다.
 export function whereText(booths, placeKo) {
@@ -38,10 +37,6 @@ export function companyRow(row, data, placeKo, onChange) {
       booths.some((b) => placeKo.has(splitBooth(b).place)) ? el('a', { href: `#/map/at/${encodeURIComponent(id)}`, text: '지도' }) : null,
       el('a', { href: `#/talk/${encodeURIComponent(id)}`, text: '대화' }),
       out(data.link.replace('{id}', encodeURIComponent(id)), '공식')));
-  // 번역은 번역 앱으로 한다: 고른 글(없으면 회사 이름)을 복사해 두고 앱을 연다.
-  const tr = translatorRow(() => name);
-  li.querySelector('.row-actions').append(tr.button);
-  li.append(tr.note);
   attachImage(li, id, name, data);
   return li;
 }

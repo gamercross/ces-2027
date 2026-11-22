@@ -1,9 +1,8 @@
 // 물어보기: 앱 안에 이미 있는 자료를 한 칸에서 찾는다. 자주 묻는 것은 답을 미리 적어 두었다.
 // 서버도 열쇠도 없다. 자료는 폰에 담아 둔 것이라 인터넷 없이도 된다. 찾는 셈은 askall.js (화면과 따로).
-// 영어로 부스에서 묻는 화면 "물어볼 말"(#/ask)과는 다르다. 이 화면(#/q)은 앱 안 자료를 찾는다.
 
 import { el, num, out } from '../dom.js';
-import { getFinder, getInfo, getOnsite, getPhrases, getPlaces, getSeparate, getTransit } from '../data.js';
+import { getFinder, getInfo, getOnsite, getPlaces, getSeparate, getTransit } from '../data.js';
 import { mapsLink } from '../maps.js';
 import { buildEntries, companyHits, resolveBasis, searchAll } from '../askall.js';
 import { companyRow } from '../company.js';
@@ -49,7 +48,7 @@ function faqCard(item, docs) {
         el('span', { text: b.ko }),
         b.sources.length
           ? el('small', { class: 'proof wrap' }, `${mdOf(b.read)} 확인 · `, b.sources.flatMap((s, i) => [i ? ' · ' : '', out(s.url, s.ko)]))
-          : el('small', { class: 'proof wrap', text: b.app ? `${mdOf(b.read)} 확인 · 앱 안의 글` : '앱에 담아 둔 자료 (영어는 초안)' }))))),
+          : el('small', { class: 'proof wrap', text: b.app ? `${mdOf(b.read)} 확인 · 앱 안의 글` : '앱에 담아 둔 자료' }))))),
     el('div', { class: 'row-actions' }, item.links.map((l) => el('a', { href: l.to, text: l.ko }))));
 }
 
@@ -70,9 +69,9 @@ function cap(list, make) {
 }
 
 export async function render({ rest }) {
-  const [info, separate, phrases, sessions, faq, transit, onsite, places] = await Promise.all([getInfo(), getSeparate(), getPhrases(), getSessions(), getFaq().catch(() => ({ items: [] })), getTransit().catch(() => null), getOnsite().catch(() => null), getPlaces().catch(() => null)]);
-  const docs = { info, separate, phrases };
-  const entries = buildEntries({ info, separate, phrases, sessions, transit, onsite, places });
+  const [info, separate, sessions, faq, transit, onsite, places] = await Promise.all([getInfo(), getSeparate(), getSessions(), getFaq().catch(() => ({ items: [] })), getTransit().catch(() => null), getOnsite().catch(() => null), getPlaces().catch(() => null)]);
+  const docs = { info, separate };
+  const entries = buildEntries({ info, separate, sessions, transit, onsite, places });
 
   const input = el('input', { type: 'search', inputmode: 'search', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', placeholder: '배지, 셔틀, 삼성, 가격', 'aria-label': '앱 안 자료에서 찾을 말' });
   const results = el('div', { class: 'page' });
@@ -148,7 +147,7 @@ export async function render({ rest }) {
   return el('div', { class: 'page' },
     el('section', { class: 'panel' },
       el('h1', { text: '물어보기' }),
-      el('p', { class: 'lead' }, '앱 안 자료에서만 찾는다. 인터넷 없이도 된다. 영어로 묻는 말은 ', el('a', { href: '#/ask', text: '물어볼 말' }), '.'),
+      el('p', { class: 'lead', text: '앱 안 자료에서만 찾는다. 인터넷 없이도 된다.' }),
       note),
     results,
     // 한 손으로 닿게 찾기 칸을 아래에 붙여 둔다.

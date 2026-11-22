@@ -15,7 +15,6 @@ const VIEWS = {
   diary: () => import('./views/diary.js'),
   topics: () => import('./views/topics.js'),
   days: () => import('./views/days.js'),
-  ask: () => import('./views/ask.js'),
   q: () => import('./views/askall.js'),
   listen: () => import('./views/listen.js'),
   apply: () => import('./views/apply.js'),
@@ -24,15 +23,13 @@ const VIEWS = {
   sessions: () => import('./views/sessions.js'),
   onsite: () => import('./views/onsite.js'),
   talk: () => import('./views/talk.js'),
-  translate: () => import('./views/translate.js'),
-  deep: () => import('./views/deep.js'),
   settings: () => import('./views/settings.js'),
   info: () => import('./views/info.js'),
 };
-const TAB_OF = { '': 'home', find: 'find', plan: 'plan', map: 'map', diary: 'diary', topics: 'topics', days: 'plan', ask: 'find', listen: 'diary', apply: 'home', transit: 'home', sessions: 'plan', onsite: 'home', talk: 'find', translate: 'home', deep: 'home', settings: 'home', info: 'home' };
+const TAB_OF = { '': 'home', find: 'find', plan: 'plan', map: 'map', diary: 'diary', topics: 'topics', days: 'plan', listen: 'diary', apply: 'home', transit: 'home', sessions: 'plan', onsite: 'home', talk: 'find', settings: 'home', info: 'home' };
 
 // 메인 틀: 아래 탭은 다섯(홈 · 회사 · 동선 · 지도 · 일기). 주제 판은 회사 탭 아래에 선다.
-// 탭이 아닌 화면(명함 · 시간과 일정 · 물어볼 말 …)은 위에 "뒤로"가 생기고, 돌아갈 곳은 TAB_OF의 탭이다.
+// 탭이 아닌 화면(명함 · 시간과 일정 · 듣기 …)은 위에 "뒤로"가 생기고, 돌아갈 곳은 TAB_OF의 탭이다.
 TAB_OF.topics = 'find';
 const ROOTS = new Set(['', 'find', 'plan', 'map', 'diary']);
 for (const k of Object.keys(VIEWS)) frame.views.add(k);

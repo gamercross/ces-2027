@@ -1,4 +1,4 @@
-// Playwright CLI test for R39 ~ R41 (번역 앱 · 대화 칸 · 붙여넣기). 360 x 740 폰 크기.
+// Playwright CLI test for R40 ~ R41 (대화 칸 · 붙여넣기) and the removal of the translation screens (2026-11-22). 360 x 740 폰 크기.
 // Run with: playwright-cli open about:blank
 //           playwright-cli run-code "$(cat scripts/browser-talk.mjs)"
 // The app must be served from a stamped dist at http://127.0.0.1:47130/ (exhibitors.json 자료가 있는 지은 것).
@@ -30,34 +30,20 @@ async (page) => {
   await page.reload();
   const first = await page.evaluate(async () => { const d = await (await fetch('data/exhibitors.json')).json(); return { id: d.ex[0][0], name: d.ex[0][1] }; });
 
-  // 1. 번역 앱 준비
-  await page.goto(`${URL}#/translate`);
-  await page.getByRole('heading', { name: '번역 앱 준비' }).waitFor();
-  const prepText = await page.locator('#view').innerText();
-  check(['파파고', '구글 번역', '오프라인 팩', '플레이 스토어', '앱 스토어', '공식 도움말'].every((w) => prepText.includes(w)), '번역 앱 준비: 두 앱의 깔기 · 한국어 영어 오프라인 팩 · 공식 도움말이 보인다');
-  await page.getByLabel('파파고 앱을 깔았다').check();
-  await page.reload();
-  await page.getByRole('heading', { name: '번역 앱 준비' }).waitFor();
-  check(await page.getByLabel('파파고 앱을 깔았다').isChecked(), '번역 앱 준비: 체크가 폰에 남는다');
-  await page.getByLabel('번역 앱에 넘길 글').fill('얼마예요?');
-  await page.getByRole('button', { name: '파파고로 열기' }).click();
-  const c1 = await page.evaluate(() => window.__calls);
-  check(c1.some((c) => c[0] === 'copy' && c[1] === '얼마예요?') && c1.some((c) => c[0] === 'open' && c[1].startsWith('https://papago.naver.com/?sk=ko&tk=en&st=')), '번역 앱 열기: 글을 복사해 두고 파파고를 연다 (데스크톱 브라우저라 웹 번역 주소)');
-  await noSideScroll('번역 앱 준비');
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}55-translate-prep.png`, fullPage: false });
+  // 1. 번역 화면은 없다 (번역 앱 준비 · 물어볼 말 · 깊은 설정은 2026-11-22에 지웠다)
+  for (const gone of ['translate', 'ask', 'deep']) {
+    await page.goto(`${URL}#/${gone}`);
+    await page.getByRole('heading', { name: '없는 화면이다' }).waitFor();
+  }
+  check(true, '번역 앱 준비 · 물어볼 말 · 깊은 설정 주소는 "없는 화면이다"로 열린다');
 
   // 2. 회사 카드
   await page.goto(`${URL}#/find`);
   await page.locator('input[type=search]').fill(first.name);
   await page.locator('#view .hits li').first().waitFor();
   const row = page.locator('#view .hits li').first();
-  check(await row.getByRole('link', { name: '대화' }).count() === 1 && await row.getByRole('button', { name: '번역 앱' }).count() === 1, '회사 카드: "대화"와 "번역 앱" 단추가 있다');
-  await page.evaluate(() => { window.__calls = []; });
-  await row.getByRole('button', { name: '번역 앱' }).click();
-  const c2 = await page.evaluate(() => window.__calls);
-  check(c2.some((c) => c[0] === 'copy') && c2.some((c) => c[0] === 'open'), '회사 카드: 번역 앱을 누르면 복사하고 연다');
+  check(await row.getByRole('link', { name: '대화' }).count() === 1 && await row.getByRole('button', { name: '번역 앱' }).count() === 0, '회사 카드: "대화" 단추가 있고 "번역 앱" 단추는 없다');
   await noSideScroll('회사 카드');
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}56-company-translator.png` });
 
   // 3. 대화 칸: 붙여넣기 → 나누기 → 일기 초안
   await page.goto(`${URL}#/talk/${encodeURIComponent(first.id)}`);
@@ -88,8 +74,8 @@ async (page) => {
   await page.getByRole('heading', { name: /한 덩어리/ }).waitFor();
   await page.getByRole('button', { name: '비우기' }).click();
   await page.getByRole('button', { name: '손으로', exact: true }).click();
-  await page.getByLabel('원문', { exact: true }).fill('Nice to meet you');
-  await page.getByLabel('번역', { exact: true }).fill('만나서 반갑습니다');
+  await page.getByLabel('들은 말이나 한 말', { exact: true }).first().fill('Nice to meet you');
+  check(await page.getByLabel('번역', { exact: true }).count() === 0, '손으로 넣기: 번역 칸이 없다');
   await page.getByRole('button', { name: '줄 넣기' }).click();
   await page.getByRole('heading', { name: '넣을 대화 1줄' }).waitFor();
   await page.getByRole('button', { name: '대화만 저장' }).click();
@@ -105,19 +91,12 @@ async (page) => {
   const file = JSON.parse(Buffer.concat(chunks).toString('utf8'));
   check(file.talks?.length === 2 && file.entries.length === 1 && !JSON.stringify(file).includes('audio') && !('talkId' in file.entries[0]), '내보내기 파일에 일기와 대화가 들어 있고 녹음은 없다');
 
-  // 6. 영한 모델은 앞 화면에서 권하지 않고 깊은 설정에 있다
-  await page.goto(`${URL}#/ask`);
-  await page.getByRole('heading', { name: '물어볼 말' }).waitFor();
-  const askText = await page.locator('#view').innerText();
-  check(!askText.includes('영한 번역 모델 받기') && askText.includes('번역 앱 열기') && askText.includes('깊은 설정'), '물어볼 말: 영한 번역 모델 받기를 권하지 않고 "번역 앱 열기"와 깊은 설정 링크가 있다');
-  await noSideScroll('물어볼 말');
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}59-ask-translator.png` });
+  // 6. 듣기에는 번역 칸이 없다
   await page.goto(`${URL}#/listen`);
   await page.getByRole('heading', { name: '듣기' }).waitFor();
-  check(!(await page.locator('#view').innerText()).includes('영한 번역 모델 받기'), '듣기: 영한 번역 모델 받기를 권하지 않는다');
-  await page.goto(`${URL}#/deep`);
-  await page.getByRole('heading', { name: '깊은 설정' }).waitFor();
-  check((await page.locator('#view').innerText()).includes('폰 안 영한 번역 모델'), '깊은 설정: 폰 안 영한 번역 모델 칸이 있다 (기본 꺼짐)');
-  await noSideScroll('깊은 설정');
+  const listenText = await page.locator('#view').innerText();
+  check(!/번역|한국어로|물어볼 말|깊은 설정/.test(listenText) && listenText.includes('받아쓰기') && listenText.includes('손으로 적기'), '듣기: 번역 · 한국어로 · 물어볼 말 · 깊은 설정이 없고 받아쓰기와 손으로 적기는 있다');
+  await noSideScroll('듣기');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}60-listen.png` });
   return checks.map((c) => `됨 | ${c.what}`).join('\n');
 }
