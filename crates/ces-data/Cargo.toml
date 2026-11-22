@@ -7,5 +7,6 @@ publish.workspace = true
 
 [dependencies]
 ces-core = { path = "../ces-core" }
+ces-diary = { path = "../ces-diary" }
 serde_json = "1"
 ureq = "3"

@@ -53,9 +53,13 @@ jobs:
         run: |
           cargo build --release --locked -p ces-data
           cargo build --release --locked -p ces-core --target wasm32-unknown-unknown
+          cargo build --release --locked -p ces-diary --target wasm32-unknown-unknown
 
       - name: 장소 자료 살피기
         run: target/release/ces-data check-places
+
+      - name: 폰의 일기 정리(diary.wasm)가 자료 도구와 같은 한 장을 만드는지 견주기
+        run: node scripts/diary-wasm.mjs target/wasm32-unknown-unknown/release/ces_diary.wasm target/release/ces-data
 
       - name: 날짜
         id: day
@@ -163,6 +167,7 @@ jobs:
           cp -R web/. dist/
           cp data/info.json data/categories.json data/places.json data/booth-spots.json data/indoor-paths-guess.json data/transit.json config/settings.json dist/data/
           cp target/wasm32-unknown-unknown/release/ces_core.wasm dist/core.wasm
+          cp target/wasm32-unknown-unknown/release/ces_diary.wasm dist/diary.wasm
           # 보드(/board/)와 테스터 안내(/testers/). 앱이 미리 받지 않는 곳이다.
           mkdir -p dist/board
           cp docs/board/index.html docs/board/board-data.js docs/board/board.single.html dist/board/
