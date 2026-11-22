@@ -23,8 +23,6 @@
   /* 탭마다 강조색 하나 (홈 · 회사 · 동선 · 지도 · 일기). 위는 글자 · 단추 색, soft는 면 색. 모두 차분한 파스텔 계열 */
   --tab-home: #56679a;
   --tab-home-soft: #dfe4f2;
-  --tab-find: #356f67;
-  --tab-find-soft: #d3e8e2;
   --tab-plan: #9a4d62;
   --tab-plan-soft: #f0dbe0;
   --tab-map: #7d6420;
@@ -114,8 +112,6 @@
   --accent-soft: #2c3560;
   --tab-home: #9fb0ea;
   --tab-home-soft: #2c3560;
-  --tab-find: #7fd0c2;
-  --tab-find-soft: #23473f;
   --tab-plan: #f0a3b6;
   --tab-plan-soft: #4d2f3a;
   --tab-map: #e3c36f;
@@ -155,7 +151,7 @@
 }
 
 /* 탭마다 강조색: app.js가 <body data-tab>을 정한다 */
-body[data-tab="find"] { --accent: var(--tab-find); --accent-soft: var(--tab-find-soft); }
+body[data-tab="settings"] { --accent: var(--tab-home); --accent-soft: var(--tab-home-soft); }
 body[data-tab="plan"] { --accent: var(--tab-plan); --accent-soft: var(--tab-plan-soft); }
 body[data-tab="map"] { --accent: var(--tab-map); --accent-soft: var(--tab-map-soft); }
 body[data-tab="diary"] { --accent: var(--tab-diary); --accent-soft: var(--tab-diary-soft); }

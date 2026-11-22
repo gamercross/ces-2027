@@ -9,6 +9,7 @@ import { markLabel, toggleMark } from '../alerts.js';
 import { getMarks, setMarks } from '../notify.js';
 import { fillDays, nextStop, placeTable, sortRoute, splitBooth } from '../route.js';
 import { mapsLink } from '../maps.js';
+import { alertBands } from '../bands.js';
 import { mergeItems, planCode, planCsv, planMd, planText, readCode, shareLink } from '../share.js';
 
 function download(name, text, type) {
@@ -35,6 +36,7 @@ export async function render() {
   const days = [...info.show.days.map((d, i) => ({ key: i + 1, ko: d.ko, hours: d.hours, date: d.date })), { key: 0, ko: '날짜 미정', hours: '', date: null }];
 
   const holder = el('div', { class: 'page' });
+  const nowHolder = el('div', { class: 'page' });
   const status = el('p', { class: 'note', role: 'status' });
 
   // at: 그 곳을 볼 때쯤(분). null이면 그 날 쓸 시간 밖이다. undefined면 시간을 보이지 않는다(날짜 미정).
@@ -96,7 +98,7 @@ export async function render() {
     if (!list.length) {
       sections.push(el('section', { class: 'panel' },
         el('p', { text: '관심 회사를 고르면 동선이 생긴다.' }),
-        el('div', { class: 'actions' }, el('a', { class: 'btn', href: '#/find', text: '회사 고르기' }))));
+        el('div', { class: 'actions' }, el('a', { class: 'btn', href: '#/map', text: '지도에서 회사 찾기' }))));
     }
     const next = nextStop(list);
     if (!list.length) {
@@ -107,8 +109,8 @@ export async function render() {
       const place = placeOf(next.id);
       const route = mapsLink(places, place, 'directions');
       const day = days.find((d) => d.key === (next.day || 0));
-      sections.push(el('section', { class: 'panel next' },
-        el('h2', { text: '다음 갈 곳' }),
+      sections.push(el('section', { class: 'panel next now' },
+        el('p', { class: 'note', text: '지금 갈 곳' }),
         el('p', { class: 'big', text: row ? row[1] : '자료에서 빠진 회사' }),
         el('p', { class: 'note', text: [day?.ko, booth ? `${place ? place.ko : '장소 모름'} · 부스 ${splitBooth(booth).code} (자리는 짐작)` : '부스 미정'].filter(Boolean).join(' · ') }),
         el('div', { class: 'actions' },
@@ -120,7 +122,7 @@ export async function render() {
             draw();
           } }))));
     } else {
-      sections.push(el('section', { class: 'panel next' }, el('h2', { text: '다음 갈 곳' }), el('p', { text: '동선의 회사를 다 봤다.' })));
+      sections.push(el('section', { class: 'panel next now' }, el('p', { class: 'note', text: '지금 갈 곳' }), el('p', { text: '동선의 회사를 다 봤다.' })));
     }
     // 내 일정 한 줄.
     const eventRow = (e) => {
@@ -173,6 +175,9 @@ export async function render() {
         el('h2', { text: `전시 밖 일정 ${others.length}개` }),
         el('ol', { class: 'stops' }, others.map((e) => eventRow({ ...e, name: `${e.date.slice(5).replace('-', '/')} ${e.name}` })))));
     }
+    // 지금 갈 곳은 맨 위 한 줄로 따로 둔다.
+    const first = sections[0]?.classList.contains('now') ? sections.shift() : null;
+    nowHolder.replaceChildren(...(first ? [first] : []));
     holder.replaceChildren(...sections);
   }
 
@@ -248,10 +253,12 @@ export async function render() {
   draw();
   return el('div', { class: 'page' },
     incoming,
+    nowHolder,
     el('section', { class: 'head' },
       el('h1', { text: '동선' }),
       el('p', { class: 'lead', text: '일정은 바뀔 수 있다 — 운영팀 안내가 먼저. 걷는 차례는 짐작이다.' })),
-    el('div', { class: 'segs' }, el('a', { class: 'seg', href: '#/days', text: '시간 · 내 일정' }), el('a', { class: 'seg', href: '#/sessions', text: '세션' })),
+    alertBands(info.show.from),
+    el('div', { class: 'segs' }, el('a', { class: 'seg', href: '#/rec', text: '추천' }), el('a', { class: 'seg', href: '#/days', text: '시간 · 내 일정' }), el('a', { class: 'seg', href: '#/sessions', text: '세션' })),
     el('label', { class: 'field' }, el('span', { class: 'label', text: '하루에 볼 곳' }), limitSelect),
     status,
     holder,

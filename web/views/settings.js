@@ -1,7 +1,9 @@
-// 설정: 화면 테마(밝게 · 어둡게 · 자동) · 알림 · 인터넷 없이 쓰기. 짧게, 한 묶음에 한 가지.
+// 설정: 명함 · 화면 테마(밝게 · 어둡게 · 자동) · 알림 · 인터넷 없이 쓰기 · 내보내기. 짧게, 한 묶음에 한 가지.
 
-import { el } from '../dom.js';
-import { getTheme, setTheme } from '../store.js';
+import { el, num, out } from '../dom.js';
+import { getInfo, getMeta } from '../data.js';
+import { getDiary, getProfile, getTalks, getTheme, setTheme, tagKo } from '../store.js';
+import { bundle, fileName, talksFor } from '../diary.js';
 import { offline } from '../offline.js';
 import { alerts, askPermission, checkAlerts } from '../notify.js';
 
@@ -43,7 +45,7 @@ function notifyBox() {
   window.addEventListener('ces-alerts', paint);
   return el('section', { class: 'panel' }, el('h2', { text: '알림' }), state,
     el('p', { class: 'note', text: '일정이 30분 안에 시작할 때 · 명함 낼 부스가 가까울 때. 앱이 열려 있을 때만 알린다.' }),
-    el('p', { class: 'note', text: alerts.state === 'denied' || alerts.state === 'unsupported' ? '대신 첫 화면에 띠로 보인다. 아이폰은 홈 화면에 추가한 뒤에 켤 수 있다.' : '아이폰은 홈 화면에 추가한 뒤에 켤 수 있다.' }),
+    el('p', { class: 'note', text: alerts.state === 'denied' || alerts.state === 'unsupported' ? '대신 동선 탭 위에 띠로 보인다. 아이폰은 홈 화면에 추가한 뒤에 켤 수 있다.' : '아이폰은 홈 화면에 추가한 뒤에 켤 수 있다.' }),
     error, el('div', { class: 'actions' }, button));
 }
 
@@ -71,8 +73,52 @@ function offlineBox() {
     el('div', { class: 'actions' }, button), version);
 }
 
+// 명함: 이 폰에만 남는다. 만들기 · 고치기는 명함 화면에서.
+function cardBox() {
+  const profile = getProfile();
+  return el('section', { class: 'panel' },
+    el('h2', { text: '명함' }),
+    profile
+      ? el('p', {}, el('b', { text: profile.nick }), ' ', el('span', { class: 'tag mint', text: tagKo(profile.tag) }))
+      : el('p', { class: 'note', text: '아직 명함이 없다.' }),
+    el('div', { class: 'actions' }, el('a', { class: 'btn', href: '#/card', text: profile ? '명함 보기 · 고치기' : '명함 만들기' })));
+}
+
+// 내보내기: 일기 전부와 폰에 있는 대화를 파일 하나로. 녹음은 어느 때도 들어가지 않는다.
+function exportBox() {
+  const status = el('p', { class: 'note', role: 'status' });
+  const ready = getDiary().filter((e) => !e.draft);
+  const button = el('button', { class: 'btn', type: 'button', text: '일기 · 대화 전부 파일로', disabled: ready.length === 0, onclick: () => {
+    const text = JSON.stringify(bundle(ready, getProfile(), new Date(), talksFor(ready, getTalks(), true)), null, 2);
+    const url = URL.createObjectURL(new Blob([text], { type: 'application/json;charset=utf-8' }));
+    const a = el('a', { href: url, download: fileName(getProfile()) });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    status.textContent = `일기 ${ready.length}개와 폰에 있는 대화를 파일로 내보냈다.`;
+  } });
+  return el('section', { class: 'panel' },
+    el('h2', { text: '내보내기' }),
+    el('p', { class: 'note', text: ready.length ? `다듬어 남긴 일기 ${ready.length}개와 대화를 한 파일로. 녹음은 안 간다.` : '내보낼 일기가 아직 없다.' }),
+    el('div', { class: 'actions' }, button), status);
+}
+
+// 자료: 어디서 언제 받은 것인지. 공식 출처와 받은 날짜는 늘 화면에 보인다.
+async function dataBox() {
+  const [meta, info] = await Promise.all([getMeta().catch(() => null), getInfo().catch(() => null)]);
+  const md = (read) => { const [, m, d] = String(read || '').split('-'); return m ? `${Number(m)}/${Number(d)}` : ''; };
+  return el('section', { class: 'panel' },
+    el('h2', { text: '자료' }),
+    meta
+      ? el('p', {}, `전시사 ${num(meta.exhibitors)}곳 · 받은 날 ${meta.v} · `, out('https://exhibitors.ces.tech/8_0/', 'CES 공식 전시사 검색'))
+      : el('p', { class: 'note', text: '전시사 자료를 아직 받지 못했다.' }),
+    info ? el('p', { class: 'note' }, `날짜와 시간 · 오가는 법: ${md(info.show.source.read)} 확인 · `, out(info.show.source.url, '출처')) : null,
+    el('p', { class: 'note', text: '부스 자리는 정식 배치도 전이라 홀 안은 짐작이다.' }));
+}
+
 export async function render() {
   return el('div', { class: 'page' },
     el('section', { class: 'head' }, el('h1', { text: '설정' })),
-    themeBox(), notifyBox(), offlineBox());
+    cardBox(), themeBox(), notifyBox(), offlineBox(), exportBox(), await dataBox());
 }

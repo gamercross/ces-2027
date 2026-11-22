@@ -5,6 +5,19 @@ const FILES = [/*__FILES__*/];
 const PREFIX = 'ces2027-';
 const CACHE = PREFIX + VERSION;
 
+// 2026-11-22에 지운 폰 안 영한 번역 모델이 폰에 남긴 것(약 250MB)을 비운다.
+// 받아쓰기 모델의 파일은 건드리지 않는다: 번역 모델의 주소(opus-mt-en-ko)와 단어 사전(vendor/translate/)만 지운다.
+const OLD_TRANSLATION = ['/opus-mt-en-ko', '/vendor/translate/'];
+async function dropTranslation() {
+  for (const name of ['ces2027keep-speech-v1', 'transformers-cache']) {
+    try {
+      if (!(await caches.has(name))) continue;
+      const cache = await caches.open(name);
+      for (const request of await cache.keys()) if (OLD_TRANSLATION.some((part) => request.url.includes(part))) await cache.delete(request);
+    } catch { /* 지우지 못해도 앱은 그대로 쓴다 */ }
+  }
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);
@@ -18,6 +31,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const names = await caches.keys();
     await Promise.all(names.filter((name) => name.startsWith(PREFIX) && name !== CACHE).map((name) => caches.delete(name)));
+    await dropTranslation();
     await self.clients.claim();
   })());
 });

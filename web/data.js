@@ -26,12 +26,7 @@ export const getCategories = () => cached('categories', () => getJson('data/cate
 // 정식 배치도에서 옮긴 부스 자리. 없거나 비어 있으면 모든 자리가 짐작이다.
 export const getOfficialSpots = () => cached('officialSpots', () => getJson('data/booth-spots.json').catch(() => ({ places: {} })));
 export const getIndoorPaths = () => cached('indoorPaths', () => getJson('data/indoor-paths-guess.json'));
-// CES 배지와 따로 신청하는 곳 · 자율주행 이동 (공식 출처만). 첫 화면을 그린 뒤에 읽는다.
-export const getSeparate = () => cached('separate', () => getJson('data/separate.json'));
-export const getOnsite = () => cached('onsite', () => getJson('data/onsite.json'));
 export const getTransit = () => cached('transit', () => getJson('data/transit.json'));
-// 팀이 같이 쓰는 주제. 없거나 비어 있으면 각자 만든다.
-export const getTeamTopics = () => cached('teamTopics', () => getJson('data/topics.json').catch(() => ({ topics: [] })));
 
 // 찾기: 코어(WASM) + 색인 + 전시사 + 장소 이름.
 export const getFinder = () => cached('finder', async () => {

@@ -1,14 +1,14 @@
-// 오가는 법: CES 공식 셔틀의 노선 · 다니는 시간 · 타는 곳. 묶음마다 칩 하나(한 번에 한 묶음), 카드마다 출처와 확인한 날짜.
+// 오가는 법(지도 탭 아래): 캠퍼스 사이 오가는 법과 CES 공식 셔틀의 노선 · 다니는 시간 · 타는 곳. 묶음마다 칩 하나(한 번에 한 묶음), 카드마다 출처와 확인한 날짜.
 // 2027 안내에서 읽지 못한 줄은 "확인 필요"로 두고 짐작해서 채우지 않는다. 자료는 data/transit.json.
 
 import { el, out } from '../dom.js';
-import { getPlaces } from '../data.js';
+import { getInfo, getPlaces } from '../data.js';
 import { counts, GROUPS, STATUS_KO, stopLink, timetable } from '../transit.js';
 
 const md = (date) => { const [, m, d] = date.split('-').map(Number); return `${m}/${d}`; };
 
 export async function render() {
-  const [data, places] = await Promise.all([fetch('data/transit.json').then((r) => { if (!r.ok) throw new Error(`transit ${r.status}`); return r.json(); }), getPlaces()]);
+  const [data, places, info] = await Promise.all([fetch('data/transit.json').then((r) => { if (!r.ok) throw new Error(`transit ${r.status}`); return r.json(); }), getPlaces(), getInfo()]);
   const groups = GROUPS.filter((g) => data.lines.some((l) => g.kinds.includes(l.kind)));
   let now = groups[0].k;
 
@@ -43,8 +43,12 @@ export async function render() {
     el('section', { class: 'head' },
       el('h1', { text: '오가는 법' }),
       el('p', { class: 'lead', text: `CES 공식 셔틀 · ${data.service.ko}. ${data.badge}` })),
+    el('section', { class: 'panel' },
+      el('h2', { text: '캠퍼스 사이' }),
+      el('ul', { class: 'stack' }, info.moving.map((m) => el('li', {}, el('b', { text: m.ko }), el('span', { text: ` ${m.what}` })))),
+      el('p', { class: 'proof wrap' }, `${md(info.movingSource.read)} 확인 · `, out(info.movingSource.url, '출처'))),
     tabs, body,
     el('section', { class: 'foot' },
       el('p', { text: `${md(data.read)} 공식 교통 안내에서 읽었다. 라스베이거스 시간이다. 읽지 못한 줄은 "확인 필요"다.` }),
-      el('p', {}, out(data.guide.url, data.guide.ko), ' · ', out(data.flyer.url, data.flyer.ko), ' · ', el('a', { href: '#/apply', text: '자율주행은 따로 신청' }))));
+      el('p', {}, out(data.guide.url, data.guide.ko), ' · ', out(data.flyer.url, data.flyer.ko))));
 }

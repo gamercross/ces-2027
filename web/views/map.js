@@ -19,6 +19,7 @@ import { getMarks, setMarks } from '../notify.js';
 import { getEvents } from '../store.js';
 import { routeThroughAisle } from '../indoor-path.js';
 import { T, DAY_COLORS, withAlpha } from '../tokens.js';
+import { findBox } from '../mapfind.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const FILL = { hall: T.hall, room: T.room, out: T.out, hotel: T.hotel };
@@ -611,6 +612,7 @@ export async function render({ rest = [] } = {}) {
   paintLegend();
 
   const page = el('div', { class: 'page' },
+    findBox(),
     el('section', { class: 'panel' },
       el('h1', { text: '지도' }),
       frame,
@@ -622,10 +624,11 @@ export async function render({ rest = [] } = {}) {
         el('button', { class: 'seg', type: 'button', text: '작게', 'aria-label': '지도 작게', onclick: () => (solid.getAttribute('aria-pressed') === 'true' ? three?.zoom(1.25) : zoom(1.4)) })),
       el('div', { class: 'segs', role: 'group', 'aria-label': '부스 점 칠하기' }, colorButtons),
       legendBox,
+      el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: '#/transit', text: '셔틀 · 오가는 법' })),
       el('p', { class: 'note', text: `부스 자리는 짐작이다 (${places.edition}판, 정식 배치도 전). 붉은 테두리는 명함 넣는 부스.` }),
       pins.length
         ? el('p', { class: 'note', text: `번호는 동선 차례, 색은 날짜: ${info.show.days.map((d, i) => `${d.ko.split(' ')[0]} ${['분홍', '파랑', '초록', '노랑'][i]}`).join(' · ')}.` })
-        : el('p', { class: 'note' }, '관심 회사를 넣으면 번호로 찍힌다. ', el('a', { href: '#/find', text: '회사 고르기' }))),
+        : el('p', { class: 'note', text: '위 찾기 칸에서 회사를 찾아 관심에 넣으면 번호로 찍힌다.' })),
     detail,
     mePanel);
   // 화면에 붙은 뒤에야 크기를 알 수 있다.
