@@ -338,6 +338,7 @@ body.pcard-open { overflow: hidden; }
 .result { display: grid; gap: 2px; width: 100%; min-height: 56px; padding: var(--s2) var(--s3); border: 0; border-radius: var(--radius-ctl); background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
 .result:hover, .result:focus-visible { background: var(--panel-2); outline: none; }
 .result b { font-size: calc(16px * var(--scale)); overflow-wrap: anywhere; }
+.result.session b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .result span { font-size: var(--fs-small); color: var(--ink-2); }
 .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
 .chips::-webkit-scrollbar { display: none; }
@@ -534,9 +535,6 @@ a.link-text { display: inline-flex; align-items: center; min-height: var(--tap-m
 .setrow-hint { font-size: var(--fs-small); color: var(--warn); font-weight: 700; overflow-wrap: anywhere; }
 .setrow-hint[hidden] { display: none; }
 .setrow-hint:empty { display: none; }
-/* 한 줄에 글자 단추 둘(갈 곳 목록: 문서로 · 표로, 시간 · 일정 파일: 불러오기 · 내보내기) */
-.setrow-pair { display: flex; flex: none; align-items: center; }
-.setrow-pair .pick { padding: 0 var(--s2); }
 .setgroup { display: grid; gap: var(--s2); }
 .setgroup .label { margin: 0; }
 .stop.preview { grid-template-columns: 1fr; padding: 0; }
@@ -573,3 +571,8 @@ a.link-text { display: inline-flex; align-items: center; min-height: var(--tap-m
 .photo-box > * + * { margin-top: var(--s2); }
 /* 글자가 커지면 회사 카드의 날짜 칩은 두 줄로 접는다("날짜 없음"이 옆으로 숨지 않게) */
 :root[data-text="3"] .pcard .segs, :root[data-text="4"] .pcard .segs { flex-wrap: wrap; overflow: visible; }
+
+/* ---- 설정 "관심 회사 링크" 줄(R48): 오른쪽에 글자 단추 둘(복사 · 파일로) ---- */
+.setrow-btns { display: flex; flex: none; align-items: center; gap: var(--s1); }
+/* 같은 꼴의 줄 둘(갈 곳 목록: 문서로 · 표로, 시간 · 일정 파일: 불러오기 · 내보내기)도 이 모양을 쓴다. 글자 단추 둘이 360px 한 줄에 들게 옆 여백을 줄인다 */
+.setrow-btns .pick { padding: 0 var(--s2); }

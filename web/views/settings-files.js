@@ -24,7 +24,7 @@ function download(name, text, type) {
 
 const line = (label, state, ...buttons) => el('li', { class: 'setrow' },
   el('div', { class: 'setrow-main' }, el('b', { text: label }), el('span', { class: 'setrow-state', text: state })),
-  el('span', { class: 'setrow-pair' }, buttons));
+  el('span', { class: 'setrow-btns' }, buttons));
 
 // 갈 곳 목록: 날마다 회사 · 부스 · 장소를 문서(마크다운)나 표(CSV) 파일로.
 function planRows() {

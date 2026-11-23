@@ -85,3 +85,13 @@ export function planCsv(items, days, byId, placeKo, data) {
   }
   return t;
 }
+
+// 관심 회사의 공식 전시사 쪽 링크를 줄마다 글로(R48). 현장에서 공식 앱의 실내 길 안내를 쓰고 싶은 사람이 공식 플래너에 손으로 담을 때 쓴다.
+// 우리 앱은 로그인하지 않는다: 이 글은 공식 쪽으로 어디에도 보내지 않고, 복사하거나 파일로 내려받을 뿐이다.
+// 한 줄 = "회사 이름 — 주소". 자료에서 빠진 회사는 건너뛴다. items는 관심 목록([{ id }]), byId는 id → 전시사 줄, link는 주소 꼴({id} 자리가 있다).
+export function officialLinks(items, byId, link, dataDate) {
+  const rows = items.map((it) => byId.get(it.id)).filter(Boolean);
+  const lines = rows.map((r) => `${r[1]} — ${link.replace('{id}', encodeURIComponent(r[0]))}`);
+  const head = `CES 2027 관심 회사 ${rows.length}곳의 공식 전시사 쪽 링크 (자료 ${dataDate}에 받음)`;
+  return { count: rows.length, text: rows.length ? `${head}\n${lines.join('\n')}\n` : '' };
+}

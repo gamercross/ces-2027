@@ -2,11 +2,12 @@
 // 명함 · 알림 · 인터넷 없이 · 저장 공간 · 내보내기 · 자료. 폰 안에서만 일어나고 밖으로 보내지 않는다.
 
 import { el, num, out } from '../dom.js';
-import { getInfo, getMeta } from '../data.js';
+import { getExhibitors, getInfo, getMeta } from '../data.js';
 import { clearMine, getDiary, getInterests, getProfile, getTalks, getTextSize, getTheme, setTextSize, setTheme, tagKo } from '../store.js';
 import { getPeople } from '../people-store.js';
 import { dropAllAudio } from '../audio-store.js';
 import { bundle, fileName, talksFor } from '../diary.js';
+import { officialLinks } from '../share.js';
 import { offline } from '../offline.js';
 import { alerts, askPermission, checkAlerts, getPaper } from '../notify.js';
 import { paperPanel } from './card.js';
@@ -249,6 +250,34 @@ function mineRow(shell) {
     el('button', { class: 'pick', type: 'button', id: 'mine-open', text: '지우기', 'aria-label': '이 폰의 내 자료 지우기', onclick: (ev) => { shell.open([], ev.currentTarget); first(); } }));
 }
 
+// 회사 링크(R48): 관심 회사의 공식 주소: 줄마다 "회사 이름 — 주소"를 글로 복사하거나 파일로 내려받는다. 로그인하지 않고 폰 안에서만 만든다.
+// 전시사 자료는 첫 화면에 싣지 않으므로 단추를 누를 때 받는다.
+function linksRow() {
+  const n = getInterests().length;
+  const status = el('p', { class: 'setrow-hint', role: 'status', hidden: true });
+  const make = async () => {
+    const [data, meta] = await Promise.all([getExhibitors(), getMeta().catch(() => null)]);
+    return officialLinks(getInterests(), new Map(data.ex.map((r) => [r[0], r])), data.link, meta?.v || '');
+  };
+  const say = (t) => { status.textContent = t; status.hidden = false; };
+  const copy = el('button', { class: 'pick', type: 'button', text: '복사', 'aria-label': '관심 회사 공식 링크 복사', disabled: n === 0, onclick: async () => {
+    try { const r = await make(); await navigator.clipboard.writeText(r.text); say(`${r.count}곳의 링크를 복사했다.`); } catch { say('복사하지 못했다. "파일로"를 쓴다.'); }
+  } });
+  const file = el('button', { class: 'pick', type: 'button', text: '파일로', 'aria-label': '관심 회사 공식 링크 파일로', disabled: n === 0, onclick: async () => {
+    try {
+      const r = await make();
+      const url = URL.createObjectURL(new Blob([r.text], { type: 'text/plain;charset=utf-8' }));
+      const a = el('a', { href: url, download: 'ces2027-관심회사-공식링크.txt' });
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      say(`${r.count}곳의 링크를 파일로 내보냈다.`);
+    } catch { say('링크를 만들지 못했다. 전시사 자료가 폰에 없을 수 있다.'); }
+  } });
+  return [row('회사 링크', n ? `관심 회사 ${n}곳의 공식 주소` : '관심 회사가 아직 없다', el('span', { class: 'setrow-btns' }, copy, file)), el('li', { class: 'setrow-more' }, status)];
+}
+
 // 종이 명함: 있는지 · 없으면 QR 명함으로 대신. 묻는 곳은 여기 한 곳뿐이다(갈 곳 탭의 띠와 QR 화면에는 두지 않는다).
 function paperRow(shell, showFrom) {
   const { s, main } = rowState('종이 명함');
@@ -299,7 +328,7 @@ export async function render() {
   window.addEventListener('hashchange', () => shell.close(), { once: true });
   const showFrom = (await getInfo().catch(() => null))?.show.from || '2027-01-06';
   const list = el('ul', { class: 'setlist' },
-    ...cardRow(), paperRow(shell, showFrom), ...notifyRow(), offlineRow(), ...storageRow(), ...exportRow(), ...fileRows(), mineRow(shell), permissionRows(), await dataRow(shell));
+    ...cardRow(), paperRow(shell, showFrom), ...notifyRow(), offlineRow(), ...storageRow(), ...exportRow(), ...fileRows(), ...linksRow(), mineRow(shell), permissionRows(), await dataRow(shell));
   return el('div', { class: 'page listpage settingspage' },
     el('section', { class: 'head' }, el('h1', { text: '설정' })),
     sizeBox(),

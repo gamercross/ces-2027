@@ -297,6 +297,32 @@ check(diary.fileName(who, new Date(2027, 0, 7)) === 'ces2027-일기-물개-20270
     `전시사 목록: ${doc.ex.length}곳 이름순(A ~ Z, 숫자 · 기호는 맨 끝 #), 혁신상 ${award.length} · 한국 ${korea.length} · 노스 ${inNorth.length}곳 부스 번호순, 이름 · 부스 번호로 거르기, 위치 묶음 ${groups.length}개가 모든 장소를 덮는다`);
 }
 
+// 세션 거르기 칩(기조연설 · 생중계 · 내 일정 · 분야 묶음)과 지도 찾기 칸의 세션 줄: 진짜 세션 자료로.
+{
+  const SS = await import('../web/sessions.js');
+  const MF = await import('../web/mapfind.js');
+  const doc = SS.clean(await json('data/sessions.json'));
+  const cats = await json('data/categories.json');
+  const items = doc.items;
+  const groups = SS.topicGroups(items, cats.groups);
+  const covered = new Set(groups.flatMap((g) => g.topics));
+  const allTopics = new Set(items.flatMap((s) => s.topics || []));
+  const key = SS.filterSessions(items, { keynote: true });
+  const live = SS.filterSessions(items, { live: true });
+  const one = items.find((s) => s.topics?.length);
+  const mine = SS.filterSessions(items, { mine: true }, [SS.asEvent(one)]);
+  const mob = groups.find((g) => g.k === 'mob');
+  const inMob = SS.filterSessions(items, { topics: mob.topics });
+  const both = SS.filterSessions(items, { keynote: true, topics: mob.topics });
+  const hits = MF.sessionHits(items, 'robot', SS.search);
+  check(key.length > 0 && key.every(SS.isKeynote) && live.length > 0 && live.every((s) => s.live) && mine.length === 1 && mine[0].id === one.id
+    && inMob.length === mob.n && inMob.every((s) => s.topics.some((t) => mob.topics.includes(t))) && both.length <= Math.min(key.length, inMob.length)
+    && [...allTopics].every((t) => covered.has(t)) && groups.at(-1).k === 'etc' && groups[0].ko === cats.groups[0].ko
+    && hits.length === 2 && hits.every((h) => /robot/i.test(`${h.session.title} ${h.session.topics.join(' ')} ${h.session.track}`) && /^세션 · \d+\/\d+ \d\d:\d\d · /.test(h.sub)) && hits[0].session.date <= hits[1].session.date
+    && MF.sessionHits(items, '로봇', SS.search).length === 0 && MF.sessionHits(items, 'ai', SS.search).length === 0,
+    `세션 거르기: 기조연설 ${key.length} · 생중계 ${live.length} · 내 일정 · 분야 묶음 ${groups.length}개(${groups.map((g) => `${g.ko} ${g.n}`).join(' · ')})가 모든 주제를 덮고, 지도 찾기 칸은 영어 낱말이면 세션을 두 줄까지 이른 차례로 보인다`);
+}
+
 // 부스까지 길 안내.
 {
   const G = await import('../web/guide.js');
@@ -1074,6 +1100,22 @@ if (await exists('data/meta.json')) {
   check(['"photo.js"', '"photo-store.js"', '"idb.js"'].every((f) => sw.includes(f)), '사진 코드는 인터넷 없이 담아 두는 목록에 있다');
   const firstScreen = (await Promise.all(['app.js', 'store.js', 'data.js', 'offline.js', 'notify.js', 'alerts.js', 'dom.js', 'views/map.js', 'views/card.js'].map(read))).join('\n');
   check(!/photo/.test(firstScreen), '사진 코드는 첫 화면에 싣지 않는다');
+}
+
+// 회사 링크(R48): 관심 회사의 공식 주소를 줄마다 글로. 로그인하지 않고 어디로도 보내지 않는다.
+{
+  const read = (p) => readFile(join(dist, p), 'utf8');
+  const { officialLinks } = await import('../web/share.js');
+  const byId = new Map([['A1', ['A1', 'Alpha Robotics']], ['B/2', ['B/2', 'Beta 가나']]]);
+  const link = 'https://exhibitors.ces.tech/8_0/exhibitor/exhibitor-details.cfm?exhid={id}';
+  const r = officialLinks([{ id: 'B/2' }, { id: 'NOPE' }, { id: 'A1' }], byId, link, '2026-11-22');
+  const lines = r.text.trim().split('\n');
+  check(r.count === 2 && lines.length === 3 && lines[0] === 'CES 2027 관심 회사 2곳의 공식 전시사 쪽 링크 (자료 2026-11-22에 받음)' && lines[1] === 'Beta 가나 — https://exhibitors.ces.tech/8_0/exhibitor/exhibitor-details.cfm?exhid=B%2F2' && lines[2].startsWith('Alpha Robotics — ') && officialLinks([], byId, link, 'x').text === '',
+    '회사 링크: 관심 목록 차례로 줄마다 "회사 이름 — 공식 주소"이고, 자료에서 빠진 회사는 건너뛰고, 주소의 id는 인코딩하고, 관심이 없으면 빈 글이다');
+  const settingsV = await read('views/settings.js');
+  const linksFn = settingsV.slice(settingsV.indexOf('function linksRow'), settingsV.indexOf('// 종이 명함: 있는지'));
+  check(linksFn.includes("row('회사 링크'") && linksFn.includes('navigator.clipboard.writeText') && linksFn.includes('ces2027-관심회사-공식링크.txt') && /make = async \(\) => \{\s*const \[data, meta\] = await Promise\.all\(\[getExhibitors\(\)/.test(linksFn) && !/fetch\(|sendBeacon|XMLHttpRequest|innerHTML|window\.open|location/.test(linksFn),
+    '설정의 "회사 링크": 복사 · 파일로 둘이고, 전시사 자료는 누를 때만 받고, 로그인하거나 어디로 보내는 코드가 없다');
 }
 
 const table = ['무엇 | 본 것', '--- | ---', ...lines].join('\n');
