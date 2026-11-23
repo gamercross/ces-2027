@@ -87,7 +87,7 @@ async function checkAlertsNow() {
       const tail = noPaper ? ' 종이 명함이 없으면 앱의 QR 명함을 보여 준다.' : '';
       if (alerts.needs.length && fresh(sent, 'morning', today)) {
         const names = alerts.needs.slice(0, 3).map((n) => n.name).join(' · ') + (alerts.needs.length > 3 ? ' …' : '');
-        if (await notify(`오늘 명함 ${alerts.needs.length}장 필요`, `오늘 동선에 명함 넣는 이벤트 부스가 있다: ${names}.${tail}`, 'ces-cards-today', noPaper ? '#/card' : '#/plan')) {
+        if (await notify(`오늘 명함 ${alerts.needs.length}장 필요`, `오늘 갈 곳에 명함 넣는 이벤트 부스가 있다: ${names}.${tail}`, 'ces-cards-today', noPaper ? '#/card' : '#/plan')) {
           sent.morning = today;
           if (!save('alerts.v1', sent)) {
             alerts.fallback = true;

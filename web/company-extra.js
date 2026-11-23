@@ -1,5 +1,5 @@
-// 회사 카드에 더하는 두 줄 묶음: "부스 자리마다 한 줄"과 "이 회사 세션".
-// 지도의 회사 카드와 동선의 회사 카드가 같이 쓴다. 줄 모양은 `.pick-row`(높이 56px 이상, 줄 전체가 눌린다).
+// 회사 카드에 더하는 두 줄 묶음: "부스 자리마다 한 줄"과 "이 회사 강연"(공식 일정의 세션).
+// 지도의 회사 카드와 갈 곳의 회사 카드가 같이 쓴다. 줄 모양은 `.pick-row`(높이 56px 이상, 줄 전체가 눌린다).
 
 import { el } from './dom.js';
 import { getSessions } from './data.js';
@@ -40,22 +40,31 @@ const partyIndex = () => (indexOnce ||= Promise.all([getSessions(), import('./se
 
 const FIRST = 3;
 
-// 이 회사 세션: 제목 + 때 · 날짜 · 곳. 줄을 누르면 공식 세션 쪽이 열린다.
-// 자료를 받는 동안과 맞는 세션이 없을 때(또는 일정을 받아 두지 못했을 때)는 숨겨 둔다.
-export function sessionBlock(companyName) {
-  const box = el('section', { class: 'card-sessions', hidden: true, 'aria-label': '이 회사 세션' });
+// 이 회사 강연: 제목 + 때 · 날짜 · 곳. 줄을 누르면 공식 세션 쪽이 열린다.
+// 자료를 받는 동안과 맞는 강연이 없을 때(또는 일정을 받아 두지 못했을 때)는 숨겨 둔다.
+// compact(갈 곳의 회사 카드): 누르는 줄 없이 한 칸에 "이 회사 강연 n개"와 때 · 곳만 보인다(둘까지, 나머지는 강연 일정에서).
+export function sessionBlock(companyName, { compact = false } = {}) {
+  const box = el('section', { class: compact ? 'card-sessions compact' : 'card-sessions', hidden: true, 'aria-label': '이 회사 강연' });
   partyIndex().then(({ S, index }) => {
     const list = S.forCompany(index, companyName);
     if (!list.length) return;
+    if (compact) {
+      box.replaceChildren(
+        el('p', { class: 'sessions-title', text: `이 회사 강연 ${list.length}개` }),
+        ...list.slice(0, 2).map((s) => el('p', { class: 'note', text: S.whenWhere(s) })),
+        ...(list.length > 2 ? [el('p', { class: 'note', text: `외 ${list.length - 2}개는 강연 일정에서 본다` })] : []));
+      box.hidden = false;
+      return;
+    }
     let all = false;
     const paint = () => {
       const shown = all ? list : list.slice(0, FIRST);
       box.replaceChildren(
-        el('p', { class: 'label', text: `이 회사 세션 ${list.length}개 · 라스베이거스 시각` }),
+        el('p', { class: 'label', text: `이 회사 강연 ${list.length}개 · 라스베이거스 시각` }),
         el('ul', { class: 'pick-list' }, shown.map((s) => el('li', {}, el('a', { class: 'pick-row', href: s.url, target: '_blank', rel: 'noopener noreferrer', 'aria-label': `${s.title}, ${S.whenWhere(s)}. 공식 쪽에서 열린다` },
           el('b', { text: s.title }), el('span', { text: S.whenWhere(s) }))))),
-        ...(list.length > FIRST ? [el('button', { class: 'linkish', type: 'button', text: all ? '접기' : `세션 ${list.length - FIRST}개 더 보기`, onclick: () => { all = !all; paint(); } })] : []),
-        el('p', { class: 'note', text: '세션 제목에 회사 이름이 밝혀진 것만 보인다.' }));
+        ...(list.length > FIRST ? [el('button', { class: 'linkish', type: 'button', text: all ? '접기' : `강연 ${list.length - FIRST}개 더 보기`, onclick: () => { all = !all; paint(); } })] : []),
+        el('p', { class: 'note', text: '강연 제목에 회사 이름이 밝혀진 것만 보인다.' }));
     };
     paint();
     box.hidden = false;

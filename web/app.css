@@ -39,7 +39,7 @@ h3 { font-size: var(--fs-body); }
 .en { font-weight: 700; overflow-wrap: anywhere; }
 
 /* 줄(보조 카드 면) 안의 링크는 강조색 대비가 4.5:1에 못 미쳐 글자색으로 쓴다(밑줄은 그대로) */
-.hits a, .stop a, .entry a, .heard a, .linkish { color: var(--ink); }
+.hits a, .stop a, .meal a, .entry a, .heard a, .linkish { color: var(--ink); }
 
 /* 글 속 링크는 줄 높이만큼 두되 위아래로 누를 자리를 넓힌다 */
 .proof a, .foot a, .note a, .lead a, .panel p > a, .rows a { display: inline-block; min-width: var(--tap-min); text-align: center; padding: 14px var(--s1); margin: -14px 0; }
@@ -70,6 +70,8 @@ h3 { font-size: var(--fs-body); }
 /* 지도 탭: 머리를 줄이고 이름 · 비공식은 찾기 칸 안으로 합친다 */
 body[data-tab="map"]:not(.sub) .brand { display: none; }
 body[data-tab="map"]:not(.sub) .bar { padding-top: env(safe-area-inset-top); padding-bottom: 0; }
+/* 지도 화면에는 찾기 칸 안에 "비공식"이 있다. 머리의 것은 숨겨 같은 말이 두 번 나오지 않게 한다(갈 곳에서 "지도에서 보기"로 온 지도) */
+body:has(.mappage) .bar .tag { display: none; }
 .find-tag { position: absolute; right: var(--s3); top: 50%; transform: translateY(-50%); pointer-events: none; }
 .find-field input { padding-right: 76px; }
 /* 인터넷이 끊기면 위에 한 줄 */
@@ -102,12 +104,43 @@ body[data-tab="map"]:not(.sub) .bar { padding-top: env(safe-area-inset-top); pad
 .wait { min-height: 160px; }
 .empty .btn { min-width: 60%; }
 
-/* ---- 동선 맨 위: 지금 갈 곳(한 줄 카드: 이름 · 곳, 오른쪽에 길 안내) ---- */
-.now { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--s3); }
-.now-text { min-width: 0; }
-.now .big { font-size: calc(20px * var(--scale-head)); font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
-.now-go { display: grid; justify-items: center; gap: 0; }
-.now-go .pick { min-height: var(--tap-min); }
+/* ---- 갈 곳 맨 위: 날짜 한 줄(‹ 1월 6일 (수) · 남은 4곳 ›) → 다음에 갈 곳 한 곳 크게(검정 단추는 "길 안내" 하나) ---- */
+.daynav { display: flex; align-items: center; gap: var(--s2); }
+.daynav-btn { flex: none; display: flex; align-items: center; justify-content: center; width: var(--tap-min); height: var(--tap-min); padding: 0; border: 0; border-radius: var(--radius-ctl); background: var(--panel); color: var(--ink); cursor: pointer; }
+.daynav-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.daynav-btn[disabled] { opacity: 0.35; cursor: default; }
+.daynav-now { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 0 6px; text-align: center; font-size: calc(22px * var(--scale-head)); line-height: 1.3; letter-spacing: 0; }
+.daynav-left { font-size: var(--fs-small); font-weight: 700; letter-spacing: 0; color: var(--ink-2); }
+.planpage .panel.nextup { display: grid; gap: var(--s3); padding: var(--s4); }
+.nextup > * + * { margin-top: 0; }
+.nextup-open { display: grid; gap: 2px; width: 100%; padding: 0; border: 0; border-radius: var(--radius-tag); background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.nextup .big { font-size: var(--fs-now); font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+.nextup .note { font-size: var(--fs-small); overflow-wrap: anywhere; }
+.nextup-go { display: flex; align-items: center; gap: var(--s3); }
+.nextup-go .btn { flex: 1 1 auto; font-size: calc(17px * var(--scale)); }
+.nextup-go .pick { flex: none; font-size: var(--fs-body); }
+/* 그다음 곳들 · 다녀온 곳 접기 · 맨 아래 "목록 고치기 · 지도에서 보기" */
+.after, .visited { display: grid; gap: var(--s2); }
+.subhead { padding: var(--s1) var(--s1) 0; font-size: var(--fs-small); font-weight: 700; color: var(--ink-2); }
+.meal { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); min-height: var(--tap-min); padding: var(--s1) var(--s3); border: 2px dashed var(--line); border-radius: var(--radius-ctl); color: var(--ink-2); font-size: var(--fs-small); }
+.meal-text { min-width: 0; overflow-wrap: anywhere; }
+.daynotes { display: grid; gap: var(--s1); padding: 0 var(--s1); }
+.fold { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); min-height: 48px; padding-left: var(--s1); color: var(--ink-2); font-size: var(--fs-small); }
+.fold-text { min-width: 0; overflow-wrap: anywhere; }
+.fold .pick { flex: none; font-size: var(--fs-body); }
+.foot-links { padding-left: 0; }
+/* 다녀온 곳의 줄: 번호는 테두리만, 이름에 줄, 오른쪽에 체크된 "다녀옴" 칸(눌러서 되돌린다) */
+.stop.done .no { background: transparent; border: 2px solid var(--ink-2); color: var(--ink-2); }
+.stop.done .name { color: var(--ink-2); text-decoration: line-through; }
+.check { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 56px; min-height: var(--tap-min); padding: var(--s1); border: 0; border-radius: var(--radius-ctl); background: transparent; color: var(--ink-2); font-size: var(--fs-note); font-weight: 700; cursor: pointer; }
+.check i { display: grid; place-items: center; width: 26px; height: 26px; border: 2px solid var(--ink-2); border-radius: var(--radius-tag); }
+.check.on i { background: var(--accent); border-color: var(--accent); }
+.check svg { width: 16px; height: 16px; fill: none; stroke: var(--on-accent); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+/* 탭 바로 위에 6초 뜨는 한 줄: "OO 다녀왔다 · 일기 쓰기" */
+.toast { position: fixed; left: var(--s4); right: var(--s4); bottom: calc(var(--tabs) + env(safe-area-inset-bottom) + var(--s3)); z-index: 8; display: flex; align-items: center; justify-content: space-between; gap: var(--s3); max-width: calc(var(--column) - var(--s6)); margin: 0 auto; padding: var(--s1) var(--s2) var(--s1) var(--s4); border-radius: var(--radius); background: var(--btn); color: var(--on-btn); font-size: var(--fs-small); font-weight: 700; }
+.toast-text { min-width: 0; overflow-wrap: anywhere; }
+.toast .pick { flex: none; color: var(--on-btn); font-size: var(--fs-body); }
+.toast .pick:focus-visible { outline-color: var(--on-btn); }
 .head-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
 .planpage, .listpage { gap: var(--s3); }
 .planpage h1, .listpage h1 { font-size: var(--fs-now); }
@@ -131,12 +164,9 @@ body[data-tab="map"]:not(.sub) .bar { padding-top: env(safe-area-inset-top); pad
 .people-q[hidden] { display: none; }
 .paste { display: grid; gap: var(--s2); }
 .paste[hidden] { display: none; }
-.planpage .segs[aria-label="날짜"] { position: sticky; top: 0; z-index: 3; padding: var(--s2) 0; background: var(--bg); }
 .seg.daychip { flex-direction: column; gap: 0; min-width: 44px; min-height: 56px; line-height: 1.2; }
 .dc-day { font-size: var(--fs-body); font-weight: 800; }
 .dc-n { font-size: var(--fs-note); font-weight: 400; opacity: 0.8; }
-.undo { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); padding: 0 var(--s3); border-radius: var(--radius-ctl); background: var(--panel-2); font-size: var(--fs-small); font-weight: 700; }
-.undo[hidden] { display: none; }
 .tools { display: grid; gap: var(--s3); }
 .pcard-tools-title { flex: 1 1 auto; font-size: var(--fs-now); }
 
@@ -237,10 +267,9 @@ input[type="date"], input[type="time"] { -webkit-appearance: none; appearance: n
 details.more > summary { min-height: var(--tap-min); display: flex; align-items: center; font-weight: 700; color: var(--ink); cursor: pointer; }
 details.more[open] > summary { margin-bottom: var(--s2); }
 
-/* ---- 동선 ---- */
+/* ---- 갈 곳의 줄 ---- */
 .stops { display: grid; gap: var(--s2); }
-.campus { font-size: var(--fs-note); font-weight: 700; color: var(--ink-2); padding-top: var(--s1); }
-/* 줄: 번호 · 이름 · 때와 곳 · 봤다. 줄 전체가 눌리는 단추(카드를 연다), 오른쪽에 봤다 */
+/* 줄: 번호 · 이름 · 때와 곳. 줄 전체가 눌리는 단추(카드를 연다) */
 .stop { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--s1); padding: 0 var(--s2) 0 0; }
 .stop.event { grid-template-columns: 32px 1fr auto; gap: 10px; padding: 10px var(--s3); }
 .stop-open { display: grid; grid-template-columns: 32px 1fr; gap: 10px; align-items: start; width: 100%; min-height: 64px; padding: 10px 0 10px var(--s3); border: 0; background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
@@ -250,7 +279,6 @@ details.more[open] > summary { margin-bottom: var(--s2); }
 .stop .name { font-size: calc(17px * var(--scale)); font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
 .stop .where, .entry .where { font-size: var(--fs-small); color: var(--ink-2); overflow-wrap: anywhere; }
 .stop-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-.seen-btn { min-width: 56px; }
 .stop.seen .no { opacity: 0.5; }
 /* 회사 카드(큰 창): 아래에서 화면 대부분을 덮는다 */
 body.pcard-open { overflow: hidden; }
@@ -264,7 +292,15 @@ body.pcard-open { overflow: hidden; }
 .pcard-close { flex: none; min-height: var(--tap-min); padding: 0 var(--s3); }
 .pcard-name { font-size: calc(26px * var(--scale-head)); line-height: 1.25; overflow-wrap: anywhere; }
 .pcard-where { font-size: var(--fs-body); font-weight: 700; }
-.pcard-cats { font-size: var(--fs-small); color: var(--ink-2); }
+/* 갈 곳의 회사 카드: 곳 한 줄 · 검정 "길 안내" 하나 · 글자 단추 셋 · 강연 한 칸 · 다른 날로 옮기기 · 빼기 */
+.pcard-place { font-size: var(--fs-small); color: var(--ink-2); overflow-wrap: anywhere; }
+.pcard-place .tag { margin-left: 2px; }
+.pcard-links { display: flex; flex-wrap: wrap; justify-content: space-around; gap: 0 var(--s2); }
+.pcard-links .pick, .pcard-remove { font-size: var(--fs-body); }
+.pcard-remove { justify-self: start; padding-left: var(--s1); }
+.card-sessions.compact { gap: 2px; padding: var(--s3); border-radius: var(--radius-ctl); background: var(--panel-2); }
+.sessions-title { font-size: var(--fs-small); font-weight: 700; }
+.pcard .inline input { background: var(--panel-2); }
 .pcard .actions { margin-top: 0; }
 .pcard .actions .btn { flex: 1 1 140px; }
 .pcard .segs .seg { flex: 1 1 0; min-height: 48px; font-size: calc(16px * var(--scale)); }
@@ -498,6 +534,9 @@ a.link-text { display: inline-flex; align-items: center; min-height: var(--tap-m
 .setrow-hint { font-size: var(--fs-small); color: var(--warn); font-weight: 700; overflow-wrap: anywhere; }
 .setrow-hint[hidden] { display: none; }
 .setrow-hint:empty { display: none; }
+/* 한 줄에 글자 단추 둘(갈 곳 목록: 문서로 · 표로, 시간 · 일정 파일: 불러오기 · 내보내기) */
+.setrow-pair { display: flex; flex: none; align-items: center; }
+.setrow-pair .pick { padding: 0 var(--s2); }
 .setgroup { display: grid; gap: var(--s2); }
 .setgroup .label { margin: 0; }
 .stop.preview { grid-template-columns: 1fr; padding: 0; }
@@ -532,3 +571,5 @@ a.link-text { display: inline-flex; align-items: center; min-height: var(--tap-m
 .photo-field > * + * { margin-top: var(--s2); }
 .photo-field .row-actions { margin-top: var(--s2); }
 .photo-box > * + * { margin-top: var(--s2); }
+/* 글자가 커지면 회사 카드의 날짜 칩은 두 줄로 접는다("날짜 없음"이 옆으로 숨지 않게) */
+:root[data-text="3"] .pcard .segs, :root[data-text="4"] .pcard .segs { flex-wrap: wrap; overflow: visible; }

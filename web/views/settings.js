@@ -10,6 +10,7 @@ import { bundle, fileName, talksFor } from '../diary.js';
 import { offline } from '../offline.js';
 import { alerts, askPermission, checkAlerts, getPaper } from '../notify.js';
 import { paperPanel } from './card.js';
+import { fileRows } from './settings-files.js';
 import { createCardShell } from '../plancard.js';
 
 const THEMES = [
@@ -91,8 +92,8 @@ function notifyRow() {
   function paint() {
     s.textContent = { granted: '켜져 있다', default: '꺼져 있다', denied: '막혀 있다', unsupported: '쓸 수 없다' }[alerts.state] || '';
     // 상태가 문제일 때만 한 줄: 왜 안 되고 어디서 켜는가
-    hint.textContent = alerts.state === 'denied' ? '알림이 막혀 있다. 브라우저 주소창 옆 사이트 설정에서 알림을 허용한다. 막혀 있어도 동선 탭 위에 띠로 보인다.'
-      : alerts.state === 'unsupported' ? '이 브라우저는 알림을 못 쓴다(아이폰은 홈 화면에 추가한 뒤에 켤 수 있다). 대신 동선 탭 위에 띠로 보인다.'
+    hint.textContent = alerts.state === 'denied' ? '알림이 막혀 있다. 브라우저 주소창 옆 사이트 설정에서 알림을 허용한다. 막혀 있어도 갈 곳 탭 위에 띠로 보인다.'
+      : alerts.state === 'unsupported' ? '이 브라우저는 알림을 못 쓴다(아이폰은 홈 화면에 추가한 뒤에 켤 수 있다). 대신 갈 곳 탭 위에 띠로 보인다.'
       : alerts.error || '';
     hint.hidden = !hint.textContent;
     button.hidden = alerts.state !== 'default';
@@ -143,7 +144,7 @@ function storageRow() {
       button.dataset.ask = '1';
       button.textContent = '정말 비우기';
       note.hidden = false;
-      note.textContent = '받아 둔 받아쓰기 모델과 옛 번역 모델만 지운다. 내 일기 · 명함 · 동선은 그대로다.';
+      note.textContent = '받아 둔 받아쓰기 모델과 옛 번역 모델만 지운다. 내 일기 · 명함 · 갈 곳은 그대로다.';
       setTimeout(() => { if (button.isConnected) { delete button.dataset.ask; button.textContent = '비우기'; } }, 5000);
       return;
     }
@@ -189,7 +190,7 @@ function exportRow() {
 }
 
 // 이 폰의 내 자료 지우기: 두 번 확인한다. 첫 확인에서 먼저 내보내기를 권하고, 둘째 확인 뒤에 지운다.
-// 지우는 것: 명함 · 관심 · 동선 · 일기 · 만난 사람 · 대화 · 일정 · 설정 · 녹음. 남기는 것: 인터넷 없이 열리게 담아 둔 앱 껍데기.
+// 지우는 것: 명함 · 관심 · 갈 곳 · 일기 · 만난 사람 · 대화 · 일정 · 설정 · 녹음. 남기는 것: 인터넷 없이 열리게 담아 둔 앱 껍데기.
 // 다 지우면 처음 들어온 것처럼 첫 실행 명함부터 시작한다.
 function mineCounts() {
   const diary = getDiary().length, people = getPeople().length, plan = getInterests().length;
@@ -198,12 +199,12 @@ function mineCounts() {
 }
 function mineRow(shell) {
   const c = mineCounts();
-  const parts = [c.diary ? `일기 ${c.diary}` : '', c.people ? `만난 사람 ${c.people}` : '', c.plan ? `동선 ${c.plan}곳` : ''].filter(Boolean);
+  const parts = [c.diary ? `일기 ${c.diary}` : '', c.people ? `만난 사람 ${c.people}` : '', c.plan ? `갈 곳 ${c.plan}곳` : ''].filter(Boolean);
   const header = (title) => el('div', { class: 'pcard-top' }, el('h2', { class: 'pcard-tools-title', text: title }), el('button', { class: 'btn ghost pcard-close', type: 'button', text: '닫기', onclick: () => shell.close() }));
   const list = () => {
     const n = mineCounts();
     return el('ul', { class: 'dots', 'aria-label': '지워지는 것' },
-      el('li', { text: `일기 ${n.diary}개(넣은 사진 포함) · 만난 사람 ${n.people}명 · 동선 ${n.plan}곳` }),
+      el('li', { text: `일기 ${n.diary}개(넣은 사진 포함) · 만난 사람 ${n.people}명 · 갈 곳 ${n.plan}곳` }),
       el('li', { text: '내 명함과 설정(글자 크기 · 화면 색 · 표시한 것)' }));
   };
   // 첫 확인: 먼저 내보내기를 권한다.
@@ -248,7 +249,7 @@ function mineRow(shell) {
     el('button', { class: 'pick', type: 'button', id: 'mine-open', text: '지우기', 'aria-label': '이 폰의 내 자료 지우기', onclick: (ev) => { shell.open([], ev.currentTarget); first(); } }));
 }
 
-// 종이 명함: 있는지 · 없으면 QR 명함으로 대신. 묻는 곳은 동선 탭 위 띠와 여기 두 곳뿐이다(QR 화면에는 두지 않는다).
+// 종이 명함: 있는지 · 없으면 QR 명함으로 대신. 묻는 곳은 여기 한 곳뿐이다(갈 곳 탭의 띠와 QR 화면에는 두지 않는다).
 function paperRow(shell, showFrom) {
   const { s, main } = rowState('종이 명함');
   const paint = () => { const p = getPaper(); s.textContent = p?.has === true ? '있다' : p?.has === false ? '없다 · QR 명함으로 대신' : '아직 안 정했다'; };
@@ -286,7 +287,7 @@ async function dataRow(shell) {
     meta ? el('p', {}, `전시사 ${num(meta.exhibitors)}곳 · 받은 날 ${meta.v} · `, out('https://exhibitors.ces.tech/8_0/', 'CES 공식 전시사 검색')) : el('p', { class: 'note', text: '전시사 자료를 아직 받지 못했다.' }),
     info ? el('p', {}, `날짜와 시간 · 오가는 법: ${md(info.show.source.read)} 확인 · `, out(info.show.source.url, '출처')) : null,
     el('p', { class: 'note', text: '부스 자리는 정식 배치도 전이라 홀 안은 짐작이다.' }),
-    el('p', { class: 'note', text: '이 앱은 사용 기록을 보내지 않는다. 명함 · 일기 · 동선은 이 폰에만 남는다.' }),
+    el('p', { class: 'note', text: '이 앱은 사용 기록을 보내지 않는다. 명함 · 일기 · 갈 곳은 이 폰에만 남는다.' }),
   ], ev.currentTarget);
   const when = meta ? `${md(meta.v)} 받음` : '받지 못했다';
   return row('자료', `${when} · CES 공식`, el('button', { class: 'pick', type: 'button', text: '출처', onclick: open }));
@@ -298,7 +299,7 @@ export async function render() {
   window.addEventListener('hashchange', () => shell.close(), { once: true });
   const showFrom = (await getInfo().catch(() => null))?.show.from || '2027-01-06';
   const list = el('ul', { class: 'setlist' },
-    ...cardRow(), paperRow(shell, showFrom), ...notifyRow(), offlineRow(), ...storageRow(), ...exportRow(), mineRow(shell), permissionRows(), await dataRow(shell));
+    ...cardRow(), paperRow(shell, showFrom), ...notifyRow(), offlineRow(), ...storageRow(), ...exportRow(), ...fileRows(), mineRow(shell), permissionRows(), await dataRow(shell));
   return el('div', { class: 'page listpage settingspage' },
     el('section', { class: 'head' }, el('h1', { text: '설정' })),
     sizeBox(),

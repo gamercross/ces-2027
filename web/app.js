@@ -22,10 +22,10 @@ const VIEWS = {
   settings: () => import('./views/settings.js'),
   collect: () => import('./views/collect.js'),
 };
-// 어느 탭 아래의 화면인가: 지도(전시사 목록 · 셔틀 · 오가는 법) · 동선(추천 · 시간과 일정 · 세션) · 일기(듣기 · 대화 칸 · 만난 사람) · 설정(명함 · 모은 일기).
+// 어느 탭 아래의 화면인가: 지도(전시사 목록 · 셔틀 · 오가는 법) · 갈 곳(추천 · 시간과 일정 · 강연 일정) · 일기(듣기 · 대화 칸 · 만난 사람) · 설정(명함 · 모은 일기).
 const TAB_OF = { map: 'map', list: 'map', transit: 'map', plan: 'plan', rec: 'plan', days: 'plan', sessions: 'plan', diary: 'diary', listen: 'diary', talk: 'diary', people: 'diary', settings: 'settings', card: 'settings', collect: 'settings' };
 
-// 메인 틀: 아래 탭은 넷(지도 · 동선 · 일기 · 설정). 앱을 열면 지도.
+// 메인 틀: 아래 탭은 넷(지도 · 갈 곳 · 일기 · 설정). 앱을 열면 지도.
 // 탭이 아닌 화면(명함 · 시간과 일정 · 듣기 …)은 위에 "뒤로"가 생기고, 돌아갈 곳은 TAB_OF의 탭이다.
 const ROOTS = new Set(['map', 'plan', 'diary', 'settings']);
 for (const k of Object.keys(VIEWS)) frame.views.add(k);
@@ -77,7 +77,7 @@ function frameFor(name, rest) {
 
 async function show() {
   const mine = ++turn;
-  // 나눈 링크(#plan=<코드>)로 들어왔으면 동선 화면에서 받은 목록을 보인다.
+  // 나눈 링크(#plan=<코드>)로 들어왔으면 갈 곳 화면에서 받은 목록을 보인다.
   if (location.hash.startsWith('#plan=')) {
     sessionStorage.setItem('ces2027.incoming', location.hash.slice(1));
     replaceTo('#/plan');
@@ -115,7 +115,7 @@ async function show() {
   if (!first) view.focus({ preventScroll: true });
 }
 
-// 인터넷이 끊기면 위에 한 줄로 알린다. 폰에 담아 둔 화면 · 동선 · 지도는 그대로 열린다.
+// 인터넷이 끊기면 위에 한 줄로 알린다. 폰에 담아 둔 화면 · 갈 곳 · 지도는 그대로 열린다.
 const net = document.getElementById('net');
 function paintNet() { net.hidden = navigator.onLine !== false; }
 window.addEventListener('online', paintNet);
@@ -138,7 +138,7 @@ getSettings().then((s) => {
   img.addEventListener('load', () => { slot.replaceChildren(img); slot.hidden = false; });
 });
 
-// 새 판이 있으면 탭 위에 알리고, 누르면 다시 연다. 폰에 남긴 것(명함 · 관심 · 동선 · 일기)은 그대로다.
+// 새 판이 있으면 탭 위에 알리고, 누르면 다시 연다. 폰에 남긴 것(명함 · 관심 · 갈 곳 · 일기)은 그대로다.
 window.addEventListener('ces-offline', () => { document.getElementById('update').hidden = !offline.update; });
 document.getElementById('update-go').addEventListener('click', () => location.reload());
 
