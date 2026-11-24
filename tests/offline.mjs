@@ -289,8 +289,10 @@ await step('지도', '3D 지도(누를 때만 불러오는 조각 map3d.js)가 �
 await step('지도', '지도 위의 내 위치 · 따라가기 · 부스 번호로 맞추기', async () => {
   await go('#/map', '지도 내 위치');
   await page.locator('svg.map').waitFor();
-  await page.locator('input[placeholder^="가까운 부스 번호"]').fill('14731');
-  await page.getByRole('button', { name: '맞추기' }).click();
+  // 같은 칸이 길 안내 판에도 하나 있다(nav-form, 평소엔 숨어 있다). 지도 아래 묶음의 것을 쓴다.
+  const fit = page.locator('form.inline:not(.nav-form)', { has: page.locator('input[placeholder^="가까운 부스 번호"]') });
+  await fit.locator('input').fill('14731');
+  await fit.getByRole('button', { name: '맞추기' }).click();
   await sleep(500);
   return !!(await store('where.v1'));
 });
@@ -650,22 +652,37 @@ await step('판 바뀜', '새 판을 받는 도중에 끊기면(담는 파일 �
     fact('끊긴 새 판 때문에 "새 판이 있다" 띠가 뜨나', String(bandShown));
   return { status: stillOld && reg && !bandShown ? '됨' : '안 됨', note: `담긴 판 ${keys.length}개 · 홀 자료 ${net.failed.length}번 끊음` };
 });
-await step('판 바뀜', '새 판을 끝까지 받은 뒤 끊어도 "다시 열기"가 되고 새 판으로 열린다', async () => {
+const cacheSizes = () => page.evaluate(async () => { const out = {}; for (const k of (await caches.keys()).filter((n) => n.startsWith('ces2027-'))) out[k] = (await (await caches.open(k)).keys()).length; return out; });
+const pageVersion = () => page.evaluate(async () => (await (await fetch('version.json')).json()).v).catch(() => '');
+await step('판 바뀜', '새 판을 끝까지 받아도 "다시 열기"를 누르기 전에는 쓰던 판 그대로다(끊은 채 앱을 새로 열어도). "새 판이 있다" 띠는 다시 뜬다', async () => {
   await ctx.setOffline(false); net.up = true; offlineNow = false; net.failPrefix = null;
   await go('#/settings', '판 바뀜 2');
+  const before = await pageVersion();
   await page.evaluate(async () => { const r = await navigator.serviceWorker.getRegistration(); await r.update().catch(() => {}); });
   await page.locator('#update:not([hidden])').waitFor({ timeout: 20000 });
   await ctx.setOffline(true); net.up = false; offlineNow = true;
+  await go('#/map', '판 바뀜 뒤 새로 열기');
+  await page.locator('svg.map').waitFor({ timeout: 10000 });
+  const band = await page.locator('#update:not([hidden])').waitFor({ timeout: 8000 }).then(() => true, () => false);
+  const v = await pageVersion();
+  const sizes = await cacheSizes();
+  const both = sizes[`ces2027-${before}`] >= listed.length && sizes[`ces2027-${before}-new1`] >= listed.length;
+  fact('새 판을 받아 둔 채(누르기 전) 담음 이름과 파일 수', JSON.stringify(sizes));
+  return { status: v === before && band && both && !(await failedView()) ? '됨' : '안 됨', note: `쓰는 판 ${v} · 띠 ${band}` };
+});
+await step('판 바뀜', '끊은 채 "다시 열기"를 누르면 그때 새 판으로 열리고, 옛 판은 지워지고, 띠가 사라진다', async () => {
   await page.locator('#update-go').click();
   await sleep(3500);
-  const v = await page.evaluate(async () => (await (await fetch('version.json')).json()).v).catch(() => '');
-  return { status: /-new1$/.test(v) && !(await failedView()) ? '됨' : '안 됨', note: `판 ${v}` };
+  const v = await pageVersion();
+  const names = Object.keys(await cacheSizes());
+  const band = await page.evaluate(() => !document.getElementById('update').hidden);
+  return { status: /-new1$/.test(v) && names.length === 1 && /-new1$/.test(names[0]) && !band && !(await failedView()) ? '됨' : '안 됨', note: `판 ${v} · 담음 ${names.length}개` };
 });
-await step('판 바뀜', '출발 전에 판을 "고정"하거나 "지금 판 그대로 쓰기"를 고르는 길이 있다', async () => {
-  const text = (await Promise.all(['offline.js', 'app.js', 'views/settings.js'].map((f) => readFile(join(dist, f), 'utf8')))).join('\n');
-  const hasPin = /고정|지금 판|새 판 받지|업데이트 끄/.test(text);
-  return { status: hasPin ? '됨' : '안 됨', note: '새 판이 깔리면 옛 판은 지워지고 되돌릴 길도 없다(skipWaiting + 옛 담음 삭제)' };
-}, '안 됨');
+await step('판 바뀜', '새 판으로 바꾼 뒤 끊은 채 화면들이 열린다(지도 · 갈 곳 · 일기 · 설정)', async () => {
+  const bad = [];
+  for (const h of ['#/map', '#/plan', '#/diary', '#/settings']) { await go(h, `새 판 ${h}`); await sleep(500); if (await failedView()) bad.push(h); }
+  return { status: bad.length ? '안 됨' : '됨', note: bad.join(' ') };
+});
 
 // ================= 마무리 =================
 // ================= 17. 처음 담는 도중에 끊기면 =================

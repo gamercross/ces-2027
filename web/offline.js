@@ -7,13 +7,10 @@ const LATE_MS = 30000;
 function late() { if (!offline.ready && !offline.late) { offline.late = true; changed(); } }
 
 if ('serviceWorker' in navigator) {
-  // 새 판: 서비스 워커가 바뀌어 이 화면을 맡으면, 지금 열린 화면은 옛 판이다. "다시 열기"를 권한다.
-  // (처음 깔릴 때도 맡는 일이 생기지만, 그때는 전에 맡던 것이 없으니 알리지 않는다.)
-  let had = !!navigator.serviceWorker.controller;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (had) { offline.update = true; changed(); }
-    had = true;
-  });
+  // 새 판: 서비스 워커는 새 판을 받아만 두고, 화면에는 쓰던 판을 그대로 준다(web/sw.js의 "쓰는 판").
+  // 받아 둔 판이 쓰는 판과 다르면 "새 판이 있다 · 다시 열기"를 보인다. 누르기 전에는 앱을 껐다 켜도 쓰던 판 그대로다.
+  // 서비스 워커가 바뀔 때(새 판을 다 받았을 때)와 앱을 열 때 본다.
+  navigator.serviceWorker.addEventListener('controllerchange', look);
   // 현장에서 낡은 판에 갇히지 않게: 화면으로 돌아올 때 새 판이 있는지 묻는다 (10분에 한 번까지).
   let asked = Date.now();
   document.addEventListener('visibilitychange', () => {
@@ -31,9 +28,30 @@ if ('serviceWorker' in navigator) {
     } catch { /* 판 이름이 없으면 그대로 둔다 */ }
     if (offline.ready) offline.late = false;
     changed();
+    look();
   });
   // 인터넷이 돌아오면 못 담은 것을 다시 담아 본다 (앱을 껐다 켜지 않아도).
   window.addEventListener('online', () => { if (started && !offline.ready) register(); });
+}
+
+// 서비스 워커에게 묻는다(web/sw.js의 message). 답이 없으면 null.
+async function ask(what) {
+  const reg = await navigator.serviceWorker.getRegistration();
+  const worker = reg?.active;
+  if (!worker) return null;
+  return new Promise((done) => {
+    const pipe = new MessageChannel();
+    const timer = setTimeout(() => done(null), 4000);
+    pipe.port1.onmessage = (ev) => { clearTimeout(timer); done(ev.data?.error ? null : ev.data); };
+    worker.postMessage({ ces: what }, [pipe.port2]);
+  });
+}
+// 받아 둔 새 판이 있는지 본다. 있으면 띠를 보인다(app.js).
+async function look() {
+  const s = await ask('state').catch(() => null);
+  if (!s) return;
+  const update = s.latest !== s.using;
+  if (update !== offline.update) { offline.update = update; changed(); }
 }
 
 // 서비스 워커를 건다. 첫 화면이 그려진 뒤에 부른다: 폰에 담는 일(파일 서른몇 개)이 첫 화면과 회선을 다투지 않게.
@@ -55,10 +73,10 @@ export function startOffline() {
 
 // 폰에 남긴 것(명함 · 갈 곳 · 일기 · 사진)을 저절로 지우지 말아 달라고 폰에 부탁한다. 들어줄지는 폰이 정한다(화면은 바뀌지 않는다).
 // 명함을 만든 뒤에 한 번만 부탁한다: 남길 것이 생기기 전에는 묻지 않는다.
-let asked = false;
+let begged = false;
 export async function keepData() {
-  if (asked || !navigator.storage?.persist) return;
-  asked = true;
+  if (begged || !navigator.storage?.persist) return;
+  begged = true;
   try { if (!(await navigator.storage.persisted())) await navigator.storage.persist(); } catch { /* 못 부탁해도 앱은 그대로 쓴다 */ }
 }
 
@@ -93,8 +111,9 @@ export async function freshen() {
   try { localStorage.setItem(BOOT, `ces2027-${v}`); } catch { /* 막힌 폰이면 index.html이 한 번 더 받는다 */ }
   return v;
 }
+// "다시 열기": 받아 둔 새 판이 있으면 서비스 워커에게 그 판을 쓰라고 한 뒤(이때만 판이 바뀐다), 새 파일을 한 번씩 받아 두고 다시 연다.
 export async function reopen() {
-  try { await freshen(); } catch { /* 못 받아도 다시 연다 */ }
+  try { await ask('use-latest'); await freshen(); } catch { /* 못 바꿔도 다시 연다 */ }
   location.reload();
 }
 // 화면 조각을 못 불러왔을 때: 판이 섞인 탓이면(새 판이 깔렸거나 이름을 못 찾는 오류) 새로 받아 한 번만 저절로 다시 연다.
