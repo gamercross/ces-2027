@@ -4,6 +4,11 @@
 
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
+/* 앱 화면의 글자는 길게 눌러도 선택되지 않는다(끌다가 글자가 잡히고 iOS 메뉴가 뜨던 것). 적는 칸, 내가 적은 글, 받은 주소, 복사할 안내 글은 고를 수 있다.
+   앱 안에서 넘어가는 링크와 단추는 길게 눌러도 미리 보기 창이 뜨지 않는다(바깥 링크는 그대로) */
+body { -webkit-user-select: none; user-select: none; }
+input, textarea, select, [contenteditable], [role="status"], .entry p, .pcard-note, .contact, .link-text, .heard li, .qr figcaption, .coll-body { -webkit-user-select: text; user-select: text; }
+a[href^="#"], button { -webkit-touch-callout: none; }
 body {
   margin: 0;
   background: var(--bg);

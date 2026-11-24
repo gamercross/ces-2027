@@ -652,6 +652,18 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       && /\.ctl \{[^}]*user-select: none;[^}]*touch-action: manipulation/.test(appCss) && /\.lead \{[^}]*word-break: keep-all/.test(appCss) && /\.session \.row-actions \{[^}]*gap: var\(--s2\)/.test(appCss)
       && !mapV2.includes("      guide,\n"),
       '폰에서 찾은 것: 날짜 · 시간 칸은 기본 모양을 꺼 카드 밖으로 나가지 않는다 · 카드가 열리면 페이지가 당겨지지 않고 카드가 바퀴 쓸기를 받는다 · 찾기 칸 지우기와 카드 닫기(×, 44px, 이름 있음) · + 단추 글자가 선택되지 않는다 · 세션 안내 글은 낱말에서 줄을 바꾸고 단추 사이는 8px · 부스 없는 회사 카드에 "null"이 없다');
+    // 폰 확인 2차: 새 판으로 다시 열기 전에 새 파일을 받아 둔다(띠 · 새로 고침 · 저절로 한 번) · 카드 자리의 입력은 지도가 받지 않는다 · 화면 글자는 선택되지 않는다 · 카드는 열 때마다 맨 위 · 찾기 시작하면 카드를 닫는다.
+    const offJs = await readFile(join(dist, 'offline.js'), 'utf8');
+    const appJs2 = await readFile(join(dist, 'app.js'), 'utf8');
+    const gestJs2 = await readFile(join(dist, 'mapgesture.js'), 'utf8');
+    const htmlBoot = await readFile(join(dist, 'index.html'), 'utf8');
+    check(/export async function freshen\(\)/.test(offJs) && /fetch\(request\.url, \{ cache: 'reload' \}\)/.test(offJs) && /export async function healOnce/.test(offJs) && offJs.includes("'ces2027.boot.v1'")
+      && /getElementById\('update-go'\)[^\n]*reopen\(\)/.test(appJs2) && /healOnce\(e\)/.test(appJs2)
+      && htmlBoot.includes('"ces2027.boot.v1"') && htmlBoot.indexOf('"ces2027.boot.v1"') < htmlBoot.indexOf('<link rel="modulepreload" href="app.js">') && /cache:"reload"/.test(htmlBoot)
+      && /const onMap = /.test(gestJs2) && (gestJs2.match(/if \(!onMap\(ev\)\) return;/g) || []).length === 2
+      && /body \{ -webkit-user-select: none; user-select: none; \}/.test(appCss) && /input, textarea, select,[^{]*\{ -webkit-user-select: text; user-select: text; \}/.test(appCss)
+      && /setState\(next === 'closed' \? 'half' : next\);\n[^\n]*\n    body\.scrollTop = 0;/.test(sheetJs) && /onType\?\.\(\)/.test(findJs) && /onType: \(\) => \{ if \(sheet\.state\(\) !== 'closed'\) sheet\.close\(\); \}/.test(mapV2),
+      '폰 확인 2차: 새 판으로 다시 열기 전에 새 파일을 받아 둔다(띠 · 새로 고침 · 화면 조각을 못 불러오면 한 번) · 카드 자리에서 시작한 입력은 지도가 받지 않는다 · 화면 글자는 길게 눌러도 선택되지 않는다(적는 칸은 된다) · 카드는 열 때마다 맨 위부터 · 찾는 글자를 넣으면 카드를 닫는다');
   }
   // 다시 짓기 7단계: 글자 크기 네 단계(기본 100 · 크게 115 · 더 크게 130 · 가장 크게 150%). 첫 그림 전에 걸리고, 제목은 상한, 지도 글자는 130%까지.
   {

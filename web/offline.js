@@ -46,3 +46,44 @@ window.addEventListener('beforeinstallprompt', (ev) => {
   changed();
 });
 window.addEventListener('appinstalled', () => { offline.install = null; changed(); });
+
+// ---- 새 판으로 다시 열기 ----
+// Safari(WebKit)는 화면을 다시 열 때 미리 받는 조각(app.js · store.js …)을 서비스 워커에 묻지 않고 메모리에 든 옛 것으로 쓴다.
+// 그러면 새로 부르는 화면 조각(새 판)이 옛 조각을 만나 이름을 못 찾고 "화면을 불러오지 못했다"가 뜬다.
+// 그래서 다시 열기 전에, 새 서비스 워커가 담아 둔 파일을 이 화면에서 한 번씩 받아 메모리의 것을 새 것으로 바꾼다(폰 안에서 받는 것이라 금방이다).
+// index.html 맨 위의 작은 글도 같은 일을 한다(Safari의 새로 고침으로 열었을 때). 거기와 같은 열쇠(BOOT)를 쓴다.
+const BOOT = 'ces2027.boot.v1';
+async function controllerVersion() {
+  const res = await fetch('version.json', { cache: 'reload' });
+  return res.ok ? (await res.json()).v : null;
+}
+export async function freshen() {
+  if (!('caches' in window) || !navigator.serviceWorker?.controller) return null;
+  // 새 서비스 워커가 다 켜진 뒤에 받는다 (켜지는 중이면 잠깐 기다린다).
+  const reg = await navigator.serviceWorker.getRegistration();
+  const worker = reg?.active;
+  if (worker && worker.state === 'activating') await new Promise((done) => { worker.addEventListener('statechange', done, { once: true }); setTimeout(done, 3000); });
+  const v = await controllerVersion();
+  if (!v || !(await caches.has(`ces2027-${v}`))) return null;
+  const cache = await caches.open(`ces2027-${v}`);
+  await Promise.all((await cache.keys()).map((request) => fetch(request.url, { cache: 'reload' }).catch(() => null)));
+  try { localStorage.setItem(BOOT, `ces2027-${v}`); } catch { /* 막힌 폰이면 index.html이 한 번 더 받는다 */ }
+  return v;
+}
+export async function reopen() {
+  try { await freshen(); } catch { /* 못 받아도 다시 연다 */ }
+  location.reload();
+}
+// 화면 조각을 못 불러왔을 때: 판이 섞인 탓이면(새 판이 깔렸거나 이름을 못 찾는 오류) 새로 받아 한 번만 저절로 다시 연다.
+// 같은 판에서 두 번 하지 않는다(진짜 고장이면 "화면을 불러오지 못했다"를 그대로 보인다).
+export async function healOnce(error) {
+  if (!navigator.serviceWorker?.controller || navigator.onLine === false) return false;
+  if (!offline.update && !(error instanceof SyntaxError)) return false;
+  try {
+    const v = await controllerVersion();
+    if (!v || sessionStorage.getItem('ces2027.healed') === v) return false;
+    sessionStorage.setItem('ces2027.healed', v);
+  } catch { return false; }
+  await reopen();
+  return true;
+}
