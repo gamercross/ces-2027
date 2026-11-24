@@ -34,6 +34,8 @@ async (page) => {
     for (const theme of ['light', 'dark']) for (const text of [1, 4]) {
       const tag = `${W}px ${theme === 'light' ? '밝게' : '어둡게'} 글자 ${text}`;
       await open('#/diary/new', { theme, text });
+      await page.locator('textarea[name="saw"]').waitFor();
+      await page.locator('details.more > summary').click(); // 나머지 칸은 "더 적기" 아래 접혀 있다
       await page.locator('input[name="date"]').waitFor();
       await settle(300);
       check((await page.evaluate(() => document.documentElement.dataset.theme)) === theme, `${tag} 일기 쓰기: 화면 색이 고른 대로 걸렸다(시험이 다른 색으로 재지 않게)`);

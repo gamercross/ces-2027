@@ -20,7 +20,7 @@ async (page) => {
     const view = document.querySelector('#view');
     const tabs = document.querySelector('.tabs').getBoundingClientRect();
     const scrollers = (n) => { for (let p = n; p && p !== document.body; p = p.parentElement) { const o = getComputedStyle(p).overflowX; if (o === 'auto' || o === 'scroll') return true; } return false; };
-    const visible = (n) => { const r = n.getBoundingClientRect(); const s = getComputedStyle(n); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none'; };
+    const visible = (n) => { const r = n.getBoundingClientRect(); const s = getComputedStyle(n); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' && n.checkVisibility(); }; // 접힌 "더 적기" 안의 칸은 보이는 것으로 치지 않는다
     const side = document.documentElement.scrollWidth > w;
     // 글자 잘림: 글자를 담은 칸이 안의 글보다 좁은데 가로로 밀리지도 않는 것(말줄임 · 숨김)
     const clipped = [...view.querySelectorAll('*')].filter((n) => {
@@ -89,7 +89,7 @@ async (page) => {
   check(wrap === 'wrap' && (await page.locator('.textsegs .seg').first().evaluate((n) => n.getBoundingClientRect().width)) < 200, '큰 단계에서는 글자 크기 칩이 2 × 2로 접힌다');
 
   // 2. 네 단계 × (360 · 390) × 화면: 가로 넘침 0 · 글자 잘림 0 · 누르는 곳 44px · 탭이 안 가림
-  const screens = [['지도', '#/map', null], ['갈 곳', '#/plan', null], ['갈 곳 카드', '#/plan', 'card'], ['일기', '#/diary', null], ['만난 사람 카드', '#/diary', 'person'], ['일기 쓰기', '#/diary/new', null], ['설정', '#/settings', null], ['명함 QR', '#/card', null], ['지도 회사 카드', '#/map', 'mapcard']];
+  const screens = [['지도', '#/map', null], ['갈 곳', '#/plan', null], ['갈 곳 카드', '#/plan', 'card'], ['일기', '#/diary', null], ['만난 사람 카드', '#/diary', 'person'], ['일기 쓰기', '#/diary/new', null], ['일기 쓰기 더 적기', '#/diary/new', 'more'], ['설정', '#/settings', null], ['명함 QR', '#/card', null], ['지도 회사 카드', '#/map', 'mapcard']];
   const problems = [];
   let audited = 0;
   for (const [W, H] of [[360, 740], [390, 780]]) {
@@ -105,6 +105,7 @@ async (page) => {
         else await settle(500);
         await settle(extra === 'mapcard' ? 1500 : 500);
         if (extra === 'card') { await page.locator('.stops .stop-open').first().click(); await page.locator('.pcard').waitFor(); }
+        if (extra === 'more') { await page.locator('details.more > summary').click(); await settle(200); }
         if (extra === 'person') { await page.locator('.met .stop-open').first().click(); await page.locator('.pcard').waitFor(); }
         if (extra === 'mapcard') { await page.getByRole('button', { name: '노스', exact: true }).click(); await settle(1500); await page.evaluate(async () => { const m = document.querySelector('#view > .page').mapApi; await m.ensureFull(); const row = [...m.rows.values()].find((r) => r[7]?.[0]?.endsWith('@LVCC_N')); await m.openCompany(row); }); await settle(900); }
         if (SHOTS && W === 360 && ['설정', '갈 곳', '갈 곳 카드'].includes(ko)) await page.screenshot({ path: `${SHOTS}12${n}-text${n}-${{ 설정: 'settings', '갈 곳': 'plan', '갈 곳 카드': 'plan-card' }[ko]}.png` });
