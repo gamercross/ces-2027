@@ -14,7 +14,7 @@ const FONT = 'system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", "
 const shade = ([r, g, b], k) => `rgb(${Math.round(r * k)},${Math.round(g * k)},${Math.round(b * k)})`;
 // 손가락 크기: 점 가운데에서 이만큼 안이면 그 점을 누른 것으로 본다. 둘이 이만큼도 차이 나지 않으면 애매하다.
 const REACH = 16;
-const PIN_REACH = 8; // 번호 원의 테두리 밖으로 이만큼까지
+const PIN_REACH = 11; // 번호 원의 테두리 밖으로 이만큼까지(원 반지름 11과 더해 누르는 칸이 44px)
 const TIE = 3;
 const EDGE = 10;
 

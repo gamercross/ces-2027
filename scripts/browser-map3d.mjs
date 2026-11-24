@@ -233,7 +233,8 @@ async (page) => {
   // ---- 7. 인터넷 없이: 한 번 연 뒤 끊고 다시 열어도 3D가 열리고 차례 선이 그려진다
   await open3d();
   await page.evaluate(() => navigator.serviceWorker.ready);
-  await page.waitForFunction(async () => (await caches.keys()).length > 0 && !!(await caches.match('map3d.js')), null, { timeout: 30000 });
+  // 서비스 워커가 이 화면을 맡고, 첫 화면과 3D 조각이 폰에 담길 때까지 기다린다(담기기 전에 끊으면 다시 열리지 않는다).
+  await page.waitForFunction(async () => !!navigator.serviceWorker.controller && !!(await caches.match('./')) && !!(await caches.match('map3d.js')), null, { timeout: 30000 });
   await page.context().setOffline(true);
   try {
   await page.reload({ waitUntil: 'domcontentloaded' });
