@@ -80,6 +80,9 @@ await ctx.addInitScript(() => {
     const c = navigator.clipboard, orig = c?.writeText?.bind(c);
     if (c && orig) c.writeText = async (t) => { try { sessionStorage.setItem('__clip', String(t)); } catch { /* 막힌 곳이면 그대로 */ } return orig(t).catch(() => {}); };
   } catch { /* 클립보드가 없는 곳 */ }
+  // 책상 Safari(WebKit)에는 파일 공유 창이 있지만 창 없는 시험에서는 고를 사람이 없어 끝나지 않는다.
+  // 그래서 여기서는 "공유 창이 없는 폰"으로 두어 내려받기 길을 보고, 공유 창 길은 아래 "일기 파일을 폰의 공유 창으로 건넨다"에서 흉내로 따로 본다.
+  try { Object.defineProperty(Navigator.prototype, 'canShare', { value: undefined, configurable: true, writable: true }); } catch { /* 못 바꾸는 곳이면 그대로 */ }
 });
 let page = await ctx.newPage();
 const external = new Set();      // 앱이 스스로 부른 바깥 주소
