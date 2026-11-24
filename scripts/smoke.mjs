@@ -748,7 +748,7 @@ check(missing.length === 0 && gone.length === 0, `서비스 워커가 담아 둘
   const frontWords = ['날마다 쓸 시간', '내 일정', '추천', '길 안내', '종이 명함', '이벤트 부스', '명함 알림', '듣기', '녹음 알림', '대화 칸'];
   check(wantNos.every((no) => reqNos.includes(no)) && !reqNos.includes('R25') && !reqNos.includes('R39') && frontWords.every((w) => frontText.includes(w)) && Object.keys(BD.objectMap.objects).length >= 20 && BD.usecases.length >= 7 && BD.usecases.every((u) => !u.prop), `보드에 깊게 4 ~ 7이 보인다: 앞면 두 장에 낱말 ${frontWords.length}개, 뒷면에 요구 ${reqNos.length}개(R18 ~ R31(R25 · R29 ~ R31 제외) · R40 · R41, 지운 요구는 없다) · 객체 ${Object.keys(BD.objectMap.objects).length}개 · 순서도 ${BD.usecases.length}개`);
   const guide = await readFile(join(dist, 'testers/index.html'), 'utf8').catch(() => '');
-  const guideWords = ['홈 화면에 추가', '비행기 모드', '켜기', '폰 안에서만', '폰의 음성 인식 서비스', 'QR 두 개', '첫 화면', '안드로이드 크롬', '아이폰 사파리', '이름과 연락처는 적지 않는다', '일정은 바뀔 수 있', 'data-copy'];
+  const guideWords = ['홈 화면에 추가', '비행기 모드', '켜기', '폰 안에서만', '폰의 음성 인식 서비스', '명함 QR', '링크드인 QR', '첫 화면', '안드로이드 크롬', '아이폰 사파리', '이름과 연락처는 적지 않는다', '일정은 바뀔 수 있', 'data-copy'];
   check(guideWords.every((w) => guide.includes(w)) && !/<input|<form|type="email"|type="tel"/.test(guide) && guide.includes('href="../app.css"'), `테스터 안내가 /testers/에 있다: 확인할 것 여덟 · 폰 둘 · 복사할 글, 이름과 연락처를 받는 칸이 없다`);
   // 안내에 적은 단추 · 글귀가 앱에 그대로 있는지 (앱의 글이 바뀌면 안내도 고친다).
   const appText = (await Promise.all(['views/settings.js', 'views/card.js', 'views/map.js', 'views/listen.js', 'views/diary.js', 'views/talk.js', 'talk-ui.js', 'app.js', 'index.html'].map((f) => readFile(join(dist, f), 'utf8')))).join('\n');
