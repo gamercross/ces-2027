@@ -544,6 +544,42 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       check(placed.some((p) => p.id === 'a') && !placed.some((p) => p.id === 'b') && !placed.some((p) => p.id === 'e') && over === 0 && placed.every((p) => p.size >= 13) && placed.find((p) => p.id === 'c')?.text === '11735 Union bio', '글자 놓기: 중요한 것부터 놓고 겹치거나 화면 밖으로 나가는 것은 숨기며 글자는 13px 이상이다');
       const crowded = mm.layoutLabels([{ id: 'x', x: 50, y: 50, text: '11735 Union bio', alts: ['11735 U', '11735'], size: 13, prio: 90, anchor: 'start' }, { id: 'y', x: 50, y: 52, text: '높은 것', size: 13, prio: 99, anchor: 'start' }], { width: 360, height: 600 });
       check(crowded.length === 1 && crowded[0].id === 'y', '좁은 곳에서는 높은 순위 하나만 남고 나머지는 숨는다');
+      // 3D 지도(11/24): 차례 선 · 다음 곳 이름 · 누른 곳 = 열리는 카드. 글자 놓기의 막힌 칸 · 왼쪽 놓기, 누른 곳 고르기, 보이는 칸에 맞추기.
+      {
+        const name = { id: 'n', x: 100, y: 100, text: '3M', size: 13, prio: 95, anchor: 'start', dx: 19 };
+        const stuck = mm.layoutLabels([name], { width: 360, height: 300 }, { blocked: [[110, 90, 200, 110]] });
+        const left = mm.layoutLabels([{ ...name, flip: true }], { width: 360, height: 300 }, { blocked: [[110, 90, 200, 110]] });
+        check(stuck.length === 0 && left.length === 1 && left[0].side === 'left' && left[0].rect[2] <= 100 && mm.layoutLabels([{ ...name, flip: true }], { width: 360, height: 300 })[0].side === undefined,
+          '글자 놓기: 막힌 칸(갈 곳 번호 · 화면 단추)은 피하고, 오른쪽에 못 놓는 갈 곳 이름은 왼쪽에 놓는다');
+        const m3 = await import('../web/map3d.js');
+        const sq = (x, y, r) => [[x - r, y - r], [x + r, y - r], [x + r, y + r], [x - r, y + r]];
+        const hits = {
+          far: true,
+          pins: [{ id: 'p1', sx: 100, sy: 100, r: 11 }, { id: 'p2', sx: 104, sy: 100, r: 13 }, { id: 'p3', sx: 300, sy: 70, r: 11 }],
+          booths: [{ key: 'N|1', sx: 200, sy: 200 }, { key: 'N|2', sx: 210, sy: 200 }],
+          shapes: [{ p: { k: 'HALL' }, polys: [sq(200, 200, 60)] }],
+          campuses: [{ c: { k: 'lvcc' }, poly: sq(200, 200, 150) }, { c: { k: 'ven' }, poly: sq(600, 200, 100) }],
+        };
+        const at = (x, y, h = hits) => m3.pickAt(x, y, h);
+        check(at(102, 100)?.id === 'p2' && at(315, 70)?.id === 'p3' && at(325, 70)?.kind !== 'pin' && at(201, 200)?.key === 'N|1' && at(205, 200) === null,
+          '3D 누름: 갈 곳 번호 · 부스 점은 손가락에 가장 가까운 것(겹친 번호는 위의 것)이고, 두 점 한가운데처럼 애매하면 아무것도 고르지 않는다');
+        check(at(230, 240)?.kind === 'place' && at(230, 240).p.k === 'HALL' && at(320, 320)?.kind === 'campus' && at(320, 320).c.k === 'lvcc' && at(600, 200)?.c.k === 'ven',
+          '3D 누름: 홀 지붕은 그 홀, 홀에서 떨어진 캠퍼스 바닥은 그 캠퍼스다');
+        check(at(265, 240) === null && at(320, 320, { ...hits, far: false }) === null && at(900, 900) === null && at(230, 240, { ...hits, far: false })?.kind === 'place',
+          '3D 누름: 홀 테두리 바로 밖 · 가까이 볼 때의 바닥 · 빈 곳은 아무것도 열지 않는다(다른 캠퍼스 카드가 뜨지 않는다)');
+        const flat = { yaw: 0, pitch: Math.PI / 2 };
+        const plain = m3.spanFor([0, 0, 400, 200], 360, 544, flat);
+        const tight = m3.spanFor([0, 0, 400, 200], 360, 544, { ...flat, top: 184, bottom: 154, right: 62 });
+        const turned = m3.spanFor([0, 0, 400, 200], 360, 544, { yaw: -0.5, pitch: 0.95, top: 184, bottom: 154, right: 62 });
+        // 맞춘 span에서 상자의 네 귀가 보이는 칸(360 - 62 - 양옆 16, 544 - 184 - 154) 안에 든다
+        const fitsIn = (span, cam) => { const k = 360 / span; return [[200, 100], [200, -100], [-200, 100], [-200, -100]].every(([dx, dz]) => Math.abs(dx * Math.cos(cam.yaw) - dz * Math.sin(cam.yaw)) * k <= (360 - 62 - 32) / 2 + 1e-6 && Math.abs((dx * Math.sin(cam.yaw) + dz * Math.cos(cam.yaw)) * Math.sin(cam.pitch)) * k <= (544 - 184 - 154) / 2 + 1e-6); };
+        check(Math.abs(plain - 360 / (328 / 400)) < 1e-6 && tight > plain && fitsIn(tight, flat) && fitsIn(turned, { yaw: -0.5, pitch: 0.95 }) && m3.spanFor([0, 0, 1, 1], 360, 544, flat) === 150 && m3.spanFor([0, 0, 90000, 90000], 360, 544, flat) === 7000,
+          '3D 보기: 위 찾기 칸 · 아래 띠 · 오른쪽 단추를 뺀 보이는 칸에 상자가 다 들어오게 맞추고(돌려 놓아도), 한계(150 ~ 7000) 안이다');
+        const m3Src = await readFile(join(dist, 'map3d.js'), 'utf8');
+        const mapSrc3 = await readFile(join(dist, 'views/map.js'), 'utf8');
+        check(/^import [^;]*from '\.\/(tokens|mapmath|hallgroups)\.js';$/gm.test(m3Src) && (m3Src.match(/^import /gm) || []).length === 3 && !/https?:\/\//.test(m3Src) && mapSrc3.includes('three.set(') && mapSrc3.includes('over.routes = routes') && /line3\(points, T\.accent, 4\.5, dash\)/.test(mapSrc3),
+          '3D 지도는 바깥 엔진 없이 이미 받은 조각 셋(색 · 지도 셈 · 홀 이름)만 쓰고, 2D가 그리는 차례 선 · 길 안내 선을 그대로 넘겨받아 그린다');
+      }
       // 길 안내의 셈 (web/nav.js)
       const nv = await import('../web/nav.js');
       const lvcc = { k: 'lvcc', toWorld: { scale: 1 }, geo: { lat: 36.1313, lng: -115.1525 } };
