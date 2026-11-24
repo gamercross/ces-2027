@@ -490,11 +490,23 @@ await step('내보내기', '일기 탭 "보내기"(모으는 곳 주소가 없�
   const clip = await page.evaluate(() => sessionStorage.getItem('__clip') || '');
   return { status: /오프라인 시험|사진 시험/.test(clip) ? '됨' : '일부', note: `복사한 글 ${clip.length}자` };
 });
-await step('내보내기', '파일이 어떻게 폰 밖으로 나가나: 공유 시트(navigator.share)를 쓰나, 내려받기(<a download>)만 쓰나', async () => {
-  const sources = await Promise.all(['views/diary.js', 'views/settings.js', 'views/collect.js'].map((f) => readFile(join(dist, f), 'utf8')));
-  const usesShareForFile = sources.some((s) => /navigator\.share\(\{[^}]*files/.test(s));
-  return { status: usesShareForFile ? '됨' : '일부', note: usesShareForFile ? '파일 공유 시트' : '내려받기만 쓴다(아이폰은 파일 앱 "다운로드"에 저장 → 거기서 AirDrop). 파일을 바로 공유 시트로 보내지는 않는다' };
-}, '일부');
+await step('내보내기', '일기 파일을 폰의 공유 창으로 건넨다(되는 폰에서). 공유 창을 닫으면 아무것도 안 나가고, 안 되는 폰은 내려받는다', async () => {
+  // 책상 브라우저에는 폰의 공유 창이 없어, 건네는 조각(handoff.js)에 "된다"고 답하는 흉내를 끼워 본다. 실제 공유 창(AirDrop · 파일에 저장)은 아이폰에서 봐야 한다.
+  const r = await page.evaluate(async () => {
+    const keep = [navigator.share, navigator.canShare];
+    let got = null;
+    navigator.canShare = (d) => !!d?.files?.length;
+    navigator.share = async (d) => { got = d.files[0].name; };
+    const { handFile } = await import('./handoff.js');
+    const how = await handFile('시험.json', '{}');
+    navigator.share = async () => { throw new DOMException('닫음', 'AbortError'); };
+    const cancel = await handFile('시험.json', '{}');
+    [navigator.share, navigator.canShare] = keep;
+    return { how, got, cancel };
+  });
+  const sources = (await Promise.all(['views/diary.js', 'views/settings.js'].map((f) => readFile(join(dist, f), 'utf8'))));
+  return { status: r.how === 'shared' && r.got === '시험.json' && r.cancel === 'cancel' && sources.every((s) => /handFile\(/.test(s)) ? '됨' : '안 됨', note: `건넴 ${r.how} · 닫음 ${r.cancel} (일기 "보내기"와 설정 "내보내기"가 쓴다)` };
+});
 await step('내보내기', '모은 일기 열기: 받은 일기 파일을 고르면 폰 안(diary.wasm)에서 네 태그 × 회사 한 장이 나온다', async () => {
   await go('#/collect', '모은 일기');
   await page.locator('input[type=file]').setInputFiles({ name: '일기.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(exported)) });
@@ -546,10 +558,10 @@ await step('설정', '"인터넷 없이" 칸: "다 담았다"와 담긴 판 이�
   return /판 \d{4}-\d\d-\d\d/.test(await view());
 });
 await step('설정', '"홈 화면에 추가" 단추: 아이폰 사파리에는 안 뜬다(beforeinstallprompt가 없다). 앱 안에 아이폰용 안내 글이 있나', async () => {
-  const sources = (await Promise.all(['views/settings.js', 'views/card.js', 'offline.js', 'index.html'].map((f) => readFile(join(dist, f), 'utf8')))).join('\n');
+  const sources = (await Promise.all(['views/settings.js', 'views/card.js', 'offline.js', 'index.html', 'tips.js'].map((f) => readFile(join(dist, f), 'utf8')))).join('\n');
   const hasGuide = /공유 단추|공유 아이콘|홈 화면에 추가.{0,20}(공유|사파리)/.test(sources);
   return { status: hasGuide ? '됨' : '안 됨', note: hasGuide ? '안내 글 있음' : '앱 안에 아이폰용 "공유 → 홈 화면에 추가" 안내가 없다(테스터 안내 문서에만 있다)' };
-}, '안 됨');
+});
 await step('설정', '자료 출처 카드(받은 날 · 공식 출처 링크)', async () => {
   await page.getByRole('button', { name: '출처' }).click();
   await sleep(400);
@@ -735,6 +747,36 @@ await step('처음 담다 끊김', '앱을 열어 둔 채 인터넷이 돌아오
   await ctx.setOffline(false);
   await page.waitForFunction(() => /다 담았다/.test(document.querySelector('#view')?.innerText || ''), null, { timeout: 15000 });
   return true;
+});
+
+// ================= 18. 아이폰 Safari 탭으로 열었을 때의 안내 · 저녁의 일기 띠 =================
+const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
+await step('홈 화면에 추가 안내', '아이폰 Safari 탭으로 처음 열면 첫 명함 화면에 "홈 화면에 추가" 한 줄이 보이고, 다른 폰에서는 안 보인다', async () => {
+  const other = await page.evaluate(() => document.querySelectorAll('.tip-line, .tip-box').length);
+  await ctx.close();
+  ctx = await browser.newContext({ viewport: { width: 390, height: 780 }, userAgent: IPHONE });
+  page = await ctx.newPage();
+  await page.goto(`${ORIGIN}/`);
+  await page.locator('form.panel').waitFor({ timeout: 8000 });
+  const line = await page.locator('.tip-line').innerText({ timeout: 4000 }).catch(() => '');
+  return { status: /홈 화면에 추가/.test(line) && other === 0 ? '됨' : '안 됨', note: line };
+});
+await step('일기 챙기기', '전시 날 저녁에 보내지 않은 일기가 있으면 탭 위 띠가 "보내지 않은 일기 1개 · 일기 열기"를 보이고, 일기 탭에서는 사라진다', async () => {
+  await ctx.close();
+  ctx = await browser.newContext({ viewport: { width: 390, height: 780 } });
+  page = await ctx.newPage();
+  await page.clock.install({ time: new Date('2027-01-07T03:00:00Z') }); // 라스베이거스 1/6 19:00, 전시가 끝난 뒤
+  await page.goto(`${ORIGIN}/`);
+  await page.evaluate(() => {
+    localStorage.setItem('ces2027.profile.v1', JSON.stringify({ nick: '시험', tag: 'student', line: '', github: '', discord: '' }));
+    localStorage.setItem('ces2027.diary.v1', JSON.stringify([{ id: 'd1', date: '2027-01-06', company: 'A', saw: '본 것', felt: '', tag: 'student' }]));
+  });
+  await page.goto('about:blank'); await page.goto(`${ORIGIN}/#/plan`);
+  const text = await page.locator('#notice:not([hidden])').innerText({ timeout: 8000 }).catch(() => '');
+  await page.locator('#notice-go').click().catch(() => {});
+  await sleep(1200);
+  const at = await page.evaluate(() => ({ hash: location.hash, hidden: document.getElementById('notice').hidden }));
+  return { status: /보내지 않은 일기 1개/.test(text) && /일기 열기/.test(text) && at.hash === '#/diary' && at.hidden ? '됨' : '안 됨', note: `${text.replace(/\n/g, ' · ')} → ${at.hash}` };
 });
 
 await ctx.close(); await browser.close(); server.close();
