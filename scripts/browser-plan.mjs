@@ -56,9 +56,9 @@ async (page) => {
   };
   await put();
 
-  // 1. 이름과 틀: 탭 "갈 곳", 날짜 한 줄, 다음에 갈 곳 한 곳 크게
+  // 1. 이름과 틀: 탭 "갈 곳", 날짜 한 줄에 남은 곳 수, 다음에 갈 곳 한 곳 크게
   check((await text('.tabs a[data-tab="plan"] span')) === '갈 곳' && (await text('.planpage h1')) === '갈 곳', '탭과 머리의 이름은 "갈 곳"이다');
-  check((await text('.daynav-day')) === '1월 6일 (수)' && (await text('.daynav-now')) === '1월 6일 (수)', `날짜 한 줄: "${await text('.daynav-now')}" (날짜만, 칩과 곳 수는 없다)`);
+  check((await text('.daynav-day')) === '1월 6일 (수)' && (await text('.daynav-left')) === '· 남은 4곳' && (await page.locator('.daynav a, .daynav button').count()) === 2, `날짜 한 줄: "${await text('.daynav-day')} ${await text('.daynav-left')}" (다녀온 곳과 내 일정을 뺀 남은 수, 누르는 것은 화살표 둘뿐)`);
   check((await page.locator('.segs[aria-label="날짜"]').count()) === 0 && (await page.locator('.daychip').count()) === 0, '날짜 칩 줄은 없다("안 본 곳" 칩도 없다)');
   const nextText = await text('.nextup-open');
   check(nextText.startsWith('다음에 갈 곳 · 10:30쯤') && nextText.includes(nameOf(1)) && nextText.includes('LVCC 노스 홀 · 부스'), `다음에 갈 곳: 고른 날의 첫 안 간 곳(${nameOf(1)}), 때와 곳이 같이 보인다`);
@@ -86,7 +86,7 @@ async (page) => {
   await page.locator('.nextup-go .pick').click();
   await settle(300);
   check((await text('.toast-text')) === `${nameOf(1)} 다녀왔다.` && (await page.locator('.toast a').getAttribute('href')) === `#/diary/new/${seed.list[1].id}` && (await text('.toast a')) === '일기 쓰기', `다녀왔다: 아래에 "${await text('.toast')}"가 뜬다(일기 쓰기로 한 번에)`);
-  check((await text('.nextup-open')).includes(nameOf(2)) && (await text('.subhead')) === '그다음 2곳' && (await text('.fold-text')) === `다녀온 곳 2 (${nameOf(0)} 외 1곳)`, '다음에 갈 곳 · 그다음 곳 수 · 다녀온 곳이 같이 바뀐다');
+  check((await text('.nextup-open')).includes(nameOf(2)) && (await text('.daynav-left')) === '· 남은 3곳' && (await text('.subhead')) === '그다음 2곳' && (await text('.fold-text')) === `다녀온 곳 2 (${nameOf(0)} 외 1곳)`, '다음에 갈 곳 · 남은 곳 수 · 그다음 곳 수 · 다녀온 곳이 같이 바뀐다');
   const toastBox = await page.locator('.toast').evaluate((n) => { const r = n.getBoundingClientRect(); return { bottom: Math.round(r.bottom), tabsTop: innerHeight - document.querySelector('.tabs').offsetHeight }; });
   check(toastBox.bottom <= toastBox.tabsTop, '알림 한 줄은 탭 바로 위에 뜬다(탭을 가리지 않는다)');
   await page.emulateMedia({ colorScheme: 'light' });
@@ -103,7 +103,7 @@ async (page) => {
   await shot('192-where-visited-open-360.png');
   await page.locator('.stop.done .check').nth(1).click();
   await settle(200);
-  check((await text('.subhead')) === '그다음 3곳' && (await text('.nextup-open')).includes(nameOf(1)) && (await stored())[1].seen === false, '"다녀옴" 칸을 누르면 갈 곳으로 돌아온다');
+  check((await text('.daynav-left')) === '· 남은 4곳' && (await text('.subhead')) === '그다음 3곳' && (await text('.nextup-open')).includes(nameOf(1)) && (await stored())[1].seen === false, '"다녀옴" 칸을 누르면 갈 곳으로 돌아온다');
   await page.evaluate(() => window.scrollTo(0, 0));
 
   // 5. 회사 카드: 이름 · 부스 · 길 안내(검정 하나) · 다녀왔다 · 일기 쓰기 · 공식 쪽, 날짜에 1/5가 없다
@@ -127,12 +127,12 @@ async (page) => {
   check((await text('.pcard-sub')).startsWith('1월 7일 1번째') && (await stored())[2].day === 2, `다른 날로 옮기기: 카드가 "${await text('.pcard-sub')}"로 바뀐다`);
   await page.keyboard.press('Escape');
   await settle(200);
-  check((await page.locator('.pcard-back').isHidden()) && (await text('.daynav-day')) === '1월 7일 (목)' && (await text('.subhead')) === '그다음 2곳', 'Esc로 닫히고 보는 날이 따라간다');
+  check((await page.locator('.pcard-back').isHidden()) && (await text('.daynav-day')) === '1월 7일 (목)' && (await text('.daynav-left')) === '· 남은 3곳' && (await text('.subhead')) === '그다음 2곳', 'Esc로 닫히고 보는 날이 따라간다');
   // 빼면 되돌리기가 6초 뜬다
   await page.locator('.after .stop-open').last().click();
   await page.locator('.pcard button', { hasText: '갈 곳에서 빼기' }).click();
   await settle(300);
-  check((await text('.subhead')) === '그다음 1곳' && (await text('.toast-text')) === `${nameOf(6)} 뺐다.`, '갈 곳에서 빼기: 줄이 줄고 "되돌리기"가 뜬다');
+  check((await text('.daynav-left')) === '· 남은 2곳' && (await text('.subhead')) === '그다음 1곳' && (await text('.toast-text')) === `${nameOf(6)} 뺐다.`, '갈 곳에서 빼기: 줄이 줄고 "되돌리기"가 뜬다');
   await page.locator('.toast .pick').click();
   await settle(300);
   check((await text('.subhead')) === '그다음 2곳' && (await stored()).length === 8, '되돌리기: 줄이 돌아온다');
@@ -140,7 +140,7 @@ async (page) => {
   // 6. 날짜 넘기기: 전시 나흘 + 날짜 없음. 1/5는 내 일정이 없으면 없다
   for (let i = 0; i < 3; i++) await page.locator('.daynav-btn[data-side="next"]').click();
   await settle(200);
-  check((await text('.daynav-day')) === '날짜 없음' && (await page.locator('.daynav-btn[data-side="next"]').isDisabled()) && (await page.locator('.daynotes').textContent()).includes('목록 고치기'), '마지막은 "날짜 없음"이고, 날마다 나누라는 한 줄이 있다');
+  check((await text('.daynav-day')) === '날짜 없음' && (await text('.daynav-left')) === '· 남은 1곳' && (await page.locator('.daynav-btn[data-side="next"]').isDisabled()) && (await page.locator('.daynotes').textContent()).includes('목록 고치기'), '마지막은 "날짜 없음 · 남은 1곳"이고, 날마다 나누라는 한 줄이 있다');
   await shot('197-where-nodate-360.png');
   for (let i = 0; i < 4; i++) await page.locator('.daynav-btn[data-side="prev"]').click();
   await settle(200);
@@ -195,13 +195,21 @@ async (page) => {
   await page.locator('.daybar:not([hidden])').waitFor();
   await settle(1500);
   check(await page.locator('.navbar').isHidden(), '그 날 갈 곳이 남아 있지 않으면 지도 아래 띠가 없다');
+  // 그 날 회사를 다 다녀왔으면 날짜 줄에 "다 다녀옴"
+  await page.goto('about:blank');
+  await page.goto(`${URL}#/plan`);
+  await page.locator('.daynav').waitFor();
+  await settle(500);
+  while ((await text('.daynav-day')) !== '1월 6일 (수)') { await page.locator('.daynav-btn[data-side="prev"]').click(); await settle(150); }
+  check((await text('.daynav-left')) === '· 다 다녀옴' && (await text('.nextup .big')) === '이 날 갈 곳을 다 다녀왔다.', `그 날 회사를 다 다녀왔으면 날짜 줄은 "${await text('.daynav-day')} ${await text('.daynav-left')}"`);
+  await shot('199-where-all-done-360.png');
 
   // 9. 1/5: 회사는 넣지 못한다(예전에 넣은 것은 "날짜 없음"으로 읽는다). 1/5에 넣은 내 일정이 있을 때만 그 날이 보인다
   await put({ list: [{ id: seed.list[1].id, day: 5 }, { id: seed.list[2].id, day: 1 }], events: [{ id: 'p1', date: '2027-01-05', from: '18:00', to: '19:00', name: '사전 모임', place: '' }] });
   check((await text('.daynav-day')) === '1월 6일 (수)' && !(await page.locator('.daynav-btn[data-side="prev"]').isDisabled()), '1/5에 내 일정이 있으면 앞 날로 넘길 수 있다');
   await page.locator('.daynav-btn[data-side="prev"]').click();
   await settle(200);
-  check((await text('.daynav-day')) === '1월 5일 (화)' && (await page.locator('.stop').count()) === 0 && (await text('.meal')) === '18:00 ~ 19:00 · 사전 모임 (내 일정)' && (await page.locator('.nextup a.btn').count()) === 0, '1월 5일: 내 일정만 보이고 회사 · 길 안내는 없다');
+  check((await text('.daynav-day')) === '1월 5일 (화)' && (await page.locator('.daynav-left').count()) === 0 && (await page.locator('.stop').count()) === 0 && (await text('.meal')) === '18:00 ~ 19:00 · 사전 모임 (내 일정)' && (await page.locator('.nextup a.btn').count()) === 0, '1월 5일: 내 일정만 보이고 회사 · 길 안내는 없다(회사가 없는 날은 남은 곳 수를 적지 않는다. 내 일정은 세지 않는다)');
   for (let i = 0; i < 5; i++) await page.locator('.daynav-btn[data-side="next"]').click();
   await settle(200);
   check((await text('.daynav-day')) === '날짜 없음' && (await text('.nextup .big')) === nameOf(1), '예전에 1/5로 넣은 회사는 "날짜 없음"에 보인다');
@@ -228,6 +236,7 @@ async (page) => {
   check(ses.h1 === '강연 일정' && ses.acts[0] === '내 일정에 넣기' && ses.acts.includes('공식 쪽') && !ses.acts.includes('넣기') && !ses.acts.includes('공식'), `강연 일정의 줄 단추: ${ses.acts.join(' · ')}`);
 
   // 11. 360 · 390px × 밝게 · 어둡게 × 글자 네 단계: 옆으로 안 밀리고, 누르는 곳 44px, 카드도 같다
+  const dayLines = [];
   for (const W of [360, 390]) {
     for (const theme of ['light', 'dark']) {
       for (const size of [1, 2, 3, 4]) {
@@ -237,6 +246,10 @@ async (page) => {
         const side = await page.evaluate((w) => document.documentElement.scrollWidth <= w, W);
         const small = await smallTaps('main');
         const oneBlack = await page.evaluate(() => [...document.querySelectorAll('main .btn:not(.ghost)')].filter((n) => n.getBoundingClientRect().width > 0).length);
+        // 날짜 줄: 날짜와 남은 곳 수가 한 줄인가. 넘치면 남은 곳 수만 둘째 줄로(날짜보다 작은 글씨, 잘리지 않는다)
+        const dayLine = await page.evaluate(() => { const d = document.querySelector('.daynav-day').getBoundingClientRect(), l = document.querySelector('.daynav-left'), r = l.getBoundingClientRect(), box = document.querySelector('.daynav-now').getBoundingClientRect(); return { text: l.textContent, one: r.top < d.bottom - 2, inside: r.left >= box.left - 1 && r.right <= box.right + 1 && d.left >= box.left - 1 && d.right <= box.right + 1, small: parseFloat(getComputedStyle(l).fontSize) < parseFloat(getComputedStyle(document.querySelector('.daynav-day')).fontSize), dayLines: Math.round(d.height / parseFloat(getComputedStyle(document.querySelector('.daynav-day')).lineHeight)) }; });
+        dayLines.push(`${W}px 글자 ${size}: ${dayLine.one ? '한 줄' : '둘째 줄'}`);
+        check(dayLine.text === '· 남은 4곳' && dayLine.inside && dayLine.small && dayLine.dayLines === 1, `${W}px ${theme === 'dark' ? '어둡게' : '밝게'} 글자 ${size} 날짜 줄: ${dayLine.one ? '날짜와 남은 곳 수가 한 줄' : '남은 곳 수가 둘째 줄 작은 글씨'}에 들어가고 잘리지 않는다`);
         const cut = await page.evaluate(() => [...document.querySelectorAll('.daynav-now, .nextup .big, .nextup .note, .stop .name, .stop .where, .meal-text, .fold-text')].filter((n) => n.scrollWidth > n.clientWidth + 1).length);
         if (SHOTS && W === 360 && ((theme === 'dark' && size === 1) || (theme === 'light' && size === 4))) await shot(theme === 'dark' ? '190-where-dark-360.png' : '196-where-text4-360.png');
         if (SHOTS && W === 390 && theme === 'light' && size === 1) await shot('190-where-390.png');
@@ -254,5 +267,5 @@ async (page) => {
   await page.evaluate(() => { localStorage.setItem('ces2027.text.v1', JSON.stringify(1)); localStorage.setItem('ces2027.theme.v1', JSON.stringify('light')); });
 
   console.log(JSON.stringify(checks.map((c) => `${c.ok ? '됨' : '안 됨'} | ${c.what}`), null, 1));
-  return `${checks.length}개 통과 · 첫 화면 누를 곳 ${taps.length}개`;
+  return `${checks.length}개 통과 · 첫 화면 누를 곳 ${taps.length}개 · 날짜 줄 ${[...new Set(dayLines)].join(' / ')}`;
 }

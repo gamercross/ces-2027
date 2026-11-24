@@ -223,12 +223,14 @@ export async function render() {
       const when = hours ? timeline(items.length, hours, evs, pace) : [];
       items.forEach((it, i) => { if (hours) whenOf.set(it.id, when[i]); });
 
-      // 날짜 한 줄: ‹ 1월 6일 (수) ›. 날마다 몇 곳인지는 여기 적지 않는다(안 1에서 뺀 것. 아래 "그다음 n곳"이 말한다).
+      // 날짜 한 줄: ‹ 1월 6일 (수) · 남은 4곳 ›. 남은 곳 = 그 날 회사 가운데 "다녀왔다"를 누르지 않은 곳(내 일정은 세지 않는다).
+      // 다 다녀왔으면 "다 다녀옴", 그 날 넣은 회사가 없으면 수를 적지 않는다. 글자만 더한다(단추 · 칩은 늘리지 않는다, 2026-11-24 이재엽).
+      const left = items.length ? (todo.length ? `남은 ${todo.length}곳` : '다 다녀옴') : '';
       const at = live.findIndex((x) => x.key === d.key);
       const step = (to, left) => el('button', { class: 'daynav-btn', type: 'button', disabled: !to, 'aria-label': to ? `${left ? '앞 날' : '다음 날'}: ${longDay(to)}` : (left ? '앞 날 없음' : '다음 날 없음'), onclick: () => { if (!to) return; showDay(to.key); status.textContent = ''; hideToast(); draw(); document.querySelector(`.daynav-btn[data-side="${left ? 'prev' : 'next'}"]`)?.focus({ preventScroll: true }); }, 'data-side': left ? 'prev' : 'next' }, chevron(left));
       navHolder.replaceChildren(el('div', { class: 'daynav', role: 'group', 'aria-label': '날짜' },
         step(live[at - 1], true),
-        el('h2', { class: 'daynav-now', 'aria-live': 'polite' }, el('span', { class: 'daynav-day', text: longDay(d) })),
+        el('h2', { class: 'daynav-now', 'aria-live': 'polite' }, el('span', { class: 'daynav-day', text: longDay(d) }), left ? el('span', { class: 'daynav-left', text: `· ${left}` }) : null),
         step(live[at + 1], false)));
 
       // 다음에 갈 곳: 고른 날의 첫 안 간 곳 하나를 가장 크게. 검정 단추는 "길 안내" 하나.
