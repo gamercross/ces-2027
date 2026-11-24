@@ -217,6 +217,14 @@ body:has(.mappage) .bar .tag { display: none; }
 .linkish { display: inline-flex; align-items: center; min-height: var(--tap-min); min-width: var(--tap-min); padding: 0 var(--s1); border: 0; background: none; text-decoration: underline; text-underline-offset: 3px; font-size: var(--fs-note); cursor: pointer; }
 .row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); margin-top: var(--s1); }
 .row-actions a { text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; display: inline-flex; align-items: center; min-height: var(--tap-min); min-width: var(--tap-min); padding: 0 var(--s1); font-size: var(--fs-note); }
+/* 인터넷이 끊겼을 때만(html[data-offline], app.js의 paintNet) 구글맵 · CES 공식 사이트로 나가는 링크 가까이에 한 줄. 평소에는 아무것도 없다.
+   카드의 단추 줄은 그 줄 아래에, 줄마다 링크가 있는 목록은 줄마다 되풀이하지 않고 목록 맨 위에 한 번만. */
+[data-offline] :is(.actions, .pcard-links, .navbar, :not(li) > .row-actions):has(a[href*="ces.tech"], a[href*="google.com/maps"])::after,
+[data-offline] :is(ul, ol):not(li *):has(> li :is(a[href*="ces.tech"], a[href*="google.com/maps"]))::before { content: "공식 사이트는 인터넷이 있어야 열린다"; display: block; flex: 1 1 100%; font-size: var(--fs-note); font-weight: 400; color: var(--ink-2); }
+[data-offline] :is(.actions, .pcard-links, .navbar, :not(li) > .row-actions):has(a[href*="google.com/maps"])::after,
+[data-offline] :is(ul, ol):not(li *):has(> li a[href*="google.com/maps"])::before { content: "구글맵은 인터넷이 있어야 열린다"; }
+[data-offline] :is(.actions, .pcard-links, .navbar, :not(li) > .row-actions):has(a[href*="google.com/maps"]):has(a[href*="ces.tech"])::after,
+[data-offline] :is(ul, ol):not(li *):has(> li a[href*="google.com/maps"]):has(> li a[href*="ces.tech"])::before { content: "구글맵 · 공식 사이트는 인터넷이 있어야 열린다"; }
 
 /* ---- 적는 칸 ---- */
 .form { display: grid; gap: 14px; }

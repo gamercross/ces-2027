@@ -5,6 +5,7 @@
 //   dist는 CI의 "짓기"가 만든 것과 같은 꼴이다(scripts/stamp.mjs까지 돌린 것). 자료가 없는 dist면 자료 쪽 시험은 "안 됨"으로 나온다.
 //   Playwright는 npm 설치 없이 playwright-cli(전역)의 것을 쓴다. 다른 곳의 것을 쓰려면 PLAYWRIGHT_CORE=<playwright-core 폴더>.
 //   브라우저 실행 파일이 Playwright 판과 어긋나면 PW_CHROMIUM=<실행 파일> · PW_WEBKIT=<실행 파일>로 알려 준다.
+//   CI(.github/workflows/pages.yml의 "인터넷을 끊고 써 보기")는 playwright-core를 따로 받아 PLAYWRIGHT_CORE로 알려 주고 Chromium으로 돈다.
 // 끝낼 때: 예상과 다른 것이 있으면 1, 없으면 0. "예상"은 아래 step()의 expect(기본 '됨')다.
 //   알려진 한계(밖의 지도 · 공식 사이트 · 아이폰에 없는 기능)는 expect를 '안 됨' · '일부'로 적어 두어 시험이 실패하지 않는다.
 
@@ -68,7 +69,10 @@ const launchOptions = {};
 // Playwright 판과 받아 둔 브라우저 판이 어긋나면 받아 둔 Chrome for Testing을 직접 가리킨다(헤드리스 쉘은 듣기 화면에서 죽어서 쓰지 않는다).
 if (browserName === 'chromium') { launchOptions.executablePath = process.env.PW_CHROMIUM || `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1243/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`; launchOptions.args = ['--headless=new']; }
 if (browserName === 'webkit' && process.env.PW_WEBKIT) launchOptions.executablePath = process.env.PW_WEBKIT;
-const browser = await pw[browserName].launch(launchOptions).catch(async () => pw[browserName].launch());
+// 받아 둔 실행 파일이 없는 곳(CI의 리눅스)에서는 Playwright가 받은 Chromium을 새 헤드리스로 띄운다(channel: 'chromium'). 그것도 없으면 기본으로.
+const browser = await pw[browserName].launch(launchOptions)
+  .catch(() => (browserName === 'chromium' ? pw.chromium.launch({ channel: 'chromium' }) : Promise.reject(new Error('없다'))))
+  .catch(() => pw[browserName].launch());
 let ctx = await browser.newContext({ viewport: { width: 390, height: 780 }, acceptDownloads: true, permissions: browserName === 'chromium' ? ['geolocation', 'clipboard-read', 'clipboard-write'] : ['geolocation'], geolocation: { latitude: 36.1338, longitude: -115.1577, accuracy: 20 } });
 // 복사한 글을 시험이 읽을 수 있게 writeText를 한 겹 싼다(WebKit은 클립보드 읽기를 막아 둔다). 원래 복사도 그대로 부른다.
 await ctx.addInitScript(() => {
@@ -91,6 +95,12 @@ const sleep = (ms) => page.waitForTimeout(ms);
 const go = async (hash, label = hash) => { where = label; await page.goto('about:blank'); await page.goto(`${ORIGIN}/${hash}`); await sleep(400); };
 const view = () => page.evaluate(() => document.querySelector('#view')?.innerText || '');
 const failedView = async () => /불러오지 못했/.test(await view());
+// 밖으로 나가는 링크 가까이의 한 줄(끊겼을 때만 CSS가 그린다): 카드의 단추 줄 아래, 목록은 맨 위에 한 번. 없으면 'none'.
+const netNote = (link) => link.evaluate((a) => {
+  const group = a.closest('.actions, .pcard-links, .navbar, .row-actions'), list = a.closest('ul, ol');
+  const under = group ? getComputedStyle(group, '::after').content : 'none';
+  return under !== 'none' ? under : list ? getComputedStyle(list, '::before').content : 'none';
+});
 const store = (key) => page.evaluate((k) => { try { return JSON.parse(localStorage.getItem(`ces2027.${k}`)); } catch { return null; } }, key);
 
 // 담아 둘 목록(sw.js의 FILES)을 읽는다.
@@ -120,9 +130,9 @@ fact('담아 두지 않는 파일', notListed.join(', ') || '없음');
 fact('처음 열어 명함 화면이 뜨기까지(이 컴퓨터, 회선 제한 없음)', `${firstShown}ms`);
 fact('다 담기기까지(이 컴퓨터, 회선 제한 없음)', cachedAt == null ? `못 담음(${cached}/${listed.length})` : `${cachedAt}ms`);
 await step('처음 열기', `서비스 워커가 목록 ${listed.length}개를 모두 담는다(한 번 열었을 뿐, 다른 화면은 안 열었다)`, () => ({ status: cached >= listed.length ? '됨' : '안 됨', note: `${cached}/${listed.length}` }));
-await step('처음 열기', '설정 칸 "인터넷 없이"가 "인터넷 없이 열린다"로 바뀐다(다 담았다는 표시)', async () => {
+await step('처음 열기', '설정 칸 "인터넷 없이"가 "다 담았다"로 바뀐다', async () => {
   await page.goto(`${ORIGIN}/#/settings`);
-  await page.waitForFunction(() => /인터넷 없이 열린다/.test(document.querySelector('#view')?.innerText || ''), null, { timeout: 8000 });
+  await page.waitForFunction(() => /다 담았다/.test(document.querySelector('#view')?.innerText || ''), null, { timeout: 8000 });
   return true;
 });
 await step('처음 열기', '다 담았다는 알림이 첫 화면 · 명함 화면에 보인다', async () => {
@@ -265,6 +275,10 @@ await step('지도', '다른 캠퍼스로 가는 "구글맵 길찾기"는 밖의
   const href = await page.locator('a', { hasText: '구글맵' }).first().getAttribute('href');
   return { status: /^https:\/\/www\.google\.com\/maps/.test(href || '') ? '안 됨' : '모름', note: '우리 지도의 길 안내(선 · 거리)는 됨, 구글맵으로 넘어가는 것만 안 됨' };
 }, '안 됨');
+await step('지도', '끊겼을 때 구글맵 단추 아래에 "구글맵은 인터넷이 있어야 열린다" 한 줄이 보인다', async () => {
+  const t = await netNote(page.locator('a', { hasText: '구글맵' }).first());
+  return { status: /구글맵은 인터넷이 있어야 열린다/.test(t) ? '됨' : '안 됨', note: t };
+});
 await step('지도', '3D 지도(누를 때만 불러오는 조각 map3d.js)가 열린다', async () => {
   await go('#/map', '지도 3D');
   await page.locator('svg.map').waitFor({ timeout: 12000 });
@@ -370,6 +384,11 @@ await step('세션', '세션 카드의 "공식 쪽" 링크는 CES 공식 사이�
   const href = await page.getByRole('link', { name: '공식 쪽' }).first().getAttribute('href');
   return { status: /^https:\/\/www\.ces\.tech/.test(href || '') ? '안 됨' : '모름', note: '목록과 시간은 됨, 공식 설명 쪽은 인터넷이 있어야 열린다' };
 }, '안 됨');
+await step('세션', '끊겼을 때 세션 목록 맨 위에 "구글맵 · 공식 사이트는 인터넷이 있어야 열린다"가 한 번만 보인다(줄마다 되풀이하지 않는다)', async () => {
+  const perRow = await page.locator('.row-actions').first().evaluate((n) => getComputedStyle(n, '::after').content);
+  const t = await netNote(page.getByRole('link', { name: '공식 쪽' }).first());
+  return { status: /공식 사이트는 인터넷이 있어야 열린다/.test(t) && perRow === 'none' ? '됨' : '안 됨', note: t };
+});
 
 // ================= 8. 일기 =================
 const png = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 1600; c.height = 1200; const x = c.getContext('2d'); for (let i = 0; i < 40; i++) { x.fillStyle = `hsl(${i * 9} 70% 55%)`; x.fillRect(i * 40, (i * 31) % 1200, 120, 90); } return c.toDataURL('image/png').split(',')[1]; });
@@ -517,9 +536,9 @@ await step('설정', '화면 색(어둡게)이 바뀌고 다시 열어도 남는
   await page.getByRole('button', { name: '자동' }).click(); await page.waitForLoadState('load'); await sleep(600);
   return t === 'dark';
 });
-await step('설정', '"인터넷 없이" 칸: 담긴 판 이름과 "인터넷 없이 열린다"', async () => {
+await step('설정', '"인터넷 없이" 칸: "다 담았다"와 담긴 판 이름', async () => {
   await go('#/settings', '설정 인터넷 없이');
-  await page.waitForFunction(() => /인터넷 없이 열린다/.test(document.querySelector('#view')?.innerText || ''), null, { timeout: 6000 });
+  await page.waitForFunction(() => /다 담았다/.test(document.querySelector('#view')?.innerText || ''), null, { timeout: 6000 });
   return /판 \d{4}-\d\d-\d\d/.test(await view());
 });
 await step('설정', '"홈 화면에 추가" 단추: 아이폰 사파리에는 안 뜬다(beforeinstallprompt가 없다). 앱 안에 아이폰용 안내 글이 있나', async () => {
@@ -574,7 +593,7 @@ await step('저장', '앱이 "지우지 마라"를 부탁한다(navigator.storag
   const text = (await Promise.all(allFiles.filter((f) => f.endsWith('.js') || f === 'index.html').map((f) => readFile(join(dist, f), 'utf8')))).join('\n');
   const called = /storage\.persist\s*\(/.test(text);
   return { status: called ? '됨' : '안 됨', note: called ? '' : '코드 어디에도 persist() 호출이 없다' };
-}, '안 됨');
+});
 await step('저장', '일기는 localStorage(글) + IndexedDB(사진 · 녹음)에 있다', async () => {
   const keys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('ces2027.')));
   fact('localStorage 열쇠', keys.join(', '));
@@ -604,6 +623,11 @@ await step('끊은 채 한 바퀴', '지운 뒤에도 인터넷 없이 처음부
 await ctx.setOffline(false);
 net.up = true;
 offlineNow = false;
+await step('밖으로 나가는 링크', '인터넷이 돌아오면 "인터넷이 있어야 열린다" 줄이 사라진다', async () => {
+  await go('#/sessions', '돌아온 뒤 세션');
+  const t = await netNote(page.getByRole('link', { name: '공식 쪽' }).first());
+  return { status: t === 'none' ? '됨' : '안 됨', note: t };
+});
 await step('판 바뀜', '새 판을 받는 도중에 끊기면(담는 파일 중 하나가 안 와도) 옛 판이 그대로 열린다(새 판은 통째로 받거나 아예 안 받는다)', async () => {
   await go('#/settings', '판 바뀜');
   const before = await page.evaluate(async () => (await (await fetch('version.json')).json()).v);
@@ -658,12 +682,12 @@ await step('처음 담다 끊김', '담는 도중 연결이 끊기면 아무것�
   fact('담다 끊긴 뒤 담음 · 활성 서비스 워커', `${cachedNow.join(',') || '없음'} · ${info.regs}`);
   return { status: info.regs === 0 ? '됨' : '안 됨', note: '서비스 워커가 깔리지 않았다 = 다음에 다시 시도한다' };
 });
-await step('처음 담다 끊김', '그 상태에서 설정을 열어도 "담는 중이다"만 보이고 끊겼다는 말은 없다', async () => {
+await step('처음 담다 끊김', '그 상태에서 설정을 열면 "아직 담지 못했다 · 와이파이에서 다시 연다"가 보인다', async () => {
   await page.goto(`${ORIGIN}/#/settings`);
-  await sleep(1500);
+  await page.waitForFunction(() => /아직 담지 못했다 · 와이파이에서 다시 연다/.test(document.querySelector('#view')?.innerText || ''), null, { timeout: 8000 }).catch(() => {});
   const t = await view();
-  return { status: /담는 중이다/.test(t) ? '안 됨' : '됨', note: '담지 못했는데도 "담는 중이다"로 보인다(사용자는 끊긴 줄 모른다)' };
-}, '안 됨');
+  return { status: /아직 담지 못했다/.test(t) && !/담는 중이다|다 담았다/.test(t) ? '됨' : '안 됨', note: (t.match(/인터넷 없이\n?[^\n]*/) || [''])[0].replace(/\n/g, ' ') };
+});
 await step('처음 담다 끊김', '이 상태로 비행기 모드에 들어가 열면 앱이 안 열린다(캐시가 없다)', async () => {
   await ctx.setOffline(true); net.up = false;
   const ok = await page.goto(`${ORIGIN}/`, { timeout: 5000 }).then((r) => !!r && r.ok(), () => false);
@@ -675,6 +699,23 @@ await step('처음 담다 끊김', '인터넷이 다시 되면, 앱을 다시 �
   let n = 0;
   for (let i = 0; i < 40 && n < listed.length; i++) { await sleep(300); n = await page.evaluate(async (v) => (await caches.has(`ces2027-${v}`)) ? (await (await caches.open(`ces2027-${v}`)).keys()).length : 0, version); }
   return { status: n >= listed.length ? '됨' : '안 됨', note: `${n}/${listed.length}` };
+});
+
+// 담다 끊긴 채 앱을 열어 둔 사람: 인터넷이 돌아오면 앱을 껐다 켜지 않아도 다시 담고, 설정 줄이 "다 담았다"로 바뀐다.
+await ctx.close();
+ctx = await browser.newContext({ viewport: { width: 390, height: 780 } });
+page = await ctx.newPage();
+net.failPrefix = (p) => p.startsWith('/data/halls/');
+await step('처음 담다 끊김', '앱을 열어 둔 채 인터넷이 돌아오면 저절로 다시 담고 "다 담았다"로 바뀐다', async () => {
+  where = '열어 둔 채 다시 담기';
+  await page.goto(`${ORIGIN}/#/settings`);
+  await page.waitForFunction(() => /아직 담지 못했다/.test(document.querySelector('#view')?.innerText || ''), null, { timeout: 10000 });
+  await ctx.setOffline(true);
+  net.failPrefix = null;
+  await sleep(300);
+  await ctx.setOffline(false);
+  await page.waitForFunction(() => /다 담았다/.test(document.querySelector('#view')?.innerText || ''), null, { timeout: 15000 });
+  return true;
 });
 
 await ctx.close(); await browser.close(); server.close();

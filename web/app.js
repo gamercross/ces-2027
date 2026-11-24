@@ -2,7 +2,7 @@
 
 import { getProfile } from './store.js';
 import { getInfo, getMeta, getPlaces, getSettings } from './data.js';
-import { healOnce, offline, reopen, startOffline } from './offline.js';
+import { healOnce, keepData, offline, reopen, startOffline } from './offline.js';
 import { alerts, checkAlerts, startAlerts } from './notify.js';
 import { failed, frame, loading, missing } from './frame.js';
 
@@ -102,6 +102,7 @@ async function show() {
     if (mine !== turn) return;
     view.replaceChildren(node);
     startOffline();
+    if (getProfile()) keepData();
     // 화면을 바꿀 때마다 알릴 것을 다시 본다 (표시한 부스가 없으면 아무것도 읽지 않는다).
     if (!startAlerts()) checkAlerts();
   } catch (e) {
@@ -120,7 +121,12 @@ async function show() {
 
 // 인터넷이 끊기면 위에 한 줄로 알린다. 폰에 담아 둔 화면 · 갈 곳 · 지도는 그대로 열린다.
 const net = document.getElementById('net');
-function paintNet() { net.hidden = navigator.onLine !== false; }
+function paintNet() {
+  const off = navigator.onLine === false;
+  net.hidden = !off;
+  // 끊겼을 때만 밖으로 나가는 단추(구글맵 · 공식 사이트) 아래에 한 줄이 보인다 (app.css의 [data-offline]).
+  document.documentElement.toggleAttribute('data-offline', off);
+}
 window.addEventListener('online', paintNet);
 window.addEventListener('offline', paintNet);
 paintNet();

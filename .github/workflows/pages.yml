@@ -194,6 +194,20 @@ jobs:
       - name: 지은 것 살피기
         run: node scripts/smoke.mjs dist
 
+      # 인터넷이 없는 전시장에서도 열리는지: 한 번 연 뒤 네트워크를 끊고 화면마다 열어 쓴다(tests/offline.mjs, Chromium).
+      # 전시사 · 세션 자료를 못 받은 날은 자료 쪽 시험이 뜻이 없어 건너뛴다(경고만). 브라우저 시험이라 한 번은 다시 해 본다.
+      - name: 인터넷을 끊고 써 보기 (Chromium)
+        run: |
+          if [ ! -f dist/data/meta.json ] || [ ! -f dist/data/sessions.json ]; then
+            echo "::warning::전시사나 세션 자료가 없어 오프라인 시험을 건너뛴다."
+            exit 0
+          fi
+          npm install --no-save --no-audit --no-fund --prefix .cache/pw playwright-core@1.65.1
+          export PLAYWRIGHT_CORE="$PWD/.cache/pw/node_modules/playwright-core"
+          node "$PLAYWRIGHT_CORE/cli.js" install --with-deps chromium
+          node tests/offline.mjs dist --out=offline.md || { echo "::warning::오프라인 시험이 한 번 실패했다. 다시 해 본다."; node tests/offline.mjs dist --out=offline.md; }
+          cat offline.md >> "$GITHUB_STEP_SUMMARY"
+
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
