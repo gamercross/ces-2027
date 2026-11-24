@@ -676,6 +676,9 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       check(wf.includes('cron:') && wf.includes('check-floorplan.mjs') && wf.includes("steps.plan.outputs.state == 'open'") && wf.includes('gh issue create') && wf.includes('issues: write') && wf.includes('gh issue list --label floorplan --state open'), '정식 배치도 감시: 매일 한 번 공식 사이트를 보고, 열렸을 때만 이슈 하나를 만든다(이미 열린 이슈가 있으면 또 만들지 않는다)');
       check(/startNav\(/.test(mapSrc) && /길 안내 시작/.test(mapSrc) && /function endNav/.test(mapSrc) && /navFollow/.test(mapSrc) && /map\/go|rest\[0\] === 'go'/.test(mapSrc) && /estimate\(/.test(mapSrc) && /\/\/ ---- 길 안내/.test(mapSrc),
         '길 안내: 카드의 "길 안내 시작" · 아래 띠(남은 거리 · 걷는 시간 · 방향 · 끝내기) · 걸으면 지도가 따라오고 손으로 끌면 멈춘다 · 다음 갈 곳에서도 시작한다(#/map/go/<회사>)');
+      // 길 판 안에 다음에 누를 것 (편의성 점검 6절 2 · 4번): 위치를 못 쓰면 부스 번호 칸 + 맞추기, 다른 캠퍼스면 구글맵으로 가기 + 셔틀 보기. 같은 칸 · 같은 구글맵 단추는 한 곳에만
+      check(mapSrc.includes("const NO_GPS = '위치를 못 쓴다. 가까운 부스 번호를 적는다.'") && !mapSrc.includes('위치 권한을 거부했다') && mapSrc.includes("class: 'inline nav-form'") && mapSrc.includes('function fitBooth(') && mapSrc.includes('boothForm.hidden = needBooth') && mapSrc.includes("'구글맵으로 가기'") && mapSrc.includes("href: '#/transit', text: '셔틀 보기'") && mapSrc.includes('navMaps !== next.id') && !/api[_-]?key|maps\.googleapis/i.test(mapSrc),
+        '길 판: 위치를 못 쓰면 한 줄 말 + 판 안의 "가까운 부스 번호" 칸 · 맞추기, 다른 캠퍼스면 "구글맵으로 가기"(링크만, 키 없음) · "셔틀 보기". 아래 묶음의 같은 칸 · 같은 구글맵 단추와 겹치지 않는다');
       check(/pointerType|pointers\.size === 2/.test(gestSrc) && /DOUBLE_MS/.test(gestSrc) && /addEventListener\('wheel'/.test(gestSrc) && /requestAnimationFrame/.test(gestSrc) && /swallow/.test(gestSrc) && /sheet-grip/.test(sheetSrc) && /'half'/.test(sheetSrc) && /'full'/.test(sheetSrc) && /closed/.test(sheetSrc),
         '손짓: 한 손가락 끌기 · 두 손가락 벌리기 · 두 번 톡 · 휠, 프레임마다 한 번만 그리고 끌고 난 뒤 click은 막는다. 카드는 반쯤 → 끝까지 끌어올리고 아래로 끌면 닫힌다');
     }
@@ -788,7 +791,7 @@ check(missing.length === 0 && gone.length === 0, `서비스 워커가 담아 둘
   check(guideWords.every((w) => guide.includes(w)) && !/<input|<form|type="email"|type="tel"/.test(guide) && guide.includes('href="../app.css"'), `테스터 안내가 /testers/에 있다: 확인할 것 여덟 · 폰 둘 · 복사할 글, 이름과 연락처를 받는 칸이 없다`);
   // 안내에 적은 단추 · 글귀가 앱에 그대로 있는지 (앱의 글이 바뀌면 안내도 고친다).
   const appText = (await Promise.all(['views/settings.js', 'views/card.js', 'views/map.js', 'views/listen.js', 'views/diary.js', 'views/talk.js', 'talk-ui.js', 'app.js', 'index.html'].map((f) => readFile(join(dist, f), 'utf8')))).join('\n');
-  const labels = ['명함부터 만든다', '명함 만들기', '명함 고치기 끝', '지도로', 'QR 보기', '명함 고치기', '인터넷 없이', '인터넷 없이 열린다', '켜기', '켜져 있다', '이벤트 있음으로 표시', '가까운 부스 번호', '맞추기', '가까이에 명함 넣는 이벤트 부스', '크게 띄우기', '읽어 주기', '이 폰에서 되는 것', '이 폰에서는 안 됨', '받아쓰기를 어디서 하나', '알겠다 · 이 길로 한다', '그만둔다', '상대에게 알렸다 · 듣기 시작', '알렸다 · 듣기 시작', '손으로 적기', '줄 넣기', '멈추고 일기 초안 만들기', '적은 것으로 초안 만들기', '일기 초안 다듬기', '나누기', '말한 사람 바꾸기', '초안 만들기', '폰에 남기기', '녹음 듣기', '새 판이 있다'];
+  const labels = ['명함부터 만든다', '명함 만들기', '명함 고치기 끝', '지도로', 'QR 보기', '명함 고치기', '인터넷 없이', '다 담았다', '켜기', '켜져 있다', '이벤트 있음으로 표시', '가까운 부스 번호', '맞추기', '가까이에 명함 넣는 이벤트 부스', '크게 띄우기', '읽어 주기', '이 폰에서 되는 것', '이 폰에서는 안 됨', '받아쓰기를 어디서 하나', '알겠다 · 이 길로 한다', '그만둔다', '상대에게 알렸다 · 듣기 시작', '알렸다 · 듣기 시작', '손으로 적기', '줄 넣기', '멈추고 일기 초안 만들기', '적은 것으로 초안 만들기', '일기 초안 다듬기', '나누기', '말한 사람 바꾸기', '초안 만들기', '폰에 남기기', '녹음 듣기', '새 판이 있다'];
   const missingLabels = labels.filter((l) => !appText.includes(l) || !guide.includes(l.replace(/&/g, '&amp;')));
   check(missingLabels.length === 0, `테스터 안내에 적은 단추와 글귀 ${labels.length}개가 앱과 안내에 그대로 있다 (없는 것: ${missingLabels.join(' / ') || '없음'})`);
   const daysJs = await readFile(join(dist, 'views/days.js'), 'utf8');

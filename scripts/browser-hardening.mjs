@@ -44,7 +44,7 @@ async (page) => {
     'R21: 부스까지의 홀 안 길을 짐작으로 그린다');
 
   await page.getByRole('button', { name: 'GPS로 찾기' }).click();
-  await page.getByText('위치 권한을 거부했다. 브라우저 설정에서 허락하거나 부스 번호로 맞춘다.').waitFor();
+  await page.getByText('위치를 못 쓴다. 가까운 부스 번호를 적는다.').waitFor();
   check(true, 'R12: 위치 권한을 거부하면 부스 번호로 맞추는 방법을 알린다');
 
   await page.getByRole('button', { name: '따라가기 켜기' }).click();

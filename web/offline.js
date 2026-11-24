@@ -1,7 +1,10 @@
 // 오프라인: 서비스 워커가 화면 · 코어 · 자료를 폰에 담아 둔다. 담겼는지와 판 이름을 여기서 안다.
 
-export const offline = { ready: false, version: null, install: null, update: false };
+// late: 담기를 시작한 지 30초가 넘었거나 담다가 실패했는데 아직 못 담았다. 설정의 "인터넷 없이" 줄이 "아직 담지 못했다"고 말한다.
+export const offline = { ready: false, version: null, install: null, update: false, late: false };
 const changed = () => window.dispatchEvent(new Event('ces-offline'));
+const LATE_MS = 30000;
+function late() { if (!offline.ready && !offline.late) { offline.late = true; changed(); } }
 
 if ('serviceWorker' in navigator) {
   // 새 판: 서비스 워커가 바뀌어 이 화면을 맡으면, 지금 열린 화면은 옛 판이다. "다시 열기"를 권한다.
@@ -26,17 +29,37 @@ if ('serviceWorker' in navigator) {
         offline.ready = await caches.has(`ces2027-${offline.version}`);
       }
     } catch { /* 판 이름이 없으면 그대로 둔다 */ }
+    if (offline.ready) offline.late = false;
     changed();
   });
+  // 인터넷이 돌아오면 못 담은 것을 다시 담아 본다 (앱을 껐다 켜지 않아도).
+  window.addEventListener('online', () => { if (started && !offline.ready) register(); });
 }
 
 // 서비스 워커를 건다. 첫 화면이 그려진 뒤에 부른다: 폰에 담는 일(파일 서른몇 개)이 첫 화면과 회선을 다투지 않게.
 let started = false;
+// 담기는 "전부 아니면 하나도 아니다"라서, 받다가 끊기면 서비스 워커가 깔리지 않고 버려진다(redundant). 그때 바로 "아직 담지 못했다"로 바꾼다.
+async function register() {
+  try {
+    const reg = await navigator.serviceWorker.register('sw.js');
+    const worker = reg.installing;
+    if (worker && !reg.active) worker.addEventListener('statechange', () => { if (worker.state === 'redundant') late(); });
+  } catch { late(); }
+}
 export function startOffline() {
   if (started || !('serviceWorker' in navigator)) return;
   started = true;
-  const go = () => navigator.serviceWorker.register('sw.js').catch(() => {});
-  if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 3000 }); else setTimeout(go, 1200);
+  if ('requestIdleCallback' in window) requestIdleCallback(register, { timeout: 3000 }); else setTimeout(register, 1200);
+  setTimeout(late, LATE_MS);
+}
+
+// 폰에 남긴 것(명함 · 갈 곳 · 일기 · 사진)을 저절로 지우지 말아 달라고 폰에 부탁한다. 들어줄지는 폰이 정한다(화면은 바뀌지 않는다).
+// 명함을 만든 뒤에 한 번만 부탁한다: 남길 것이 생기기 전에는 묻지 않는다.
+let asked = false;
+export async function keepData() {
+  if (asked || !navigator.storage?.persist) return;
+  asked = true;
+  try { if (!(await navigator.storage.persisted())) await navigator.storage.persist(); } catch { /* 못 부탁해도 앱은 그대로 쓴다 */ }
 }
 
 // 홈 화면에 추가: 브라우저가 물어볼 수 있게 되면 단추를 보인다.
