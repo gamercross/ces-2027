@@ -21,32 +21,32 @@ async (page) => {
     const input = page.locator('.find-field input');
     await input.waitFor({ timeout: 15000 });
     await input.fill('robot');
-    await page.waitForFunction(() => [...document.querySelectorAll('.results .result span')].some((x) => x.textContent.startsWith('세션 ·')), null, { timeout: 15000 });
+    await page.waitForFunction(() => [...document.querySelectorAll('.results .result span')].some((x) => x.textContent.startsWith('강연 ·')), null, { timeout: 15000 });
     const res = await page.evaluate(() => [...document.querySelectorAll('.results .result')].map((r) => ({ t: r.querySelector('b').textContent, s: r.querySelector('span').textContent })));
-    const ses = res.filter((r) => r.s.startsWith('세션 ·'));
-    const firstSes = res.findIndex((r) => r.s.startsWith('세션 ·'));
-    const visible = await page.evaluate(() => { const box = document.querySelector('.results').getBoundingClientRect(); return [...document.querySelectorAll('.results .result')].filter((r) => r.querySelector('span').textContent.startsWith('세션 ·')).every((r) => r.getBoundingClientRect().bottom <= box.bottom + 1); });
-    check(ses.length === 2 && firstSes === 2 && visible && ses.every((r) => /^세션 · \d+\/\d+ \d\d:\d\d · /.test(r.s)), `${w}px 지도 찾기 "robot": 회사 두 줄 뒤에 세션 줄 둘, 내리지 않아도 보인다 (${ses.map((r) => r.t).join(' / ')})`);
+    const ses = res.filter((r) => r.s.startsWith('강연 ·'));
+    const firstSes = res.findIndex((r) => r.s.startsWith('강연 ·'));
+    const visible = await page.evaluate(() => { const box = document.querySelector('.results').getBoundingClientRect(); return [...document.querySelectorAll('.results .result')].filter((r) => r.querySelector('span').textContent.startsWith('강연 ·')).every((r) => r.getBoundingClientRect().bottom <= box.bottom + 1); });
+    check(ses.length === 2 && firstSes === 2 && visible && ses.every((r) => /^강연 · \d+\/\d+ \d\d:\d\d · /.test(r.s)), `${w}px 지도 찾기 "robot": 회사 두 줄 뒤에 세션 줄 둘, 내리지 않아도 보인다 (${ses.map((r) => r.t).join(' / ')})`);
     if (w === 360) await page.screenshot({ path: `${SHOTS}180-find-sessions-360.png` });
     await input.fill('로봇');
     await page.waitForTimeout(700);
-    const koSes = await page.evaluate(() => [...document.querySelectorAll('.results .result span')].filter((x) => x.textContent.startsWith('세션 ·')).length);
+    const koSes = await page.evaluate(() => [...document.querySelectorAll('.results .result span')].filter((x) => x.textContent.startsWith('강연 ·')).length);
     check(koSes === 0, `${w}px 한글 낱말에는 세션 줄을 붙이지 않는다(세션 자료가 영어다)`);
     await input.fill('robot');
-    await page.waitForFunction(() => [...document.querySelectorAll('.results .result span')].some((x) => x.textContent.startsWith('세션 ·')), null, { timeout: 15000 });
+    await page.waitForFunction(() => [...document.querySelectorAll('.results .result span')].some((x) => x.textContent.startsWith('강연 ·')), null, { timeout: 15000 });
     const pickTitle = ses[0].t;
     await page.locator('.results .result', { hasText: pickTitle }).first().click();
     await page.waitForFunction(() => location.hash.startsWith('#/sessions/q/'), null, { timeout: 10000 });
     await page.locator('.entry.session').first().waitFor({ timeout: 15000 });
     const found = await titles();
     const tab = await page.evaluate(() => document.querySelector('.tabs a[aria-current="page"]')?.dataset.tab);
-    check(found.includes(pickTitle) && /^찾은 세션 \d+개/.test(await countText()) && (await page.locator('input[aria-label="세션 찾기"]').inputValue()) === pickTitle && tab === 'plan', `${w}px 세션 줄을 누르면 세션 일정이 그 제목으로 찾은 채 열린다 (${await countText()})`);
+    check(found.includes(pickTitle) && /^찾은 강연 \d+개/.test(await countText()) && (await page.locator('input[aria-label="강연 찾기"]').inputValue()) === pickTitle && tab === 'plan', `${w}px 세션 줄을 누르면 세션 일정이 그 제목으로 찾은 채 열린다 (${await countText()})`);
 
     // 2. 거르기 칩: 기조연설 · 생중계 · 내 일정 · 분야
     await page.goto('about:blank');
     await page.goto(`${URL}#/sessions`);
     await page.locator('.entry.session').first().waitFor({ timeout: 15000 });
-    const chipNames = await page.evaluate(() => [...document.querySelectorAll('.chips[aria-label="세션 거르기"] .chip-go')].map((b) => b.textContent));
+    const chipNames = await page.evaluate(() => [...document.querySelectorAll('.chips[aria-label="강연 거르기"] .chip-go')].map((b) => b.textContent));
     check(chipNames.join(' ') === '기조연설 생중계 내 일정 분야 ▾', `${w}px 날짜 칩 아래에 거르기 칩 넷 (${chipNames.join(' · ')})`);
     const dayCount0 = await page.evaluate(() => [...document.querySelectorAll('.daychip .dc-n')].map((x) => x.textContent).join(' '));
     await page.locator('.chips .chip-go', { hasText: '생중계' }).click();
@@ -74,7 +74,7 @@ async (page) => {
     const keyRows = await page.evaluate(() => [...document.querySelectorAll('.entry.session')].map((r) => r.textContent.includes('기조연설')));
     check(keyRows.every(Boolean), `${w}px "기조연설"을 켜면 기조연설만 (${keyRows.length}줄)`);
     check(await noOverflow(), `${w}px 옆으로 밀리지 않는다`);
-    const small = await page.evaluate(() => [...document.querySelectorAll('.chips[aria-label="세션 거르기"] .chip-go')].filter((b) => { const r = b.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).length);
+    const small = await page.evaluate(() => [...document.querySelectorAll('.chips[aria-label="강연 거르기"] .chip-go')].filter((b) => { const r = b.getBoundingClientRect(); return r.height < 44 || r.width < 44; }).length);
     check(small === 0, `${w}px 거르기 칩은 누르는 곳 44px 이상`);
   }
 

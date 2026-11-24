@@ -29,7 +29,7 @@ export function hallOfNumber(q, ranges) {
 }
 
 export function findBox({ places, ranges = [], onCompany, onPlace }) {
-  const input = el('input', { type: 'search', inputmode: 'search', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search', placeholder: '회사 · 부스 번호 · 홀 찾기', 'aria-label': '회사 이름 · 부스 번호 · 분야 · 홀 · 세션 찾기' });
+  const input = el('input', { type: 'search', inputmode: 'search', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search', placeholder: '회사 · 부스 번호 · 홀 찾기', 'aria-label': '회사 이름 · 부스 번호 · 분야 · 홀 · 강연 찾기' });
   const list = el('ul', { class: 'results', role: 'listbox', 'aria-label': '찾은 것', hidden: true });
   const note = el('p', { class: 'results-note', role: 'status', hidden: true });
   // 지우기(×): 글자가 있을 때만 보인다(app.css의 :placeholder-shown). 누르면 칸이 비고 결과 줄이 닫힌다.

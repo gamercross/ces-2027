@@ -318,7 +318,7 @@ check(diary.fileName(who, new Date(2027, 0, 7)) === 'ces2027-일기-물개-20270
   check(key.length > 0 && key.every(SS.isKeynote) && live.length > 0 && live.every((s) => s.live) && mine.length === 1 && mine[0].id === one.id
     && inMob.length === mob.n && inMob.every((s) => s.topics.some((t) => mob.topics.includes(t))) && both.length <= Math.min(key.length, inMob.length)
     && [...allTopics].every((t) => covered.has(t)) && groups.at(-1).k === 'etc' && groups[0].ko === cats.groups[0].ko
-    && hits.length === 2 && hits.every((h) => /robot/i.test(`${h.session.title} ${h.session.topics.join(' ')} ${h.session.track}`) && /^세션 · \d+\/\d+ \d\d:\d\d · /.test(h.sub)) && hits[0].session.date <= hits[1].session.date
+    && hits.length === 2 && hits.every((h) => /robot/i.test(`${h.session.title} ${h.session.topics.join(' ')} ${h.session.track}`) && /^강연 · \d+\/\d+ \d\d:\d\d · /.test(h.sub)) && hits[0].session.date <= hits[1].session.date
     && MF.sessionHits(items, '로봇', SS.search).length === 0 && MF.sessionHits(items, 'ai', SS.search).length === 0,
     `세션 거르기: 기조연설 ${key.length} · 생중계 ${live.length} · 내 일정 · 분야 묶음 ${groups.length}개(${groups.map((g) => `${g.ko} ${g.n}`).join(' · ')})가 모든 주제를 덮고, 지도 찾기 칸은 영어 낱말이면 세션을 두 줄까지 이른 차례로 보인다`);
 }
