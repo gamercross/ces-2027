@@ -116,7 +116,8 @@ function offlineRow() {
   } });
   function paint() {
     const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-    const ready = offline.ready ? '인터넷 없이 열린다' : ('serviceWorker' in navigator ? '담는 중이다' : '이 브라우저는 안 된다');
+    // 사실대로 말한다: 다 담았으면 "다 담았다", 30초가 넘도록 못 담았거나 담다 끊겼으면 "아직 담지 못했다".
+    const ready = offline.ready ? '다 담았다' : !('serviceWorker' in navigator) ? '이 브라우저는 안 된다' : offline.late ? '아직 담지 못했다 · 와이파이에서 다시 연다' : '담는 중이다';
     s.textContent = `${ready}${offline.version ? ` · 판 ${offline.version}${standalone ? ' · 홈 화면' : ''}` : ''}`;
     button.hidden = !offline.install;
   }
