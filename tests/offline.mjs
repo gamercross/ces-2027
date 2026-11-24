@@ -452,13 +452,15 @@ await step('만난 사람', '명함 받기(주소 붙여넣기): 주소를 적�
   const list = await store('people.v1');
   return { status: list?.length === 1 ? '됨' : '안 됨', note: `만난 사람 ${list?.length || 0}명 (key: ${await page.evaluate(() => Object.keys(localStorage).filter((k) => /people|met/.test(k)).join(','))})` };
 });
+// 카메라로 QR을 읽는 기능(BarcodeDetector)은 브라우저마다 다르다: Mac의 Chromium에는 있고, 리눅스(CI)의 Chromium과 WebKit에는 없다. 있는 곳에서만 "됨"을 기대한다.
+const canScan = await page.evaluate(() => 'BarcodeDetector' in window).catch(() => false);
 await step('만난 사람', '명함 받기(카메라 QR): 이 화면에서 카메라로 읽을 수 있나(인터넷과는 상관없다)', async () => {
   await go('#/people/new', '명함 받기 카메라');
   const btn = page.getByRole('button', { name: '카메라 켜기' });
   const disabled = await btn.isDisabled();
   const note = (await page.locator('.note').first().innerText().catch(() => '')).slice(0, 80);
   return { status: disabled ? '일부' : '됨', note: disabled ? `이 브라우저는 못 읽는다: ${note}` : '단추가 켜져 있다(실제 읽기는 폰 카메라로 봐야 한다)' };
-}, browserName === 'chromium' ? '됨' : '일부');
+}, canScan ? '됨' : '일부');
 await step('만난 사람', '만난 사람 목록 · 찾기', async () => {
   await go('#/people', '만난 사람');
   await sleep(400);
