@@ -1,5 +1,5 @@
 // 추천: 공식 자료만 근거로(혁신상 · 한국 기업 · 내 분야) 먼저 볼 만한 회사. 까닭을 한 줄로 보이고, 한 곳씩 눌러 관심에 담는다.
-// 동선 탭 아래의 화면이다 (회사 탭이 없어지면서 find.js에서 옮겼다).
+// 갈 곳 탭 아래의 화면이다 (회사 탭이 없어지면서 find.js에서 옮겼다).
 
 import { el, num } from '../dom.js';
 import { getCategories, getExhibitors, getMeta, getPlaces } from '../data.js';
@@ -18,7 +18,7 @@ export async function render() {
   const placeKo = new Map(places.places.map((p) => [p.k, p.ko]));
   const profile = getProfile();
   const link = el('a', { class: 'chip', href: '#/plan' });
-  const paintLink = () => { link.textContent = `관심 ${getInterests().length}곳 · 동선`; };
+  const paintLink = () => { link.textContent = `관심 ${getInterests().length}곳 · 갈 곳`; };
   paintLink();
 
   let chip = 'all';
@@ -50,7 +50,7 @@ export async function render() {
   return el('div', { class: 'page' },
     el('section', { class: 'head' },
       el('h1', { text: '추천' }),
-      el('p', { class: 'lead' }, el('a', { href: '#/plan', text: '← 동선' }), ' · 이름 · 분야 · 부스 번호로 찾으려면 ', el('a', { href: '#/map', text: '지도' }), '.')),
+      el('p', { class: 'lead' }, el('a', { href: '#/plan', text: '← 갈 곳' }), ' · 이름 · 분야 · 부스 번호로 찾으려면 ', el('a', { href: '#/map', text: '지도' }), '.')),
     chips, body,
     el('div', { class: 'dock' }, link));
 }

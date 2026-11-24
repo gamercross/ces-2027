@@ -54,18 +54,18 @@ const placesOf = (row, placeKo) => [...new Set(row[7].map((b) => placeKo.get(b.s
 
 // 단톡방에 붙여 넣을 글.
 export function planText(items, days, byId, placeKo) {
-  let t = '[CES 2027 내 동선]\n';
+  let t = '[CES 2027 갈 곳]\n';
   for (const { d, rows } of grouped(items, days, byId)) {
     t += `\n■ ${d.ko}\n`;
     rows.forEach((r, j) => { t += `${j + 1}. ${r[1]} · ${`${placesOf(r, placeKo)[0] || '부스 미정'} ${codesOf(r)[0] || ''}`.trim()}\n`; });
   }
-  t += `\n목록 코드: ${planCode(items)}\n(동선 화면의 "코드 넣기"에 붙여 넣으면 같은 목록을 더할 수 있다. 부스 자리는 짐작이다.)`;
+  t += `\n목록 코드: ${planCode(items)}\n(갈 곳 탭의 "목록 고치기 → 받은 목록 넣기"에 이 글을 붙여 넣으면 같은 목록을 더할 수 있다. 부스 자리는 짐작이다.)`;
   return t;
 }
 
 // 내 노트에 둘 마크다운.
 export function planMd(items, days, byId, placeKo, dataDate, today) {
-  let t = `---\n제목: "CES 2027 내 동선"\n종류: 연수기록\n날짜: ${today}\n출처: CES 2027 준비 지도 (전시사 자료 ${dataDate}에 받음)\n---\n\n# CES 2027 내 동선\n\n자리와 걷는 차례는 부스 번호로 짐작한 것이다. 공식 배치도로 다시 확인한다.\n`;
+  let t = `---\n제목: "CES 2027 갈 곳"\n종류: 연수기록\n날짜: ${today}\n출처: CES 2027 준비 지도 (전시사 자료 ${dataDate}에 받음)\n---\n\n# CES 2027 갈 곳\n\n자리와 걷는 차례는 부스 번호로 짐작한 것이다. 공식 배치도로 다시 확인한다.\n`;
   for (const { d, rows } of grouped(items, days, byId)) {
     t += `\n## ${d.ko}\n\n| # | 회사 | 부스 | 장소 |\n|---|---|---|---|\n`;
     rows.forEach((r, j) => { t += `| ${j + 1} | ${r[1].replace(/\|/g, '/')} | ${codesOf(r).join(', ')} | ${placesOf(r, placeKo).join(', ')} |\n`; });

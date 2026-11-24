@@ -69,7 +69,7 @@ async (page) => {
     if (state.data) { localStorage.setItem('ces2027.interests.v1', JSON.stringify(sd.interests)); localStorage.setItem('ces2027.people.v1', JSON.stringify(sd.people)); localStorage.setItem('ces2027.diary.v1', JSON.stringify(sd.diary)); }
     if (state.text) localStorage.setItem('ces2027.text.v1', JSON.stringify(state.text));
   };
-  // [번호, 이름, 해시, 상태, 동작, 있는 쪽]  — 동작: card(동선 카드) person(만난 사람 카드) mapcard hall booth
+  // [번호, 이름, 해시, 상태, 동작, 있는 쪽]  — 동작: card(갈 곳 카드) person(만난 사람 카드) mapcard hall booth
   const SCREENS = [
     ['01', '처음명함', '#/card', { profile: false }, null, '전후'],
     ['02', 'QR', '#/card', { profile: true, data: true, paper: true }, null, '전후'],
@@ -77,8 +77,8 @@ async (page) => {
     ['04', '지도홀', '#/map', { profile: true, data: true, paper: true }, 'hall', '후'],
     ['05', '지도부스', '#/map', { profile: true, data: true, paper: true }, 'booth', '후'],
     ['06', '회사카드', '#/map', { profile: true, data: true, paper: true }, 'mapcard', '후'],
-    ['07', '동선', '#/plan', { profile: true, data: true, paper: true }, null, '전후'],
-    ['08', '동선카드', '#/plan', { profile: true, data: true, paper: true }, 'card', '후'],
+    ['07', '갈 곳', '#/plan', { profile: true, data: true, paper: true }, null, '전후'],
+    ['08', '갈 곳 카드', '#/plan', { profile: true, data: true, paper: true }, 'card', '후'],
     ['09', '일기', '#/diary', { profile: true, data: true, paper: true }, null, '전후'],
     ['10', '만난사람', '#/people', { profile: true, data: true, paper: true }, null, '전후'],
     ['11', '만난사람카드', '#/diary', { profile: true, data: true, paper: true }, 'person', '후'],

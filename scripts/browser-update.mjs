@@ -21,7 +21,7 @@ async (page) => {
   // 화면이 자리 잡을 때까지(저절로 다시 여는 것까지) 기다린 뒤의 모습
   const settled = async (ms = 6000) => { let last = null; const end = Date.now() + ms; while (Date.now() < end) { await page.waitForTimeout(500); const s = await state(); if (s) last = s; } return last || {}; };
   const tabs = async (tag) => {
-    for (const [t, ko] of [['plan', '동선'], ['diary', '일기'], ['map', '지도'], ['settings', '설정']]) {
+    for (const [t, ko] of [['plan', '갈 곳'], ['diary', '일기'], ['map', '지도'], ['settings', '설정']]) {
       await page.locator(`.tabs a[data-tab="${t}"]`).click();
       await page.waitForTimeout(1200);
       const s = await state();
@@ -71,7 +71,7 @@ async (page) => {
   await untilBand('다시 열지 않고 탭');
   await page.locator('.tabs a[data-tab="plan"]').click();
   s = await settled();
-  check(!s.fail && s.v.includes('next') && (await page.evaluate(() => location.hash)) === '#/plan', `다시 열지 않고 탭: 동선 탭을 누르면 한 번 저절로 다시 열려 동선이 보인다 — ${s.text}`);
+  check(!s.fail && s.v.includes('next') && (await page.evaluate(() => location.hash)) === '#/plan', `다시 열지 않고 탭: 갈 곳 탭을 누르면 한 번 저절로 다시 열려 갈 곳이 보인다 — ${s.text}`);
   await tabs('다시 열지 않고 탭 뒤');
 
   // 뒷정리: 시험용 서비스 워커와 담아 둔 것을 지운다

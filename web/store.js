@@ -41,8 +41,9 @@ export const tagKo = (k) => TAGS.find((t) => t.k === k)?.ko || '';
 export const getProfile = () => load('profile.v1', null);
 export const setProfile = (profile) => save('profile.v1', profile);
 
-// 관심 회사: [{ id, day }] — day는 0(날짜 미정) 또는 1 ~ 4(전시 첫날 ~ 넷째 날). 이 차례가 걷는 차례다.
-export const getInterests = () => load('interests.v1', []);
+// 관심 회사: [{ id, day }] — day는 0(날짜 없음) 또는 1 ~ 4(전시 첫날 ~ 넷째 날). 이 차례가 걷는 차례다.
+// 1/5(전시 전날, 번호 5)에는 회사를 넣지 않는다(2026-11-23, 내 일정만). 예전에 1/5로 넣었거나 받은 목록의 1/5는 읽을 때 "날짜 없음"으로 본다.
+export const getInterests = () => { const list = load('interests.v1', []); return Array.isArray(list) ? list.map((it) => (it?.day === 5 ? { ...it, day: 0 } : it)) : []; };
 export const setInterests = (list) => save('interests.v1', list);
 export const hasInterest = (id) => getInterests().some((it) => it.id === id);
 // 넣거나 뺀다. 넣었으면 true.

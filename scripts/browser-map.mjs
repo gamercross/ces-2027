@@ -87,7 +87,7 @@ async (page) => {
     const wPinch = await api((m) => m.view[2] - m.view[0]);
     check(wPinch < wAfter * 0.75, `${tag} 두 손가락 벌리기: 칸 너비 ${Math.round(wAfter)} → ${Math.round(wPinch)} (가까이)`);
 
-    // 5. 부스 점을 누르면 아래에서 카드가 올라온다 (자리 짐작 · 관심 · 동선 · 길)
+    // 5. 부스 점을 누르면 아래에서 카드가 올라온다 (자리는 짐작 · 관심 · 갈 곳 · 길)
     await api((m) => m.fit(m.pad([m.L.list.find((p) => p.k === 'LVCC_N').world[0][0] + 60, m.L.list.find((p) => p.k === 'LVCC_N').world[0][1] + 10, m.L.list.find((p) => p.k === 'LVCC_N').world[0][0] + 220, m.L.list.find((p) => p.k === 'LVCC_N').world[0][1] + 140], 0)));
     await settle(1300);
     const dot = await api((m) => {
@@ -101,24 +101,24 @@ async (page) => {
     await page.locator('.sheet .card h2').waitFor();
     await settle(900);
     const cardInfo = await page.evaluate(() => ({ h2: document.querySelector('.sheet .card h2').textContent, state: document.querySelector('.sheet').dataset.state, text: document.querySelector('.sheet').innerText, h2px: parseFloat(getComputedStyle(document.querySelector('.sheet .card h2')).fontSize), sheetH: Math.round(document.querySelector('.sheet').getBoundingClientRect().height), mapH: Math.round(document.querySelector('.mapx').getBoundingClientRect().height) }));
-    check(cardInfo.h2 === dot.name && cardInfo.state === 'half' && cardInfo.text.includes('자리 짐작') && cardInfo.text.includes('관심 담기') && cardInfo.text.includes('동선에 넣기') && cardInfo.text.includes('여기까지 길') && cardInfo.text.includes('공식 링크') && cardInfo.h2px >= 24, `${tag} 부스를 누르면 반쯤 올라온 카드: ${cardInfo.h2}(${cardInfo.h2px}px) · 부스 · 홀 · 자리 짐작 · 관심 · 동선 · 길 · 공식 링크`);
+    check(cardInfo.h2 === dot.name && cardInfo.state === 'half' && cardInfo.text.includes('자리는 짐작') && cardInfo.text.includes('관심 담기') && cardInfo.text.includes('갈 곳에 넣기') && cardInfo.text.includes('여기까지 길') && cardInfo.text.includes('공식 링크') && cardInfo.h2px >= 24, `${tag} 부스를 누르면 반쯤 올라온 카드: ${cardInfo.h2}(${cardInfo.h2px}px) · 부스 · 홀 · 자리는 짐작 · 관심 · 갈 곳 · 길 · 공식 링크`);
     const spotShown = await page.evaluate(() => { const s = document.querySelector('.sheet').getBoundingClientRect(); const d = document.querySelector('circle[data-key].on, circle[data-key]'); const b = [...document.querySelectorAll('circle[data-key]')].map((c) => c.getBoundingClientRect()).filter((r2) => r2.y > 120 && r2.y < s.top - 10); return b.length; });
     check(spotShown > 0, `${tag} 카드가 올라와도 위의 지도에 부스 점이 보인다 (${spotShown}개)`);
     await noSideScroll(`${tag} 카드`);
     await shot(W === 360 ? '94-after-card.png' : '97-after-card-390.png');
 
-    // 6. 카드 끌어올림 · 관심 · 동선에 넣기
+    // 6. 카드 끌어올림 · 관심 · 갈 곳에 넣기
     await page.locator('.sheet-grip').click();
     await page.waitForTimeout(400);
     check((await page.locator('.sheet').getAttribute('data-state')) === 'full', `${tag} 손잡이를 누르면 끝까지 올라온다`);
     await page.locator('.sheet-grip').click();
     await page.waitForTimeout(400);
     await page.getByRole('button', { name: '관심 담기' }).click();
-    await page.getByRole('button', { name: /6일에 동선으로 넣기|1\/6.*동선으로 넣기/ }).first().click().catch(() => {});
+    await page.getByRole('button', { name: /1\/6의 갈 곳에 넣기/ }).first().click().catch(() => {});
     const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('ces2027.interests.v1') || '[]'));
-    check(stored.length === 1 && stored[0].day >= 0, `${tag} 관심 담기 · 동선에 넣기가 폰에 남는다 (${JSON.stringify(stored[0] || null)})`);
+    check(stored.length === 1 && stored[0].day >= 0, `${tag} 관심 담기 · 갈 곳에 넣기가 폰에 남는다 (${JSON.stringify(stored[0] || null)})`);
     await page.waitForTimeout(500);
-    check((await page.locator('g[data-pin]').count()) === 1, `${tag} 동선에 넣은 회사에 번호 점이 찍힌다`);
+    check((await page.locator('g[data-pin]').count()) === 1, `${tag} 갈 곳에 넣은 회사에 번호 점이 찍힌다`);
 
     // 7. 손잡이를 아래로 끌면 닫힌다
     await page.evaluate(() => { const g = document.querySelector('.sheet-grip'); const r = g.getBoundingClientRect(); const f = (t, y) => g.dispatchEvent(new PointerEvent(t, { pointerId: 5, clientX: r.x + 20, clientY: y, bubbles: true })); f('pointerdown', r.y + 10); f('pointermove', r.y + 120); f('pointermove', r.y + 260); f('pointerup', r.y + 260); });
@@ -141,19 +141,19 @@ async (page) => {
     await page.locator('.find-field input').fill('');
   }
 
-  // 8b. 내 동선: 같은 날 회사 둘이면 번호 점 둘과 차례대로 이은 선
+  // 8b. 내 갈 곳: 같은 날 회사 둘이면 번호 점 둘과 차례대로 이은 선
   const two = await page.evaluate(async () => { const d = await (await fetch('data/exhibitors.json')).json(); return d.ex.filter((r) => r[7].length && /@LVCC_N$/.test(r[7][0])).slice(0, 2).map((r) => ({ id: r[0], name: r[1] })); });
   await page.evaluate((two2) => localStorage.setItem('ces2027.interests.v1', JSON.stringify(two2.map((x) => ({ id: x.id, day: 1 })))), two);
   await page.goto('about:blank');
   await page.goto(`${URL}#/map`);
   await page.locator('svg.map').waitFor();
   await page.waitForFunction(() => document.querySelectorAll('g[data-pin]').length === 2, null, { timeout: 15000 });
-  const lines2 = await page.evaluate(() => ({ pins: [...document.querySelectorAll('g[data-pin] text')].map((x) => x.textContent), lines: document.querySelectorAll('svg.map polyline[stroke-linecap="round"]').length, chip: [...document.querySelectorAll('.chip-go')].some((c) => c.textContent === '내 동선') }));
-  check(lines2.pins.join() === '1,2' && lines2.lines >= 1 && lines2.chip, `내 동선: 번호 점 ${lines2.pins.join('·')}과 선 ${lines2.lines}줄, 칩에 "내 동선"이 생긴다`);
-  await page.getByRole('button', { name: '내 동선', exact: true }).click();
+  const lines2 = await page.evaluate(() => ({ pins: [...document.querySelectorAll('g[data-pin] text')].map((x) => x.textContent), lines: document.querySelectorAll('svg.map polyline[stroke-linecap="round"]').length, chip: [...document.querySelectorAll('.chip-go')].some((c) => c.textContent === '내 갈 곳') }));
+  check(lines2.pins.join() === '1,2' && lines2.lines >= 1 && lines2.chip, `내 갈 곳: 번호 점 ${lines2.pins.join('·')}과 선 ${lines2.lines}줄, 칩에 "내 갈 곳"이 생긴다`);
+  await page.getByRole('button', { name: '내 갈 곳', exact: true }).click();
   await settle(1500);
   const nm = await labelsReport();
-  check(nm.sample.length > 0 && nm.minPx >= 13 && nm.overlap === 0, `"내 동선" 칩: 관심 회사 이름이 늘 보인다 (${nm.sample.slice(0, 2).join(' / ')})`);
+  check(nm.sample.length > 0 && nm.minPx >= 13 && nm.overlap === 0, `"내 갈 곳" 칩: 관심 회사 이름이 늘 보인다 (${nm.sample.slice(0, 2).join(' / ')})`);
   // 8c. 다른 화면의 "지도" 링크(#/map/at/<회사>)로 오면 그 회사 카드가 열린다
   await page.goto('about:blank');
   await page.goto(`${URL}#/map/at/${encodeURIComponent(two[1].id)}`);

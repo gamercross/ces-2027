@@ -89,7 +89,7 @@ async (page) => {
     await page.locator('.list-top input[type="search"]').fill('');
     await page.waitForTimeout(250);
 
-    // 7. 관심 담기 → 폰에 남고 동선에 나온다
+    // 7. 관심 담기 → 폰에 남고 갈 곳에 나온다
     const like = rows().first().locator('.ex-like');
     await like.click();
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ces2027.interests.v1') || '[]').length);

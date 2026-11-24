@@ -318,7 +318,7 @@ check(diary.fileName(who, new Date(2027, 0, 7)) === 'ces2027-일기-물개-20270
   check(key.length > 0 && key.every(SS.isKeynote) && live.length > 0 && live.every((s) => s.live) && mine.length === 1 && mine[0].id === one.id
     && inMob.length === mob.n && inMob.every((s) => s.topics.some((t) => mob.topics.includes(t))) && both.length <= Math.min(key.length, inMob.length)
     && [...allTopics].every((t) => covered.has(t)) && groups.at(-1).k === 'etc' && groups[0].ko === cats.groups[0].ko
-    && hits.length === 2 && hits.every((h) => /robot/i.test(`${h.session.title} ${h.session.topics.join(' ')} ${h.session.track}`) && /^세션 · \d+\/\d+ \d\d:\d\d · /.test(h.sub)) && hits[0].session.date <= hits[1].session.date
+    && hits.length === 2 && hits.every((h) => /robot/i.test(`${h.session.title} ${h.session.topics.join(' ')} ${h.session.track}`) && /^강연 · \d+\/\d+ \d\d:\d\d · /.test(h.sub)) && hits[0].session.date <= hits[1].session.date
     && MF.sessionHits(items, '로봇', SS.search).length === 0 && MF.sessionHits(items, 'ai', SS.search).length === 0,
     `세션 거르기: 기조연설 ${key.length} · 생중계 ${live.length} · 내 일정 · 분야 묶음 ${groups.length}개(${groups.map((g) => `${g.ko} ${g.n}`).join(' · ')})가 모든 주제를 덮고, 지도 찾기 칸은 영어 낱말이면 세션을 두 줄까지 이른 차례로 보인다`);
 }
@@ -461,17 +461,29 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
     const transitV = await readFile(join(dist, 'views/transit.js'), 'utf8');
     const mapfindV = await readFile(join(dist, 'mapfind.js'), 'utf8');
     const mapV3 = await readFile(join(dist, 'views/map.js'), 'utf8');
-    check(planV.includes('지금 갈 곳') && planV.includes('alertBands(') && ['#/rec', '#/days', '#/sessions'].every((h) => planV.includes(h)) && ['#/listen', '#/talk', '#/people'].every((h) => diaryV.includes(h)) && transitV.includes('info.moving') && mapV3.includes('findBox(') && mapV3.includes('#/transit') && mapV3.includes("href: '#/list'") && mapfindV.includes('getFinder'),
-      '합친 자리: 동선 맨 위에 "지금 갈 곳" 한 줄과 띠, 동선 아래에 추천 · 시간과 일정 · 세션, 일기 안에 듣기 · 대화 칸 · 만난 사람, 지도 위에 찾기 칸과 셔틀 · 오가는 법 · 전시사 목록');
-    // 다시 짓기 5단계 동선: 날짜 칩 하나에 그 날 차례만, 줄에는 단추 하나(봤다)와 누르면 열리는 큰 카드, 지도와 같은 번호, 도크 없음.
+    check(planV.includes('다음에 갈 곳') && planV.includes('alertBands(') && ['#/rec', '#/days', '#/sessions'].every((h) => planV.includes(h)) && ['#/listen', '#/talk', '#/people'].every((h) => diaryV.includes(h)) && transitV.includes('info.moving') && mapV3.includes('findBox(') && mapV3.includes('#/transit') && mapV3.includes("href: '#/list'") && mapfindV.includes('getFinder'),
+      '합친 자리: 갈 곳 맨 위에 "다음에 갈 곳" 한 곳과 띠, 갈 곳 아래에 강연 일정 · 추천 회사 · 내 시간, 일기 안에 듣기 · 대화 칸 · 만난 사람, 지도 위에 찾기 칸과 셔틀 · 오가는 법 · 전시사 목록');
+    // 갈 곳(2026-11-23, 안 1): 날짜 한 줄(‹ 1월 6일 (수) ›) → 다음에 갈 곳 한 곳 크게 → 그다음 곳들 → 다녀온 곳 접기 → "목록 고치기 · 지도에서 보기".
+    // 줄에는 줄 전체 단추 하나(다녀온 곳의 줄에만 "다녀옴" 칸), 고치기는 회사 카드, 지도와 같은 번호, 도크 없음. "안 본 곳" 칩(R47)은 다녀온 곳 접기가 대신한다.
     const pcardV = await readFile(join(dist, 'plancard.js'), 'utf8');
     const rowFn = planV.slice(planV.indexOf('function item('), planV.indexOf('// ---- 회사 카드(큰 창)'));
     const rowButtons = (rowFn.match(/el\('button'/g) || []).length;
-    check(rowFn.includes('stop-open') && rowButtons === 2 && !rowFn.includes('select') && !rowFn.includes("'위로'") && !rowFn.includes("'빼기'")
-      && ['위로', '아래로', '관심에서 빼기', '#/diary/new/', '#/map/at/', '#/map/go/', '#/map/day/'].every((t) => planV.includes(t))
+    const cardFn = planV.slice(planV.indexOf('function card('), planV.indexOf('function draw('));
+    const toolsFn = planV.slice(planV.indexOf('// ---- 목록 고치기(큰 창)'), planV.indexOf('const toolsBtn ='));
+    const storeV = await readFile(join(dist, 'store.js'), 'utf8');
+    check(rowFn.includes('stop-open') && rowButtons === 2 && rowFn.includes("it.seen ? el('button', { class: 'check on'") && !rowFn.includes('select') && !rowFn.includes("'빼기'")
+      && ['daynav', '다음에 갈 곳', '그다음 ${rest.length}곳', '다녀온 곳 ${done.length}', '목록 고치기', '지도에서 보기', '일기 쓰기', '#/diary/new/', '#/map/at/', '#/map/go/', '#/map/day/'].every((t) => planV.includes(t))
+      && !['차례 정리', '날짜 채우기', '걷는 차례로', '날짜 미정', "'아직'", "'봤다'", '안 본 곳', 'daychip', 'daynav-left', "'마크다운'", "'CSV'", "'코드'"].some((t) => planV.includes(t))
+      // 회사 카드: 검정 단추는 "길 안내" 하나, 1/5는 날짜 고르기에 없다, 위로 · 아래로 · 대화 · 명함 이벤트 · 로고는 없다
+      && (cardFn.match(/class: 'btn( wide)?'/g) || []).length === 1 && cardFn.includes("text: '길 안내'") && cardFn.includes('days.filter((d) => !d.pre)') && cardFn.includes('갈 곳에서 빼기') && cardFn.includes('공식 쪽') && cardFn.includes('자리는 짐작')
+      && !["'위로'", "'아래로'", '#/talk/', '명함 이벤트', 'attachImage', 'mapsLink('].some((t) => planV.includes(t))
+      // 목록 고치기: 말 바꾸기 다섯, 검정 단추 없음
+      && ['날짜 없는 곳을 날마다 나누기', '가까운 곳끼리 줄 세우기', '하루에 볼 곳', '다른 사람에게 보내기', '받은 목록 넣기', 'navigator.share'].every((t) => toolsFn.includes(t)) && !/class: 'btn'/.test(toolsFn.slice(toolsFn.indexOf('const codeInput')))
+      && planV.includes("showToast(`${nameOf(id)} 다녀왔다.`") && /setTimeout\(hideToast, 6000\)/.test(planV)
+      && /it\?\.day === 5 \? \{ \.\.\.it, day: 0 \}/.test(storeV) && /filter\(\(d\) => !d\.pre\)/.test(mapV3)
       && pcardV.includes('Escape') && pcardV.includes("role: 'dialog'") && !/class: 'dock'/.test(planV) && !planV.includes('<select')
-      && /rest\[0\] === 'day'/.test(mapV3) && mapV3.includes('dayFocus'),
-      '동선: 날짜 칩 한 줄(칩마다 곳 수) · 줄에는 누르는 단추 둘(줄 전체 + 봤다) · 날짜 · 위로 · 아래로 · 빼기 · 일기는 회사 카드로 · 카드는 Esc로 닫히는 대화창 · "이 날 지도에서 보기"(#/map/day/N, 그 날 번호만 진하게) · 아래 도크 없음');
+      && /rest\[0\] === 'day'/.test(mapV3) && mapV3.includes('dayFocus') && mapV3.includes('function nextOfDay()') && mapV3.includes('곳만 보는 중') && mapV3.includes("text: '모두 보기'") && !mapV3.includes('nextStop(getInterests())'),
+      '갈 곳(안 1): 날짜 한 줄(칩 · 곳 수 없음) · 다음에 갈 곳 한 곳 크게 · 그다음 곳들 · 다녀온 곳 접기(다녀옴 칸으로 되돌림) · 목록 고치기 · 지도에서 보기 · 회사 카드의 검정 단추는 길 안내 하나 · 1/5에는 회사를 넣지 못한다(카드 · 지도 · 저장 읽기) · "다녀왔다" 뒤 일기 쓰기 6초 · 지도의 다음 갈 곳은 고른 날의 회사만 · 아래 도크 없음');
     // 다시 짓기 6단계 일기 + 만난 사람: 일기 첫 묶음이 만난 사람(최근 세 명 + 명함 받기), 맨 위 회색 단추 셋 없음, 읽자마자 저장, 일기는 본 것 한 칸이면 된다.
     const peopleV = await readFile(join(dist, 'views/people.js'), 'utf8');
     const peopleUiV = await readFile(join(dist, 'people-ui.js'), 'utf8');
@@ -612,7 +624,7 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
   const lightVars = [...tokCss.split(':root[data-theme="dark"]')[0].matchAll(/--((?:bg|panel|panel-2|ink|ink-2|accent|on-accent|mint|peach|lilac|warn|map-[a-z]+|day-\d|group-[a-z]+|tab-[a-z]+(?:-soft)?))\s*:/g)].map((m) => m[1]);
   const lacking = lightVars.filter((v) => !darkVars.has(v));
   check(lacking.length === 0 && /--qr-bg/.test(tokCss) && !darkVars.has('qr-bg') && !darkVars.has('qr-ink'), `어둡게: 밝게의 색 ${lightVars.length}개가 모두 어둡게에도 있다 (빠진 것 ${lacking.join(' ') || '없음'}). QR 색은 어둡게에서도 그대로다`);
-  // 다시 짓기 8단계 디자인 마감: 제목 24px 한 줄 · 12px 글자 없음 · 두 겹 도크 없음(solo만 탭 위) · 링크 모양 회색 칩 없음 · 선택된 탭은 굵은 선 · 지도 머리 접기 · 카드가 열리면 아래 묶음 가림 · 종이 명함 질문은 동선 띠와 설정에만 · 첫 명함은 필수 둘 다음에 바로 단추.
+  // 다시 짓기 8단계 디자인 마감: 제목 24px 한 줄 · 12px 글자 없음 · 두 겹 도크 없음(solo만 탭 위) · 링크 모양 회색 칩 없음 · 선택된 탭은 굵은 선 · 지도 머리 접기 · 카드가 열리면 아래 묶음 가림 · 종이 명함 질문은 설정에만(2026-11-23, 갈 곳의 띠에서 뺐다) · 첫 명함은 필수 둘 다음에 바로 단추.
   {
     const cardJs = await readFile(join(dist, 'views/card.js'), 'utf8');
     const planJs = await readFile(join(dist, 'views/plan.js'), 'utf8');
@@ -626,10 +638,10 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       && /\.tabs a\[aria-current="page"\] svg \{[^}]*stroke-width: 2\.[5-9]/.test(appCss)
       && /body\[data-tab="map"\]:not\(\.sub\) \.brand \{ display: none; \}/.test(appCss) && mapV2.includes('find-tag') === false && (await readFile(join(dist, 'mapfind.js'), 'utf8')).includes('find-tag')
       && appCss.includes('.mappage:has(.mapx[data-sheet="half"]') && /\.mapx-top \{[^}]*background: var\(--bg\)/.test(appCss)
-      && !cardJs.includes('paperPanel(showFrom),\n') && settingsJs.includes('paperPanel(showFrom)') && (await readFile(join(dist, 'bands.js'), 'utf8')).includes('종이 명함이 있나요?')
+      && !cardJs.includes('paperPanel(showFrom),\n') && settingsJs.includes('paperPanel(showFrom)') && !/종이 명함이 있나요|setPaper|class: 'btn'/.test(await readFile(join(dist, 'bands.js'), 'utf8'))
       && formStart > 0 && cardJs.indexOf("class: 'dock'", formStart) > 0 && cardJs.indexOf("class: 'dock'", formStart) < cardJs.indexOf("field('한 줄 (선택)', line)", formStart)
       && planJs.includes('boothLines(') && (await readFile(join(dist, 'company-extra.js'), 'utf8')).includes('부스 ${booths.length}곳'),
-      '디자인 마감: 제목은 24px 한 줄 · 12px 글자가 없다(13px부터) · 아래 도크를 걷고 "일기 쓰기"만 탭 바로 위에 붙는다 · 링크 모양 회색 칩이 없다 · 선택된 탭은 굵은 선 · 지도 탭은 머리를 접고 "비공식"을 찾기 칸에 · 카드가 열리면 지도 아래 묶음을 가린다 · 종이 명함 질문은 동선 띠와 설정에만 · 첫 명함은 필수 둘 다음에 바로 단추 · 부스가 여럿인 회사는 카드에 모두 보인다');
+      '디자인 마감: 제목은 24px 한 줄 · 12px 글자가 없다(13px부터) · 아래 도크를 걷고 "일기 쓰기"만 탭 바로 위에 붙는다 · 링크 모양 회색 칩이 없다 · 선택된 탭은 굵은 선 · 지도 탭은 머리를 접고 "비공식"을 찾기 칸에 · 카드가 열리면 지도 아래 묶음을 가린다 · 종이 명함 질문은 설정에만 있고 갈 곳의 띠에는 검정 단추가 없다 · 첫 명함은 필수 둘 다음에 바로 단추 · 부스가 여럿인 회사는 카드에 모두 보인다');
     // 실제 아이폰에서 찾은 것(11/22 폰 확인): 날짜 · 시간 칸의 기본 모양 끄기 · 카드가 열리면 페이지가 당겨지지 않기 · 카드의 바퀴 쓸기 · × 단추 둘 · + 단추 글자 선택 막기 · 세션 안내 글 줄바꿈과 단추 사이.
     const sheetJs = await readFile(join(dist, 'mapsheet.js'), 'utf8');
     const findJs = await readFile(join(dist, 'mapfind.js'), 'utf8');
@@ -811,8 +823,8 @@ check(cats.groups.length === 7 && ['stu', 'job', 'ret', 'mid'].every((k) => cats
   const extraJs = await readFile(join(dist, 'company-extra.js'), 'utf8');
   const mapJs = await readFile(join(dist, 'views/map.js'), 'utf8');
   const planJs2 = await readFile(join(dist, 'views/plan.js'), 'utf8');
-  check(/sessionBlock\(name\)/.test(mapJs) && /boothLines\(row\[7\]/.test(mapJs) && /sessionBlock\(nameOf\(id\)\)/.test(planJs2) && /boothLines\(row\?\.\[7\]/.test(planJs2) && /import\('\.\/sessions\.js'\)/.test(extraJs) && !/^import[^(\n]*sessions\.js/m.test(extraJs) && /hidden: true/.test(extraJs) && /\.length < 2\) return null/.test(extraJs) && /\.pick-row/.test(await readFile(join(dist, 'app.css'), 'utf8')),
-    '회사 카드(지도 · 동선 둘 다): "이 회사 세션" 줄과 부스 자리마다 한 줄. 세션 셈은 누를 때 불러오고, 맞는 세션이 없으면 줄을 숨긴다');
+  check(/sessionBlock\(name\)/.test(mapJs) && /boothLines\(row\[7\]/.test(mapJs) && /sessionBlock\(nameOf\(id\), \{ compact: true \}\)/.test(planJs2) && extraJs.includes('이 회사 강연 ${list.length}개') && /boothLines\(row\?\.\[7\]/.test(planJs2) && /import\('\.\/sessions\.js'\)/.test(extraJs) && !/^import[^(\n]*sessions\.js/m.test(extraJs) && /hidden: true/.test(extraJs) && /\.length < 2\) return null/.test(extraJs) && /\.pick-row/.test(await readFile(join(dist, 'app.css'), 'utf8')),
+    '회사 카드(지도 · 갈 곳 둘 다): "이 회사 강연" 줄(갈 곳 카드는 누르는 줄 없는 한 칸)과 부스 자리마다 한 줄. 강연 셈은 누를 때 불러오고, 맞는 강연이 없으면 줄을 숨긴다');
 
   // 이 폰의 내 자료 지우기: ces2027. 열쇠만 지우고(앱 껍데기 캐시는 그대로), 두 번 확인하고, 먼저 내보내기를 권한다.
   const mem = () => { const m = new Map(); return { get length() { return m.size; }, key: (i) => [...m.keys()][i] ?? null, setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k), getItem: (k) => (m.has(k) ? m.get(k) : null) }; };

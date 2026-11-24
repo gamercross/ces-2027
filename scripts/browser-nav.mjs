@@ -1,4 +1,4 @@
-// Playwright CLI test for 길 안내(이동 안내 모드): 목적지까지 선 · 남은 거리 · 걷는 시간 · 방향, 걸으면 따라오고, 도착하면 "봤다".
+// Playwright CLI test for 길 안내(이동 안내 모드): 목적지까지 선 · 남은 거리 · 걷는 시간 · 방향, 걸으면 따라오고, 도착하면 "다녀왔다".
 // Run with: playwright-cli open about:blank
 //           playwright-cli run-code "$(cat scripts/browser-nav.mjs)"
 // The app must be served from a stamped dist at http://127.0.0.1:47581/ (자료가 있는 지은 것). 위치는 시험 브라우저가 흉내 낸다.
@@ -57,16 +57,16 @@ async (page) => {
   const v2 = await api((m) => m.view.slice());
   check(Math.abs(v2[0] - v1[0]) < 1 && Math.abs(v2[1] - v1[1]) < 1, '손으로 끌면 지도가 그 자리에 남는다 (위치가 바뀌어도 끌려가지 않는다)');
 
-  // 4. 도착: 목적지 가까이로 맞추면 "도착했다" + "봤다"
+  // 4. 도착: 목적지 가까이로 맞추면 "도착했다" + "다녀왔다"
   const spot = await api((m) => m.nav.spot);
   await page.evaluate((s) => { localStorage.setItem('ces2027.where.v1', JSON.stringify({ by: 'booth', campus: 'lvcc', place: 'LVCC_N', code: '1', x: s.x + 4, z: s.z + 4, at: Date.now() })); }, spot);
   await api((m) => m.drawMe());
   text = await bar();
-  check(text && text.includes('도착했다') && text.includes('봤다'), `목적지 가까이(30m 안)면 "도착했다"와 "봤다"가 나온다 (${(text || '').replace(/\n/g, ' · ')})`);
+  check(text && text.includes('도착했다') && text.includes('다녀왔다'), `목적지 가까이(30m 안)면 "도착했다"와 "다녀왔다"가 나온다 (${(text || '').replace(/\n/g, ' · ')})`);
   await page.getByRole('button', { name: '끝내기' }).click();
   check((await bar()) === null || !(await bar()).includes('끝내기'), '끝내기를 누르면 안내 띠가 사라진다');
 
-  // 5. 동선의 "다음 갈 곳": 관심 회사가 있으면 띠에서 바로 안내를 시작한다
+  // 5. 지도의 "다음 갈 곳": 관심 회사가 있으면 띠에서 바로 안내를 시작한다
   await page.evaluate((r) => { localStorage.setItem('ces2027.interests.v1', JSON.stringify([{ id: r.id, day: 1 }])); localStorage.removeItem('ces2027.where.v1'); }, row);
   await page.goto('about:blank');
   await page.goto(`${URL}#/map`);
@@ -77,7 +77,7 @@ async (page) => {
   await page.getByRole('button', { name: '길 안내', exact: true }).click();
   await page.waitForFunction(() => document.querySelector('.navbar').innerText.startsWith('→'), null, { timeout: 15000 });
   check(true, '"길 안내"를 누르면 그 회사로 안내가 시작된다');
-  // 동선 탭의 "길 안내" 링크(#/map/go/<회사>)
+  // 갈 곳 탭의 "길 안내" 링크(#/map/go/<회사>)
   await page.goto('about:blank');
   await page.goto(`${URL}#/map/go/${encodeURIComponent(row.id)}`);
   await page.waitForFunction(() => document.querySelector('.navbar') && /^→/.test(document.querySelector('.navbar').innerText), null, { timeout: 15000 });

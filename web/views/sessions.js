@@ -1,4 +1,4 @@
-// 세션 일정: CES 공식 일정(기조연설 · 세션)을 날짜별로 보고, 낱말로 찾고, 내 일정에 넣는다.
+// 강연 일정(공식 일정의 세션): CES 공식 일정(기조연설 · 세션)을 날짜별로 보고, 낱말로 찾고, 내 일정에 넣는다. 화면의 말은 "강연"이다(2026-11-23, "세션"은 낯선 말).
 // 자료(data/sessions.json)는 빌드 때 공식 사이트에서 받아 둔 것이다. 못 받은 날에는 못 받았다고 보이고, 짐작해 채우지 않는다.
 // 이 화면은 누를 때 불러온다. 내 일정은 폰에만 남는다.
 
@@ -25,13 +25,13 @@ export async function render({ rest = [] } = {}) {
   try { data = await load(); } catch { data = null; }
   if (!data) {
     return el('div', { class: 'page' }, el('section', { class: 'panel' },
-      el('h1', { text: '세션 일정' }),
+      el('h1', { text: '강연 일정' }),
       el('p', { text: '공식 일정을 받아 두지 못했다. 공식 쪽에서 직접 본다.' }),
             el('div', { class: 'actions' }, out(OFFICIAL, '공식 일정', 'btn'), el('a', { class: 'btn ghost', href: '#/days', text: '내 일정' }))));
   }
 
   const places = await getPlaces().catch(() => null);
-  // 날짜 칩은 동선과 같다: 1/5(사전 일정) ~ 1/9. 1/4는 매체 전용이라 칩에 넣지 않는다(찾기에서는 나온다).
+  // 날짜 칩은 1/5(전시 전날) ~ 1/9. 1/4는 매체 전용이라 칩에 넣지 않는다(찾기에서는 나온다).
   const info = await getInfo().catch(() => null);
   const planDates = new Set(info ? dayList(info).map((d) => d.date) : []);
   const allDays = daysOf(data.items);
@@ -49,10 +49,10 @@ export async function render({ rest = [] } = {}) {
   const status = el('p', { class: 'note', role: 'status' });
   const list = el('ul', { class: 'stack' });
   const tabs = el('div', { class: 'segs', role: 'group', 'aria-label': '날짜' });
-  const chips = el('div', { class: 'chips', role: 'group', 'aria-label': '세션 거르기' });
+  const chips = el('div', { class: 'chips', role: 'group', 'aria-label': '강연 거르기' });
   const picker = el('div', { class: 'list-pick', hidden: true });
   const count = el('h2');
-  const box = el('input', { type: 'search', placeholder: '찾기 (예: AI, robot)', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', 'aria-label': '세션 찾기', value: q });
+  const box = el('input', { type: 'search', placeholder: '찾기 (예: AI, robot)', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', 'aria-label': '강연 찾기', value: q });
   const recBox = el('div', { class: 'page' });
 
   function paintChips() {
@@ -71,12 +71,12 @@ export async function render({ rest = [] } = {}) {
       el('div', { class: 'panel-head' }, el('h2', { text: '분야 고르기' }), el('button', { class: 'pick', type: 'button', text: '닫기', onclick: () => { pickerOpen = false; paintPicker(); paintChips(); } })),
       el('div', { class: 'pick-wrap' },
         el('button', { class: 'chip-go', type: 'button', text: '모든 분야', 'aria-pressed': topicKey ? 'false' : 'true', onclick: () => choose(null) }),
-        groups.map((g) => el('button', { class: 'chip-go', type: 'button', 'aria-pressed': g.k === topicKey ? 'true' : 'false', 'aria-label': `${g.ko} 세션 ${g.n}개`, onclick: () => choose(g) }, g.ko, el('span', { class: 'chip-n', text: ` ${g.n}` })))));
+        groups.map((g) => el('button', { class: 'chip-go', type: 'button', 'aria-pressed': g.k === topicKey ? 'true' : 'false', 'aria-label': `${g.ko} 강연 ${g.n}개`, onclick: () => choose(g) }, g.ko, el('span', { class: 'chip-n', text: ` ${g.n}` })))));
     picker.hidden = false;
   }
   const filtering = () => filt.keynote || filt.live || filt.mine || !!filt.topics;
 
-  // 세션을 남에게 건넨다: 폰의 나누기 창이 있으면 그것, 없으면 글을 복사한다. 우리 서버는 거치지 않는다.
+  // 강연 하나를 남에게 건넨다: 폰의 나누기 창이 있으면 그것, 없으면 글을 복사한다. 우리 서버는 거치지 않는다.
   async function share(s) {
     const text = shareText(s);
     try {
@@ -100,16 +100,16 @@ export async function render({ rest = [] } = {}) {
       el('div', { class: 'where one', text: `${withDate ? `${dayKo(s.date)} ` : ''}${s.from} ~ ${s.to}${s.place ? ` · ${s.place}` : ' · 장소 미정'}` }),
       s.track || s.topics?.length ? el('div', { class: 'where one', text: [s.track, ...(s.topics || [])].filter(Boolean).join(' · ') }) : null,
       el('div', { class: 'row-actions' },
-        el('button', { class: 'pick', type: 'button', 'aria-pressed': mine ? 'true' : 'false', text: mine ? '빼기' : '넣기', onclick: () => {
+        el('button', { class: 'pick', type: 'button', 'aria-pressed': mine ? 'true' : 'false', text: mine ? '내 일정에서 빼기' : '내 일정에 넣기', onclick: () => {
           const next = toggle(s, getEvents());
           if (next.added === null) { status.textContent = '시간이 맞지 않아 넣지 못했다.'; return; }
           setEvents(next.events);
           status.textContent = next.added ? '내 일정에 넣었다.' : '내 일정에서 뺐다.';
           draw();
         } }),
-        el('button', { class: 'linkish', type: 'button', text: '나누기', onclick: () => share(s) }),
-        out(s.url, '공식'),
-        link ? out(link, '지도') : null));
+        out(s.url, '공식 쪽'),
+        link ? out(link, '지도') : null,
+        el('button', { class: 'linkish', type: 'button', text: '보내기', 'aria-label': `${s.title} 다른 사람에게 보내기`, onclick: () => share(s) })));
   }
 
   function draw() {
@@ -120,17 +120,17 @@ export async function render({ rest = [] } = {}) {
     paintPicker();
     tabs.replaceChildren(...days.map((d) => {
       const n = onDay(pool, d).length;
-      return el('button', { class: 'seg daychip', type: 'button', 'aria-pressed': !q && d === day ? 'true' : 'false', 'aria-label': `${dayKo(d)} 세션 ${n}개`, onclick: () => { day = d; q = ''; shown = 7; box.value = ''; draw(); } },
+      return el('button', { class: 'seg daychip', type: 'button', 'aria-pressed': !q && d === day ? 'true' : 'false', 'aria-label': `${dayKo(d)} 강연 ${n}개`, onclick: () => { day = d; q = ''; shown = 7; box.value = ''; draw(); } },
         el('span', { class: 'dc-day', text: dayKo(d).replace(/ \(.*\)/, '') }), el('span', { class: 'dc-n', text: `${n}개` }));
     }));
     const found = q ? search(pool, q).sort((a, b) => a.date.localeCompare(b.date) || a.from.localeCompare(b.from)) : onDay(pool, day);
-    count.textContent = q ? `찾은 세션 ${found.length}개` : `${dayKo(day)} ${found.length}개${filtering() ? ' (거름)' : mineCount ? ` · 내 일정 ${mineCount}` : ''}`;
+    count.textContent = q ? `찾은 강연 ${found.length}개` : `${dayKo(day)} ${found.length}개${filtering() ? ' (거름)' : mineCount ? ` · 내 일정 ${mineCount}` : ''}`;
     const { picks, skipped } = recommendWithSkips(data.items, getTopics(), getEvents());
     recBox.replaceChildren(...(picks.length ? [el('section', { class: 'panel' },
-      el('h2', { text: `내 주제 세션 ${picks.length}곳${skipped ? ` · 겹쳐 ${skipped}곳 뺌` : ''}` }),
+      el('h2', { text: `내 주제 강연 ${picks.length}개${skipped ? ` · 때가 겹쳐 ${skipped}개 뺌` : ''}` }),
       el('ul', { class: 'stack' }, picks.slice(0, recShown).map((s) => row(s, true))),
-      picks.length > recShown ? el('button', { class: 'btn ghost wide', type: 'button', text: `더 보기 (${picks.length - recShown}곳 남음)`, onclick: () => { recShown += 4; draw(); } }) : null)] : []));
-    list.replaceChildren(...(found.length ? found.slice(0, shown).map((s) => row(s, !!q)) : [el('li', { class: 'note', text: filtering() ? '맞는 세션이 없다. 거르기 칩을 끄거나 다른 날을 본다.' : '맞는 세션이 없다. 다른 낱말로 찾는다.' })]),
+      picks.length > recShown ? el('button', { class: 'btn ghost wide', type: 'button', text: `더 보기 (${picks.length - recShown}개 남음)`, onclick: () => { recShown += 4; draw(); } }) : null)] : []));
+    list.replaceChildren(...(found.length ? found.slice(0, shown).map((s) => row(s, !!q)) : [el('li', { class: 'note', text: filtering() ? '맞는 강연이 없다. 거르기 칩을 끄거나 다른 날을 본다.' : '맞는 강연이 없다. 다른 낱말로 찾는다.' })]),
       ...(found.length > shown ? [el('li', {}, el('button', { class: 'btn ghost wide', type: 'button', text: `더 보기 (${found.length - shown}개 남음)`, onclick: () => { shown += 10; draw(); } }))] : []));
   }
   box.addEventListener('input', () => { q = box.value.trim(); shown = 7; draw(); });
@@ -138,12 +138,12 @@ export async function render({ rest = [] } = {}) {
   draw();
   return el('div', { class: 'page' },
     el('section', { class: 'head' },
-      el('h1', { text: '세션 일정' }),
-      el('p', { class: 'lead', text: '넣으면 동선과 지도에도 보인다. 시각은 라스베이거스 기준이다.' })),
+      el('h1', { text: '강연 일정' }),
+      el('p', { class: 'lead', text: '넣으면 갈 곳과 지도에도 보인다. 시각은 라스베이거스 기준이다.' })),
     el('div', { class: 'page' }, box, tabs, chips, picker, status),
     recBox,
     el('section', { class: 'panel' }, count, list),
     el('section', { class: 'foot' },
       el('p', {}, `라스베이거스 시각 · 바뀔 수 있다 · ${stamp(data.v)} 받음 · `, out(data.source?.url || OFFICIAL, '출처'), data.skipped ? ` · 못 읽은 카드 ${data.skipped}` : ''),
-      el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: '#/plan', text: '동선' }), el('a', { class: 'btn ghost', href: '#/days', text: '내 일정' }))));
+      el('div', { class: 'actions' }, el('a', { class: 'btn ghost', href: '#/plan', text: '갈 곳' }), el('a', { class: 'btn ghost', href: '#/days', text: '내 일정' }))));
 }

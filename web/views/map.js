@@ -1,7 +1,7 @@
 // 지도: 2D가 기본이다. 3D는 위 단추를 누를 때 불러온다.
 // 손가락으로 크게 · 작게(두 손가락 벌리기 · 두 번 톡), 한 손가락 끌기. 확대 단계 셋: 캠퍼스 셋 → 홀 → 부스.
 // 확대할수록 더 보인다: 캠퍼스에는 홀 이름, 홀에는 큰 회사 · 관심 회사 이름, 부스에는 부스 번호와 회사 이름(겹치면 숨기고, 글자는 13px 아래로 줄지 않는다).
-// 위에 찾기 칸과 홀 바로 가기, 회사를 누르면 아래에서 올라오는 큰 카드. 관심 회사는 동선 번호로 찍히고 차례대로 선이 이어진다.
+// 위에 찾기 칸과 홀 바로 가기, 회사를 누르면 아래에서 올라오는 큰 카드. 관심 회사는 갈 곳 번호로 찍히고 차례대로 선이 이어진다.
 // 전시사 자료는 첫 화면에 다 받지 않는다: 홀로 가까이 갈 때 그 홀의 것만 받는다(찾기 · 관심 회사가 있으면 전체). 홀 안 부스 자리는 짐작이다.
 
 import { el, out } from '../dom.js';
@@ -85,7 +85,7 @@ export async function render({ rest = [] } = {}) {
   let fullOnce = null;
   const pending = new Map();
   let pins = [];
-  let dayFocus = rest[0] === 'day' && rest[1] != null && Number.isFinite(Number(rest[1])) ? Number(rest[1]) : null; // 동선에서 "지도에서 보기"로 왔을 때 그 날
+  let dayFocus = rest[0] === 'day' && rest[1] != null && Number.isFinite(Number(rest[1])) ? Number(rest[1]) : null; // 갈 곳 탭에서 "지도에서 보기"로 왔을 때 그 날
   let colorMode = MODES.some((m) => m.k === load('mapColor.v1', 'plain')) ? load('mapColor.v1', 'plain') : 'plain';
   const mapx = el('div', { class: 'mapx', 'data-level': 'campus' });
   const page = el('div', { class: 'page mappage' });
@@ -384,6 +384,15 @@ export async function render({ rest = [] } = {}) {
     }));
     sizeMarks();
   }
+  // "다음 갈 곳"이 보는 날: 갈 곳 탭에서 넘겨 온 날 → 그 탭에서 고른 날 → 오늘 → 갈 곳이 남은 첫 날. 그 날의 회사만 보이고, 남은 곳이 없으면 띠를 안 보인다.
+  function nextOfDay() {
+    const list = getInterests();
+    let day = dayFocus;
+    if (day == null) { try { const saved = sessionStorage.getItem('ces2027.planDay'); if (saved !== null && Number.isFinite(Number(saved))) day = Number(saved); } catch { /* 저장이 막혀도 지도는 된다 */ } }
+    if (day == null) { const d = new Date(); day = info ? dayKeyOf(info, `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`) : null; }
+    if (day == null) day = list.filter((it) => !it.seen).map((it) => it.day || 0).sort((a, b) => dayRank(a) - dayRank(b))[0] ?? null;
+    return day == null ? null : nextStop(list, day);
+  }
   function todayIndex() {
     if (dayFocus != null) return dayFocus;
     const d = new Date();
@@ -435,7 +444,8 @@ export async function render({ rest = [] } = {}) {
   const wrapBox = (list) => { const b = bbox(list.flatMap((p) => p.world)); return pad(b, 28); };
 
   // 회사 한 곳의 카드
-  const infoDays = () => (info ? dayList(info) : []).map((d) => ({ key: d.key, ko: d.ko.split(' ')[0] }));
+  // 회사를 넣을 수 있는 날: 전시 나흘. 1/5는 전시장이 안 여는 날이라 뺀다(내 일정만).
+  const infoDays = () => (info ? dayList(info) : []).filter((d) => !d.pre).map((d) => ({ key: d.key, ko: d.ko.split(' ')[0] }));
   async function openCompany(row, key) {
     if (!row) return;
     const id = row[0];
@@ -470,7 +480,7 @@ export async function render({ rest = [] } = {}) {
       interestBtn.classList.toggle('ghost', on);
       dayRow.replaceChildren(...infoDays().map((d) => {
         const cur = getInterests().find((it) => it.id === id)?.day || 0;
-        return el('button', { class: 'seg', type: 'button', text: d.ko, 'aria-pressed': cur === d.key ? 'true' : 'false', 'aria-label': `${d.ko}에 동선으로 넣기`, onclick: () => {
+        return el('button', { class: 'seg', type: 'button', text: d.ko, 'aria-pressed': cur === d.key ? 'true' : 'false', 'aria-label': `${d.ko}의 갈 곳에 넣기`, onclick: () => {
           const list = getInterests();
           const at = list.findIndex((it) => it.id === id);
           if (at >= 0) list[at] = { ...list[at], day: d.key }; else list.push({ id, day: d.key });
@@ -480,7 +490,7 @@ export async function render({ rest = [] } = {}) {
         } });
       }));
     };
-    const dayRow = el('div', { class: 'segs', role: 'group', 'aria-label': '동선에 넣기' });
+    const dayRow = el('div', { class: 'segs', role: 'group', 'aria-label': '갈 곳에 넣기' });
     interestBtn.addEventListener('click', () => { toggleInterest(id); afterInterests(); paint(); });
     const guide = bk ? guideBlock(bk, place, spot, row) : null;
     const logoBox = el('div', { class: 'card-logo' });
@@ -491,13 +501,13 @@ export async function render({ rest = [] } = {}) {
       boothLines(row[7], (k) => { const p = placeBy.get(k); return p ? shortName(p.ko) : ''; }, { now: bk ? row[7].find((b) => boothKey(b) === bk) : null, pick: (b) => openCompany(rows.get(id) || row, boothKey(b)) })
         || el('p', { class: 'card-where', text: bk ? `부스 ${code} · ${place ? shortName(place.ko) : '장소 모름'}` : '부스 미정' }),
       el('p', { class: 'card-tags' },
-        spot && !spot.official ? el('span', { class: 'tag', text: '자리 짐작' }) : null,
+        spot && !spot.official ? el('span', { class: 'tag', text: '자리는 짐작' }) : null,
         award ? el('span', { class: 'tag mint', text: award & 2 ? '최고 혁신상' : '혁신상' }) : null,
         country >= 0 && country === korea ? el('span', { class: 'tag mint', text: '한국' }) : null),
       catKo ? el('p', { class: 'note', text: catKo }) : null);
     paint();
     box.append(head,
-      el('div', { class: 'card-actions' }, interestBtn, el('p', { class: 'label', text: '동선에 넣기' }), dayRow),
+      el('div', { class: 'card-actions' }, interestBtn, el('p', { class: 'label', text: '갈 곳에 넣기' }), dayRow),
       guide || '', // 부스가 없는 회사는 길 안내 칸이 없다 (null을 그대로 붙이면 "null" 글자가 보인다)
       sessionBlock(name),
       el('div', { class: 'row-actions' }, meta?.link ? out(meta.link.replace('{id}', encodeURIComponent(id)), '공식 링크') : null, el('a', { href: `#/talk/${encodeURIComponent(id)}`, text: '대화' }), markBlock(bk)),
@@ -561,7 +571,7 @@ export async function render({ rest = [] } = {}) {
     sheet.open(el('div', { class: 'card' },
       el('div', { class: 'card-head' }, el('h2', { text: `부스 ${key.slice(bar + 1)}` }),
         el('p', { class: 'card-where', text: `${place ? shortName(place.ko) : '장소 모름'} · 회사 ${rs.length}곳` }),
-        spot && !spot.official ? el('p', { class: 'card-tags' }, el('span', { class: 'tag', text: '자리 짐작' })) : null),
+        spot && !spot.official ? el('p', { class: 'card-tags' }, el('span', { class: 'tag', text: '자리는 짐작' })) : null),
       companyButtons(rs, key)), 'half');
     if (spot) flyTo(spot.x, spot.z, 200);
     three?.chooseBooth(key);
@@ -600,7 +610,7 @@ export async function render({ rest = [] } = {}) {
       el('div', { class: 'card-head' }, el('h2', { text: shortName(p.ko) }),
         el('p', { class: 'card-where', text: p.theme }),
         boothRange(p.k) ? el('p', { class: 'note', text: `부스 번호 ${boothRange(p.k)}` }) : null,
-        el('p', { class: 'card-tags' }, p.boothSpots === 'guess' ? el('span', { class: 'tag', text: '자리 짐작' }) : null)),
+        el('p', { class: 'card-tags' }, p.boothSpots === 'guess' ? el('span', { class: 'tag', text: '자리는 짐작' }) : null)),
       here.length ? el('p', { class: 'note', text: `내 관심 ${here.length}곳: ${here.map((h) => h.name).slice(0, 3).join(' · ')}${here.length > 3 ? ' …' : ''}` }) : null,
       el('div', { class: 'actions' }, link ? out(link, '구글맵에서 열기', 'btn ghost') : null, route ? out(route, '걸어서 길찾기', 'btn ghost') : null),
       listBox), 'half');
@@ -706,7 +716,7 @@ export async function render({ rest = [] } = {}) {
   function buildChips() {
     chipBoxes.length = 0;
     const defs = [{ ko: '전체', all: true, box: null }, ...HALL_CHIPS.map(([ko, keys]) => ({ ko, list: keys.map((k) => placeBy.get(k)).filter(Boolean) })).filter((d) => d.list.length).map((d) => ({ ko: d.ko, box: wrapBox(d.list) }))];
-    if (pins.length) defs.push({ ko: '내 동선', box: pad(bbox(pins.map((p) => [p.x, p.z])), 90) });
+    if (pins.length) defs.push({ ko: '내 갈 곳', box: pad(bbox(pins.map((p) => [p.x, p.z])), 90) });
     for (const d of defs) {
       d.node = el('button', { class: 'chip-go', type: 'button', text: d.ko, 'aria-pressed': 'false', onclick: () => { sheet.close(); finder.clear(); goBox(d.box || all); } });
       chipBoxes.push(d);
@@ -736,7 +746,7 @@ export async function render({ rest = [] } = {}) {
   }
   function drawMe() {
     const where = getWhere();
-    const next = nextStop(getInterests());
+    const next = nextOfDay();
     const nextPin = next ? pins.find((p) => p.id === next.id) : null;
     const at = myPoint(where);
     const unit = (view[2] - view[0]) / 360;
@@ -777,7 +787,7 @@ export async function render({ rest = [] } = {}) {
     else if (where.inside) whereText.textContent = `${L.campuses.find((c) => c.k === where.campus)?.ko} 안 (GPS)`;
     else whereText.textContent = `가장 가까운 곳은 ${L.campuses.find((c) => c.k === where.campus)?.ko}, 약 ${where.meters >= 1000 ? `${(where.meters / 1000).toFixed(where.meters >= 10000 ? 0 : 1)}km` : `${where.meters}m`} 떨어져 있다 (GPS)`;
     if (!next) {
-      nextBox.replaceChildren(el('p', { class: 'note', text: pins.length ? '동선의 회사를 다 봤다.' : '관심 회사를 넣으면 다음 갈 곳이 나온다.' }));
+      nextBox.replaceChildren(el('p', { class: 'note', text: pins.length ? '이 날 갈 곳이 남아 있지 않다.' : '관심 회사를 넣으면 다음 갈 곳이 나온다.' }));
       return;
     }
     const row = rows.get(next.id);
@@ -790,7 +800,7 @@ export async function render({ rest = [] } = {}) {
       el('div', { class: 'actions' },
         route ? out(route, '구글맵 길찾기', 'btn') : null,
         nextPin ? el('button', { class: 'btn ghost', type: 'button', text: '지도에서 보기', onclick: () => { if (in3d()) mode(false); goBox([nextPin.x - 140, nextPin.z - 140, nextPin.x + 140, nextPin.z + 140]); } }) : null,
-        el('a', { class: 'btn ghost', href: '#/plan', text: '동선에서 표시' })));
+        el('a', { class: 'btn ghost', href: '#/plan', text: '갈 곳에서 보기' })));
   }
   board.addEventListener('viewchange', drawMe);
 
@@ -999,7 +1009,7 @@ export async function render({ rest = [] } = {}) {
     let target = nav;
     let kind = 'nav';
     if (!target) {
-      const nx = nextStop(getInterests());
+      const nx = nextOfDay();
       const pin = nx ? pins.find((p) => p.id === nx.id && !p.seen) : null;
       if (pin) { const b = splitBooth(pin.booth); target = { id: pin.id, name: pin.name, key: `${b.place}|${b.code}`, code: b.code, place: placeBy.get(b.place), spot: { x: pin.x, z: pin.z } }; kind = 'next'; }
     }
@@ -1024,7 +1034,7 @@ export async function render({ rest = [] } = {}) {
         kind === 'next' ? el('button', { class: 'btn', type: 'button', text: '길 안내', onclick: () => startNav(rows.get(target.id), target.key) }) : null,
         kind === 'nav' && !est ? el('button', { class: outside ? 'btn ghost' : 'btn', type: 'button', text: where ? '다시 잡기' : '내 위치 잡기', onclick: () => gpsButton.click() }) : null,
         farRoute ? out(farRoute, '구글맵', 'btn') : null,
-        kind === 'nav' && est?.arrived ? el('button', { class: 'btn', type: 'button', text: '봤다', onclick: seen }) : null,
+        kind === 'nav' && est?.arrived ? el('button', { class: 'btn', type: 'button', text: '다녀왔다', onclick: seen }) : null,
         kind === 'nav' ? el('button', { class: 'btn ghost', type: 'button', text: '끝내기', onclick: endNav }) : null));
     navbar.hidden = false;
     requestAnimationFrame(() => mapx.style.setProperty('--nav-h', `${navbar.offsetHeight + 8}px`));
@@ -1051,16 +1061,15 @@ export async function render({ rest = [] } = {}) {
   paintLegend();
   if (colorMode === 'group') getCategories().then((t) => { table = t; colorOf = null; paintLegend(); drawBooths(); }).catch(() => {});
 
-  // ---- 동선에서 온 날: 그 날의 번호만 진하게 보이고, 위에 한 줄로 알린다.
+  // ---- 갈 곳 탭에서 온 날: 그 날의 번호만 진하게 보이고, 위에 한 줄로 알린다("1/6 갈 곳 5곳만 보는 중 · 모두 보기").
   const daybar = el('div', { class: 'daybar', hidden: true });
   function paintDayBar() {
     if (dayFocus == null) { daybar.hidden = true; return; }
     const n = pins.filter((p) => p.day === dayFocus).length;
-    const ko = dayFocus ? (info ? dayByKey(info, dayFocus)?.ko : '') || '' : '날짜 미정';
+    const ko = dayFocus ? `${((info ? dayByKey(info, dayFocus)?.ko : '') || '').split(' ')[0]} 갈 곳` : '날짜 없는 곳';
     daybar.replaceChildren(
-      el('span', { class: 'daybar-text', text: `${ko} 동선 ${n}곳` }),
-      el('button', { class: 'pick', type: 'button', text: '모든 날', onclick: () => { dayFocus = null; paintDayBar(); drawPins(); } }),
-      el('a', { class: 'pick', href: '#/plan', text: '동선' }));
+      el('span', { class: 'daybar-text', text: `${ko} ${n}곳만 보는 중` }),
+      el('button', { class: 'pick', type: 'button', text: '모두 보기', onclick: () => { dayFocus = null; paintDayBar(); drawPins(); drawMe(); } }));
     daybar.hidden = false;
   }
   // ---- 조립

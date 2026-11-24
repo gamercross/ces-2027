@@ -115,7 +115,7 @@ export async function render() {
       tags.length ? el('span', { class: 'stop-tags' }, tags) : null);
     const like = el('button', { class: 'pick ex-like', type: 'button' });
     const paintLike = () => { const on = hasInterest(id); like.textContent = on ? '관심 중' : '관심'; like.setAttribute('aria-pressed', on ? 'true' : 'false'); like.setAttribute('aria-label', `${row[1]} ${on ? '관심에서 빼기' : '관심 담기'}`); };
-    like.addEventListener('click', () => { const added = toggleInterest(id); paintLike(); said.textContent = `${row[1]}을(를) ${added ? '관심에 담았다. 동선에 나온다' : '관심에서 뺐다'}.`; });
+    like.addEventListener('click', () => { const added = toggleInterest(id); paintLike(); said.textContent = `${row[1]}을(를) ${added ? '관심에 담았다. 갈 곳에 나온다' : '관심에서 뺐다'}.`; });
     paintLike();
     return el('li', { class: 'ex-row' }, open, like);
   }

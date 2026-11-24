@@ -16,7 +16,7 @@ export function sessionHits(items, q, searchSessions, n = SESSIONS) {
   const t = String(q || '').trim();
   if (t.length < 3 || /[\u3131-\uD79D]/.test(t)) return [];
   return searchSessions(items, t).sort((a, b) => a.date.localeCompare(b.date) || a.from.localeCompare(b.from)).slice(0, n)
-    .map((s) => ({ session: s, title: s.title, sub: `세션 · ${dayMd(s.date)} ${s.from} · ${(s.place || '장소 미정').split(',')[0]}` }));
+    .map((s) => ({ session: s, title: s.title, sub: `강연 · ${dayMd(s.date)} ${s.from} · ${(s.place || '장소 미정').split(',')[0]}` }));
 }
 
 // opts: { places: [{ k, ko, ... }], onCompany(row, data, finder), onPlace(place) }
@@ -29,7 +29,7 @@ export function hallOfNumber(q, ranges) {
 }
 
 export function findBox({ places, ranges = [], onCompany, onPlace, onType }) {
-  const input = el('input', { type: 'search', inputmode: 'search', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search', placeholder: '회사 · 부스 번호 · 홀 찾기', 'aria-label': '회사 이름 · 부스 번호 · 분야 · 홀 · 세션 찾기' });
+  const input = el('input', { type: 'search', inputmode: 'search', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search', placeholder: '회사 · 부스 번호 · 홀 찾기', 'aria-label': '회사 이름 · 부스 번호 · 분야 · 홀 · 강연 찾기' });
   const list = el('ul', { class: 'results', role: 'listbox', 'aria-label': '찾은 것', hidden: true });
   const note = el('p', { class: 'results-note', role: 'status', hidden: true });
   // 지우기(×): 글자가 있을 때만 보인다(app.css의 :placeholder-shown). 누르면 칸이 비고 결과 줄이 닫힌다.
@@ -92,7 +92,7 @@ export function findBox({ places, ranges = [], onCompany, onPlace, onType }) {
     if (hall) items.push({ place: hall, title: hall.ko, sub: `부스 ${q.trim()} · 번호 범위 ${rule.from}–${rule.to}로 본 홀` });
     // 세션 줄은 회사 두 줄 다음에 끼운다(결과 칸을 내리지 않아도 보이게, 제목은 두 줄까지). 회사가 둘보다 적으면 그 뒤에.
     items.splice(hallHits.length + Math.min(2, rows.length), 0, ...sessionRows);
-    if (!items.length) { say('맞는 회사 · 세션이 없다.'); return; }
+    if (!items.length) { say('맞는 회사 · 강연이 없다.'); return; }
     show(items);
   }
   input.addEventListener('input', find);
