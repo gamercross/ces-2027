@@ -11,10 +11,11 @@ import { join, extname, normalize } from 'node:path';
 const dir = process.argv[2] || 'dist';
 const port = Number(process.argv[3] || 47572);
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.wasm': 'application/wasm', '.png': 'image/png', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json', '.txt': 'text/plain; charset=utf-8' };
-const base = JSON.parse(await readFile(join(dir, 'version.json'), 'utf8')).v;
+// 판 이름은 물을 때마다 읽는다 (서버를 띄워 둔 채 dist를 다시 지어도 맞게).
+const baseOf = async () => JSON.parse(await readFile(join(dir, 'version.json'), 'utf8')).v;
 let turn = 0; // 0 = 옛 판, n = n번째 새 판
 
-function next(path, body) {
+function next(path, body, base) {
   if (!turn) return body;
   const name = `__next${turn}`;
   if (path === '/store.js') return `${body}\nexport const ${name} = true;\n`;
@@ -32,9 +33,9 @@ createServer(async (req, res) => {
     if ((await stat(file)).isDirectory()) file = join(file, 'index.html');
     const rel = file.slice(dir.length).replace(/\\/g, '/');
     const text = ['.js', '.json'].includes(extname(file));
-    const body = next(rel.startsWith('/') ? rel : `/${rel}`, await readFile(file, text ? 'utf8' : undefined));
+    const body = next(rel.startsWith('/') ? rel : `/${rel}`, await readFile(file, text ? 'utf8' : undefined), turn ? await baseOf() : '');
     // GitHub Pages와 같은 머리글. 이 고장은 머리글과 상관없이 난다(no-store로도 났다).
     res.writeHead(200, { 'content-type': types[extname(file)] || 'application/octet-stream', 'cache-control': 'max-age=600' });
     res.end(body);
   } catch { res.writeHead(404); res.end('없다'); }
-}).listen(port, '127.0.0.1', () => console.log(`열림 http://127.0.0.1:${port}/ (옛 판 ${base})`));
+}).listen(port, '127.0.0.1', () => baseOf().then((base) => console.log(`열림 http://127.0.0.1:${port}/ (옛 판 ${base})`)));
