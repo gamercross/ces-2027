@@ -510,14 +510,38 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       ['ces2027keep-speech-v1', new Map([['https://x/vendor/speech/a.js', 1], ['https://x/vendor/translate/source-tokenizer.json', 1]])],
       ['transformers-cache', new Map([['https://huggingface.co/TigreGotico/opus-mt-en-ko-onnx/resolve/3f/int8/encoder_model.onnx', 1], ['https://huggingface.co/onnx-community/moonshine-tiny-ONNX/resolve/a6/x.onnx', 1]])],
     ]);
-    const fakeCaches = { keys: async () => [...store.keys()], has: async (n) => store.has(n), delete: async (n) => store.delete(n), open: async (n) => ({ keys: async () => [...store.get(n).keys()].map((url) => ({ url })), delete: async (r) => store.get(n).delete(r.url) }) };
-    const ctx = { self: { addEventListener: (k, f) => { handlers[k] = f; }, clients: { claim: async () => {} }, registration: { scope: 'https://x/' }, location: { origin: 'https://x' } }, caches: fakeCaches, Request: class {}, URL };
+    const fakeCaches = { keys: async () => [...store.keys()], has: async (n) => store.has(n), delete: async (n) => store.delete(n), open: async (n) => { if (!store.has(n)) store.set(n, new Map()); return { keys: async () => [...store.get(n).keys()].map((url) => ({ url })), delete: async (r) => store.get(n).delete(r.url), match: async (k) => store.get(n).get(k), put: async (k, v) => { store.get(n).set(k, v); } }; } };
+    const ctx = { self: { addEventListener: (k, f) => { handlers[k] = f; }, clients: { claim: async () => {} }, registration: { scope: 'https://x/' }, location: { origin: 'https://x' } }, caches: fakeCaches, Request: class {}, Response: class { constructor(body) { this.body = body; } async text() { return this.body; } }, URL };
     vm.runInNewContext(sw.replace("'__VERSION__'", "'t'"), ctx);
     let pending;
     handlers.activate({ waitUntil: (p) => { pending = p; } });
     await pending;
     check(!store.has('ces2027-old') && !store.get('ces2027keep-speech-v1').has('https://x/vendor/translate/source-tokenizer.json') && store.get('ces2027keep-speech-v1').has('https://x/vendor/speech/a.js') && [...store.get('transformers-cache').keys()].length === 1 && [...store.get('transformers-cache').keys()][0].includes('moonshine') && /translationModel\.v1/.test(app),
       '서비스 워커: 켜질 때 이미 받아 둔 영한 번역 모델과 단어 사전만 폰에서 비우고(받아쓰기 모델 파일은 그대로), 번역 설정 열쇠도 치운다');
+    // 쓰는 판(안 8): 새 판은 받아만 두고, "다시 열기"를 누를 때만 쓰는 판을 바꾼다.
+    {
+      const usedNow = async () => (await store.get('ces2027use')?.get('use')?.text()) || '';
+      const offJs0 = await readFile(join(dist, 'offline.js'), 'utf8');
+      // 판 이름과 목록을 시험용으로 바꿔 끼운 서비스 워커를 켠다(지은 것에는 이미 진짜 판 이름이 찍혀 있다).
+      const swAs = (v) => sw.replace(/const VERSION = [^;\n]+;/, `const VERSION = '${v}';`).replace(/const FILES = \[[^\n]*\];/, 'const FILES = [];');
+      const boot = async (v) => { const h = {}; vm.runInNewContext(swAs(v), { ...ctx, self: { ...ctx.self, addEventListener: (k, f) => { h[k] = f; } } }); h.activate({ waitUntil: (p) => { pending = p; } }); await pending; return h; };
+      // 처음: 판 t가 켜진다.
+      store.delete('ces2027use');
+      store.set('ces2027-t', new Map());
+      await boot('t');
+      const firstUse = await usedNow();
+      // 새 서비스 워커(판 n)가 켜진다: 폰은 판 t를 쓰고 있고, 판 n을 다 받아 두었다. 담다 끊긴 빈 껍데기도 하나 있다.
+      store.set('ces2027-n', new Map());
+      store.set('ces2027-broken', new Map());
+      const h2 = await boot('n');
+      const kept = store.has('ces2027-t') && store.has('ces2027-n') && !store.has('ces2027-broken') && (await usedNow()) === 'ces2027-t';
+      const say = async (what) => { let answer; h2.message({ data: { ces: what }, ports: [{ postMessage: (m) => { answer = m; } }], waitUntil: (p) => { pending = p; } }); await pending; return answer; };
+      const before = await say('state');
+      const after = await say('use-latest');
+      check(firstUse === 'ces2027-t' && kept && before.latest === 'n' && before.using === 't' && after.using === 'n' && (await usedNow()) === 'ces2027-n' && !store.has('ces2027-t') && store.has('ces2027-n')
+        && /const cache = await caches\.open\(await inUse\(\)\);/.test(sw) && /await ask\('use-latest'\); await freshen\(\);/.test(offJs0),
+        '서비스 워커: 처음 켜지면 그 판을 쓰는 판으로 적고, 새 판이 켜져도 쓰던 판을 그대로 주며(새 판은 받아만 두고 빈 껍데기는 지운다), "다시 열기"를 누를 때만 쓰는 판을 바꾸고 옛 판을 지운다');
+    }
     // 3단계(11/22): 처음 들어오면 명함. 환영 한 줄 → 한 화면(별명 · 나만 필수) → 명함 + QR 둘 → "지도로". 설정에서 QR 보기 · 고치기.
     const cardV = await readFile(join(dist, 'views/card.js'), 'utf8');
     const settingsV = await readFile(join(dist, 'views/settings.js'), 'utf8');
