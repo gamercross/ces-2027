@@ -4,7 +4,8 @@
 //           playwright-cli run-code "$(cat scripts/browser-update.mjs)"
 // 고장의 까닭: WebKit은 화면을 다시 열 때 미리 받는 조각(app.js · store.js …)을 서비스 워커에 묻지 않고 메모리의 옛 것으로 쓴다.
 //   새로 부르는 화면 조각(새 판)이 옛 조각을 만나 이름을 못 찾는다. 그래서 다시 열기 전에 새 파일을 한 번씩 받아 둔다(web/offline.js · index.html).
-// 세 길을 본다: ① 띠의 "다시 열기" ② 브라우저의 새로 고침 ③ 다시 열지 않고 다른 탭을 누름.
+// 11/24부터 새 판은 받아만 두고 "다시 열기"를 누를 때만 쓴다(web/sw.js의 "쓰는 판"). 누르기 전에는 옛 화면에 옛 조각만 가서 섞이지 않는다.
+// 세 길을 본다: ① 띠의 "다시 열기"(새 판으로) ② 누르지 않고 브라우저의 새로 고침(쓰던 판 그대로, 그 뒤에 누르면 새 판) ③ 누르지 않고 다른 탭(쓰던 판 그대로).
 async (page) => {
   const URL = 'http://127.0.0.1:47572/';
   const checks = [];
@@ -48,7 +49,7 @@ async (page) => {
     await page.reload();
     await page.locator('#update:not([hidden])').waitFor({ timeout: 30000 });
     const s = await state();
-    check(old && s.band && s.v !== before.v && s.caches.includes('next'), `${tag}: 옛 판(${before.v})이 열려 있을 때 새 판(${s.v})이 깔리고 "새 판이 있다" 띠가 뜬다`);
+    check(old && s.band && s.v === before.v && s.caches.includes('next'), `${tag}: 옛 판(${before.v})이 열려 있을 때 새 판을 받아 두고 "새 판이 있다" 띠가 뜬다. 쓰는 판은 그대로다(${s.v}) — 담음 ${s.caches}`);
   };
 
   await page.setViewportSize({ width: 390, height: 780 });
@@ -60,18 +61,22 @@ async (page) => {
   check(!s.fail && /설정/.test(s.text) && !s.band && s.v.includes('next'), `띠의 다시 열기: 누르면 새 판으로 설정 화면이 열린다("화면을 불러오지 못했다"가 아니다) — ${s.text} · 판 ${s.v}`);
   await tabs('띠의 다시 열기 뒤');
 
-  // ② 띠를 누르지 않고 브라우저의 새로 고침
+  // ② 띠를 누르지 않고 브라우저의 새로 고침: 쓰던 판 그대로 열리고 띠가 다시 뜬다. 그 뒤에 누르면 새 판.
   await untilBand('브라우저의 새로 고침');
   await page.reload();
   s = await settled();
-  check(!s.fail && /설정/.test(s.text) && s.v.includes('next'), `브라우저의 새로 고침: 저절로 새 파일을 받아 설정 화면이 열린다 — ${s.text} · 판 ${s.v}`);
-  await tabs('브라우저의 새로 고침 뒤');
+  check(!s.fail && /설정/.test(s.text) && !s.v.includes('next') && s.band, `브라우저의 새로 고침: 누르기 전에는 쓰던 판 그대로 설정 화면이 열리고 띠가 다시 뜬다 — ${s.text} · 판 ${s.v}`);
+  await tabs('브라우저의 새로 고침 뒤(쓰던 판)');
+  await page.locator('#update-go').click();
+  s = await settled();
+  check(!s.fail && !s.band && s.v.includes('next') && !s.caches.includes(','), `새로 고침 뒤에 "다시 열기"를 누르면 새 판으로 열리고 옛 담음은 지워진다 — ${s.text} · 판 ${s.v}`);
+  await tabs('새로 고침 뒤 다시 열기 뒤');
 
-  // ③ 다시 열지 않고 다른 탭을 누름 (옛 화면 + 새 화면 조각)
+  // ③ 누르지 않고 다른 탭을 누름: 쓰던 판의 화면 조각이 와서 그대로 열린다(저절로 다시 열리지 않는다).
   await untilBand('다시 열지 않고 탭');
   await page.locator('.tabs a[data-tab="plan"]').click();
-  s = await settled();
-  check(!s.fail && s.v.includes('next') && (await page.evaluate(() => location.hash)) === '#/plan', `다시 열지 않고 탭: 갈 곳 탭을 누르면 한 번 저절로 다시 열려 갈 곳이 보인다 — ${s.text}`);
+  s = await settled(3000);
+  check(!s.fail && !s.v.includes('next') && s.band && (await page.evaluate(() => location.hash)) === '#/plan', `다시 열지 않고 탭: 갈 곳 탭이 쓰던 판 그대로 열리고 띠는 남아 있다 — ${s.text}`);
   await tabs('다시 열지 않고 탭 뒤');
 
   // 뒷정리: 시험용 서비스 워커와 담아 둔 것을 지운다
