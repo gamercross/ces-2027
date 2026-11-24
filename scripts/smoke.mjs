@@ -664,6 +664,9 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       check(wf.includes('cron:') && wf.includes('check-floorplan.mjs') && wf.includes("steps.plan.outputs.state == 'open'") && wf.includes('gh issue create') && wf.includes('issues: write') && wf.includes('gh issue list --label floorplan --state open'), '정식 배치도 감시: 매일 한 번 공식 사이트를 보고, 열렸을 때만 이슈 하나를 만든다(이미 열린 이슈가 있으면 또 만들지 않는다)');
       check(/startNav\(/.test(mapSrc) && /길 안내 시작/.test(mapSrc) && /function endNav/.test(mapSrc) && /navFollow/.test(mapSrc) && /map\/go|rest\[0\] === 'go'/.test(mapSrc) && /estimate\(/.test(mapSrc) && /\/\/ ---- 길 안내/.test(mapSrc),
         '길 안내: 카드의 "길 안내 시작" · 아래 띠(남은 거리 · 걷는 시간 · 방향 · 끝내기) · 걸으면 지도가 따라오고 손으로 끌면 멈춘다 · 다음 갈 곳에서도 시작한다(#/map/go/<회사>)');
+      // 길 판 안에 다음에 누를 것 (편의성 점검 6절 2 · 4번): 위치를 못 쓰면 부스 번호 칸 + 맞추기, 다른 캠퍼스면 구글맵으로 가기 + 셔틀 보기. 같은 칸 · 같은 구글맵 단추는 한 곳에만
+      check(mapSrc.includes("const NO_GPS = '위치를 못 쓴다. 가까운 부스 번호를 적는다.'") && !mapSrc.includes('위치 권한을 거부했다') && mapSrc.includes("class: 'inline nav-form'") && mapSrc.includes('function fitBooth(') && mapSrc.includes('boothForm.hidden = needBooth') && mapSrc.includes("'구글맵으로 가기'") && mapSrc.includes("href: '#/transit', text: '셔틀 보기'") && mapSrc.includes('navMaps !== next.id') && !/api[_-]?key|maps\.googleapis/i.test(mapSrc),
+        '길 판: 위치를 못 쓰면 한 줄 말 + 판 안의 "가까운 부스 번호" 칸 · 맞추기, 다른 캠퍼스면 "구글맵으로 가기"(링크만, 키 없음) · "셔틀 보기". 아래 묶음의 같은 칸 · 같은 구글맵 단추와 겹치지 않는다');
       check(/pointerType|pointers\.size === 2/.test(gestSrc) && /DOUBLE_MS/.test(gestSrc) && /addEventListener\('wheel'/.test(gestSrc) && /requestAnimationFrame/.test(gestSrc) && /swallow/.test(gestSrc) && /sheet-grip/.test(sheetSrc) && /'half'/.test(sheetSrc) && /'full'/.test(sheetSrc) && /closed/.test(sheetSrc),
         '손짓: 한 손가락 끌기 · 두 손가락 벌리기 · 두 번 톡 · 휠, 프레임마다 한 번만 그리고 끌고 난 뒤 click은 막는다. 카드는 반쯤 → 끝까지 끌어올리고 아래로 끌면 닫힌다');
     }
