@@ -39,6 +39,9 @@ async (page) => {
   const far = (a, b) => Math.max(...a.map((v, i) => Math.abs(v - b[i])));
   const overlaps = (rects) => { let n = 0; for (let i = 0; i < rects.length; i++) for (let j = i + 1; j < rects.length; j++) { const a = rects[i], b = rects[j]; if (a[0] < b[2] - 0.5 && b[0] < a[2] - 0.5 && a[1] < b[3] - 0.5 && b[1] < a[3] - 0.5) n++; } return n; };
 
+  // 앞서 돈 시험이 남긴 것을 지운다: 위치 허락(남아 있으면 내 자리가 GPS로 바뀐다. 이 시험은 부스 번호로 맞춘 자리만 쓴다) · 끊어 둔 인터넷.
+  await page.context().clearPermissions();
+  await page.context().setOffline(false);
   // 시험용 갈 곳: 1/6에 노스 · 센트럴 홀 다섯, 1/7에 베네시안 둘 (편의성 점검과 같은 꼴에 다른 날 선을 보려고 하나 더).
   await page.setViewportSize({ width: 360, height: 740 });
   await page.goto(URL);
@@ -110,7 +113,7 @@ async (page) => {
   // ---- 1. 360px 밝게: 차례 선 · 이름
   await open3d();
   await measure('360 밝게');
-  await shot('211-map3d-day-360.png');
+  await shot('221-map3d-day-360.png');
 
   // ---- 2. 누른 곳 = 열리는 카드
   // 2-1. 화면 가운데(편의성 점검에서 "베네시안 캠퍼스"가 뜨던 곳): 손가락 아래의 홀이 열린다
@@ -120,7 +123,7 @@ async (page) => {
   let sh = await sheet();
   const midKo = mid.kind === 'place' ? await api((m, k) => m.L.list.find((p) => p.k === k).ko, mid.name) : '';
   check(mid.kind === 'place' && sh.state !== 'closed' && midKo.includes(sh.title) && !sh.title.includes('캠퍼스'), `가운데를 누르면 손가락 아래의 홀 "${sh.title}" 카드가 열린다 (다른 캠퍼스 카드가 아니다)`);
-  await shot('212-map3d-tap-hall-360.png');
+  await shot('222-map3d-tap-hall-360.png');
   await closeSheet();
   // 2-2. 갈 곳 번호를 누르면 그 회사 카드
   await page.getByRole('button', { name: '내 갈 곳', exact: true }).click();
@@ -147,7 +150,7 @@ async (page) => {
   sh = await sheet();
   const code = dot.key.slice(dot.key.indexOf('|') + 1);
   check(sh.state !== 'closed' && (sh.title === `부스 ${code}` || sh.where.includes(code)), `부스 점 ${code}을 누르면 그 부스의 카드가 열린다 ("${sh.title}" · ${sh.where.replace(/\n/g, ' ')})`);
-  await shot('213-map3d-tap-booth-360.png');
+  await shot('223-map3d-tap-booth-360.png');
   await closeSheet();
   // 2-5. 멀리(전체): 캠퍼스 이름이 보이고, 캠퍼스 바닥을 누르면 그 캠퍼스 · 빈 곳은 아무것도
   await page.getByRole('button', { name: '전체', exact: true }).click();
@@ -158,7 +161,7 @@ async (page) => {
   await tapAt(spot.x, spot.y);
   sh = await sheet();
   check(sh.state !== 'closed' && sh.title === campusKo, `캠퍼스 바닥을 누르면 손가락 아래의 "${sh.title}" 카드가 열린다`);
-  await shot('214-map3d-tap-campus-360.png');
+  await shot('224-map3d-tap-campus-360.png');
   await closeSheet();
   await page.getByRole('button', { name: '전체', exact: true }).click();
   await settle(600);
@@ -181,7 +184,7 @@ async (page) => {
   const flat = [...turned.l.labels.map((x) => x.rect), turned.l.nextRect].filter(Boolean);
   check(Math.abs(turned.yaw - yaw0) > 0.5 && turned.l.next === seed.first.name.slice(0, 16) && !!turned.l.nextRect && overlaps(flat) === 0 && turned.l.labels.every((x) => x.size >= 13) && turned.lines.some((l) => l.today && l.pts.length === 5),
     `끌어서 돌려도(${(turned.yaw - yaw0).toFixed(2)}rad) 차례 선이 남고, 글자 ${flat.length}개는 눕지 않고 화면을 향해 겹침 없이 놓인다 (다음 곳 "${turned.l.next}")`);
-  await shot('215-map3d-turned-360.png');
+  await shot('225-map3d-turned-360.png');
 
   // ---- 4. 다른 날 선은 얇은 점선, 이 날 보기 중에는 더 흐리게 (2D와 같다)
   const dim = (await three((t) => t.linesOnScreen())).find((l) => !l.today);
@@ -206,7 +209,7 @@ async (page) => {
   check(!!way && !!casing && way.pts.length >= 2, `길 안내 중에 3D에도 길 선이 그려진다 (점 ${way?.pts.length}개, 흰 테두리 + 강조색)`);
   check(way.pts.every(([x, y]) => x >= 0 && x <= nav.w && y >= nav.l.band[0] - 30 && y <= nav.l.band[1] + 2), '길 선(내 자리 ~ 가는 곳)이 한 화면에 든다');
   check(nav.l.next === seed.first.name.slice(0, 16) && bar.includes('짐작') && bar.includes(seed.first.name), `가는 곳 이름 "${nav.l.next}"이 지도에 있고 아래 띠에 "(짐작)"이 그대로 있다`);
-  await shot('216-map3d-nav-360.png');
+  await shot('226-map3d-nav-360.png');
   await page.locator('.navbar').getByRole('button', { name: '끝내기' }).click();
   await settle(400);
   check(!(await three((t) => t.linesOnScreen())).some((l) => l.width === 4.5), '끝내기를 누르면 길 선이 지워진다');
@@ -214,15 +217,15 @@ async (page) => {
   // ---- 6. 390px · 어둡게 · 글자 네 단계
   await open3d({ w: 390, h: 780 });
   await measure('390 밝게');
-  await shot('217-map3d-day-390.png');
+  await shot('227-map3d-day-390.png');
   await open3d({ theme: 'dark' });
   await measure('360 어둡게');
-  await shot('218-map3d-day-dark-360.png');
+  await shot('228-map3d-day-dark-360.png');
   for (const text of [2, 3, 4]) {
     await open3d({ text });
     const s = await measure(`360 글자 ${text}단계`);
     check(s.l.nextSize >= 13 * (text === 2 ? 1.15 : 1.3), `글자 ${text}단계에서 지도 글자도 커진다 (다음 곳 이름 ${s.l.nextSize.toFixed(1)}px)`);
-    if (text === 4) await shot('219-map3d-day-text4-360.png');
+    if (text === 4) await shot('229-map3d-day-text4-360.png');
   }
   await open3d({ theme: 'dark', text: 4, w: 390, h: 780 });
   await measure('390 어둡게 글자 4단계');
@@ -232,6 +235,7 @@ async (page) => {
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.waitForFunction(async () => (await caches.keys()).length > 0 && !!(await caches.match('map3d.js')), null, { timeout: 30000 });
   await page.context().setOffline(true);
+  try {
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.locator('svg.map').waitFor();
   await page.waitForFunction(() => document.querySelectorAll('svg.map [data-pin]').length >= 7, null, { timeout: 15000 });
@@ -241,7 +245,7 @@ async (page) => {
   await settle(600);
   const off = await three((t) => ({ pins: t.pinsOnScreen().length, lines: t.linesOnScreen().length, next: t.labelsOnScreen().next }));
   check(off.pins === 7 && off.lines >= 1 && off.next === seed.first.name.slice(0, 16), `인터넷 없이도 3D가 열리고 번호 ${off.pins}개 · 차례 선 · 다음 곳 이름이 그려진다`);
-  await page.context().setOffline(false);
+  } finally { await page.context().setOffline(false); }
 
   check(errors.length === 0, `화면 오류 없음 (${errors.length}건${errors.length ? `: ${errors[0]}` : ''})`);
   return JSON.stringify(checks, null, 2);

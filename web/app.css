@@ -34,7 +34,8 @@ h3 { font-size: var(--fs-body); }
 .note, .hint { font-size: var(--fs-note); color: var(--ink-2); }
 .foot { font-size: var(--fs-fine); color: var(--ink-2); padding: var(--s1); }
 .foot > * + * { margin-top: 6px; }
-.error { color: var(--warn); font-weight: 700; }
+.error, .field-error { color: var(--warn); font-weight: 700; }
+.field-error { font-size: var(--fs-small); word-break: keep-all; overflow-wrap: break-word; }
 .note.warn { color: var(--warn); font-weight: 700; }
 .proof { display: inline-block; font-size: var(--fs-fine); color: var(--ink-2); white-space: nowrap; }
 .proof.wrap { display: block; white-space: normal; overflow-wrap: anywhere; line-height: 2; }
@@ -252,6 +253,12 @@ input[type="date"], input[type="time"] { -webkit-appearance: none; appearance: n
 .qrs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
 .qr { display: grid; gap: 6px; text-align: center; min-width: 0; }
 .qr svg { width: 100%; height: auto; border-radius: var(--radius-ctl); display: block; }
+/* QR이 홀수 개(하나 · 셋)면 맨 앞 것(링크드인이 있으면 링크드인)이 한 줄을 차지한다. 상대 폰이 옆 QR을 잘못 읽지 않게 크게. */
+/* 크기는 화면 높이를 따른다(178 ~ 220px): 360 × 740 폰에서 QR 셋과 그 아래 글이 스크롤 없이 한 화면에 든다. 혼자면 가장 크게. */
+.qr.lead { grid-column: 1 / -1; }
+.qr.lead svg { width: min(100%, 180px); margin: 0 auto; }
+@supports (height: 1dvh) { .qr.lead svg { width: min(100%, clamp(168px, 24dvh, 220px)); } }
+.qr.lead:only-child svg { width: min(100%, 220px); }
 .qr-empty { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; padding: 10px; border-radius: var(--radius-ctl); background: var(--panel); font-size: var(--fs-note); color: var(--ink-2); }
 .qr figcaption { display: grid; font-size: var(--fs-fine); color: var(--ink-2); overflow-wrap: anywhere; }
 .qr figcaption b { font-size: var(--fs-small); color: var(--ink); }
