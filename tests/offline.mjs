@@ -181,8 +181,8 @@ await step('첫 실행', '별명 · 나 · 깃허브 · 디스코드를 적고 "
   await page.getByLabel('별명').fill('시험');
   await page.getByRole('radio', { name: '학생' }).check({ force: true });
   await page.getByText('더 적기').click().catch(() => {});
-  await page.getByLabel('깃허브 (선택)').fill('https://github.com/octocat');
-  await page.getByLabel('디스코드 (선택)').fill('https://discord.gg/abc123');
+  await page.getByLabel('깃허브', { exact: true }).fill('https://github.com/octocat');
+  await page.getByLabel('디스코드', { exact: true }).fill('https://discord.gg/abc123');
   await page.getByRole('button', { name: '명함 만들기' }).click();
   await page.locator('.qr svg').first().waitFor({ timeout: 8000 });
   const n = await page.locator('.qr svg').count();
