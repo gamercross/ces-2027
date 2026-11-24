@@ -27,8 +27,9 @@ export function createSheet(host, { onClose, onChange } = {}) {
   // 열 때 아직 안 보이던 카드는 맨 위부터 보인다.
   function open(children, next = 'half') {
     body.replaceChildren(...[].concat(children).filter(Boolean));
-    body.scrollTop = 0;
     setState(next === 'closed' ? 'half' : next);
+    // 보이게 한 뒤에 맨 위로 올린다. 숨겨진 동안에는 굴린 자리가 바뀌지 않아, 다시 열면 지난번 굴린 자리부터 보였다.
+    body.scrollTop = 0;
   }
   const close = () => setState('closed');
   grip.addEventListener('click', () => { if (!dragged) setState(state === 'half' ? 'full' : 'half'); });

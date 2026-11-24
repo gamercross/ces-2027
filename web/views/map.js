@@ -686,6 +686,8 @@ export async function render({ rest = [] } = {}) {
   // ---- 위: 찾기 칸 · 홀 바로 가기
   const finder = findBox({
     places: places.places,
+    // 찾는 글자를 넣기 시작하면 열려 있던 카드를 닫는다 (펼친 카드 밑에 결과 줄이 숨던 것). 길 안내는 그대로 둔다.
+    onType: () => { if (sheet.state() !== 'closed') sheet.close(); },
     ranges: places.boothRules?.numbers || [],
     onPlace: (p) => pickPlace(placeBy.get(p.k)),
     onCompany: async (row, f) => {

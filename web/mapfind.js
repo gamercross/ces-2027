@@ -28,7 +28,7 @@ export function hallOfNumber(q, ranges) {
   return ranges.find((r) => n >= r.from && n <= r.to) || null;
 }
 
-export function findBox({ places, ranges = [], onCompany, onPlace }) {
+export function findBox({ places, ranges = [], onCompany, onPlace, onType }) {
   const input = el('input', { type: 'search', inputmode: 'search', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search', placeholder: '회사 · 부스 번호 · 홀 찾기', 'aria-label': '회사 이름 · 부스 번호 · 분야 · 홀 · 세션 찾기' });
   const list = el('ul', { class: 'results', role: 'listbox', 'aria-label': '찾은 것', hidden: true });
   const note = el('p', { class: 'results-note', role: 'status', hidden: true });
@@ -60,6 +60,7 @@ export function findBox({ places, ranges = [], onCompany, onPlace }) {
     const mine = ++turn;
     const q = input.value.trim();
     if (!q) { clear(); return; }
+    onType?.(); // 찾기 시작: 열려 있던 카드가 결과 줄을 가리지 않게 맡긴 쪽이 내린다
     // 홀 이름은 바로 찾는다 (자료를 기다리지 않는다).
     const lower = q.toLowerCase();
     const hallHits = places.filter((p) => p.ko.toLowerCase().includes(lower) || p.en?.toLowerCase().includes(lower)).slice(0, 2)

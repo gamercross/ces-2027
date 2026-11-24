@@ -1,4 +1,4 @@
-// Playwright CLI test: 실제 아이폰(Safari)에서 찾은 것(11/22 폰 확인 1 · 2 · 4 · 5 · 8 · 9 · 10 · 11번). 360 x 740 · 390 x 780, 밝게 · 어둡게, 글자 기본 · 가장 크게.
+// Playwright CLI test: 실제 아이폰(Safari)에서 찾은 것(11/22 폰 확인 1차 1 · 2 · 4 · 5 · 8 · 9 · 10 · 11번, 2차 B · E · F). 360 x 740 · 390 x 780, 밝게 · 어둡게, 글자 기본 · 가장 크게.
 // Run with: playwright-cli open about:blank                                      (Chromium)
 //           playwright-cli open --browser=webkit --device="iPhone 15" about:blank  (WebKit, 아이폰 기기 프로필)
 //           playwright-cli run-code "$(cat scripts/browser-phone.mjs)"
@@ -203,6 +203,41 @@ async (page) => {
         await settle(400);
         check((await sheet.getAttribute('data-state')) === 'closed', `${tag} 카드 닫기 단추를 누르면 카드가 닫힌다`);
       }
+
+      // ---- 폰 확인 2차: B(카드 위 입력이 뒤의 지도를 움직임 · 글자 선택) · E(다시 열면 맨 위) · F(찾기 결과가 카드 밑에 숨음) ----
+      await reopen();
+      const view0 = await page.evaluate(() => { const m = document.querySelector('#view > .page').mapApi; return m.view.map((n) => Math.round(n)).join(); });
+      const hit = await page.evaluate(() => {
+        const map = document.querySelector('svg.map'); const s = document.querySelector('.sheet').getBoundingClientRect();
+        const x = s.left + s.width / 2, y = s.top + s.height / 2; // 카드 한가운데(뒤에는 지도가 깔려 있다)
+        const p = (t, id, px, py) => map.dispatchEvent(new PointerEvent(t, { pointerId: id, clientX: px, clientY: py, bubbles: true, pointerType: 'touch', isPrimary: true }));
+        p('pointerdown', 7, x, y); for (let i = 1; i <= 8; i++) p('pointermove', 7, x - i * 10, y - i * 8); p('pointerup', 7, x - 80, y - 64);
+        const w = new WheelEvent('wheel', { deltaY: 120, clientX: x, clientY: y, bubbles: true, cancelable: true }); map.dispatchEvent(w);
+        return { prevented: w.defaultPrevented };
+      });
+      await settle(500);
+      const view1 = await page.evaluate(() => { const m = document.querySelector('#view > .page').mapApi; return m.view.map((n) => Math.round(n)).join(); });
+      check(view0 === view1 && !hit.prevented, `${tag} 카드 자리에서 시작한 끌기 · 바퀴는 뒤의 지도를 움직이지 않는다(보는 칸 ${view0} → ${view1})`);
+      const sel = await page.evaluate(() => { const g = (q) => { for (let n = document.querySelector(q); n; n = n.parentElement) { const c = getComputedStyle(n); const v = c.userSelect || c.webkitUserSelect; if (v && v !== 'auto') return v; } return 'text'; }; /* auto는 부모 값을 따른다 */ return { title: g('.sheet .card h2'), tab: g('.tabs a'), input: g('.find-field input') }; });
+      check(sel.title === 'none' && sel.tab === 'none' && sel.input !== 'none', `${tag} 화면 글자는 길게 눌러도 선택되지 않고(카드 제목 ${sel.title} · 탭 ${sel.tab}) 적는 칸은 선택된다(${sel.input})`);
+      // E: 카드를 아래까지 굴린 뒤 닫고 다시 열면 맨 위부터 보인다
+      const rolled = await page.evaluate(() => { const b = document.querySelector('.sheet-body'); b.scrollTop = 9999; return b.scrollTop; });
+      await page.locator('.sheet-close').click();
+      await settle(400);
+      await reopen();
+      const top2 = await page.evaluate(() => document.querySelector('.sheet-body').scrollTop);
+      check(top2 === 0, `${tag} 카드를 굴린 뒤(${Math.round(rolled)}px) 닫고 다시 열면 맨 위부터 보인다(굴린 자리 ${top2})`);
+      // F: 카드를 끝까지 펼친 채 찾는 글자를 넣으면 카드가 닫히고 결과 줄이 가려지지 않는다
+      await page.locator('.sheet-grip').click();
+      await settle(500);
+      const wasFull = await sheet.getAttribute('data-state');
+      await input.fill('Samsung');
+      await page.locator('.results .result').first().waitFor({ timeout: 15000 });
+      await settle(500);
+      const seen = await page.evaluate(() => [...document.querySelectorAll('.results .result')].slice(0, 3).every((r) => { const b = r.getBoundingClientRect(); const top = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2); return !!top && r.contains(top); }));
+      check(wasFull === 'full' && (await sheet.getAttribute('data-state')) === 'closed' && seen, `${tag} 펼친 카드가 있을 때 찾는 글자를 넣으면 카드가 닫히고 결과 줄이 가려지지 않는다`);
+      await page.locator('.find-clear').click();
+      await settle(200);
       await noSideScroll(`${tag} 지도`);
     }
   }
