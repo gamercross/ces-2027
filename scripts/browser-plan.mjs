@@ -91,8 +91,18 @@ async (page) => {
   check(toastBox.bottom <= toastBox.tabsTop, '알림 한 줄은 탭 바로 위에 뜬다(탭을 가리지 않는다)');
   await page.emulateMedia({ colorScheme: 'light' });
   await shot('191-where-toast-360.png');
+  // 다녀옴 띠는 6초가 지나도 있다(전: 6초 뒤 사라짐). 띠가 있는 동안 아래 여백이 띠 높이만큼 늘어, 끝까지 굴리면 "목록 고치기 · 지도에서 보기" 줄이 띠 위로 올라온다(편의성 점검 6절 3 · 12번)
   await page.waitForTimeout(6200);
-  check(await page.locator('.toast').isHidden(), '6초 뒤에 사라진다');
+  check(await page.locator('.toast').isVisible(), '다녀옴 띠는 6초가 지나도 그대로 있다');
+  const under = () => page.evaluate(() => { const t = document.querySelector('.toast').getBoundingClientRect(); const rows = [...document.querySelectorAll('.planpage button, .planpage a')].filter((b) => ['목록 고치기', '지도에서 보기', '강연 일정', '추천 회사', '내 시간'].includes(b.textContent)).map((b) => b.getBoundingClientRect()); return { pad: parseFloat(getComputedStyle(document.querySelector('.planpage')).paddingBottom), toastH: Math.round(t.height), covered: rows.filter((r) => r.width > 0 && r.bottom > t.top && r.top < t.bottom).length, n: rows.length }; });
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await page.waitForTimeout(200);
+  const lifted = await under();
+  check(lifted.n === 5 && lifted.covered === 0 && lifted.pad >= lifted.toastH, `띠가 있는 동안 아래 여백이 띠 높이만큼 늘어(${lifted.pad}px ≥ ${lifted.toastH}px) 끝까지 굴리면 "목록 고치기 · 지도에서 보기" 줄을 덮지 않는다`);
+  await shot('207-where-toast-stays-360.png');
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.locator('.subhead').click(); // 누르는 것이 아닌 곳을 눌러도 다음 누름이다
+  check(await page.locator('.toast').isHidden() && (await page.evaluate(() => parseFloat(getComputedStyle(document.querySelector('.planpage')).paddingBottom))) === 0, '다음에 무엇을 누르면 띠가 사라지고 아래 여백도 돌아온다');
 
   // 4. 다녀온 곳 보기 → "다녀옴" 칸으로 되돌린다
   await page.locator('.fold .pick').first().click();

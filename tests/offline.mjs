@@ -397,6 +397,7 @@ const png = await page.evaluate(() => { const c = document.createElement('canvas
 await step('일기', '일기 쓰기: 회사 · 본 것 · 느낀 점 · 누구에게를 적고 "폰에 남기기"', async () => {
   await go('#/diary/new', '일기 쓰기');
   await page.locator('textarea[name=saw]').fill('오프라인 시험: 로봇 시연을 봤다.');
+  await page.locator('details.more > summary').click(); // 나머지 칸은 "더 적기" 아래 접혀 있다
   await page.locator('textarea[name=felt]').fill('해 볼 것: 명함 먼저 건네기.');
   await page.locator('input[name=other]').fill('시험 회사');
   await page.locator('input[name=for]').first().check({ force: true });
@@ -407,6 +408,7 @@ await step('일기', '일기 쓰기: 회사 · 본 것 · 느낀 점 · 누구�
 });
 await step('일기', '일기 사진 한 장: 폰에서 150KB 안으로 줄여 IndexedDB에 둔다', async () => {
   await go('#/diary/new', '일기 사진');
+  await page.locator('details.more > summary').click(); // 나머지 칸은 "더 적기" 아래 접혀 있다
   await page.locator('input[name=other]').fill('사진 회사');
   await page.locator('textarea[name=saw]').fill('사진 시험');
   await page.locator('input[type=file]').setInputFiles({ name: 'p.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });

@@ -69,14 +69,26 @@ export async function render() {
   const shell = createCardShell();
   window.addEventListener('hashchange', () => { shell.close(); hideToast(); }, { once: true });
 
-  // 탭 바로 위에 6초 뜨는 한 줄: "OO 다녀왔다 · 일기 쓰기", "OO 뺐다 · 되돌리기".
+  // 탭 바로 위에 뜨는 한 줄. "OO 다녀왔다 · 일기 쓰기"는 다음에 무엇을 누를 때까지 있고(stay), "OO 뺐다 · 되돌리기"는 6초 뜬다.
+  // 띠가 있는 동안 화면 아래 여백을 띠 높이만큼 늘린다(끝까지 굴리면 "목록 고치기 · 지도에서 보기" 줄이 띠 위로 올라온다).
   const toast = el('div', { class: 'toast', role: 'status', hidden: true });
-  function hideToast() { clearTimeout(showToast.t); toast.hidden = true; toast.replaceChildren(); }
-  function showToast(text, action) {
+  const onNextPress = (ev) => { if (!toast.contains(ev.target)) hideToast(); };
+  function hideToast() {
+    clearTimeout(showToast.t);
+    clearTimeout(showToast.arm);
+    document.removeEventListener('click', onNextPress, true);
+    toast.hidden = true;
+    toast.replaceChildren();
+    toast.parentNode?.style.removeProperty('--toast-h');
+  }
+  function showToast(text, action, stay = false) {
+    hideToast();
     toast.replaceChildren(el('span', { class: 'toast-text', text }), action);
     toast.hidden = false;
-    clearTimeout(showToast.t);
-    showToast.t = setTimeout(hideToast, 6000);
+    // 지금 이 누름이 띠를 바로 지우지 않게, 다음 누름부터 듣는다.
+    if (stay) showToast.arm = setTimeout(() => document.addEventListener('click', onNextPress, true), 0);
+    else showToast.t = setTimeout(hideToast, 6000);
+    toast.parentNode?.style.setProperty('--toast-h', `${toast.offsetHeight + 12}px`);
   }
 
   // 지금 보는 날: 넘겨 둔 날 → 오늘 → 갈 곳이 남은 첫 날 → 넣은 곳이 있는 첫 날 → 전시 첫날.
@@ -102,10 +114,10 @@ export async function render() {
   let foldOpen = false; // "다녀온 곳 · 보기"를 펼쳤나
   const change = (fn, note) => { setInterests(fn(getInterests())); status.textContent = note || ''; draw(); };
   const diaryLink = (id) => el('a', { class: 'pick', href: `#/diary/new/${id}`, text: '일기 쓰기' });
-  // 다녀왔다: 그 곳이 목록에서 빠져 "다녀온 곳"으로 가고, 아래에 "일기 쓰기"가 6초 뜬다(카드가 열려 있으면 카드 안에 같은 단추가 있다).
+  // 다녀왔다: 그 곳이 목록에서 빠져 "다녀온 곳"으로 가고, 아래에 "일기 쓰기"가 다음에 무엇을 누를 때까지 뜬다(카드가 열려 있으면 카드 안에 같은 단추가 있다).
   const setSeen = (id, seen) => {
     change((l) => l.map((x) => (x.id === id ? { ...x, seen } : x)));
-    if (seen && !shell.isOpen && byId.has(id)) showToast(`${nameOf(id)} 다녀왔다.`, diaryLink(id));
+    if (seen && !shell.isOpen && byId.has(id)) showToast(`${nameOf(id)} 다녀왔다.`, diaryLink(id), true);
     else hideToast();
   };
   const setDay = (id, key) => { showDay(key); change((l) => l.map((x) => (x.id === id ? { ...x, day: key } : x)), `${longDay(dayOf(key))}${key ? '로' : '으로'} 옮겼다.`); };
