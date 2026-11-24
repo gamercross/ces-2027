@@ -92,7 +92,7 @@ async (page) => {
   text = await bar();
   const farLink = await page.locator('.navbar a', { hasText: '구글맵' }).getAttribute('href');
   check(/가장 가까운 전시장까지 약 [\d,]+km/.test(text) && text.includes('다시 잡기') && text.includes('끝내기') && /^https:\/\/www\.google\.com\/maps\/dir\//.test(farLink || ''), `라스베이거스 밖이면 띠에 "전시장 밖 · 거리"와 다시 잡기 · 구글맵 · 끝내기가 나온다 (${text.replace(/\n/g, ' · ')})`);
-  const fits360 = await page.evaluate(() => { const n = document.querySelector('.navbar'); return document.documentElement.scrollWidth <= 360 && [...n.querySelectorAll('.btn')].every((b) => b.getBoundingClientRect().height >= 44 && b.scrollWidth <= b.clientWidth + 1); });
+  const fits360 = await page.evaluate(() => { const n = document.querySelector('.navbar'); return document.documentElement.scrollWidth <= 360 && [...n.querySelectorAll('.nav-actions .btn')].every((b) => b.getBoundingClientRect().height >= 44 && b.scrollWidth <= b.clientWidth + 1); });
   check(fits360, '띠의 단추 셋이 360px 안에 들고 글자가 잘리지 않는다 (누르는 곳 44px 이상)');
   await page.waitForTimeout(900);
   await page.screenshot({ path: `${SHOTS}98b-nav-far.png` });
@@ -103,15 +103,69 @@ async (page) => {
   const way = await page.locator('.card-way').innerText();
   check(way.includes('전시장 밖이다') && !way.includes('다른 캠퍼스'), `카드의 "여기까지 길"도 "전시장 밖"이라고 말한다 (${way.split('\n')[1] || way})`);
 
-  // 7. 위치를 거부하면 띠가 거부했다고 말한다 (예전에는 "내 위치를 먼저 잡는다"만 남았다)
+  // 7. 위치를 못 쓸 때(허락하지 않음): 판 안에 "가까운 부스 번호" 칸 + 맞추기가 바로 있다 (2026-11-24, 편의성 점검 6절 2번. 예전에는 GPS 다시 묻기만 있고 칸은 두 화면 아래였다)
+  const others = await page.evaluate(async () => { const d = await (await fetch('data/exhibitors.json')).json(); const one = (h) => d.ex.filter((x) => x[7].length === 1 && x[7][0].endsWith(`@${h}`)); return { near: one('LVCC_N')[1][7][0].split('@')[0], far: one('VEN_G')[0][0] }; });
+  // 판을 재는 것: 글 · 단추 · 보이는 칸 · 탭 위에 다 보이는지 · 44px · 안 잘림 · 화면에 보이는 검정 단추 수
+  const panel = () => page.evaluate(() => {
+    const n = document.querySelector('.navbar'); const r = n.getBoundingClientRect(); const tabs = innerHeight - document.querySelector('.tabs').offsetHeight;
+    const shown = (x) => { const q = x.getBoundingClientRect(); return q.width > 0 && q.height > 0; };
+    return { sub: n.querySelector('.nav-sub').textContent, acts: [...n.querySelectorAll('.nav-actions > *')].map((b) => b.textContent), form: shown(n.querySelector('.nav-form')),
+      inputs: [...document.querySelectorAll('input[aria-label="가까운 부스 번호"]')].filter(shown).length, inside: r.top >= 0 && r.bottom <= tabs + 1 && document.documentElement.scrollWidth <= innerWidth,
+      small: [...n.querySelectorAll('button, a, input')].filter((b) => shown(b) && (b.getBoundingClientRect().height < 43.5 || b.getBoundingClientRect().width < 43.5)).length,
+      cut: [...n.querySelectorAll('.btn')].filter((b) => b.scrollWidth > b.clientWidth + 1).length,
+      blacks: [...document.querySelectorAll('.btn:not(.ghost)')].filter((b) => { const q = b.getBoundingClientRect(); return q.width > 0 && q.top >= 0 && q.bottom <= tabs + 1; }).length };
+  });
+  const go = async (id) => { await page.goto('about:blank'); await page.goto(`${URL}#/map/go/${encodeURIComponent(id)}`); await page.waitForFunction(() => /^→/.test(document.querySelector('.navbar')?.innerText || '') && !/받는 중/.test(document.querySelector('.navbar .nav-sub')?.textContent || ''), null, { timeout: 15000 }); await page.waitForTimeout(700); };
   await page.evaluate(() => { localStorage.removeItem('ces2027.where.v1'); });
   await page.context().clearPermissions();
-  await page.goto('about:blank');
-  await page.goto(`${URL}#/map/go/${encodeURIComponent(row.id)}`);
-  await page.waitForFunction(() => /^→/.test(document.querySelector('.navbar')?.innerText || ''), null, { timeout: 15000 });
-  await page.getByRole('button', { name: '내 위치 잡기' }).click();
-  await page.waitForFunction(() => /거부/.test(document.querySelector('.navbar')?.innerText || ''), null, { timeout: 15000 });
-  check(true, '위치를 거부하면 띠에 "위치 권한을 거부했다"가 나온다');
+  await go(row.id);
+  let p = await panel();
+  check(p.sub === '위치를 못 쓴다. 가까운 부스 번호를 적는다.' && p.form && p.inputs === 1 && p.acts.join(' · ') === '끝내기' && p.blacks === 1 && p.inside && p.small === 0 && p.cut === 0, `위치를 못 쓰면 판이 한 줄로 말하고 판 안에 부스 번호 칸 + 맞추기(검정 하나) · 끝내기가 있다. 같은 칸은 화면에 하나다 (${p.sub} / ${p.acts.join(' · ')})`);
+  await page.screenshot({ path: `${SHOTS}202-guide-nogps-360.png` });
+  await page.locator('.navbar input').fill('없는번호zz');
+  await page.locator('.navbar .nav-form .btn').click();
+  await page.waitForTimeout(300);
+  p = await panel();
+  check(p.form && (/찾지 못했다/.test(p.sub) || /걸어서/.test(p.sub)), `번호가 틀리면 판이 그 자리에서 말한다 (${p.sub})`);
+  await page.locator('.navbar input').fill(others.near);
+  await page.locator('.navbar input').press('Enter');
+  await page.waitForFunction(() => /걸어서 \d+분/.test(document.querySelector('.navbar .nav-sub')?.textContent || ''), null, { timeout: 15000 });
+  p = await panel();
+  const fitted = await page.evaluate(() => ({ by: JSON.parse(localStorage.getItem('ces2027.where.v1') || 'null')?.by, lines: document.querySelectorAll('#me-layer polyline').length }));
+  check(!p.form && p.inputs === 1 && fitted.by === 'booth' && fitted.lines >= 2 && p.acts.join(' · ') === '끝내기', `번호를 적고 맞추면(누른 수 2, 굴리지 않는다) 판이 거리 · 분으로 바뀌고 선이 그어진다 (${p.sub})`);
+  await page.waitForTimeout(900);
+  await page.screenshot({ path: `${SHOTS}203-guide-fitted-360.png` });
+
+  // 8. 다른 캠퍼스: 판에 "구글맵으로 가기"(화면의 검정 단추 하나) + 글자 단추 "셔틀 보기" (편의성 점검 6절 4번. 예전에는 "끝내기"만 있고 구글맵 · 셔틀은 두 화면 아래였다)
+  await page.evaluate((id) => localStorage.setItem('ces2027.interests.v1', JSON.stringify([{ id, day: 1 }])), others.far);
+  await go(others.far);
+  p = await panel();
+  const far = await page.evaluate(() => { const n = document.querySelector('.navbar'); const a = [...n.querySelectorAll('.nav-actions a')]; return { maps: a[0]?.href || '', black: a[0]?.className === 'btn', shuttle: a[1]?.getAttribute('href'), below: [...document.querySelectorAll('.panel a')].filter((x) => x.textContent === '구글맵 길찾기' && x.getBoundingClientRect().width > 0).length }; });
+  check(/다른 캠퍼스/.test(p.sub) && p.acts.join(' · ') === '구글맵으로 가기 · 셔틀 보기 · 끝내기' && /^https:\/\/www\.google\.com\/maps\/dir\//.test(far.maps) && far.black && far.shuttle === '#/transit' && p.blacks === 1 && p.inside && p.small === 0 && p.cut === 0 && far.below === 0, `다른 캠퍼스면 판에 구글맵으로 가기(검정 하나, Maps URLs) · 셔틀 보기 · 끝내기가 있고, 아래 묶음의 같은 구글맵 단추는 겹쳐 보이지 않는다 (${p.sub})`);
+  await page.screenshot({ path: `${SHOTS}204-guide-far-360.png` });
+  await page.locator('.navbar a', { hasText: '셔틀 보기' }).click();
+  await page.waitForFunction(() => location.hash === '#/transit');
+  check(true, '"셔틀 보기"는 셔틀 · 오가는 법 화면을 연다');
+
+  // 9. 360 · 390px × 밝게 · 어둡게 × 글자 네 단계: 두 판 모두 탭 위에 다 보이고, 옆으로 안 밀리고, 누르는 곳 44px 이상, 글자 안 잘림, 보이는 검정 단추 하나
+  await page.addInitScript(() => { try { const l = JSON.parse(sessionStorage.getItem('__look') || 'null'); if (l) { localStorage.setItem('ces2027.theme.v1', JSON.stringify(l.theme)); localStorage.setItem('ces2027.text.v1', JSON.stringify(l.text)); } } catch { /* 없으면 그대로 */ } });
+  for (const W of [360, 390]) for (const theme of ['light', 'dark']) for (const size of [1, 2, 3, 4]) {
+    await page.setViewportSize({ width: W, height: 740 });
+    await page.evaluate((l) => { sessionStorage.setItem('__look', JSON.stringify(l)); localStorage.removeItem('ces2027.where.v1'); }, { theme, text: size });
+    await go(row.id);
+    const a = await panel();
+    if (W === 360 && ((theme === 'dark' && size === 1) || (theme === 'light' && size === 4))) await page.screenshot({ path: `${SHOTS}202-guide-nogps-${theme === 'dark' ? 'dark' : 'text4'}-360.png` });
+    await page.locator('.navbar input').fill(others.near);
+    await page.locator('.navbar input').press('Enter');
+    await page.waitForFunction(() => /걸어서 \d+분/.test(document.querySelector('.navbar .nav-sub')?.textContent || ''), null, { timeout: 15000 });
+    await go(others.far);
+    const b = await panel();
+    if (W === 360 && ((theme === 'dark' && size === 1) || (theme === 'light' && size === 4))) await page.screenshot({ path: `${SHOTS}204-guide-far-${theme === 'dark' ? 'dark' : 'text4'}-360.png` });
+    const ok = (x) => x.inside && x.small === 0 && x.cut === 0 && x.blacks === 1;
+    check(ok(a) && a.form && ok(b) && b.acts.length === 3, `${W}px ${theme === 'dark' ? '어둡게' : '밝게'} 글자 ${size}: 위치를 못 쓸 때의 판 · 다른 캠퍼스의 판이 탭 위에 다 보이고 44px 이상 · 안 잘림 · 검정 단추 하나`);
+  }
+  await page.evaluate(() => { sessionStorage.removeItem('__look'); localStorage.setItem('ces2027.text.v1', JSON.stringify(1)); });
+  await page.setViewportSize({ width: 360, height: 740 });
   await page.context().grantPermissions(['geolocation']);
   await page.evaluate(() => { localStorage.removeItem('ces2027.interests.v1'); localStorage.removeItem('ces2027.where.v1'); });
   return checks.map((c) => `됨 | ${c.what}`).join('\n');
