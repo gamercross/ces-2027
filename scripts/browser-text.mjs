@@ -2,7 +2,7 @@
 // Run with: playwright-cli open about:blank
 //           playwright-cli run-code "$(cat scripts/browser-text.mjs)"
 // The app must be served from a stamped dist at http://127.0.0.1:47571/ (자료가 있는 지은 것).
-// SHOTS를 채우면(레포 바탕의 상대 경로) 네 단계 × 설정 · 동선 · 동선 카드 그림을 그 폴더에 남긴다.
+// SHOTS를 채우면(레포 바탕의 상대 경로) 네 단계 × 설정 · 갈 곳 · 갈 곳 카드 그림을 그 폴더에 남긴다.
 async (page) => {
   const URL = 'http://127.0.0.1:47571/';
   const SHOTS = '';
@@ -89,7 +89,7 @@ async (page) => {
   check(wrap === 'wrap' && (await page.locator('.textsegs .seg').first().evaluate((n) => n.getBoundingClientRect().width)) < 200, '큰 단계에서는 글자 크기 칩이 2 × 2로 접힌다');
 
   // 2. 네 단계 × (360 · 390) × 화면: 가로 넘침 0 · 글자 잘림 0 · 누르는 곳 44px · 탭이 안 가림
-  const screens = [['지도', '#/map', null], ['동선', '#/plan', null], ['동선 카드', '#/plan', 'card'], ['일기', '#/diary', null], ['만난 사람 카드', '#/diary', 'person'], ['일기 쓰기', '#/diary/new', null], ['설정', '#/settings', null], ['명함 QR', '#/card', null], ['지도 회사 카드', '#/map', 'mapcard']];
+  const screens = [['지도', '#/map', null], ['갈 곳', '#/plan', null], ['갈 곳 카드', '#/plan', 'card'], ['일기', '#/diary', null], ['만난 사람 카드', '#/diary', 'person'], ['일기 쓰기', '#/diary/new', null], ['설정', '#/settings', null], ['명함 QR', '#/card', null], ['지도 회사 카드', '#/map', 'mapcard']];
   const problems = [];
   let audited = 0;
   for (const [W, H] of [[360, 740], [390, 780]]) {
@@ -107,7 +107,7 @@ async (page) => {
         if (extra === 'card') { await page.locator('.stops .stop-open').first().click(); await page.locator('.pcard').waitFor(); }
         if (extra === 'person') { await page.locator('.met .stop-open').first().click(); await page.locator('.pcard').waitFor(); }
         if (extra === 'mapcard') { await page.getByRole('button', { name: '노스', exact: true }).click(); await settle(1500); await page.evaluate(async () => { const m = document.querySelector('#view > .page').mapApi; await m.ensureFull(); const row = [...m.rows.values()].find((r) => r[7]?.[0]?.endsWith('@LVCC_N')); await m.openCompany(row); }); await settle(900); }
-        if (SHOTS && W === 360 && ['설정', '동선', '동선 카드'].includes(ko)) await page.screenshot({ path: `${SHOTS}12${n}-text${n}-${{ 설정: 'settings', 동선: 'plan', '동선 카드': 'plan-card' }[ko]}.png` });
+        if (SHOTS && W === 360 && ['설정', '갈 곳', '갈 곳 카드'].includes(ko)) await page.screenshot({ path: `${SHOTS}12${n}-text${n}-${{ 설정: 'settings', '갈 곳': 'plan', '갈 곳 카드': 'plan-card' }[ko]}.png` });
         if (SHOTS && W === 360 && n === 4 && ['일기', '지도', '지도 회사 카드'].includes(ko)) await page.screenshot({ path: `${SHOTS}125-text4-${{ 일기: 'diary', 지도: 'map', '지도 회사 카드': 'map-card' }[ko]}.png` });
         const r = await audit(`${W}px ${NAMES[n - 1]} ${ko}`, W);
         audited++;

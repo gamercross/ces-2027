@@ -56,9 +56,9 @@ async (page) => {
   };
   await put();
 
-  // 1. 이름과 틀: 탭 "갈 곳", 날짜 한 줄에 남은 곳 수, 다음에 갈 곳 한 곳 크게
+  // 1. 이름과 틀: 탭 "갈 곳", 날짜 한 줄, 다음에 갈 곳 한 곳 크게
   check((await text('.tabs a[data-tab="plan"] span')) === '갈 곳' && (await text('.planpage h1')) === '갈 곳', '탭과 머리의 이름은 "갈 곳"이다');
-  check((await text('.daynav-day')) === '1월 6일 (수)' && (await text('.daynav-left')) === '· 남은 4곳', `날짜 한 줄: "${await text('.daynav-now')}" (다녀온 곳을 뺀 남은 수)`);
+  check((await text('.daynav-day')) === '1월 6일 (수)' && (await text('.daynav-now')) === '1월 6일 (수)', `날짜 한 줄: "${await text('.daynav-now')}" (날짜만, 칩과 곳 수는 없다)`);
   check((await page.locator('.segs[aria-label="날짜"]').count()) === 0 && (await page.locator('.daychip').count()) === 0, '날짜 칩 줄은 없다("안 본 곳" 칩도 없다)');
   const nextText = await text('.nextup-open');
   check(nextText.startsWith('다음에 갈 곳 · 10:30쯤') && nextText.includes(nameOf(1)) && nextText.includes('LVCC 노스 홀 · 부스'), `다음에 갈 곳: 고른 날의 첫 안 간 곳(${nameOf(1)}), 때와 곳이 같이 보인다`);
@@ -86,7 +86,7 @@ async (page) => {
   await page.locator('.nextup-go .pick').click();
   await settle(300);
   check((await text('.toast-text')) === `${nameOf(1)} 다녀왔다.` && (await page.locator('.toast a').getAttribute('href')) === `#/diary/new/${seed.list[1].id}` && (await text('.toast a')) === '일기 쓰기', `다녀왔다: 아래에 "${await text('.toast')}"가 뜬다(일기 쓰기로 한 번에)`);
-  check((await text('.nextup-open')).includes(nameOf(2)) && (await text('.daynav-left')) === '· 남은 3곳' && (await text('.subhead')) === '그다음 2곳' && (await text('.fold-text')) === `다녀온 곳 2 (${nameOf(0)} 외 1곳)`, '다음에 갈 곳 · 남은 수 · 다녀온 곳이 같이 바뀐다');
+  check((await text('.nextup-open')).includes(nameOf(2)) && (await text('.subhead')) === '그다음 2곳' && (await text('.fold-text')) === `다녀온 곳 2 (${nameOf(0)} 외 1곳)`, '다음에 갈 곳 · 그다음 곳 수 · 다녀온 곳이 같이 바뀐다');
   const toastBox = await page.locator('.toast').evaluate((n) => { const r = n.getBoundingClientRect(); return { bottom: Math.round(r.bottom), tabsTop: innerHeight - document.querySelector('.tabs').offsetHeight }; });
   check(toastBox.bottom <= toastBox.tabsTop, '알림 한 줄은 탭 바로 위에 뜬다(탭을 가리지 않는다)');
   await page.emulateMedia({ colorScheme: 'light' });
@@ -103,7 +103,7 @@ async (page) => {
   await shot('192-where-visited-open-360.png');
   await page.locator('.stop.done .check').nth(1).click();
   await settle(200);
-  check((await text('.daynav-left')) === '· 남은 4곳' && (await text('.nextup-open')).includes(nameOf(1)) && (await stored())[1].seen === false, '"다녀옴" 칸을 누르면 갈 곳으로 돌아온다');
+  check((await text('.subhead')) === '그다음 3곳' && (await text('.nextup-open')).includes(nameOf(1)) && (await stored())[1].seen === false, '"다녀옴" 칸을 누르면 갈 곳으로 돌아온다');
   await page.evaluate(() => window.scrollTo(0, 0));
 
   // 5. 회사 카드: 이름 · 부스 · 길 안내(검정 하나) · 다녀왔다 · 일기 쓰기 · 공식 쪽, 날짜에 1/5가 없다
@@ -127,15 +127,15 @@ async (page) => {
   check((await text('.pcard-sub')).startsWith('1월 7일 1번째') && (await stored())[2].day === 2, `다른 날로 옮기기: 카드가 "${await text('.pcard-sub')}"로 바뀐다`);
   await page.keyboard.press('Escape');
   await settle(200);
-  check((await page.locator('.pcard-back').isHidden()) && (await text('.daynav-day')) === '1월 7일 (목)' && (await text('.daynav-left')) === '· 남은 3곳', 'Esc로 닫히고 보는 날이 따라간다');
+  check((await page.locator('.pcard-back').isHidden()) && (await text('.daynav-day')) === '1월 7일 (목)' && (await text('.subhead')) === '그다음 2곳', 'Esc로 닫히고 보는 날이 따라간다');
   // 빼면 되돌리기가 6초 뜬다
   await page.locator('.after .stop-open').last().click();
   await page.locator('.pcard button', { hasText: '갈 곳에서 빼기' }).click();
   await settle(300);
-  check((await text('.daynav-left')) === '· 남은 2곳' && (await text('.toast-text')) === `${nameOf(6)} 뺐다.`, '갈 곳에서 빼기: 줄이 줄고 "되돌리기"가 뜬다');
+  check((await text('.subhead')) === '그다음 1곳' && (await text('.toast-text')) === `${nameOf(6)} 뺐다.`, '갈 곳에서 빼기: 줄이 줄고 "되돌리기"가 뜬다');
   await page.locator('.toast .pick').click();
   await settle(300);
-  check((await text('.daynav-left')) === '· 남은 3곳' && (await stored()).length === 8, '되돌리기: 줄이 돌아온다');
+  check((await text('.subhead')) === '그다음 2곳' && (await stored()).length === 8, '되돌리기: 줄이 돌아온다');
 
   // 6. 날짜 넘기기: 전시 나흘 + 날짜 없음. 1/5는 내 일정이 없으면 없다
   for (let i = 0; i < 3; i++) await page.locator('.daynav-btn[data-side="next"]').click();
