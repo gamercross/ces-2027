@@ -234,6 +234,9 @@ export async function render() {
         step(live[at + 1], false)));
 
       // 다음에 갈 곳: 고른 날의 첫 안 간 곳 하나를 가장 크게. 검정 단추는 "길 안내" 하나.
+      // 날짜 없는 곳(관심만 담은 곳): 다른 날을 보고 있어도 한 줄로 알린다. 그 날이 비었으면 빈 화면 말 아래 단추로 크게, 아니면 아래에 작게(2026-11-24).
+      const noDate = d.key ? list.filter((it) => !it.day && !it.seen).length : 0;
+      const goNoDate = () => { showDay(0); status.textContent = ''; hideToast(); draw(); window.scrollTo(0, 0); holder.querySelector('.nextup-open')?.focus({ preventScroll: true }); };
       const next = todo[0];
       if (next) {
         const hasBooth = !!firstBooth(next.id);
@@ -248,7 +251,9 @@ export async function render() {
       } else {
         sections.push(el('section', { class: 'panel nextup' },
           el('p', { class: 'big', text: items.length ? '이 날 갈 곳을 다 다녀왔다.' : '이 날 넣은 곳이 없다.' }),
-          items.length ? null : el('p', { class: 'note', text: '지도에서 회사를 고르고 "갈 곳에 넣기"에서 이 날을 누른다.' })));
+          items.length ? null
+            : noDate ? el('button', { class: 'btn', type: 'button', text: `날짜 없는 곳 ${noDate}곳 보기`, onclick: goNoDate })
+              : el('p', { class: 'note', text: '지도에서 회사를 고르고 "갈 곳에 넣기"에서 이 날을 누른다.' })));
       }
 
       // 그다음 곳들: 내 일정은 때에 맞는 자리에 점선 칸으로 끼운다.
@@ -274,7 +279,7 @@ export async function render() {
       const cardCount = todo.filter((it) => (byId.get(it.id)?.[7] || []).some((b) => { const a = b.lastIndexOf('@'); return allMarks[`${b.slice(a + 1)}|${b.slice(0, a)}`]; })).length;
       const notes = [
         d.pre ? el('p', { class: 'note', text: d.note }) : null,
-        !d.key ? el('p', { class: 'note', text: '날짜를 정하지 않은 곳이다. "목록 고치기"에서 날마다 나눈다.' }) : null,
+        !d.key ? el('p', { class: 'note', text: '날짜를 정하지 않은 곳이다. 이름을 눌러 날짜를 고른다.' }) : null,
         hours?.off ? el('p', { class: 'note', text: '이 날은 안 보는 날로 정했다.' }) : null,
         // 그 날에 들어가는 수를 넘으면 알려 준다 (막지는 않는다).
         hours && !hours.off && items.length > room ? el('p', { class: 'note warn', text: `${items.length - room}곳이 내 시간에 안 들어간다. 다른 날로 옮기거나 내 시간을 늘린다.` }) : null,
@@ -290,6 +295,12 @@ export async function render() {
             el('span', { class: 'fold-text', text: `다녀온 곳 ${done.length} (${names})` }),
             el('button', { class: 'pick', type: 'button', 'aria-expanded': foldOpen ? 'true' : 'false', 'aria-label': foldOpen ? '다녀온 곳 접기' : `다녀온 곳 ${done.length}곳 보기`, text: foldOpen ? '접기' : '보기', onclick: () => { foldOpen = !foldOpen; draw(); document.querySelector('.fold .pick')?.focus({ preventScroll: true }); } })),
           foldOpen ? el('ol', { class: 'stops' }, done.map((it) => item(it, numberOf.get(it.id)))) : null));
+      }
+
+      if (noDate && items.length) {
+        sections.push(el('div', { class: 'fold nodate' },
+          el('span', { class: 'fold-text', text: `날짜 없는 곳 ${noDate}곳` }),
+          el('button', { class: 'pick', type: 'button', 'aria-label': `날짜 없는 곳 ${noDate}곳 보기`, text: '보기', onclick: goNoDate })));
       }
 
       sections.push(el('div', { class: 'fold foot-links' },

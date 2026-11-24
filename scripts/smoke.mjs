@@ -472,7 +472,7 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
     const toolsFn = planV.slice(planV.indexOf('// ---- 목록 고치기(큰 창)'), planV.indexOf('const toolsBtn ='));
     const storeV = await readFile(join(dist, 'store.js'), 'utf8');
     check(rowFn.includes('stop-open') && rowButtons === 2 && rowFn.includes("it.seen ? el('button', { class: 'check on'") && !rowFn.includes('select') && !rowFn.includes("'빼기'")
-      && ['daynav', 'daynav-left', '남은 ${todo.length}곳', "'다 다녀옴'", '다음에 갈 곳', '그다음 ${rest.length}곳', '다녀온 곳 ${done.length}', '목록 고치기', '지도에서 보기', '일기 쓰기', '#/diary/new/', '#/map/at/', '#/map/go/', '#/map/day/'].every((t) => planV.includes(t))
+      && ['daynav', 'daynav-left', '남은 ${todo.length}곳', "'다 다녀옴'", '다음에 갈 곳', '그다음 ${rest.length}곳', '다녀온 곳 ${done.length}', '목록 고치기', '지도에서 보기', '날짜 없는 곳 ${noDate}곳 보기', "class: 'fold nodate'", '!it.day && !it.seen', '일기 쓰기', '#/diary/new/', '#/map/at/', '#/map/go/', '#/map/day/'].every((t) => planV.includes(t))
       && !['차례 정리', '날짜 채우기', '걷는 차례로', '날짜 미정', "'아직'", "'봤다'", '안 본 곳', 'daychip', "'마크다운'", "'CSV'", "'코드'"].some((t) => planV.includes(t))
       // 회사 카드: 검정 단추는 "길 안내" 하나, 1/5는 날짜 고르기에 없다, 위로 · 아래로 · 대화 · 명함 이벤트 · 로고는 없다
       && (cardFn.match(/class: 'btn( wide)?'/g) || []).length === 1 && cardFn.includes("text: '길 안내'") && cardFn.includes('days.filter((d) => !d.pre)') && cardFn.includes('갈 곳에서 빼기') && cardFn.includes('공식 쪽') && cardFn.includes('자리는 짐작')
@@ -483,7 +483,7 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       && /it\?\.day === 5 \? \{ \.\.\.it, day: 0 \}/.test(storeV) && /filter\(\(d\) => !d\.pre\)/.test(mapV3)
       && pcardV.includes('Escape') && pcardV.includes("role: 'dialog'") && !/class: 'dock'/.test(planV) && !planV.includes('<select')
       && /rest\[0\] === 'day'/.test(mapV3) && mapV3.includes('dayFocus') && mapV3.includes('function nextOfDay()') && mapV3.includes('곳만 보는 중') && mapV3.includes("text: '모두 보기'") && !mapV3.includes('nextStop(getInterests())'),
-      '갈 곳(안 1): 날짜 한 줄에 그 날 남은 곳 수(칩 없음) · 다음에 갈 곳 한 곳 크게 · 그다음 곳들 · 다녀온 곳 접기(다녀옴 칸으로 되돌림) · 목록 고치기 · 지도에서 보기 · 회사 카드의 검정 단추는 길 안내 하나 · 1/5에는 회사를 넣지 못한다(카드 · 지도 · 저장 읽기) · "다녀왔다" 뒤 일기 쓰기 6초 · 지도의 다음 갈 곳은 고른 날의 회사만 · 아래 도크 없음');
+      '갈 곳(안 1): 날짜 한 줄에 그 날 남은 곳 수(칩 없음) · 다음에 갈 곳 한 곳 크게 · 그다음 곳들 · 다녀온 곳 접기(다녀옴 칸으로 되돌림) · 날짜 없는 곳 n곳 보기(빈 날은 검정 단추, 아니면 작은 한 줄) · 목록 고치기 · 지도에서 보기 · 회사 카드의 검정 단추는 길 안내 하나 · 1/5에는 회사를 넣지 못한다(카드 · 지도 · 저장 읽기) · "다녀왔다" 뒤 일기 쓰기 6초 · 지도의 다음 갈 곳은 고른 날의 회사만 · 아래 도크 없음');
     // 다시 짓기 6단계 일기 + 만난 사람: 일기 첫 묶음이 만난 사람(최근 세 명 + 명함 받기), 맨 위 회색 단추 셋 없음, 읽자마자 저장, 일기는 본 것 한 칸이면 된다.
     const peopleV = await readFile(join(dist, 'views/people.js'), 'utf8');
     const peopleUiV = await readFile(join(dist, 'people-ui.js'), 'utf8');

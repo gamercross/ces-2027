@@ -140,11 +140,40 @@ async (page) => {
   // 6. 날짜 넘기기: 전시 나흘 + 날짜 없음. 1/5는 내 일정이 없으면 없다
   for (let i = 0; i < 3; i++) await page.locator('.daynav-btn[data-side="next"]').click();
   await settle(200);
-  check((await text('.daynav-day')) === '날짜 없음' && (await text('.daynav-left')) === '· 남은 1곳' && (await page.locator('.daynav-btn[data-side="next"]').isDisabled()) && (await page.locator('.daynotes').textContent()).includes('목록 고치기'), '마지막은 "날짜 없음 · 남은 1곳"이고, 날마다 나누라는 한 줄이 있다');
+  check((await text('.daynav-day')) === '날짜 없음' && (await text('.daynav-left')) === '· 남은 1곳' && (await page.locator('.daynav-btn[data-side="next"]').isDisabled()) && (await page.locator('.daynotes').textContent()).includes('이름을 눌러 날짜를 고른다') && (await page.locator('.fold.nodate').count()) === 0, '마지막은 "날짜 없음 · 남은 1곳"이고, 이름을 눌러 날짜를 고르라는 한 줄이 있다(이 날에는 "날짜 없는 곳" 줄이 없다)');
   await shot('197-where-nodate-360.png');
   for (let i = 0; i < 4; i++) await page.locator('.daynav-btn[data-side="prev"]').click();
   await settle(200);
   check((await text('.daynav-day')) === '1월 6일 (수)' && (await page.locator('.daynav-btn[data-side="prev"]').isDisabled()), '맨 앞은 1월 6일이다(1/5는 그 날 넣은 내 일정이 없으면 보이지 않는다)');
+
+  // 6-1. 날짜 없는 곳(관심만 담은 곳)을 다른 날에서도 알린다(2026-11-24, 편의성 점검 6절 1번): 그 날에 넣은 곳이 있으면 아래에 작게, 없으면 빈 화면 말 아래 검정 단추로.
+  check((await text('.fold.nodate .fold-text')) === '날짜 없는 곳 1곳' && (await page.locator('.fold.nodate .pick').getAttribute('aria-label')) === '날짜 없는 곳 1곳 보기' && (await page.locator('.nextup > .btn').count()) === 0, '넣은 곳이 있는 날: "날짜 없는 곳 1곳 · 보기" 한 줄이 작게 선다(검정 단추는 "길 안내" 그대로)');
+  if (SHOTS) { await page.evaluate(() => document.querySelector('.fold.nodate').scrollIntoView({ block: 'center' })); await settle(200); await shot('201-where-nodate-line-360.png'); await page.evaluate(() => scrollTo(0, 0)); }
+  await page.locator('.fold.nodate .pick').click();
+  await settle(250);
+  check((await text('.daynav-day')) === '날짜 없음' && (await page.evaluate(() => scrollY === 0 && document.activeElement?.classList.contains('nextup-open'))), '"보기" 한 번에 날짜 없는 곳 목록으로 가고(전: 다음 날을 네 번), 맨 위 첫 회사에 읽는 자리가 간다');
+  await page.locator('.nextup-open').click();
+  await page.locator('.pcard').waitFor();
+  check((await page.locator('.pcard .segs .seg').allTextContents()).join(' · ') === '1/6 · 1/7 · 1/8 · 1/9 · 날짜 없음', '날짜 없는 곳의 이름을 누르면 카드에서 날짜를 고른다');
+  await page.locator('.pcard-close').click();
+  await settle(250);
+  await page.locator('.daynav-btn[data-side="prev"]').click();
+  await settle(200);
+  const emptyDay = await page.evaluate(() => ({ day: document.querySelector('.daynav-day').textContent, big: document.querySelector('.nextup .big')?.textContent, btn: document.querySelector('.nextup > .btn')?.textContent, note: !!document.querySelector('.nextup .note'), blacks: [...document.querySelectorAll('main .btn:not(.ghost)')].filter((n) => n.getBoundingClientRect().width > 0).length, small: !!document.querySelector('.fold.nodate') }));
+  check(emptyDay.day === '1월 9일 (토)' && emptyDay.big === '이 날 넣은 곳이 없다.' && emptyDay.btn === '날짜 없는 곳 1곳 보기' && !emptyDay.note && emptyDay.blacks === 1 && !emptyDay.small, `넣은 곳이 없는 날: 빈 화면 말 바로 아래 검정 단추 하나 "${emptyDay.btn}"(작은 줄과 겹쳐 보이지 않는다)`);
+  await shot('200-where-empty-nodate-360.png');
+  await page.locator('.nextup > .btn').click();
+  await settle(250);
+  check((await text('.daynav-day')) === '날짜 없음', '검정 단추를 누르면 날짜 없는 곳 목록으로 간다');
+  // 날짜 없는 곳이 없으면(다 다녀온 것도 센 것에서 뺀다) 줄도 단추도 없고 옛 안내 글이 선다
+  const keep = await stored();
+  const reopen = async (list) => { await page.evaluate((l) => localStorage.setItem('ces2027.interests.v1', JSON.stringify(l)), list); await page.evaluate(() => sessionStorage.setItem('ces2027.planDay', '4')); await page.goto('about:blank'); await page.goto(`${URL}#/plan`); await page.locator('.daynav').waitFor(); await settle(500); };
+  await reopen(keep.map((it) => (it.day ? it : { ...it, seen: true })));
+  check((await text('.daynav-day')) === '1월 9일 (토)' && (await page.locator('.nextup > .btn').count()) === 0 && (await page.locator('.fold.nodate').count()) === 0 && (await text('.nextup .note')).includes('갈 곳에 넣기'), '날짜 없는 곳을 다 다녀왔으면 줄도 단추도 없다(지도에서 넣으라는 한 줄 그대로)');
+  await reopen(keep);
+  for (let i = 0; i < 3; i++) await page.locator('.daynav-btn[data-side="prev"]').click();
+  await settle(200);
+  check((await text('.daynav-day')) === '1월 6일 (수)', '다시 1월 6일');
 
   // 7. 목록 고치기: 말 바꾸기 다섯, 검정 단추 없음
   await page.evaluate(() => { window.__copied = ''; Object.defineProperty(navigator, 'share', { value: undefined, configurable: true }); navigator.clipboard.writeText = async (t) => { window.__copied = t; }; });
@@ -253,6 +282,14 @@ async (page) => {
         const cut = await page.evaluate(() => [...document.querySelectorAll('.daynav-now, .nextup .big, .nextup .note, .stop .name, .stop .where, .meal-text, .fold-text')].filter((n) => n.scrollWidth > n.clientWidth + 1).length);
         if (SHOTS && W === 360 && ((theme === 'dark' && size === 1) || (theme === 'light' && size === 4))) await shot(theme === 'dark' ? '190-where-dark-360.png' : '196-where-text4-360.png');
         if (SHOTS && W === 390 && theme === 'light' && size === 1) await shot('190-where-390.png');
+        // 빈 날(1/8): "날짜 없는 곳 1곳 보기"가 검정 단추 하나로 서고 잘리지 않는다
+        for (let i = 0; i < 2; i++) await page.locator('.daynav-btn[data-side="next"]').click();
+        await settle(150);
+        const none = await page.evaluate((w) => { const b = document.querySelector('.nextup > .btn'); if (!b) return null; const r = b.getBoundingClientRect(); return { text: b.textContent, ok: r.height >= 51.5 && r.width >= w - 64 && b.scrollWidth <= b.clientWidth + 1 && document.documentElement.scrollWidth <= w, blacks: [...document.querySelectorAll('main .btn:not(.ghost)')].filter((n) => n.getBoundingClientRect().width > 0).length }; }, W);
+        check(none && none.text === '날짜 없는 곳 1곳 보기' && none.ok && none.blacks === 1, `${tag}: 빈 날의 "날짜 없는 곳 1곳 보기"는 52px 검정 단추 하나이고 잘리지 않는다`);
+        if (SHOTS && W === 360 && ((theme === 'dark' && size === 1) || (theme === 'light' && size === 4))) await shot(theme === 'dark' ? '200-where-empty-nodate-dark-360.png' : '200-where-empty-nodate-text4-360.png');
+        for (let i = 0; i < 2; i++) await page.locator('.daynav-btn[data-side="prev"]').click();
+        await settle(150);
         await page.locator('.after .stop-open').first().click();
         await page.locator('.pcard').waitFor();
         await settle(500);

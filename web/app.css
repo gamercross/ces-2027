@@ -125,6 +125,7 @@ body:has(.mappage) .bar .tag { display: none; }
 .nextup-go { display: flex; align-items: center; gap: var(--s3); }
 .nextup-go .btn { flex: 1 1 auto; font-size: calc(17px * var(--scale)); }
 .nextup-go .pick { flex: none; font-size: var(--fs-body); }
+.nextup > .btn { font-size: calc(17px * var(--scale)); }
 /* 그다음 곳들 · 다녀온 곳 접기 · 맨 아래 "목록 고치기 · 지도에서 보기" */
 .after, .visited { display: grid; gap: var(--s2); }
 .subhead { padding: var(--s1) var(--s1) 0; font-size: var(--fs-small); font-weight: 700; color: var(--ink-2); }
