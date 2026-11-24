@@ -48,6 +48,7 @@ async (page) => {
   // 1. 일기 쓰기: 사진 칸이 있고, 사진이 아닌 파일은 거절한다
   await page.goto(`${URL}#/diary/new`);
   await page.locator('form.form').waitFor();
+  await page.locator('details.more > summary').click(); // 나머지 칸은 "더 적기" 아래 접혀 있다
   await settle();
   const field = page.locator('.photo-field');
   check((await field.count()) === 1 && (await field.locator('.label').textContent()).includes('사진 (한 장, 선택)') && (await field.locator('.pick', { hasText: '사진 넣기' }).count()) === 1 && (await field.locator('.pick', { hasText: '사진 빼기' }).isHidden()), '쓰기 칸에 "사진 (한 장, 선택)"과 "사진 넣기"가 있고 "사진 빼기"는 숨어 있다');
@@ -166,6 +167,7 @@ async (page) => {
       await page.goto('about:blank');
       await page.goto(`${URL}#/diary/new`);
       await page.locator('form.form').waitFor();
+      await page.locator('details.more > summary').click(); // 나머지 칸은 "더 적기" 아래 접혀 있다
       console.log(`  … ${W}px 글자 ${n}단계 사진 고르기`);
       await page.locator('.photo-field .file-hidden').setInputFiles([MID]);
       await page.locator('.photo-field img.photo').waitFor({ state: 'visible', timeout: 30000 });

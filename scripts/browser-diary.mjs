@@ -130,6 +130,30 @@ async (page) => {
   await page.goto(`${URL}#/diary/new`);
   await page.locator('textarea[name=saw]').waitFor();
   await shot('115-diary-new.png');
+  // 첫 화면은 "본 것" 칸 + "폰에 남기기"뿐이다. 나머지 칸은 "더 적기" 아래 접혀 있다 (2026-11-24, 편의성 점검 6절 3번. 예전에는 칸 아홉이 다 보이고 저장은 화면 밖 y 945 ~ 971이었다)
+  // 보이는 것을 센다: 접힌 칸은 checkVisibility()가 거짓이다
+  const formNow = () => page.evaluate(() => {
+    const tabs = innerHeight - document.querySelector('.tabs').offsetHeight;
+    const seen = (x) => x.checkVisibility() && x.getBoundingClientRect().width > 0;
+    const f = document.querySelector('form.form');
+    const save = [...f.querySelectorAll('button')].find((b) => b.textContent === '폰에 남기기').getBoundingClientRect();
+    return { open: f.querySelector('details.more').open, who: f.querySelector('.diary-who').hidden ? '' : f.querySelector('.diary-who').textContent,
+      taps: [...f.querySelectorAll('textarea, input:not(.file-hidden), select, button, a, summary')].filter(seen).map((x) => (x.matches('textarea, input, select') ? x.name : x.textContent.trim())),
+      saveY: Math.round(save.top + save.height / 2 + scrollY), saveOn: save.top >= 0 && save.bottom <= tabs, saveW: Math.round(save.width), saveH: Math.round(save.height),
+      small: [...f.querySelectorAll('textarea, input:not(.file-hidden), select, button, a, summary, label.choice')].filter((x) => seen(x) && x.getBoundingClientRect().height < 43.5).length,
+      blacks: [...document.querySelectorAll('.btn:not(.ghost)')].filter(seen).length, side: document.documentElement.scrollWidth > innerWidth };
+  });
+  let f = await formNow();
+  check(!f.open && f.taps.join(' · ') === 'saw · 더 적기 · 폰에 남기기 · 그만두기' && f.saveOn && f.blacks === 1 && f.small === 0 && f.who === '', `일기 쓰기 첫 화면: 본 것 · 더 적기 · 폰에 남기기 · 그만두기뿐이고(${f.taps.length}곳, 전 14곳), "폰에 남기기"(${f.saveW} × ${f.saveH}, 가운데 y ${f.saveY})가 굴리지 않고 보인다`);
+  await shot('205-diary-short-360.png');
+  await page.locator('details.more > summary').click();
+  f = await formNow();
+  check(f.open && ['company', 'other', 'date', 'felt', '사진 넣기', 'for', '듣기', '대화 붙여넣기'].every((t) => f.taps.includes(t)) && f.small === 0 && !f.side, `"더 적기"를 누르면 회사 · 날짜 · 느낀 점 · 사진 · 누구에게 · 대화가 펴진다(${f.taps.length}곳)`);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  // 편 것은 한 화면보다 길다. 그림은 화면을 그 길이만큼 늘려 찍는다(탭이 가운데에 끼지 않게).
+  if (SHOTS) { const h = await page.evaluate(() => document.documentElement.scrollHeight); await page.setViewportSize({ width: 360, height: h }); await settle(500); await page.screenshot({ path: `${SHOTS}206-diary-more-open-360.png` }); await page.setViewportSize({ width: 360, height: 740 }); await settle(300); }
+  await page.locator('details.more > summary').click();
+  check(!(await formNow()).open, '다시 누르면 접힌다');
   await page.locator('button[type=submit]').click();
   check((await page.locator('.error:not([hidden])').count()) === 1, '비우고 남기면 "본 것을 한 줄 적는다"로 막힌다');
   await page.locator('textarea[name=saw]').fill('테스트 한 줄');
@@ -145,6 +169,63 @@ async (page) => {
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('ces2027.diary.v1')).find((e) => e.saw === '테스트 한 줄'));
   check(stored && stored.company === '' && stored.for.length === 1, `본 것 한 칸만으로 저장됐다(회사 미정, 태그 ${stored?.for.join(',')})`);
   check((await page.locator('.stops .stop .name', { hasText: '회사 미정' }).count()) >= 1, '목록에 "회사 미정"으로 보인다');
+
+  // 8. 다녀옴에서 연 일기(#/diary/new/<회사>)도 같다: 접혀 있고, 어느 회사 일기인지 제목 아래 한 줄로 보인다. 누른 수 2(적고 → 폰에 남기기), 굴리기 0
+  const co = await page.evaluate(async () => { const d = await (await fetch('data/exhibitors.json')).json(); const r = d.ex.find((x) => x[7]?.[0]?.endsWith('@LVCC_N')); return { id: r[0], name: r[1] }; });
+  await page.goto('about:blank');
+  await page.goto(`${URL}#/diary/new/${co.id}`);
+  await page.locator('textarea[name=saw]').waitFor();
+  f = await formNow();
+  check(!f.open && f.who === co.name && f.taps.length === 4 && f.saveOn, `다녀옴에서 열면 접혀 있고 제목 아래에 회사 이름(${f.who})이 보인다. "폰에 남기기" 가운데 y ${f.saveY}`);
+  await shot('205-diary-short-company-360.png');
+  await page.locator('textarea[name=saw]').fill('다녀온 곳에서 한 줄');
+  await page.locator('button[type=submit]').click();
+  await page.locator('.met').waitFor();
+  const fromVisit = await page.evaluate(() => JSON.parse(localStorage.getItem('ces2027.diary.v1')).find((e) => e.saw === '다녀온 곳에서 한 줄'));
+  check(fromVisit && fromVisit.exId === co.id && fromVisit.company === co.name && /^\d{4}-\d\d-\d\d$/.test(fromVisit.date), '접힌 채 남겨도 회사 · 날짜가 같이 저장된다');
+
+  // 9. 고칠 때: 적힌 칸(회사 · 느낀 점 · 누구에게 …)이 있으면 펴 두고, 본 것만 적힌 일기는 접어 둔다. 적다 만 느낀 점이 돌아올 때도 펴 둔다
+  await page.goto('about:blank');
+  await page.goto(`${URL}#/diary/edit/e2`);
+  await page.locator('textarea[name=saw]').waitFor();
+  f = await formNow();
+  check(f.open && (await page.locator('textarea[name=felt]').inputValue()) === '해 볼 것 하나', '고치기: 느낀 점이 적힌 일기는 "더 적기"가 펴져 있다');
+  await page.evaluate(() => { const l = JSON.parse(localStorage.getItem('ces2027.diary.v1')); l.push({ id: 'bare', date: '2027-01-08', exId: '', company: '', booth: '', saw: '본 것만 적은 일기', felt: '', for: [], sent: null }); localStorage.setItem('ces2027.diary.v1', JSON.stringify(l)); });
+  await page.goto('about:blank');
+  await page.goto(`${URL}#/diary/edit/bare`);
+  await page.locator('textarea[name=saw]').waitFor();
+  check(!(await formNow()).open, '고치기: 본 것만 적힌 일기는 접혀 있다');
+  // 접힌 칸이 틀리면 펴고 알린다
+  await page.evaluate(() => { document.querySelector('input[name=date]').value = ''; });
+  await page.locator('button[type=submit]').click();
+  check((await formNow()).open && (await page.locator('.error:not([hidden])').textContent()) === '날짜를 고른다.', '접힌 칸(날짜)이 비면 "더 적기"를 펴고 알린다');
+  await page.evaluate(() => localStorage.setItem('ces2027.diaryDraft.v1', JSON.stringify({ exId: '', byName: '', saw: '적다 만 글', felt: '적다 만 느낀 점' })));
+  await page.goto('about:blank');
+  await page.goto(`${URL}#/diary/new`);
+  await page.locator('textarea[name=saw]').waitFor();
+  check((await formNow()).open && (await page.locator('textarea[name=felt]').inputValue()) === '적다 만 느낀 점', '적다 만 느낀 점이 돌아올 때는 펴 둔다(적힌 것이 숨지 않게)');
+  await page.evaluate(() => localStorage.removeItem('ces2027.diaryDraft.v1'));
+
+  // 10. 360 · 390px × 밝게 · 어둡게 × 글자 네 단계: 첫 화면에 "폰에 남기기"가 굴리지 않고 보이고, 옆으로 안 밀리고, 누르는 곳 44px 이상, 검정 단추 하나. 편 것도 옆으로 안 밀린다
+  await page.addInitScript(() => { try { const l = JSON.parse(sessionStorage.getItem('__look') || 'null'); if (l) { localStorage.setItem('ces2027.theme.v1', JSON.stringify(l.theme)); localStorage.setItem('ces2027.text.v1', JSON.stringify(l.text)); } } catch { /* 없으면 그대로 */ } });
+  const saveYs = [];
+  for (const W of [360, 390]) for (const theme of ['light', 'dark']) for (const size of [1, 2, 3, 4]) {
+    await page.setViewportSize({ width: W, height: 740 });
+    await page.evaluate((l) => sessionStorage.setItem('__look', JSON.stringify(l)), { theme, text: size });
+    await page.goto('about:blank');
+    await page.goto(`${URL}#/diary/new/${co.id}`);
+    await page.locator('textarea[name=saw]').waitFor();
+    await settle(250);
+    const a = await formNow();
+    if (W === 360 && theme === 'light') saveYs.push(a.saveY);
+    if (W === 360 && ((theme === 'dark' && size === 1) || (theme === 'light' && size === 4))) await shot(`205-diary-short-${theme === 'dark' ? 'dark' : 'text4'}-360.png`);
+    await page.locator('details.more > summary').click();
+    const b = await formNow();
+    check(!a.open && a.saveOn && !a.side && a.small === 0 && a.blacks === 1 && a.taps.length === 4 && b.open && !b.side && b.small === 0 && b.blacks === 1, `${W}px ${theme === 'dark' ? '어둡게' : '밝게'} 글자 ${size}: 일기 쓰기 첫 화면에 "폰에 남기기"가 보이고(y ${a.saveY}) 44px 이상 · 옆으로 안 밀림 · 검정 단추 하나, 편 것도 같다`);
+  }
+  await page.evaluate(() => { sessionStorage.removeItem('__look'); localStorage.setItem('ces2027.theme.v1', JSON.stringify('light')); localStorage.setItem('ces2027.text.v1', JSON.stringify(1)); });
+  await page.setViewportSize({ width: 360, height: 740 });
+  check(true, `"폰에 남기기" 가운데 y(360px 밝게, 글자 1 ~ 4): ${saveYs.join(' · ')} (전 945 · 가장 크게 1091)`);
 
   console.log(JSON.stringify(checks.map((c) => `${c.ok ? '됨' : '안 됨'} | ${c.what}`), null, 1));
   return `${checks.length}개 통과`;
