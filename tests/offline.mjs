@@ -289,8 +289,10 @@ await step('지도', '3D 지도(누를 때만 불러오는 조각 map3d.js)가 �
 await step('지도', '지도 위의 내 위치 · 따라가기 · 부스 번호로 맞추기', async () => {
   await go('#/map', '지도 내 위치');
   await page.locator('svg.map').waitFor();
-  await page.locator('input[placeholder^="가까운 부스 번호"]').fill('14731');
-  await page.getByRole('button', { name: '맞추기' }).click();
+  // 같은 칸이 길 안내 판에도 하나 있다(nav-form, 평소엔 숨어 있다). 지도 아래 묶음의 것을 쓴다.
+  const fit = page.locator('form.inline:not(.nav-form)', { has: page.locator('input[placeholder^="가까운 부스 번호"]') });
+  await fit.locator('input').fill('14731');
+  await fit.getByRole('button', { name: '맞추기' }).click();
   await sleep(500);
   return !!(await store('where.v1'));
 });
