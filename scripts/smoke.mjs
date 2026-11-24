@@ -513,8 +513,40 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
     const settingsV = await readFile(join(dist, 'views/settings.js'), 'utf8');
     const cssV = await readFile(join(dist, 'app.css'), 'utf8');
     const required = (cardV.match(/return fail\('[^']*'/g) || []).filter((m) => /별명을 적는다|나를 하나 고른다/.test(m)).length;
-    check(/class: 'welcome'/.test(cardV) && cardV.includes('환영한다') && required === 2 && ['한 줄 (선택)', '깃허브 (선택)', '디스코드 (선택)'].every((w) => cardV.includes(w)) && cardV.includes("href: '#/map', text: '지도로'") && /rest\[0\] === 'edit'/.test(cardV) && settingsV.includes("href: '#/card', text: 'QR 보기'") && settingsV.includes("href: '#/card/edit'") && /const intro = name === 'card' && !getProfile\(\)/.test(app) && /\.form\.big \.choices \{ grid-template-columns: 1fr 1fr/.test(cssV) && /\.form\.big \.field input \{ font-size: calc\(18px \* var\(--scale\)\)/.test(cssV),
-      '처음 들어오면 명함: 환영 한 줄과 한 화면(별명 · 나만 꼭 필요하고 한 줄 · 깃허브 · 디스코드는 "선택"), 만든 뒤 명함과 QR 그리고 "지도로", 설정 탭의 "QR 보기" · "명함 고치기", 큰 글씨(18px, 글자 크기 단계를 따른다)와 2 × 2 고르기');
+    check(/class: 'welcome'/.test(cardV) && cardV.includes('환영한다') && required === 2 && cardV.includes("text: '더 적기 (선택)'") && ["field('한 줄', line)", "linkField('링크드인'", "linkField('깃허브'", "linkField('디스코드'"].every((w) => cardV.includes(w)) && !/\(선택\)', (line|github|discord|linkedin)/.test(cardV) && cardV.includes("href: '#/map', text: '지도로'") && /rest\[0\] === 'edit'/.test(cardV) && settingsV.includes("href: '#/card', text: 'QR 보기'") && settingsV.includes("href: '#/card/edit'") && /const intro = name === 'card' && !getProfile\(\)/.test(app) && /\.form\.big \.choices \{ grid-template-columns: 1fr 1fr/.test(cssV) && /\.form\.big \.field input \{ font-size: calc\(18px \* var\(--scale\)\)/.test(cssV),
+      '처음 들어오면 명함: 환영 한 줄과 한 화면(별명 · 나만 꼭 필요하고 한 줄 · 링크드인 · 깃허브 · 디스코드는 "더 적기 (선택)" 아래), 만든 뒤 명함과 QR 그리고 "지도로", 설정 탭의 "QR 보기" · "명함 고치기", 큰 글씨(18px, 글자 크기 단계를 따른다)와 2 × 2 고르기');
+    // 링크드인 칸(11/24, R56 안): 주소 전체 · 아이디 둘 다 받고, 적으면 QR이 맨 앞에 서고, 옛 꼴의 명함 · QR · 일기 파일은 그대로 읽힌다.
+    {
+      const C = await import('../web/views/card.js');
+      const P = await import('../web/people.js');
+      const li = 'https://www.linkedin.com/in/jaeyeup-lee';
+      const same = ['jaeyeup-lee', '@jaeyeup-lee', 'linkedin.com/in/jaeyeup-lee', 'https://www.linkedin.com/in/jaeyeup-lee/', 'https://kr.linkedin.com/in/jaeyeup-lee?utm_source=share&utm_medium=ios_app', 'https://www.linkedin.com/in/jaeyeup-lee/details/experience/', 'https://www.linkedin.com/mwlite/in/jaeyeup-lee'];
+      const ko = 'https://www.linkedin.com/in/%EC%9E%AC%EC%97%BD-%EC%9D%B4-123';
+      check(same.every((t) => C.linkedinUrl(t) === li) && C.linkedinUrl('') === '' && C.linkedinUrl('  ') === '' && C.linkedinUrl('재엽-이-123') === ko && C.linkedinUrl(`${ko}/`) === ko,
+        `링크드인 칸: 주소 전체(www. · kr. · 뒤에 ?… 가 붙은 것 포함)와 아이디만 적은 것 ${same.length}가지가 같은 프로필 주소가 되고, 비우면 건너뛰고, 한글 아이디는 QR에 담을 수 있는 꼴이 된다`);
+      const wrong = ['https://www.linkedin.com/company/acme', 'https://lnkd.in/abc', 'Jaeyeup Lee', 'ab', 'https://linkedin.com.evil.example/in/abc', 'https://evil.example/linkedin.com/in/abc', 'javascript:alert(1)', 'a'.repeat(101), '가'.repeat(21), '%E0%A4%A'];
+      const longest = [C.linkedinUrl('a'.repeat(100)), C.linkedinUrl('가'.repeat(20))];
+      let qrOk = true;
+      try { for (const t of [li, ko, ...longest]) qrCells(t); } catch { qrOk = false; }
+      check(wrong.every((t) => C.linkedinUrl(t) === null) && longest.every((t) => t && t.length <= C.LINKEDIN_MAX) && qrOk && cardV.includes("class: 'field-error'") && /\.field-error \{/.test(cssV) && /addEventListener\('change', ok\)/.test(cardV),
+        `링크드인 칸: 회사 쪽 · 줄인 주소 · 이름 · 남의 사이트 같은 틀린 글 ${wrong.length}가지는 받지 않고 그 칸 아래에 한 줄로 알린다. 받은 주소는 가장 긴 것도 인터넷 없이 QR이 된다`);
+      const oldCard = { nick: '물개', tag: 'stu', line: '', github: 'octocat', discord: 'seal.bot' }; // 옛 꼴: 링크드인 칸이 없다
+      const newCard = { ...oldCard, linkedin: 'linkedin.com/in/jaeyeup-lee' };
+      const kinds = (p) => C.cardLinks(p).map((l) => l.kind).join(' ');
+      const oldLinks = C.cardLinks(oldCard);
+      check(kinds(newCard) === 'linkedin github discord' && C.cardLinks(newCard)[0].text === li && C.cardLinks(newCard)[0].shown === 'linkedin.com/in/jaeyeup-lee' && kinds({ ...oldCard, github: '', linkedin: 'jaeyeup-lee' }) === 'linkedin discord' && /\.qr\.lead \{[^}]*grid-column: 1 \/ -1/.test(cssV) && /links\.length % 2 === 1/.test(cardV) && !cardV.includes('주소를 적으면 QR이 생긴다`'),
+        '내 명함의 QR 차례는 링크드인 → 깃허브 → 디스코드이고 적은 것만 보인다(빈 자리 표시 없음). 홀수 개면 맨 앞 것이 크게 한 줄을 차지한다');
+      check(kinds(oldCard) === 'github discord' && oldLinks[0].text === QR[0][0] && oldLinks[1].text === QR[1][0] && kinds({ nick: '물개', tag: 'stu' }) === '' && kinds(null) === '' && kinds({ ...oldCard, linkedin: 'https://lnkd.in/abc' }) === 'github discord',
+        '옛 꼴의 명함(링크드인 칸이 없다)은 그대로 읽힌다: 깃허브 · 디스코드 QR에 담기는 글이 전과 같고, 주소가 하나도 없는 명함 · 폰에 남은 틀린 값에도 깨지지 않는다');
+      const got = P.parseScan(li, 'auto'), pasted = P.parseScan('linkedin.com/in/jaeyeup-lee'), gotKo = P.parseScan(ko, 'auto');
+      check(got.ok && got.link.kind === 'linkedin' && got.link.url === li && pasted.ok && pasted.link.key === got.link.key && gotKo.ok && gotKo.link.kind === 'linkedin' && P.kindKo(got.link.kind) === '링크드인'
+        && P.parseScan(QR[0][0], 'auto').link?.kind === 'github' && P.parseScan(QR[1][0], 'auto').link?.kind === 'discord' && P.safeHref(li) === li,
+        '명함을 받는 쪽: 링크드인 QR과 붙여 넣은 링크드인 주소가 같은 사람(링크드인)으로 읽히고, 옛 QR(깃허브 주소 · 디스코드 아이디)도 전과 같이 읽힌다');
+      const when = new Date('2027-01-07T03:00:00Z');
+      const outNew = JSON.stringify(diary.bundle(wrote, newCard, when)), outOld = JSON.stringify(diary.bundle(wrote, oldCard, when));
+      check(outNew === outOld && !/linkedin|jaeyeup-lee/.test(outNew + diary.asText(wrote, newCard, () => '') + diary.fileName(newCard)) && diary.bundle(wrote, newCard, when).v === 1,
+        '일기 파일 · 내보내기: 링크드인을 적은 명함으로 내보내도 옛 명함과 글자 하나 다르지 않다(판 1 그대로, 명함에서는 별명과 태그만 간다)');
+    }
     // 4단계(11/22): 지도 자세히. 확대 단계 셋 · 글자 13px · 겹치면 숨김 · 홀마다 나눠 받기 · 손짓 · 카드.
     {
       const mm = await import('../web/mapmath.js');
@@ -639,7 +671,7 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       && /body\[data-tab="map"\]:not\(\.sub\) \.brand \{ display: none; \}/.test(appCss) && mapV2.includes('find-tag') === false && (await readFile(join(dist, 'mapfind.js'), 'utf8')).includes('find-tag')
       && appCss.includes('.mappage:has(.mapx[data-sheet="half"]') && /\.mapx-top \{[^}]*background: var\(--bg\)/.test(appCss)
       && !cardJs.includes('paperPanel(showFrom),\n') && settingsJs.includes('paperPanel(showFrom)') && !/종이 명함이 있나요|setPaper|class: 'btn'/.test(await readFile(join(dist, 'bands.js'), 'utf8'))
-      && formStart > 0 && cardJs.indexOf("class: 'dock'", formStart) > 0 && cardJs.indexOf("class: 'dock'", formStart) < cardJs.indexOf("field('한 줄 (선택)', line)", formStart)
+      && formStart > 0 && cardJs.indexOf("class: 'dock'", formStart) > 0 && cardJs.indexOf("class: 'dock'", formStart) < cardJs.indexOf("field('한 줄', line)", formStart)
       && planJs.includes('boothLines(') && (await readFile(join(dist, 'company-extra.js'), 'utf8')).includes('부스 ${booths.length}곳'),
       '디자인 마감: 제목은 24px 한 줄 · 12px 글자가 없다(13px부터) · 아래 도크를 걷고 "일기 쓰기"만 탭 바로 위에 붙는다 · 링크 모양 회색 칩이 없다 · 선택된 탭은 굵은 선 · 지도 탭은 머리를 접고 "비공식"을 찾기 칸에 · 카드가 열리면 지도 아래 묶음을 가린다 · 종이 명함 질문은 설정에만 있고 갈 곳의 띠에는 검정 단추가 없다 · 첫 명함은 필수 둘 다음에 바로 단추 · 부스가 여럿인 회사는 카드에 모두 보인다');
     // 실제 아이폰에서 찾은 것(11/22 폰 확인): 날짜 · 시간 칸의 기본 모양 끄기 · 카드가 열리면 페이지가 당겨지지 않기 · 카드의 바퀴 쓸기 · × 단추 둘 · + 단추 글자 선택 막기 · 세션 안내 글 줄바꿈과 단추 사이.
@@ -830,6 +862,9 @@ check(cats.groups.length === 7 && ['stu', 'job', 'ret', 'mid'].every((k) => cats
   const mem = () => { const m = new Map(); return { get length() { return m.size; }, key: (i) => [...m.keys()][i] ?? null, setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k), getItem: (k) => (m.has(k) ? m.get(k) : null) }; };
   const ls = mem(), ss = mem();
   for (const k of ['ces2027.profile.v1', 'ces2027.diary.v1', 'ces2027.people.v1', 'ces2027.interests.v1', 'ces2027.theme.v1', 'other.app']) ls.setItem(k, '1');
+  ls.setItem('ces2027.profile.v1', JSON.stringify({ nick: '물개', tag: 'stu', line: '', linkedin: 'jaeyeup-lee', github: 'octocat', discord: 'seal.bot' }));
+  const linkedinKept = () => [...Array(ls.length).keys()].some((i) => /jaeyeup-lee/.test(ls.getItem(ls.key(i)) || ''));
+  const linkedinBefore = linkedinKept();
   ss.setItem('ces2027.introLater', '1'); ss.setItem('keep', '1');
   Object.defineProperty(globalThis, 'localStorage', { value: ls, configurable: true });
   Object.defineProperty(globalThis, 'sessionStorage', { value: ss, configurable: true });
@@ -838,6 +873,8 @@ check(cats.groups.length === 7 && ['stu', 'job', 'ret', 'mid'].every((k) => cats
   const settingsJs2 = await readFile(join(dist, 'views/settings.js'), 'utf8');
   const mineFn = settingsJs2.slice(settingsJs2.indexOf('function mineRow'), settingsJs2.indexOf('// 종이 명함: 있는지'));
   const storageFn = settingsJs2.slice(settingsJs2.indexOf('function storageRow'), settingsJs2.indexOf('// 일기 전부와 폰에 있는 대화를'));
+  check(linkedinBefore && !linkedinKept() && ls.getItem('ces2027.profile.v1') === null && /linkedin: linkedin\.input\.value\.trim\(\)/.test(await readFile(join(dist, 'views/card.js'), 'utf8')),
+    '이 폰의 내 자료 지우기: 링크드인은 명함과 같은 열쇠(profile.v1) 안에 있어 명함과 함께 지워진다');
   check(cleared === 6 && ls.length === 1 && ls.getItem('other.app') === '1' && ss.length === 1 && ss.getItem('keep') === '1'
     && mineFn.includes("'이 폰의 내 자료'") && mineFn.includes('downloadExport()') && mineFn.indexOf('const first') < mineFn.indexOf('const second') && mineFn.includes('clearMine()') && mineFn.includes("'#/'") && !/caches/.test(mineFn)
     && storageFn.includes("rowState('받아 둔 모델')") && !/저장 공간/.test(storageFn.replace(/이 브라우저는 크기를|저장 공간 비우기/g, '')) && /dropAllAudio/.test(settingsJs2),
