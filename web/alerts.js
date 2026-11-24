@@ -66,6 +66,15 @@ export function vegasNow(now = new Date()) {
   return { date: `${get('year')}-${get('month')}-${get('day')}`, min: Number(get('hour')) * 60 + Number(get('minute')) };
 }
 
+// 하루 끝에 일기 보내기를 챙긴다: 전시 날(자료의 show.days)이고 그 날 전시가 끝난 뒤(close)이면, 아직 보내지 않은 일기 수를 돌려준다. 아니면 0.
+// 초안은 세지 않는다(다듬어 남겨야 보낼 수 있다). now는 vegasNow()의 꼴({ date, min }), show는 info.show.
+export function unsentTonight(diary, now, show) {
+  const day = (show?.days || []).find((d) => d.date === now?.date);
+  const m = /^(\d\d):(\d\d)$/.exec(day?.close || '');
+  if (!m || now.min < Number(m[1]) * 60 + Number(m[2])) return 0;
+  return (diary || []).filter((e) => !e.draft && !e.sent).length;
+}
+
 // 곧 시작하는 내 일정: 지금부터 ahead분 안에 시작하는 것(이미 시작한 것은 뺀다). 때가 이른 것부터. [{ ...일정, inMin }]
 export function soonEvents(events, now, ahead = 30) {
   const at = (hhmm) => { const m = /^(\d\d):(\d\d)$/.exec(hhmm || ''); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };

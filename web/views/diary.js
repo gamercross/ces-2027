@@ -8,6 +8,7 @@ import { el } from '../dom.js';
 import { getExhibitors, getSettings } from '../data.js';
 import { getDiary, getInterests, getProfile, getTalks, load, save, setDiary, TAGS, tagKo } from '../store.js';
 import { asText, bundle, collectorUrl, fileName, talksFor } from '../diary.js';
+import { handFile } from '../handoff.js';
 import { countAt } from '../people.js';
 import { getPeople } from '../people-store.js';
 import { createCardShell } from '../plancard.js';
@@ -215,15 +216,6 @@ function form(entry, preset, companies, done) {
   return node;
 }
 
-function download(name, text) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'application/json;charset=utf-8' }));
-  const a = el('a', { href: url, download: name });
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
 // 일기 탭: 맨 위가 "만난 사람"(최근 세 명 + 전체 + 명함 받기), 그 아래 날짜별 회사 일기, 보내기는 한 줄 띠, 검정 단추는 "일기 쓰기" 하나.
 export async function render({ rest, go }) {
   document.body.classList.remove('pcard-open');
@@ -300,10 +292,13 @@ export async function render({ rest, go }) {
       }
       // 파일로 내려받을 때는 그 일기와 이어진 대화와 일기 사진이 같이 들어간다.
       const photos = unsent.some((e) => e.photo) ? await (await import('../photo-store.js')).photosFor(unsent) : null;
-      download(fileName(getProfile()), JSON.stringify(bundle(unsent, getProfile(), new Date(), talksFor(unsent, getTalks()), photos), null, 2));
+      // 폰의 공유 창을 쓸 수 있으면 그것으로 건넨다(AirDrop · 파일에 저장 · 메신저가 한 번에 보인다). 아니면 내려받는다.
+      const how = await handFile(fileName(getProfile()), JSON.stringify(bundle(unsent, getProfile(), new Date(), talksFor(unsent, getTalks()), photos), null, 2));
+      if (how === 'cancel') { status.textContent = '보내지 않았다. 일기는 폰에 그대로 있다.'; return; }
       markSent(unsent.map((e) => e.id));
       const n = Object.keys(photos || {}).length;
-      show(`${unsent.length}개를 파일로 내보냈다${n ? ` (사진 ${n}장 포함)` : ''}. 이 파일을 정리하는 사람에게 건넨다.`);
+      const with_ = n ? ` (사진 ${n}장 포함)` : '';
+      show(how === 'shared' ? `${unsent.length}개를 건넸다${with_}.` : `${unsent.length}개를 파일로 내보냈다${with_}. 이 파일을 정리하는 사람에게 건넨다.`);
     } });
     const copy = el('button', { class: 'pick', type: 'button', text: '글로 복사', disabled: ready.length === 0, onclick: async () => {
       try { await navigator.clipboard.writeText(asText(ready, getProfile(), tagKo)); status.textContent = '글로 복사했다. 단톡방에 붙여 넣을 수 있다.'; } catch { status.textContent = '복사하지 못했다.'; }

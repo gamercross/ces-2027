@@ -603,3 +603,11 @@ a.link-text { display: inline-flex; align-items: center; min-height: var(--tap-m
 .setrow-btns { display: flex; flex: none; align-items: center; gap: var(--s1); }
 /* 같은 꼴의 줄 둘(갈 곳 목록: 문서로 · 표로, 시간 · 일정 파일: 불러오기 · 내보내기)도 이 모양을 쓴다. 글자 단추 둘이 360px 한 줄에 들게 옆 여백을 줄인다 */
 .setrow-btns .pick { padding: 0 var(--s2); }
+
+/* 안내 한 줄 · 한 칸(web/tips.js). 지금은 아이폰 Safari 탭에서만 보이는 "홈 화면에 추가" 하나다. 색은 무채색만 쓴다. */
+.tip-slot:empty { display: none; }
+.tip-line { font-size: var(--fs-small); font-weight: 700; color: var(--ink); word-break: keep-all; overflow-wrap: break-word; }
+.tip-box { display: flex; align-items: center; gap: var(--s2); padding: var(--s1) var(--s1) var(--s1) var(--s4); border-radius: var(--radius); background: var(--panel); font-size: var(--fs-small); }
+.tip-box p { flex: 1 1 auto; min-width: 0; word-break: keep-all; overflow-wrap: break-word; }
+.tip-box .pick { flex: none; }
+.mappage:has(.mapx[data-sheet="half"], .mapx[data-sheet="full"]) > .tip-box { display: none; }

@@ -2,9 +2,9 @@
 // 알림(Notification)을 쓸 수 있는 폰에서는 서비스 워커로 알림을 띄우고, 못 쓰는 폰에서는 화면의 띠로 같은 내용을 보인다.
 // 한계: 앱이 닫혀 있을 때 정해진 시각에 알리지는 못한다(푸시 서버가 없다). 그래서 아침 알림은 그날 앱을 처음 열 때 뜬다.
 
-import { load, save, getEvents, getInterests, getProfile, getWhere } from './store.js';
+import { load, save, getDiary, getEvents, getInterests, getProfile, getWhere } from './store.js';
 import { dayKeyOf } from './days.js';
-import { cardsNeeded, dateOf, fresh, nearMarks, notifyState, shouldAskPaper, soonEvents, vegasNow } from './alerts.js';
+import { cardsNeeded, dateOf, fresh, nearMarks, notifyState, shouldAskPaper, soonEvents, unsentTonight, vegasNow } from './alerts.js';
 
 export const getPaper = () => load('paper.v1', null);
 export const setPaper = (paper) => save('paper.v1', paper);
@@ -17,7 +17,7 @@ export function setMarks(marks) {
 }
 
 // 지금 화면에 띠로 보일 것. { paper, needs, near, state, fallback, error }
-export const alerts = { paper: null, needs: [], near: [], soon: [], state: 'unsupported', fallback: false, error: '' };
+export const alerts = { paper: null, needs: [], near: [], soon: [], unsent: 0, state: 'unsupported', fallback: false, error: '' };
 // 일정(세션 포함)이 시작하기 몇 분 전부터 알리나.
 export const SOON_MIN = 30;
 const changed = () => window.dispatchEvent(new Event('ces-alerts'));
@@ -66,6 +66,11 @@ async function checkAlertsNow() {
   alerts.near = [];
   // 곧 시작하는 내 일정(세션 포함): 앱이 열려 있거나 화면으로 돌아왔을 때 확인한다. 라스베이거스 시각으로 견준다.
   alerts.soon = soonEvents(getEvents(), vegasNow(new Date()), SOON_MIN);
+  // 전시 날 저녁(그 날 전시가 끝난 뒤): 보내지 않은 일기가 있으면 탭 위 띠로 챙긴다. 일기가 없으면 자료를 읽지 않는다.
+  alerts.unsent = 0;
+  if (getDiary().some((e) => !e.draft && !e.sent)) {
+    try { const { getInfo } = await import('./data.js'); alerts.unsent = unsentTonight(getDiary(), vegasNow(new Date()), (await getInfo()).show); } catch { /* 자료를 못 읽으면 챙기지 않는다 */ }
+  }
   for (const e of alerts.soon) {
     if (!fresh(sent, `soon:${e.id}`, today)) continue;
     const where = e.place ? ` · ${e.place}` : '';
