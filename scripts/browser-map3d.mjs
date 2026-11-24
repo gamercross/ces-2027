@@ -167,9 +167,8 @@ async (page) => {
   await tapAt(spot.x, spot.y);
   check((await sheet()).state === 'closed' && (await page.locator('canvas.map').getAttribute('data-tap')) === 'none', '빈 곳을 누르면 아무것도 열리지 않는다');
 
-  // ---- 3. 돌려도 글자는 화면을 향하고 다음 곳 이름이 남는다
-  await page.getByRole('button', { name: '내 갈 곳', exact: true }).click();
-  await settle(600);
+  // ---- 3. 돌려도 글자는 화면을 향하고(눕거나 돌지 않는다) 차례 선과 다음 곳 이름이 남는다
+  await open3d();
   b = await canvasBox();
   const yaw0 = await three((t) => t.cam.yaw);
   const drag = (type, x, y) => page.evaluate(([t, px, py]) => document.querySelector('canvas.map').dispatchEvent(new PointerEvent(t, { pointerId: 7, clientX: px, clientY: py, bubbles: true, pointerType: 'touch', isPrimary: true })), [type, x, y]);
@@ -178,8 +177,10 @@ async (page) => {
   for (let i = 1; i <= 8; i++) await drag('pointermove', b.x + 120 + i * 10, y0);
   await drag('pointerup', b.x + 200, y0);
   await settle(300);
-  const turned = await three((t) => ({ yaw: t.cam.yaw, l: t.labelsOnScreen() }));
-  check(Math.abs(turned.yaw - yaw0) > 0.5 && turned.l.next === seed.first.name.slice(0, 16) && !!turned.l.nextRect, `끌어서 돌려도(${(turned.yaw - yaw0).toFixed(2)}rad) 다음 곳 이름이 화면을 향해 놓여 있다`);
+  const turned = await three((t) => ({ yaw: t.cam.yaw, l: t.labelsOnScreen(), lines: t.linesOnScreen() }));
+  const flat = [...turned.l.labels.map((x) => x.rect), turned.l.nextRect].filter(Boolean);
+  check(Math.abs(turned.yaw - yaw0) > 0.5 && turned.l.next === seed.first.name.slice(0, 16) && !!turned.l.nextRect && overlaps(flat) === 0 && turned.l.labels.every((x) => x.size >= 13) && turned.lines.some((l) => l.today && l.pts.length === 5),
+    `끌어서 돌려도(${(turned.yaw - yaw0).toFixed(2)}rad) 차례 선이 남고, 글자 ${flat.length}개는 눕지 않고 화면을 향해 겹침 없이 놓인다 (다음 곳 "${turned.l.next}")`);
   await shot('215-map3d-turned-360.png');
 
   // ---- 4. 다른 날 선은 얇은 점선, 이 날 보기 중에는 더 흐리게 (2D와 같다)
