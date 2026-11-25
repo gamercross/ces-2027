@@ -133,7 +133,7 @@ window.BOARD = {
     {f: 'parts', id: 'ai_talk', t: 'aiface', n: '듣기', s: 'part', c: 'web/views/listen.js', d: '받아 적어 초안'},
     {f: 'parts', id: 'ai_diary', t: 'aiface', n: '일기', s: 'done', c: 'web/views/diary.js · web/people-ui.js', d: '맨 위 만난 사람 세 명 · 날짜별 일기 · 일기 카드 · 보내기 띠 · 쓰기(본 것 한 칸 + 더 적기)', ch: '11/24 · 일기 쓰기 첫 화면을 본 것 + 폰에 남기기로 줄이고 나머지 칸은 "더 적기" 아래 접었다 · 11/25 보내기가 폰의 공유 창으로 건넨다'},
     {f: 'parts', id: 'ai_talkbox', t: 'aiface', n: '대화 칸', s: 'part', c: 'web/views/talk.js', d: '듣기 · 붙여넣기 · 손으로', ch: '11/22'},
-    {f: 'parts', id: 'ai_people', t: 'aiface', n: '남의 명함 받기', s: 'part', c: 'web/views/people.js · web/people-ui.js', d: '카메라 · 주소 붙여넣기 · 읽자마자 저장 · 만난 사람 카드', ch: '11/22 · 읽자마자 저장, 같은 사람은 합침'},
+    {f: 'parts', id: 'ai_people', t: 'aiface', n: '남의 명함 받기', s: 'part', c: 'web/views/people.js · web/people-ui.js', d: '카메라 · 주소 붙여넣기 · 읽자마자 저장 · 만난 사람 카드', ch: '11/25 · 앱 안 카메라가 안 되는 폰에는 기본 카메라로 읽어 붙여 넣으라는 한두 줄'},
     {f: 'parts', id: 'ai_transit', t: 'aiface', n: '공식 셔틀', s: 'part', c: 'web/views/transit.js', d: '노선 · 시간 · 출처 · 확인 필요'},
     {f: 'parts', id: 'ac_route', t: 'acomp', n: '걷는 차례 · 날 나누기', s: 'done', c: 'web/route.js · web/days.js', d: '시간과 일정 안에 갈 곳을 넣는다'},
     {f: 'parts', id: 'ac_rec', t: 'acomp', n: '추천', s: 'done', c: 'web/recommend.js', d: '혁신상 · 한국 · 내 분야와 까닭'},

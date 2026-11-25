@@ -452,7 +452,8 @@ await step('일기', '앱을 껐다 켜도(새로 열기) 일기 · 사진이 �
 // ================= 9. 만난 사람 · 명함 받기 =================
 await step('만난 사람', '명함 받기(주소 붙여넣기): 주소를 적어 남기면 만난 사람에 쌓인다', async () => {
   await go('#/people/new', '명함 받기');
-  await page.getByRole('button', { name: '주소 붙여넣기' }).click();
+  // 앱 안 카메라가 안 되는 폰에서는 붙여 넣는 칸이 처음부터 펴져 있다. 접혀 있을 때만 편다.
+  if (!(await page.locator('input[name=addr]').isVisible())) await page.getByRole('button', { name: '주소 붙여넣기' }).click();
   await page.locator('input[name=addr]').fill('https://github.com/torvalds');
   await page.getByRole('button', { name: '남기기' }).click();
   await sleep(700);
@@ -463,11 +464,24 @@ await step('만난 사람', '명함 받기(주소 붙여넣기): 주소를 적�
 const canScan = await page.evaluate(() => 'BarcodeDetector' in window).catch(() => false);
 await step('만난 사람', '명함 받기(카메라 QR): 이 화면에서 카메라로 읽을 수 있나(인터넷과는 상관없다)', async () => {
   await go('#/people/new', '명함 받기 카메라');
-  const btn = page.getByRole('button', { name: '카메라 켜기' });
-  const disabled = await btn.isDisabled();
+  const off = await page.locator('button', { hasText: '카메라 켜기' }).evaluate((b) => b.disabled || b.hidden);
   const note = (await page.locator('.note').first().innerText().catch(() => '')).slice(0, 80);
-  return { status: disabled ? '일부' : '됨', note: disabled ? `이 브라우저는 못 읽는다: ${note}` : '단추가 켜져 있다(실제 읽기는 폰 카메라로 봐야 한다)' };
+  return { status: off ? '일부' : '됨', note: off ? `이 브라우저는 못 읽는다: ${note}` : '단추가 켜져 있다(실제 읽기는 폰 카메라로 봐야 한다)' };
 }, canScan ? '됨' : '일부');
+await step('만난 사람', '앱 안 카메라가 안 되는 폰에서만 "기본 카메라로 비추고 주소를 복사해 붙여 넣는다" 한 줄이 보이고 붙여 넣는 칸이 펴져 있다. 되는 폰에서는 안 보인다', async () => {
+  const look = () => page.evaluate(() => ({ note: document.querySelector('#view .panel .note')?.innerText || '', cam: !document.querySelector('#view .panel button.btn')?.hidden, paste: !document.querySelector('form.paste')?.hidden }));
+  const here = await look();
+  // 다른 쪽 폰을 흉내 낸다: 읽는 기능이 있으면 지우고, 없으면 있는 척한다(단추와 글만 본다. 카메라는 켜지 않는다).
+  await page.evaluate((has) => { if (has) delete window.BarcodeDetector; else window.BarcodeDetector = class { detect() { return []; } }; }, canScan);
+  await page.evaluate(() => { location.hash = '#/people'; });
+  await sleep(400);
+  await page.evaluate(() => { location.hash = '#/people/new'; });
+  await sleep(700);
+  const other = await look();
+  const [none, can] = canScan ? [other, here] : [here, other];
+  const ok = /기본 카메라/.test(none.note) && !/BarcodeDetector|브라우저/.test(none.note) && !none.cam && none.paste && !/기본 카메라/.test(can.note) && can.cam && !can.paste;
+  return { status: ok ? '됨' : '안 됨', note: none.note };
+});
 await step('만난 사람', '만난 사람 목록 · 찾기', async () => {
   await go('#/people', '만난 사람');
   await sleep(400);
