@@ -618,17 +618,12 @@ a.link-text { display: inline-flex; align-items: center; min-height: var(--tap-m
 /* 같은 꼴의 줄 둘(갈 곳 목록: 문서로 · 표로, 시간 · 일정 파일: 불러오기 · 내보내기)도 이 모양을 쓴다. 글자 단추 둘이 360px 한 줄에 들게 옆 여백을 줄인다 */
 .setrow-btns .pick { padding: 0 var(--s2); }
 
-/* 안내 한 줄 · 한 칸(web/tips.js). 지금은 아이폰 Safari 탭에서만 보이는 "홈 화면에 추가" 하나다. 색은 무채색만 쓴다. */
-.tip-slot:empty { display: none; }
-.tip-line { font-size: var(--fs-small); font-weight: 700; color: var(--ink); word-break: keep-all; overflow-wrap: break-word; }
+/* 안내 칸(web/tips.js). 홈에만 선다. 지금은 아이폰 Safari 탭에서만 보이는 "홈 화면에 추가" 하나다. 색은 무채색만 쓴다. */
 .tip-box { display: flex; align-items: center; gap: var(--s2); padding: var(--s1) var(--s1) var(--s1) var(--s4); border-radius: var(--radius); background: var(--panel); font-size: var(--fs-small); }
 .tip-box p { flex: 1 1 auto; min-width: 0; word-break: keep-all; overflow-wrap: break-word; }
 .tip-box .pick { flex: none; }
-.mappage:has(.mapx[data-sheet="half"], .mapx[data-sheet="full"]) > .tip-box { display: none; }
 
-/* 홈(안, web/views/home.js): 안내 칸 · 지금 할 일 하나 · 자료 파일의 안내 칸들. 검정 단추는 "지금 할 일" 하나뿐이다. */
+/* 홈(web/views/home.js): 안내 칸 · 지금 할 일 하나 · 자료 파일의 안내 칸들. 검정 단추는 "지금 할 일" 하나뿐이다. */
 .homepage .home-now h2 { font-size: var(--fs-now); }
 .homepage .home-card p { color: var(--ink-2); word-break: keep-all; overflow-wrap: break-word; }
 .homepage .home-card .actions { margin-top: var(--s1); }
-/* 탭이 다섯일 때(홈 탭을 더한 안): 그림 둘레를 좁혀 360px에서도 한 줄에 선다. */
-.tabs-five .tabs svg { padding: 4px 12px; }

@@ -26,43 +26,26 @@ const VIEWS = {
 // 어느 탭 아래의 화면인가: 지도(전시사 목록 · 셔틀 · 오가는 법) · 갈 곳(추천 · 시간과 일정 · 강연 일정) · 일기(듣기 · 대화 칸 · 만난 사람) · 설정(명함 · 모은 일기).
 const TAB_OF = { home: 'home', map: 'map', list: 'map', transit: 'map', plan: 'plan', rec: 'plan', days: 'plan', sessions: 'plan', diary: 'diary', listen: 'diary', talk: 'diary', people: 'diary', settings: 'settings', card: 'settings', collect: 'settings' };
 
-// 메인 틀: 아래 탭은 넷(지도 · 갈 곳 · 일기 · 설정). 앱을 열면 지도.
+// 메인 틀: 아래 탭은 넷(지도 · 갈 곳 · 일기 · 설정). 앱을 열면 홈(탭이 아니다).
 // 탭이 아닌 화면(명함 · 시간과 일정 · 듣기 …)은 위에 "뒤로"가 생기고, 돌아갈 곳은 TAB_OF의 탭이다.
 const ROOTS = new Set(['home', 'map', 'plan', 'diary', 'settings']);
 
-// 홈(안, 아직 꺼져 있다): 설정 home이 'first'면 앱을 열 때 홈이 먼저 뜨고 아래 탭은 넷 그대로다(홈은 탭이 아니고 머리의 앱 이름을 누르면 돌아온다).
-// 'tab'이면 아래 탭 맨 앞에 "홈"이 하나 더 생겨 다섯이 된다. 그 밖의 값이면(off) 지금처럼 열면 지도다.
-const homeMode = getSettings().then((s) => (['first', 'tab'].includes(s?.home) ? s.home : 'off'));
+// 홈: 앱을 열면 홈이 먼저 뜬다(아래 탭은 넷 그대로이고 홈은 탭이 아니다). 머리의 앱 이름을 누르면 홈으로 돌아온다.
+// 설정 home이 'off'면 예전처럼 열면 지도다(명함이 없으면 명함부터). 그때는 앱 이름도 지도로 간다.
+const homeMode = getSettings().then((s) => (s?.home === 'off' ? 'off' : 'on'));
 homeMode.then((mode) => {
-  // 다음에 열 때 index.html이 지도 조각을 미리 받을지 정하도록 적어 둔다(홈이 켜져 있으면 안 받는다).
-  try { if (mode === 'off') localStorage.removeItem('ces2027.homeMode.v1'); else localStorage.setItem('ces2027.homeMode.v1', 'on'); } catch { /* 막힌 폰이면 그대로 둔다 */ }
-  if (mode === 'off') return;
+  // 다음에 열 때 index.html이 지도 조각을 미리 받을지 정하도록 적어 둔다(홈이 꺼져 있을 때만 받는다).
+  try { if (mode === 'off') localStorage.setItem('ces2027.homeMode.v1', 'off'); else localStorage.removeItem('ces2027.homeMode.v1'); } catch { /* 막힌 폰이면 그대로 둔다 */ }
+  if (mode !== 'off') return;
   const brand = document.querySelector('.brand');
-  brand.setAttribute('href', '#/home');
-  brand.setAttribute('aria-label', '홈');
-  if (mode !== 'tab') return;
-  const tab = document.createElement('a');
-  tab.href = '#/home';
-  tab.dataset.tab = 'home';
-  const NS = 'http://www.w3.org/2000/svg';
-  const icon = document.createElementNS(NS, 'svg');
-  icon.setAttribute('viewBox', '0 0 24 24');
-  icon.setAttribute('aria-hidden', 'true');
-  const roof = document.createElementNS(NS, 'path');
-  roof.setAttribute('d', 'M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4v-5h-6v5H5a1 1 0 0 1-1-1v-7.5Z');
-  icon.append(roof);
-  const name = document.createElement('span');
-  name.textContent = '홈';
-  tab.append(icon, name);
-  document.querySelector('.tabs').prepend(tab);
-  document.body.classList.add('tabs-five');
-  if (document.body.dataset.tab === 'home') tab.setAttribute('aria-current', 'page');
+  brand.setAttribute('href', '#/map');
+  brand.setAttribute('aria-label', '지도');
 });
 for (const k of Object.keys(VIEWS)) frame.views.add(k);
 
-// 명함이 있으면 첫 화면(지도)이 쓸 자료(장소)를 화면 조각과 같이 받기 시작한다. 전시사 자료는 지도가 홀로 가까이 갈 때 홀마다 받는다.
-const homeWasOn = (() => { try { return localStorage.getItem('ces2027.homeMode.v1') === 'on'; } catch { return false; } })();
-if (getProfile() && !homeWasOn) { getInfo().catch(() => {}); getMeta(); getPlaces().catch(() => {}); }
+// 홈을 꺼 두어 첫 화면이 지도인 폰만: 명함이 있으면 지도가 쓸 자료(장소)를 화면 조각과 같이 받기 시작한다. 홈이 첫 화면이면 받지 않는다(홈은 폰에 담아 둔 것만 쓴다).
+const homeWasOff = (() => { try { return localStorage.getItem('ces2027.homeMode.v1') === 'off'; } catch { return false; } })();
+if (getProfile() && homeWasOff) { getInfo().catch(() => {}); getMeta(); getPlaces().catch(() => {}); }
 
 // 지운 번역 기능이 폰에 남긴 설정(받아 둔 모델 표시 · 번역 앱 고름)을 치운다.
 for (const k of ['translationModel.v1', 'translatorApp.v1', 'translatorPrep.v1']) { try { localStorage.removeItem(`ces2027.${k}`); } catch { /* 막힌 폰이면 그대로 둔다 */ } }
@@ -117,7 +100,7 @@ async function show() {
   const { name, rest, lost } = route();
   // 앱을 열면(주소에 화면이 없으면) 지도. 처음 들어오면 명함부터 만든다. "나중에"를 누르면 이번에는 묻지 않는다.
   if (name === '' && !lost) {
-    // 홈(안)이 켜져 있으면 홈이 먼저다. 처음 연 사람도 홈에서 "명함 만들기"로 간다.
+    // 열면 홈이 먼저다. 처음 연 사람도 홈에서 "명함 만들기"로 간다. 홈을 꺼 두었으면(설정 home: off) 예전처럼 명함 · 지도.
     const mode = await homeMode;
     if (mine !== turn) return;
     replaceTo(mode !== 'off' ? '#/home' : !getProfile() && !sessionStorage.getItem('ces2027.introLater') ? '#/card' : '#/map');
