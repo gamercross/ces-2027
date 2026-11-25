@@ -1,7 +1,8 @@
 // 오프라인: 서비스 워커가 화면 · 코어 · 자료를 폰에 담아 둔다. 담겼는지와 판 이름을 여기서 안다.
 
 // late: 담기를 시작한 지 30초가 넘었거나 담다가 실패했는데 아직 못 담았다. 설정의 "인터넷 없이" 줄이 "아직 담지 못했다"고 말한다.
-export const offline = { ready: false, version: null, install: null, update: false, late: false };
+// update: 받아 둔 새 판이 있다(설정에 늘 보인다). band: 탭 위의 띠로도 보일까(그 판의 띠를 닫았으면 아니다). latest: 받아 둔 새 판의 이름.
+export const offline = { ready: false, version: null, install: null, update: false, band: false, latest: null, late: false };
 const changed = () => window.dispatchEvent(new Event('ces-offline'));
 const LATE_MS = 30000;
 function late() { if (!offline.ready && !offline.late) { offline.late = true; changed(); } }
@@ -47,11 +48,20 @@ async function ask(what) {
   });
 }
 // 받아 둔 새 판이 있는지 본다. 있으면 띠를 보인다(app.js).
+// 띠를 닫으면 그 판에 대해서는 다시 띄우지 않는다. 더 새 판을 받으면 다시 뜬다. 닫아도 설정의 "인터넷 없이" 줄에는 새 판과 "다시 열기"가 남는다.
+const CLOSED = 'ces2027.updateClosed.v1';
+function closedFor() { try { return localStorage.getItem(CLOSED); } catch { return null; } }
 async function look() {
   const s = await ask('state').catch(() => null);
   if (!s) return;
   const update = s.latest !== s.using;
-  if (update !== offline.update) { offline.update = update; changed(); }
+  const band = update && closedFor() !== s.latest;
+  if (update !== offline.update || band !== offline.band || s.latest !== offline.latest) { offline.update = update; offline.band = band; offline.latest = s.latest; changed(); }
+}
+export function closeBand() {
+  try { if (offline.latest) localStorage.setItem(CLOSED, offline.latest); } catch { /* 막힌 폰이면 이번에만 닫힌다 */ }
+  offline.band = false;
+  changed();
 }
 
 // 서비스 워커를 건다. 첫 화면이 그려진 뒤에 부른다: 폰에 담는 일(파일 서른몇 개)이 첫 화면과 회선을 다투지 않게.

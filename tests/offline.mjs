@@ -688,13 +688,40 @@ await step('판 바뀜', '새 판을 끝까지 받아도 "다시 열기"를 누�
   fact('새 판을 받아 둔 채(누르기 전) 담음 이름과 파일 수', JSON.stringify(sizes));
   return { status: v === before && band && both && !(await failedView()) ? '됨' : '안 됨', note: `쓰는 판 ${v} · 띠 ${band}` };
 });
-await step('판 바뀜', '끊은 채 "다시 열기"를 누르면 그때 새 판으로 열리고, 옛 판은 지워지고, 띠가 사라진다', async () => {
-  await page.locator('#update-go').click();
+await step('판 바뀜', '띠의 "닫기"를 누르면 띠가 사라지고 새로 열어도 안 뜬다. 설정의 "인터넷 없이" 줄에는 "새 판이 있다"와 "다시 열기"가 남는다', async () => {
+  await page.locator('#update-close').click();
+  await sleep(300);
+  const gone = await page.evaluate(() => document.getElementById('update').hidden);
+  await go('#/settings', '띠를 닫은 뒤 설정');
+  await page.waitForFunction(() => /새 판이 있다/.test(document.querySelector('.setlist')?.innerText || ''), null, { timeout: 8000 });
+  const still = await page.evaluate(() => ({ band: !document.getElementById('update').hidden, button: !document.getElementById('set-reopen')?.hidden }));
+  return { status: gone && !still.band && still.button && (await pageVersion()) !== '' ? '됨' : '안 됨', note: `닫은 뒤 띠 ${still.band ? '보임' : '없음'} · 설정의 다시 열기 ${still.button ? '있음' : '없음'}` };
+});
+await step('판 바뀜', '끊은 채 설정의 "다시 열기"를 누르면 그때 새 판으로 열리고, 옛 판은 지워지고, 띠는 없다', async () => {
+  await page.locator('#set-reopen').click();
   await sleep(3500);
   const v = await pageVersion();
   const names = Object.keys(await cacheSizes());
   const band = await page.evaluate(() => !document.getElementById('update').hidden);
   return { status: /-new1$/.test(v) && names.length === 1 && /-new1$/.test(names[0]) && !band && !(await failedView()) ? '됨' : '안 됨', note: `판 ${v} · 담음 ${names.length}개` };
+});
+await step('판 바뀜', '띠를 닫은 뒤에도 더 새 판을 받으면 띠가 다시 뜬다(닫은 것은 그 판에만 듣는다)', async () => {
+  await ctx.setOffline(false); net.up = true; offlineNow = false;
+  // 한 번 닫아 둔다(지금 판 다음의 판 -new2에 대해). 그 뒤 -new3이 올라오면 다시 떠야 한다.
+  net.variant = 2;
+  await go('#/settings', '더 새 판');
+  await page.evaluate(async () => { const r = await navigator.serviceWorker.getRegistration(); await r.update().catch(() => {}); });
+  await page.locator('#update:not([hidden])').waitFor({ timeout: 20000 });
+  await page.locator('#update-close').click();
+  net.variant = 3;
+  await page.evaluate(async () => { const r = await navigator.serviceWorker.getRegistration(); await r.update().catch(() => {}); });
+  const again = await page.locator('#update:not([hidden])').waitFor({ timeout: 20000 }).then(() => true, () => false);
+  const v = await pageVersion();
+  await page.locator('#update-go').click();
+  await sleep(3500);
+  const now = await pageVersion();
+  await ctx.setOffline(true); net.up = false; offlineNow = true;
+  return { status: again && /-new1$/.test(v) && /-new3$/.test(now) ? '됨' : '안 됨', note: `닫은 뒤 더 새 판에서 띠 ${again ? '다시 뜸' : '안 뜸'} · 누르기 전 ${v} → 누른 뒤 ${now}` };
 });
 await step('판 바뀜', '새 판으로 바꾼 뒤 끊은 채 화면들이 열린다(지도 · 갈 곳 · 일기 · 설정)', async () => {
   const bad = [];

@@ -523,6 +523,8 @@ a.pick-row { text-decoration: none; }
   background: var(--peach); font-weight: 700;
 }
 .notice-bar { background: var(--mint); bottom: calc(var(--tabs) + env(safe-area-inset-bottom) + 80px); }
+.update-acts { display: flex; align-items: center; gap: var(--s1); flex: none; }
+.update > span:first-child { word-break: keep-all; }
 
 @media (prefers-reduced-motion: no-preference) {
   .btn, .pick, .seg, .choice span { transition: background-color 0.15s ease; }
