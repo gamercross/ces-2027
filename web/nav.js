@@ -47,3 +47,10 @@ export function estimate(from, to, opt = {}) {
   const walk = meters * 1.25;
   return { meters: walk, minutes: Math.max(1, Math.round(walk / WALK_M_PER_MIN)), word: bearingWord(dx, dz), deg: bearingDeg(dx, dz), sameCampus, arrived: sameCampus && walk <= ARRIVED_M && !coarse, coarse };
 }
+
+// 캠퍼스가 바뀌는 걸음(갈 곳 탭의 한 줄): 걸어서 몇 분쯤인가. 길 안내 띠가 다른 캠퍼스에 쓰는 어림 그대로다(캠퍼스 중심 사이 거리).
+// 같은 캠퍼스이거나 캠퍼스 · 자리를 모르면 null.
+export function campusHop(campusFrom, campusTo) {
+  if (!campusFrom?.geo || !campusTo?.geo || campusFrom.k === campusTo.k) return null;
+  return estimate([0, 0], [0, 0], { campusFrom, campusTo }).minutes;
+}
