@@ -60,8 +60,11 @@ export async function render({ rest = [] } = {}) {
   }
   const can = cameraSupport(envOf(window));
   const video = el('video', { class: 'scan-video', playsinline: true, muted: true, hidden: true, 'aria-label': '카메라 화면' });
-  const camBtn = el('button', { class: 'btn', type: 'button', text: '카메라 켜기', disabled: !can.ok });
-  const camNote = el('p', { class: can.ok ? 'note' : 'note warn', role: 'status', text: can.ok ? '누를 때만 켠다. QR을 화면 가운데에.' : `카메라로 읽을 수 없다. ${can.why} 주소를 붙여 넣는다.` });
+  // 앱 안 카메라가 안 되는 폰(QR을 읽는 기능이 없는 아이폰 등): 안 눌리는 단추는 감추고, 폰의 기본 카메라로 읽어 붙여 넣는 길을 한두 줄로 알린다. 붙여 넣는 칸은 펴 둔다.
+  const noReader = can.kind === 'no-reader';
+  const PHONE_CAMERA = '폰의 기본 카메라로 QR을 비추고, 뜨는 주소를 길게 눌러 복사한 뒤 아래에 붙여 넣는다.';
+  const camBtn = el('button', { class: 'btn', type: 'button', text: '카메라 켜기', disabled: !can.ok, hidden: noReader });
+  const camNote = el('p', { class: can.ok || noReader ? 'note' : 'note warn', role: 'status', text: can.ok ? '누를 때만 켠다. QR을 화면 가운데에.' : noReader ? `${can.why} ${PHONE_CAMERA}` : `카메라로 읽을 수 없다. ${can.why} 주소를 붙여 넣는다.` });
   async function toggleCam() {
     if (scanner) { stopCam(); video.hidden = true; camBtn.textContent = '카메라 켜기'; camNote.textContent = '카메라를 껐다.'; return; }
     camBtn.disabled = true;
@@ -84,11 +87,11 @@ export async function render({ rest = [] } = {}) {
 
   const addr = el('input', { name: 'addr', maxlength: 300, autocapitalize: 'off', autocomplete: 'off', spellcheck: 'false', inputmode: 'url', placeholder: '주소나 아이디', 'aria-label': '주소나 아이디' });
   const hint = el('select', { 'aria-label': '아이디만 적었을 때' }, el('option', { value: 'github', text: '아이디면 깃허브' }), el('option', { value: 'discord', text: '아이디면 디스코드' }));
-  const pasteForm = el('form', { class: 'paste', hidden: true },
+  const pasteForm = el('form', { class: 'paste', hidden: !noReader },
     el('div', { class: 'inline' }, addr, hint),
     el('button', { class: 'btn ghost', type: 'submit', text: '남기기' }));
   pasteForm.addEventListener('submit', (ev) => { ev.preventDefault(); if (keep(addr.value, hint.value, '붙여넣기')) addr.value = ''; });
-  const pasteBtn = el('button', { class: 'linkish', type: 'button', text: '주소 붙여넣기', 'aria-expanded': 'false', onclick: () => { pasteForm.hidden = !pasteForm.hidden; pasteBtn.setAttribute('aria-expanded', String(!pasteForm.hidden)); if (!pasteForm.hidden) addr.focus(); } });
+  const pasteBtn = el('button', { class: 'linkish', type: 'button', text: '주소 붙여넣기', 'aria-expanded': String(noReader), onclick: () => { pasteForm.hidden = !pasteForm.hidden; pasteBtn.setAttribute('aria-expanded', String(!pasteForm.hidden)); if (!pasteForm.hidden) addr.focus(); } });
 
   if (rest[0] === 'new') {
     holder.append(
