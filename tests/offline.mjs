@@ -400,6 +400,7 @@ const png = await page.evaluate(() => { const c = document.createElement('canvas
 await step('일기', '일기 쓰기: 회사 · 본 것 · 느낀 점 · 누구에게를 적고 "폰에 남기기"', async () => {
   await go('#/diary/new', '일기 쓰기');
   await page.locator('textarea[name=saw]').fill('오프라인 시험: 로봇 시연을 봤다.');
+  await page.locator('details.more > summary').click(); // 나머지 칸은 "더 적기" 아래 접혀 있다
   await page.locator('textarea[name=felt]').fill('해 볼 것: 명함 먼저 건네기.');
   await page.locator('input[name=other]').fill('시험 회사');
   await page.locator('input[name=for]').first().check({ force: true });
@@ -410,6 +411,7 @@ await step('일기', '일기 쓰기: 회사 · 본 것 · 느낀 점 · 누구�
 });
 await step('일기', '일기 사진 한 장: 폰에서 150KB 안으로 줄여 IndexedDB에 둔다', async () => {
   await go('#/diary/new', '일기 사진');
+  await page.locator('details.more > summary').click(); // 나머지 칸은 "더 적기" 아래 접혀 있다
   await page.locator('input[name=other]').fill('사진 회사');
   await page.locator('textarea[name=saw]').fill('사진 시험');
   await page.locator('input[type=file]').setInputFiles({ name: 'p.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
@@ -563,7 +565,8 @@ await step('설정', '"인터넷 없이" 칸: "다 담았다"와 담긴 판 이�
 await step('설정', '"홈 화면에 추가" 단추: 아이폰 사파리에는 안 뜬다(beforeinstallprompt가 없다). 앱 안에 아이폰용 안내 글이 있나', async () => {
   const sources = (await Promise.all(['views/settings.js', 'views/card.js', 'offline.js', 'index.html', 'tips.js'].map((f) => readFile(join(dist, f), 'utf8')))).join('\n');
   const hasGuide = /공유 단추|공유 아이콘|홈 화면에 추가.{0,20}(공유|사파리)/.test(sources);
-  return { status: hasGuide ? '됨' : '안 됨', note: hasGuide ? '안내 글 있음' : '앱 안에 아이폰용 "공유 → 홈 화면에 추가" 안내가 없다(테스터 안내 문서에만 있다)' };
+  const tipAt = JSON.parse(await readFile(join(dist, 'data/settings.json'), 'utf8')).homeTip;
+  return { status: hasGuide ? '됨' : '안 됨', note: hasGuide ? `안내 글을 지어 두었다(web/tips.js). 보이는 자리는 설정 homeTip = ${tipAt}` : '앱 안에 아이폰용 안내가 없다' };
 });
 await step('설정', '자료 출처 카드(받은 날 · 공식 출처 링크)', async () => {
   await page.getByRole('button', { name: '출처' }).click();
@@ -754,15 +757,46 @@ await step('처음 담다 끊김', '앱을 열어 둔 채 인터넷이 돌아오
 
 // ================= 18. 아이폰 Safari 탭으로 열었을 때의 안내 · 저녁의 일기 띠 =================
 const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
-await step('홈 화면에 추가 안내', '아이폰 Safari 탭으로 처음 열면 첫 명함 화면에 "홈 화면에 추가" 한 줄이 보이고, 다른 폰에서는 안 보인다', async () => {
-  const other = await page.evaluate(() => document.querySelectorAll('.tip-line, .tip-box').length);
+// 자리는 설정(homeTip)으로 고른다. 지금 값이 무엇이든, 꺼 둔 값(off)과 지금 값(both: 첫 명함 한 줄 + 지도 위 칸)을 끼워 본다(설정 파일을 받는 길에서 값만 바꿔 준다).
+const tipCtx = async (homeTip, userAgent = IPHONE) => {
   await ctx.close();
-  ctx = await browser.newContext({ viewport: { width: 390, height: 780 }, userAgent: IPHONE });
+  ctx = await browser.newContext({ viewport: { width: 390, height: 780 }, ...(userAgent ? { userAgent } : {}) });
   page = await ctx.newPage();
+  const base = JSON.parse(await readFile(join(dist, 'data/settings.json'), 'utf8'));
+  await page.route('**/data/settings.json', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ...base, homeTip }) }));
+};
+await step('홈 화면에 추가 안내', '꺼 두면(homeTip off) 아이폰 Safari 탭에서도 첫 명함 화면과 지도에 안내가 없다', async () => {
+  await tipCtx('off');
+  await page.goto(`${ORIGIN}/`);
+  await page.locator('form.panel').waitFor({ timeout: 8000 });
+  await sleep(600);
+  const n = await page.evaluate(() => document.querySelectorAll('.tip-line, .tip-box').length);
+  return { status: n === 0 ? '됨' : '안 됨', note: `지금 설정 homeTip = ${JSON.parse(await readFile(join(dist, 'data/settings.json'), 'utf8')).homeTip}` };
+});
+await step('홈 화면에 추가 안내', '첫 명함 한 줄(homeTip both): 아이폰 Safari 탭으로 처음 열면 "홈 화면에 추가" 한 줄이 보이고, 다른 폰에서는 안 보인다', async () => {
+  await tipCtx('both');
   await page.goto(`${ORIGIN}/`);
   await page.locator('form.panel').waitFor({ timeout: 8000 });
   const line = await page.locator('.tip-line').innerText({ timeout: 4000 }).catch(() => '');
+  await tipCtx('both', null); // 아이폰이 아닌 폰
+  await page.goto(`${ORIGIN}/`);
+  await page.locator('form.panel').waitFor({ timeout: 8000 });
+  await sleep(600);
+  const other = await page.evaluate(() => document.querySelectorAll('.tip-line, .tip-box').length);
   return { status: /홈 화면에 추가/.test(line) && other === 0 ? '됨' : '안 됨', note: line };
+});
+await step('홈 화면에 추가 안내', '지도 위 칸(homeTip both): 아이폰 Safari 탭이면 지도 위에 칸 하나가 보이고, "닫기"를 누르면 다시 열어도 안 뜬다', async () => {
+  await tipCtx('both');
+  await page.goto(`${ORIGIN}/`);
+  await page.evaluate(() => localStorage.setItem('ces2027.profile.v1', JSON.stringify({ nick: '시험', tag: 'student', line: '', github: '', discord: '' })));
+  await page.goto('about:blank'); await page.goto(`${ORIGIN}/#/map`);
+  const box = await page.locator('.tip-box p').innerText({ timeout: 8000 }).catch(() => '');
+  await page.getByRole('button', { name: '안내 닫기' }).click().catch(() => {});
+  await page.goto('about:blank'); await page.goto(`${ORIGIN}/#/map`);
+  await page.locator('svg.map').waitFor({ timeout: 10000 });
+  await sleep(800);
+  const again = await page.locator('.tip-box').count();
+  return { status: /홈 화면에 추가/.test(box) && again === 0 ? '됨' : '안 됨', note: box };
 });
 await step('일기 챙기기', '전시 날 저녁에 보내지 않은 일기가 있으면 탭 위 띠가 "보내지 않은 일기 1개 · 일기 열기"를 보이고, 일기 탭에서는 사라진다', async () => {
   await ctx.close();

@@ -479,12 +479,22 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       && !["'위로'", "'아래로'", '#/talk/', '명함 이벤트', 'attachImage', 'mapsLink('].some((t) => planV.includes(t))
       // 목록 고치기: 말 바꾸기 다섯, 검정 단추 없음
       && ['날짜 없는 곳을 날마다 나누기', '가까운 곳끼리 줄 세우기', '하루에 볼 곳', '다른 사람에게 보내기', '받은 목록 넣기', 'navigator.share'].every((t) => toolsFn.includes(t)) && !/class: 'btn'/.test(toolsFn.slice(toolsFn.indexOf('const codeInput')))
-      && planV.includes("showToast(`${nameOf(id)} 다녀왔다.`") && /setTimeout\(hideToast, 6000\)/.test(planV)
+      && planV.includes("showToast(`${nameOf(id)} 다녀왔다.`, diaryLink(id), true)") && /setTimeout\(hideToast, 6000\)/.test(planV) && planV.includes("setProperty('--toast-h'")
       && /it\?\.day === 5 \? \{ \.\.\.it, day: 0 \}/.test(storeV) && /filter\(\(d\) => !d\.pre\)/.test(mapV3)
       && pcardV.includes('Escape') && pcardV.includes("role: 'dialog'") && !/class: 'dock'/.test(planV) && !planV.includes('<select')
       && /rest\[0\] === 'day'/.test(mapV3) && mapV3.includes('dayFocus') && mapV3.includes('function nextOfDay()') && mapV3.includes('곳만 보는 중') && mapV3.includes("text: '모두 보기'") && !mapV3.includes('nextStop(getInterests())'),
-      '갈 곳(안 1): 날짜 한 줄에 그 날 남은 곳 수(칩 없음) · 다음에 갈 곳 한 곳 크게 · 그다음 곳들 · 다녀온 곳 접기(다녀옴 칸으로 되돌림) · 날짜 없는 곳 n곳 보기(빈 날은 검정 단추, 아니면 작은 한 줄) · 목록 고치기 · 지도에서 보기 · 회사 카드의 검정 단추는 길 안내 하나 · 1/5에는 회사를 넣지 못한다(카드 · 지도 · 저장 읽기) · "다녀왔다" 뒤 일기 쓰기 6초 · 지도의 다음 갈 곳은 고른 날의 회사만 · 아래 도크 없음');
+      '갈 곳(안 1): 날짜 한 줄에 그 날 남은 곳 수(칩 없음) · 다음에 갈 곳 한 곳 크게 · 그다음 곳들 · 다녀온 곳 접기(다녀옴 칸으로 되돌림) · 날짜 없는 곳 n곳 보기(빈 날은 검정 단추, 아니면 작은 한 줄) · 목록 고치기 · 지도에서 보기 · 회사 카드의 검정 단추는 길 안내 하나 · 1/5에는 회사를 넣지 못한다(카드 · 지도 · 저장 읽기) · "다녀왔다" 뒤 일기 쓰기 띠는 다음 누름까지(뺐다 · 되돌리기는 6초), 띠가 있는 동안 아래 여백 · 지도의 다음 갈 곳은 고른 날의 회사만 · 아래 도크 없음');
     // 다시 짓기 6단계 일기 + 만난 사람: 일기 첫 묶음이 만난 사람(최근 세 명 + 명함 받기), 맨 위 회색 단추 셋 없음, 읽자마자 저장, 일기는 본 것 한 칸이면 된다.
+    // 일기 쓰기 줄이기(편의성 점검 6절 3번): 첫 화면은 본 것 + 폰에 남기기, 나머지 칸은 "더 적기"(details) 안에 있다. 다녀옴 띠가 있는 동안 아래 여백을 늘린다.
+    {
+      const moreAt = diaryV.indexOf("el('details', { class: 'more', open: filled }");
+      const formAt = diaryV.indexOf("el('form', { class: 'panel form'");
+      const inMore = ["field('회사', pick)", "field('날짜', date)", "field('느낀 점', felt)", 'photo-field', '누구에게 (여럿 가능)', 'talkRow'].every((w) => { const i = diaryV.indexOf(w, moreAt); return i > moreAt && i < formAt; });
+      const css = await readFile(join(dist, 'app.css'), 'utf8');
+      check(moreAt > 0 && formAt > moreAt && inMore && /field\('본 것', saw\),\s+more,/.test(diaryV.slice(formAt)) && diaryV.includes('more.open = true') && diaryV.includes("class: 'note diary-who'")
+        && /\.planpage \{ padding-bottom: var\(--toast-h, 0px\); \}/.test(css) && /details\.more > summary \{ min-height: var\(--tap\)/.test(css),
+        '일기 쓰기 첫 화면: "본 것" 칸 + "폰에 남기기"뿐이고 회사 · 날짜 · 느낀 점 · 사진 · 누구에게 · 대화는 "더 적기" 아래 접는다 · 적힌 칸이 있으면 펴 두고 접힌 칸이 틀리면 편다 · 어느 회사 일기인지 제목 아래 한 줄 · 다녀옴 띠가 있는 동안 아래 여백을 띠 높이만큼 늘린다');
+    }
     const peopleV = await readFile(join(dist, 'views/people.js'), 'utf8');
     const peopleUiV = await readFile(join(dist, 'people-ui.js'), 'utf8');
     check(diaryV.includes("class: 'panel met'") && diaryV.includes('slice(0, 3)') && diaryV.includes('#/people/new') && !diaryV.includes("class: 'segs'")
@@ -600,6 +610,42 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       check(placed.some((p) => p.id === 'a') && !placed.some((p) => p.id === 'b') && !placed.some((p) => p.id === 'e') && over === 0 && placed.every((p) => p.size >= 13) && placed.find((p) => p.id === 'c')?.text === '11735 Union bio', '글자 놓기: 중요한 것부터 놓고 겹치거나 화면 밖으로 나가는 것은 숨기며 글자는 13px 이상이다');
       const crowded = mm.layoutLabels([{ id: 'x', x: 50, y: 50, text: '11735 Union bio', alts: ['11735 U', '11735'], size: 13, prio: 90, anchor: 'start' }, { id: 'y', x: 50, y: 52, text: '높은 것', size: 13, prio: 99, anchor: 'start' }], { width: 360, height: 600 });
       check(crowded.length === 1 && crowded[0].id === 'y', '좁은 곳에서는 높은 순위 하나만 남고 나머지는 숨는다');
+      // 3D 지도(11/24): 차례 선 · 다음 곳 이름 · 누른 곳 = 열리는 카드. 글자 놓기의 막힌 칸 · 왼쪽 놓기, 누른 곳 고르기, 보이는 칸에 맞추기.
+      {
+        const name = { id: 'n', x: 100, y: 100, text: '3M', size: 13, prio: 95, anchor: 'start', dx: 19 };
+        const stuck = mm.layoutLabels([name], { width: 360, height: 300 }, { blocked: [[110, 90, 200, 110]] });
+        const left = mm.layoutLabels([{ ...name, flip: true }], { width: 360, height: 300 }, { blocked: [[110, 90, 200, 110]] });
+        check(stuck.length === 0 && left.length === 1 && left[0].side === 'left' && left[0].rect[2] <= 100 && mm.layoutLabels([{ ...name, flip: true }], { width: 360, height: 300 })[0].side === undefined,
+          '글자 놓기: 막힌 칸(갈 곳 번호 · 화면 단추)은 피하고, 오른쪽에 못 놓는 갈 곳 이름은 왼쪽에 놓는다');
+        const m3 = await import('../web/map3d.js');
+        const sq = (x, y, r) => [[x - r, y - r], [x + r, y - r], [x + r, y + r], [x - r, y + r]];
+        const hits = {
+          far: true,
+          pins: [{ id: 'p1', sx: 100, sy: 100, r: 11 }, { id: 'p2', sx: 104, sy: 100, r: 13 }, { id: 'p3', sx: 300, sy: 70, r: 11 }],
+          booths: [{ key: 'N|1', sx: 200, sy: 200 }, { key: 'N|2', sx: 210, sy: 200 }],
+          shapes: [{ p: { k: 'HALL' }, polys: [sq(200, 200, 60)] }],
+          campuses: [{ c: { k: 'lvcc' }, poly: sq(200, 200, 150) }, { c: { k: 'ven' }, poly: sq(600, 200, 100) }],
+        };
+        const at = (x, y, h = hits) => m3.pickAt(x, y, h);
+        check(at(102, 100)?.id === 'p2' && at(315, 70)?.id === 'p3' && at(325, 70)?.kind !== 'pin' && at(201, 200)?.key === 'N|1' && at(205, 200) === null,
+          '3D 누름: 갈 곳 번호 · 부스 점은 손가락에 가장 가까운 것(겹친 번호는 위의 것)이고, 두 점 한가운데처럼 애매하면 아무것도 고르지 않는다');
+        check(at(230, 240)?.kind === 'place' && at(230, 240).p.k === 'HALL' && at(320, 320)?.kind === 'campus' && at(320, 320).c.k === 'lvcc' && at(600, 200)?.c.k === 'ven',
+          '3D 누름: 홀 지붕은 그 홀, 홀에서 떨어진 캠퍼스 바닥은 그 캠퍼스다');
+        check(at(265, 240) === null && at(320, 320, { ...hits, far: false }) === null && at(900, 900) === null && at(230, 240, { ...hits, far: false })?.kind === 'place',
+          '3D 누름: 홀 테두리 바로 밖 · 가까이 볼 때의 바닥 · 빈 곳은 아무것도 열지 않는다(다른 캠퍼스 카드가 뜨지 않는다)');
+        const flat = { yaw: 0, pitch: Math.PI / 2 };
+        const plain = m3.spanFor([0, 0, 400, 200], 360, 544, flat);
+        const tight = m3.spanFor([0, 0, 400, 200], 360, 544, { ...flat, top: 184, bottom: 154, right: 62 });
+        const turned = m3.spanFor([0, 0, 400, 200], 360, 544, { yaw: -0.5, pitch: 0.95, top: 184, bottom: 154, right: 62 });
+        // 맞춘 span에서 상자의 네 귀가 보이는 칸(360 - 62 - 양옆 16, 544 - 184 - 154) 안에 든다
+        const fitsIn = (span, cam) => { const k = 360 / span; return [[200, 100], [200, -100], [-200, 100], [-200, -100]].every(([dx, dz]) => Math.abs(dx * Math.cos(cam.yaw) - dz * Math.sin(cam.yaw)) * k <= (360 - 62 - 32) / 2 + 1e-6 && Math.abs((dx * Math.sin(cam.yaw) + dz * Math.cos(cam.yaw)) * Math.sin(cam.pitch)) * k <= (544 - 184 - 154) / 2 + 1e-6); };
+        check(Math.abs(plain - 360 / (328 / 400)) < 1e-6 && tight > plain && fitsIn(tight, flat) && fitsIn(turned, { yaw: -0.5, pitch: 0.95 }) && m3.spanFor([0, 0, 1, 1], 360, 544, flat) === 150 && m3.spanFor([0, 0, 90000, 90000], 360, 544, flat) === 7000,
+          '3D 보기: 위 찾기 칸 · 아래 띠 · 오른쪽 단추를 뺀 보이는 칸에 상자가 다 들어오게 맞추고(돌려 놓아도), 한계(150 ~ 7000) 안이다');
+        const m3Src = await readFile(join(dist, 'map3d.js'), 'utf8');
+        const mapSrc3 = await readFile(join(dist, 'views/map.js'), 'utf8');
+        check(/^import [^;]*from '\.\/(tokens|mapmath|hallgroups)\.js';$/gm.test(m3Src) && (m3Src.match(/^import /gm) || []).length === 3 && !/https?:\/\//.test(m3Src) && mapSrc3.includes('three.set(') && mapSrc3.includes('over.routes = routes') && /line3\(points, T\.accent, 4\.5, dash\)/.test(mapSrc3),
+          '3D 지도는 바깥 엔진 없이 이미 받은 조각 셋(색 · 지도 셈 · 홀 이름)만 쓰고, 2D가 그리는 차례 선 · 길 안내 선을 그대로 넘겨받아 그린다');
+      }
       // 길 안내의 셈 (web/nav.js)
       const nv = await import('../web/nav.js');
       const lvcc = { k: 'lvcc', toWorld: { scale: 1 }, geo: { lat: 36.1313, lng: -115.1525 } };

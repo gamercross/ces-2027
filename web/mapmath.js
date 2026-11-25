@@ -56,12 +56,16 @@ export function textWidth(text, px) {
 export const clip = (text, max) => { const s = String(text); return [...s].length > max ? `${[...s].slice(0, max - 1).join('')}…` : s; };
 
 // 글자 자리 정하기: 먼저 온 것(prio가 큰 것)부터 놓고, 이미 놓은 것과 겹치거나 화면 밖으로 나가면 숨긴다.
-// cands: [{ id, x, y, text, alts?, size, prio, anchor: 'middle' | 'start', dx, dy }] (x · y는 화면 px). alts는 text가 안 들어갈 때 쓸 더 짧은 글.
+// cands: [{ id, x, y, text, alts?, size, prio, anchor: 'middle' | 'start', dx, dy, flip? }] (x · y는 화면 px). alts는 text가 안 들어갈 때 쓸 더 짧은 글.
+// flip이 있으면 오른쪽(start)에 안 들어갈 때 왼쪽에 놓아 본다(놓인 글자의 side가 'left'가 된다).
+// blocked: 글자를 놓으면 안 되는 칸들 [[x0, y0, x1, y1]] (3D 지도의 갈 곳 번호 · 화면 단추).
 // 돌려주는 것: 놓은 글자들 [{ ...cand, rect: [x0, y0, x1, y1] }]
-export function layoutLabels(cands, bounds, { pad = 3, max = 160, cell = 48 } = {}) {
+export function layoutLabels(cands, bounds, { pad = 3, max = 160, cell = 48, blocked = [] } = {}) {
   const order = [...cands].sort((a, b) => b.prio - a.prio);
   const grid = new Map();
   const out = [];
+  const keep = (rect) => { for (let gx = Math.floor(rect[0] / cell); gx <= Math.floor(rect[2] / cell); gx++) for (let gy = Math.floor(rect[1] / cell); gy <= Math.floor(rect[3] / cell); gy++) { const k = `${gx},${gy}`; if (!grid.has(k)) grid.set(k, []); grid.get(k).push(rect); } };
+  for (const rect of blocked) keep(rect);
   const fits = (rect) => {
     if (rect[0] < 2 || rect[1] < 2 || rect[2] > bounds.width - 2 || rect[3] > bounds.height - 2) return false;
     for (let gx = Math.floor(rect[0] / cell); gx <= Math.floor(rect[2] / cell); gx++) {
@@ -73,16 +77,18 @@ export function layoutLabels(cands, bounds, { pad = 3, max = 160, cell = 48 } = 
   };
   for (const c of order) {
     if (out.length >= max) break;
-    // 긴 글이 안 들어가면 짧은 글(alts)로 한 번 더 해 본다.
-    for (const text of [c.text, ...(c.alts || [])]) {
+    // 긴 글이 안 들어가면 짧은 글(alts)로 한 번 더 해 본다. 그래도 안 되면(flip) 왼쪽에 놓아 본다.
+    const tries = [c.text, ...(c.alts || [])].map((text) => [text, false]);
+    if (c.flip && c.anchor === 'start') tries.push([c.text, true]);
+    for (const [text, left] of tries) {
       const w = textWidth(text, c.size);
       const h = c.size * 1.25;
-      const x = c.x + (c.dx || 0), y = c.y + (c.dy || 0);
-      const x0 = c.anchor === 'start' ? x : x - w / 2;
+      const y = c.y + (c.dy || 0);
+      const x0 = left ? c.x - (c.dx || 0) - w : c.anchor === 'start' ? c.x + (c.dx || 0) : c.x + (c.dx || 0) - w / 2;
       const rect = [x0 - pad, y - h / 2 - pad, x0 + w + pad, y + h / 2 + pad];
       if (!fits(rect)) continue;
-      out.push({ ...c, text, rect });
-      for (let gx = Math.floor(rect[0] / cell); gx <= Math.floor(rect[2] / cell); gx++) for (let gy = Math.floor(rect[1] / cell); gy <= Math.floor(rect[3] / cell); gy++) { const k = `${gx},${gy}`; if (!grid.has(k)) grid.set(k, []); grid.get(k).push(rect); }
+      out.push(left ? { ...c, text, rect, side: 'left' } : { ...c, text, rect });
+      keep(rect);
       break;
     }
   }

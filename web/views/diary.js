@@ -69,7 +69,9 @@ function photoBox(e) {
   return box;
 }
 
-// 일기 쓰기: 필수는 "본 것" 한 칸이다. 날짜는 오늘로 채우고, 회사는 동선의 "일기"에서 오면 미리 채운다(없어도 된다).
+// 일기 쓰기: 필수는 "본 것" 한 칸이다. 날짜는 오늘로 채우고, 회사는 갈 곳의 "일기 쓰기"에서 오면 미리 채운다(없어도 된다).
+// 첫 화면은 "본 것" 칸 + "폰에 남기기"뿐이다. 나머지 칸(회사 · 날짜 · 느낀 점 · 사진 · 누구에게 · 대화)은 "더 적기" 아래 접는다(2026-11-24, 편의성 점검 6절 3번).
+// 이미 적힌 칸이 있는 일기를 고칠 때와, 적다 만 느낀 점이 돌아올 때는 펴 둔다(적힌 것이 숨지 않게).
 // 적던 글은 폰에 남겨 앱을 닫아도 돌아온다(남기기 전까지). 누구에게는 마지막에 고른 것을 기억한다.
 const DRAFT = 'diaryDraft.v1';
 const LAST_TAGS = 'diaryTags.v1';
@@ -150,24 +152,39 @@ function form(entry, preset, companies, done) {
   saw.addEventListener('input', keepDraft);
   felt.addEventListener('input', keepDraft);
 
+  // 어느 회사 일기인지: 회사 칸이 접혀 있어도 제목 아래 한 줄로 보인다(회사가 없으면 줄도 없다). 회사를 바꾸면 따라 바뀐다.
+  const whoLine = el('p', { class: 'note diary-who' });
+  const paintWho = () => { const c = companies.find((x) => x.id === pick.value); whoLine.textContent = c ? c.name : other.value.trim(); whoLine.hidden = !whoLine.textContent; };
+  pick.addEventListener('change', paintWho);
+  other.addEventListener('input', paintWho);
+  paintWho();
+  // "더 적기": 고칠 때는 적힌 칸이 하나라도 있으면 펴 둔다. 새로 쓸 때는 접어 둔다(미리 채운 회사 · 날짜 · 누구에게는 적은 것으로 치지 않는다).
+  const filled = entry ? Boolean(entry.company || entry.exId || entry.felt || entry.photo || entry.heard?.length || entry.audio || (entry.for || []).length) : Boolean(back?.felt);
+  const more = el('details', { class: 'more', open: filled },
+    el('summary', { text: '더 적기' }),
+    el('div', { class: 'more-body' },
+      field('회사', pick), field('', other),
+      field('날짜', date),
+      entry ? el('div', { class: 'entry' }, heardBox(entry), entry.audio ? el('p', { class: 'note', text: '녹음은 일기 카드에서 듣는다.' }) : null) : null,
+      field('느낀 점', felt),
+      el('div', { class: 'field photo-field' }, el('span', { class: 'label', text: '사진 (한 장, 선택)' }), photoImg, el('div', { class: 'row-actions' }, photoPick, photoDrop, photoFile), photoNote),
+      el('div', { class: 'field' }, el('span', { class: 'label', text: '누구에게 (여럿 가능)' }), tags),
+      talkRow));
+
   const node = el('form', { class: 'panel form', novalidate: true },
     el('h1', { text: entry?.draft ? '일기 초안 다듬기' : entry ? '일기 고치기' : '일기 쓰기' }),
+    whoLine,
     entry?.draft ? el('p', { class: 'note', text: '초안이다. 다듬어 남기기 전에는 보내지 않는다.' }) : null,
     field('본 것', saw),
-    field('회사', pick), field('', other),
-    field('날짜', date),
-    entry ? el('div', { class: 'entry' }, heardBox(entry), entry.audio ? el('p', { class: 'note', text: '녹음은 일기 카드에서 듣는다.' }) : null) : null,
-    field('느낀 점', felt),
-    el('div', { class: 'field photo-field' }, el('span', { class: 'label', text: '사진 (한 장, 선택)' }), photoImg, el('div', { class: 'row-actions' }, photoPick, photoDrop, photoFile), photoNote),
-    el('div', { class: 'field' }, el('span', { class: 'label', text: '누구에게 (여럿 가능)' }), tags),
-    talkRow,
+    more,
     error,
     el('div', { class: 'dock' },
       el('button', { class: 'btn', type: 'submit', text: '폰에 남기기' }),
       el('button', { class: 'btn ghost', type: 'button', text: '그만두기', onclick: () => { if (fresh) save(DRAFT, null); done(); } })));
   node.addEventListener('submit', async (ev) => {
     ev.preventDefault();
-    const fail = (msg, input) => { error.textContent = msg; error.hidden = false; input?.focus(); };
+    // 접힌 칸이 틀렸으면 펴고 그 칸으로 간다.
+    const fail = (msg, input) => { error.textContent = msg; error.hidden = false; if (input && more.contains(input)) more.open = true; input?.focus(); };
     const chosen = companies.find((c) => c.id === pick.value);
     const company = chosen ? chosen.name : other.value.trim();
     if (!/^\d{4}-\d\d-\d\d$/.test(date.value)) return fail('날짜를 고른다.', date);

@@ -144,7 +144,8 @@ body:has(.mappage) .bar .tag { display: none; }
 .check i { display: grid; place-items: center; width: 26px; height: 26px; border: 2px solid var(--ink-2); border-radius: var(--radius-tag); }
 .check.on i { background: var(--accent); border-color: var(--accent); }
 .check svg { width: 16px; height: 16px; fill: none; stroke: var(--on-accent); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
-/* 탭 바로 위에 6초 뜨는 한 줄: "OO 다녀왔다 · 일기 쓰기" */
+/* 탭 바로 위에 뜨는 한 줄: "OO 다녀왔다 · 일기 쓰기"(다음에 무엇을 누를 때까지) · "OO 뺐다 · 되돌리기"(6초). 띠가 있는 동안 화면 아래 여백을 띠 높이만큼 늘린다 */
+.planpage { padding-bottom: var(--toast-h, 0px); }
 .toast { position: fixed; left: var(--s4); right: var(--s4); bottom: calc(var(--tabs) + env(safe-area-inset-bottom) + var(--s3)); z-index: 8; display: flex; align-items: center; justify-content: space-between; gap: var(--s3); max-width: calc(var(--column) - var(--s6)); margin: 0 auto; padding: var(--s1) var(--s2) var(--s1) var(--s4); border-radius: var(--radius); background: var(--btn); color: var(--on-btn); font-size: var(--fs-small); font-weight: 700; }
 .toast-text { min-width: 0; overflow-wrap: anywhere; }
 .toast .pick { flex: none; color: var(--on-btn); font-size: var(--fs-body); }
@@ -286,8 +287,16 @@ input[type="date"], input[type="time"] { -webkit-appearance: none; appearance: n
 .topic-link { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; min-height: var(--tap); color: var(--ink); text-decoration: none; }
 .topic-name { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
 .topic-name small { font-size: var(--fs-note); color: var(--ink-2); }
-details.more > summary { min-height: var(--tap-min); display: flex; align-items: center; font-weight: 700; color: var(--ink); cursor: pointer; }
+/* "더 적기": 접어 둔 칸들. 줄 전체가 눌리고, 글자 바로 옆 꺾쇠가 접힘(아래) · 펼침(위)을 알린다 */
+details.more { justify-self: stretch; }
+details.more > summary { min-height: var(--tap); display: flex; align-items: center; gap: var(--s3); width: 100%; list-style: none; font-weight: 700; color: var(--ink); cursor: pointer; }
+details.more > summary::-webkit-details-marker { display: none; }
+details.more > summary::after { content: ''; flex: none; width: 9px; height: 9px; margin: 0 6px 4px 0; border-right: 2px solid var(--ink-2); border-bottom: 2px solid var(--ink-2); transform: rotate(45deg); }
+details.more[open] > summary::after { margin-bottom: -4px; transform: rotate(-135deg); }
 details.more[open] > summary { margin-bottom: var(--s2); }
+.more-body { display: grid; gap: 14px; }
+.diary-who { margin-top: calc(var(--s2) * -1); font-weight: 700; overflow-wrap: anywhere; }
+.diary-who[hidden] { display: none; }
 
 /* ---- 갈 곳의 줄 ---- */
 .stops { display: grid; gap: var(--s2); }

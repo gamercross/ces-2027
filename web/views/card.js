@@ -131,9 +131,9 @@ function form(profile, done, go) {
       el('input', { type: 'radio', name: 'tag', value: t.k, checked: p.tag === t.k }), el('span', { text: t.ko }))));
   const error = el('p', { class: 'error', role: 'alert', hidden: true });
 
-  // 아이폰 Safari 탭으로 처음 열었을 때만: 명함을 만들기 전에 "홈 화면에 추가"부터 하라는 한 줄(web/tips.js). 홈 화면 앱에서는 안 보인다.
+  // 설정 homeTip이 'card'나 'both'일 때: 아이폰 Safari 탭으로 처음 열면 명함을 만들기 전에 "홈 화면에 추가"부터 하라는 한 줄(web/tips.js). 홈 화면 앱에서는 안 보인다.
   const homeSlot = first ? el('div', { class: 'tip-slot' }) : null;
-  if (homeSlot) getSettings().then((s) => { const line = (s?.homeTip ?? 'card') === 'card' ? tipLine('card', ['home']) : null; if (line) homeSlot.append(line); }).catch(() => {});
+  if (homeSlot) getSettings().then((s) => { const line = ['card', 'both'].includes(s?.homeTip) ? tipLine('card', ['home']) : null; if (line) homeSlot.append(line); }).catch(() => {});
   const node = el('form', { class: 'panel form big', novalidate: true },
     first ? el('p', { class: 'welcome', text: '환영한다. CES 2027 준비 지도다.' }) : null,
     el('h1', { text: profile ? '명함 고치기' : '명함부터 만든다' }),
