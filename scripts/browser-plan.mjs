@@ -313,6 +313,39 @@ async (page) => {
   }
   await page.evaluate(() => { localStorage.setItem('ces2027.text.v1', JSON.stringify(1)); localStorage.setItem('ces2027.theme.v1', JSON.stringify('light')); });
 
+  // 12. 캠퍼스가 바뀌는 자리에만 한 줄 (R57): 같은 날 LVCC 둘 → 베네시안 둘. 같은 캠퍼스 안(위의 기본 목록)에는 없다
+  const HOP = /^LVCC에서 베네시안까지 걸어서 약 \d+분 또는 셔틀$/;
+  const hops = () => page.evaluate(() => ({
+    list: [...document.querySelectorAll('.stops > li')].map((li) => (li.classList.contains('hop') ? `hop:${li.textContent}` : li.querySelector('.no')?.textContent || 'x')),
+    next: document.querySelector('.nextup .hop')?.textContent || '',
+    tall: [...document.querySelectorAll('.hop')].every((n) => n.getBoundingClientRect().height > 0),
+  }));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await put({ events: [] });
+  const sameCampus = await hops();
+  check(!sameCampus.next && !sameCampus.list.some((x) => x.startsWith('hop:')), '같은 캠퍼스 안(노스 → 센트럴)에는 이동 시간 줄이 없다');
+  const two = [1, 2, 5, 6].map((i) => ({ id: seed.list[i].id, day: 1 }));
+  await put({ list: two, events: [] });
+  const mixed = await hops();
+  check(!mixed.next && mixed.list.length === 4 && mixed.list[0] === '2' && HOP.test(mixed.list[1].replace('hop:', '')) && mixed.list[1].startsWith('hop:') && mixed.list[2] === '3' && mixed.list[3] === '4', `둘째(LVCC)와 셋째(베네시안) 줄 사이에만 한 줄이 있다 (${mixed.list[1].replace('hop:', '')})`);
+  await shot('plan-hop-list-390.png');
+  await put({ list: two.map((x, i) => ({ ...x, seen: i < 2 })), events: [] });
+  const nextFar = await hops();
+  check(HOP.test(nextFar.next) && !nextFar.list.some((x) => x.startsWith('hop:')), '"다음에 갈 곳"이 앞에 다녀온 곳과 다른 캠퍼스면 그 카드 안에 같은 한 줄이 있다');
+  await shot('plan-hop-next-390.png');
+  await put({ list: two.map((x) => ({ ...x, day: 0 })), events: [] });
+  const undated = await hops();
+  check(!undated.next && !undated.list.some((x) => x.startsWith('hop:')), '날짜 없는 곳(아직 차례가 아니다)에는 이동 시간 줄이 없다');
+  for (const W of [360, 390]) {
+    for (const size of [1, 4]) {
+      await page.setViewportSize({ width: W, height: 740 });
+      await put({ list: two, events: [], text: size, theme: size === 4 ? 'dark' : 'light' });
+      await noSideScroll(`이동 시간 줄 (글자 ${size})`);
+      check((await hops()).tall, `이동 시간 줄이 ${W}px · 글자 ${size}에서 보인다`);
+    }
+  }
+  await page.evaluate(() => { localStorage.setItem('ces2027.text.v1', JSON.stringify(1)); localStorage.setItem('ces2027.theme.v1', JSON.stringify('light')); });
+
   console.log(JSON.stringify(checks.map((c) => `${c.ok ? '됨' : '안 됨'} | ${c.what}`), null, 1));
   return `${checks.length}개 통과 · 첫 화면 누를 곳 ${taps.length}개 · 날짜 줄 ${[...new Set(dayLines)].join(' / ')}`;
 }

@@ -658,6 +658,11 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       check(nv.bearingWord(10, -10) === '북동쪽' && nv.bearingWord(0, 50) === '남쪽' && nv.bearingWord(-30, 0) === '서쪽' && nv.fmtDistance(42) === '40m' && nv.fmtDistance(433) === '450m' && nv.fmtDistance(1530) === '1.5km'
         && near.sameCampus && Math.abs(near.meters - 530.33) < 0.5 && near.minutes === 8 && near.word === '북동쪽' && Math.abs(scaled.meters - 250) < 0.01 && !far.sameCampus && far.meters > 1900 && far.meters < 2300 && here.arrived && !coarse.arrived,
       '길 안내 셈: 방향(북동쪽 · 남쪽 …) · 거리(40m · 450m · 1.5km) · 걷는 시간(분당 70m) · 줄여 그린 캠퍼스는 그만큼 더 멀다 · 다른 캠퍼스는 실제 위도 · 경도 거리 · 30m 안이면 도착이고 GPS가 캠퍼스까지만 맞았으면 도착으로 치지 않는다');
+      // 갈 곳 탭의 캠퍼스 사이 한 줄 (R57): 길 안내 띠와 같은 분, 같은 캠퍼스이거나 캠퍼스를 모르면 없다
+      const planHop = await readFile(join(dist, 'views/plan.js'), 'utf8');
+      check(nv.campusHop(lvcc, ven) === far.minutes && nv.campusHop(ven, lvcc) === far.minutes && nv.campusHop(lvcc, lvcc) === null && nv.campusHop(null, ven) === null && nv.campusHop(lvcc, { k: 'x' }) === null
+        && planHop.includes("import { campusHop } from '../nav.js';") && planHop.includes('까지 걸어서 약 ${min}분 또는 셔틀') && (planHop.match(/class: 'hop'/g) || []).length === 2 && planHop.includes("const hopOf = d.key ? hopText : () => '';"),
+      '갈 곳: 캠퍼스가 바뀌는 자리(다음에 갈 곳 카드 · 줄 사이)에만 "걸어서 약 n분 또는 셔틀" 한 줄. 분은 길 안내 띠의 어림과 같고, 같은 캠퍼스 안 · 캠퍼스를 모르는 곳 · 날짜 없는 곳에는 없다');
       // 홀마다 나눈 자료
       const idx = await json('data/halls/index.json').catch(() => null);
       if (idx && (await exists('data/exhibitors.json'))) {
