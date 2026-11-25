@@ -452,7 +452,8 @@ await step('일기', '앱을 껐다 켜도(새로 열기) 일기 · 사진이 �
 // ================= 9. 만난 사람 · 명함 받기 =================
 await step('만난 사람', '명함 받기(주소 붙여넣기): 주소를 적어 남기면 만난 사람에 쌓인다', async () => {
   await go('#/people/new', '명함 받기');
-  await page.getByRole('button', { name: '주소 붙여넣기' }).click();
+  // 앱 안 카메라가 안 되는 폰에서는 붙여 넣는 칸이 처음부터 펴져 있다. 접혀 있을 때만 편다.
+  if (!(await page.locator('input[name=addr]').isVisible())) await page.getByRole('button', { name: '주소 붙여넣기' }).click();
   await page.locator('input[name=addr]').fill('https://github.com/torvalds');
   await page.getByRole('button', { name: '남기기' }).click();
   await sleep(700);
@@ -463,11 +464,24 @@ await step('만난 사람', '명함 받기(주소 붙여넣기): 주소를 적�
 const canScan = await page.evaluate(() => 'BarcodeDetector' in window).catch(() => false);
 await step('만난 사람', '명함 받기(카메라 QR): 이 화면에서 카메라로 읽을 수 있나(인터넷과는 상관없다)', async () => {
   await go('#/people/new', '명함 받기 카메라');
-  const btn = page.getByRole('button', { name: '카메라 켜기' });
-  const disabled = await btn.isDisabled();
+  const off = await page.locator('button', { hasText: '카메라 켜기' }).evaluate((b) => b.disabled || b.hidden);
   const note = (await page.locator('.note').first().innerText().catch(() => '')).slice(0, 80);
-  return { status: disabled ? '일부' : '됨', note: disabled ? `이 브라우저는 못 읽는다: ${note}` : '단추가 켜져 있다(실제 읽기는 폰 카메라로 봐야 한다)' };
+  return { status: off ? '일부' : '됨', note: off ? `이 브라우저는 못 읽는다: ${note}` : '단추가 켜져 있다(실제 읽기는 폰 카메라로 봐야 한다)' };
 }, canScan ? '됨' : '일부');
+await step('만난 사람', '앱 안 카메라가 안 되는 폰에서만 "기본 카메라로 비추고 주소를 복사해 붙여 넣는다" 한 줄이 보이고 붙여 넣는 칸이 펴져 있다. 되는 폰에서는 안 보인다', async () => {
+  const look = () => page.evaluate(() => ({ note: document.querySelector('#view .panel .note')?.innerText || '', cam: !document.querySelector('#view .panel button.btn')?.hidden, paste: !document.querySelector('form.paste')?.hidden }));
+  const here = await look();
+  // 다른 쪽 폰을 흉내 낸다: 읽는 기능이 있으면 지우고, 없으면 있는 척한다(단추와 글만 본다. 카메라는 켜지 않는다).
+  await page.evaluate((has) => { if (has) delete window.BarcodeDetector; else window.BarcodeDetector = class { detect() { return []; } }; }, canScan);
+  await page.evaluate(() => { location.hash = '#/people'; });
+  await sleep(400);
+  await page.evaluate(() => { location.hash = '#/people/new'; });
+  await sleep(700);
+  const other = await look();
+  const [none, can] = canScan ? [other, here] : [here, other];
+  const ok = /기본 카메라/.test(none.note) && !/BarcodeDetector|브라우저/.test(none.note) && !none.cam && none.paste && !/기본 카메라/.test(can.note) && can.cam && !can.paste;
+  return { status: ok ? '됨' : '안 됨', note: none.note };
+});
 await step('만난 사람', '만난 사람 목록 · 찾기', async () => {
   await go('#/people', '만난 사람');
   await sleep(400);
@@ -688,13 +702,40 @@ await step('판 바뀜', '새 판을 끝까지 받아도 "다시 열기"를 누�
   fact('새 판을 받아 둔 채(누르기 전) 담음 이름과 파일 수', JSON.stringify(sizes));
   return { status: v === before && band && both && !(await failedView()) ? '됨' : '안 됨', note: `쓰는 판 ${v} · 띠 ${band}` };
 });
-await step('판 바뀜', '끊은 채 "다시 열기"를 누르면 그때 새 판으로 열리고, 옛 판은 지워지고, 띠가 사라진다', async () => {
-  await page.locator('#update-go').click();
+await step('판 바뀜', '띠의 "닫기"를 누르면 띠가 사라지고 새로 열어도 안 뜬다. 설정의 "인터넷 없이" 줄에는 "새 판이 있다"와 "다시 열기"가 남는다', async () => {
+  await page.locator('#update-close').click();
+  await sleep(300);
+  const gone = await page.evaluate(() => document.getElementById('update').hidden);
+  await go('#/settings', '띠를 닫은 뒤 설정');
+  await page.waitForFunction(() => /새 판이 있다/.test(document.querySelector('.setlist')?.innerText || ''), null, { timeout: 8000 });
+  const still = await page.evaluate(() => ({ band: !document.getElementById('update').hidden, button: !document.getElementById('set-reopen')?.hidden }));
+  return { status: gone && !still.band && still.button && (await pageVersion()) !== '' ? '됨' : '안 됨', note: `닫은 뒤 띠 ${still.band ? '보임' : '없음'} · 설정의 다시 열기 ${still.button ? '있음' : '없음'}` };
+});
+await step('판 바뀜', '끊은 채 설정의 "다시 열기"를 누르면 그때 새 판으로 열리고, 옛 판은 지워지고, 띠는 없다', async () => {
+  await page.locator('#set-reopen').click();
   await sleep(3500);
   const v = await pageVersion();
   const names = Object.keys(await cacheSizes());
   const band = await page.evaluate(() => !document.getElementById('update').hidden);
   return { status: /-new1$/.test(v) && names.length === 1 && /-new1$/.test(names[0]) && !band && !(await failedView()) ? '됨' : '안 됨', note: `판 ${v} · 담음 ${names.length}개` };
+});
+await step('판 바뀜', '띠를 닫은 뒤에도 더 새 판을 받으면 띠가 다시 뜬다(닫은 것은 그 판에만 듣는다)', async () => {
+  await ctx.setOffline(false); net.up = true; offlineNow = false;
+  // 한 번 닫아 둔다(지금 판 다음의 판 -new2에 대해). 그 뒤 -new3이 올라오면 다시 떠야 한다.
+  net.variant = 2;
+  await go('#/settings', '더 새 판');
+  await page.evaluate(async () => { const r = await navigator.serviceWorker.getRegistration(); await r.update().catch(() => {}); });
+  await page.locator('#update:not([hidden])').waitFor({ timeout: 20000 });
+  await page.locator('#update-close').click();
+  net.variant = 3;
+  await page.evaluate(async () => { const r = await navigator.serviceWorker.getRegistration(); await r.update().catch(() => {}); });
+  const again = await page.locator('#update:not([hidden])').waitFor({ timeout: 20000 }).then(() => true, () => false);
+  const v = await pageVersion();
+  await page.locator('#update-go').click();
+  await sleep(3500);
+  const now = await pageVersion();
+  await ctx.setOffline(true); net.up = false; offlineNow = true;
+  return { status: again && /-new1$/.test(v) && /-new3$/.test(now) ? '됨' : '안 됨', note: `닫은 뒤 더 새 판에서 띠 ${again ? '다시 뜸' : '안 뜸'} · 누르기 전 ${v} → 누른 뒤 ${now}` };
 });
 await step('판 바뀜', '새 판으로 바꾼 뒤 끊은 채 화면들이 열린다(지도 · 갈 곳 · 일기 · 설정)', async () => {
   const bad = [];

@@ -421,7 +421,7 @@ check(preloadOk, `첫 화면이 미리 받는 조각 ${preloads.length}개가 �
   const lazy = /speech|talk-ui|audio-store|talk\.js|views\/(listen|talk)/;
   check(!fixed.some((f) => lazy.test(f)) && !preloads.some((f) => lazy.test(f)) && appJs.includes("listen: () => import('./views/listen.js')"), '듣기는 첫 화면에 싣지 않고 누를 때 불러온다');
 }
-check(html.includes('id="update"') && appJs.includes('offline.update') && appJs.includes('startOffline'), '새 판 안내 자리가 있고, 서비스 워커는 첫 화면 뒤에 건다');
+check(html.includes('id="update"') && html.includes('id="update-close"') && appJs.includes('offline.band') && appJs.includes('closeBand') && appJs.includes('startOffline'), '새 판 안내 자리(다시 열기 · 닫기)가 있고, 서비스 워커는 첫 화면 뒤에 건다');
 const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 const version = await json('version.json').catch(() => null);
 const swFiles = JSON.parse(`[${(sw.match(/const FILES = \[(.*)\];/) || [])[1] || ''}]`);
@@ -660,6 +660,11 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       check(nv.bearingWord(10, -10) === '북동쪽' && nv.bearingWord(0, 50) === '남쪽' && nv.bearingWord(-30, 0) === '서쪽' && nv.fmtDistance(42) === '40m' && nv.fmtDistance(433) === '450m' && nv.fmtDistance(1530) === '1.5km'
         && near.sameCampus && Math.abs(near.meters - 530.33) < 0.5 && near.minutes === 8 && near.word === '북동쪽' && Math.abs(scaled.meters - 250) < 0.01 && !far.sameCampus && far.meters > 1900 && far.meters < 2300 && here.arrived && !coarse.arrived,
       '길 안내 셈: 방향(북동쪽 · 남쪽 …) · 거리(40m · 450m · 1.5km) · 걷는 시간(분당 70m) · 줄여 그린 캠퍼스는 그만큼 더 멀다 · 다른 캠퍼스는 실제 위도 · 경도 거리 · 30m 안이면 도착이고 GPS가 캠퍼스까지만 맞았으면 도착으로 치지 않는다');
+      // 갈 곳 탭의 캠퍼스 사이 한 줄 (R57): 길 안내 띠와 같은 분, 같은 캠퍼스이거나 캠퍼스를 모르면 없다
+      const planHop = await readFile(join(dist, 'views/plan.js'), 'utf8');
+      check(nv.campusHop(lvcc, ven) === far.minutes && nv.campusHop(ven, lvcc) === far.minutes && nv.campusHop(lvcc, lvcc) === null && nv.campusHop(null, ven) === null && nv.campusHop(lvcc, { k: 'x' }) === null
+        && planHop.includes("import { campusHop } from '../nav.js';") && planHop.includes('까지 걸어서 약 ${min}분 또는 셔틀') && (planHop.match(/class: 'hop'/g) || []).length === 2 && planHop.includes("const hopOf = d.key ? hopText : () => '';"),
+      '갈 곳: 캠퍼스가 바뀌는 자리(다음에 갈 곳 카드 · 줄 사이)에만 "걸어서 약 n분 또는 셔틀" 한 줄. 분은 길 안내 띠의 어림과 같고, 같은 캠퍼스 안 · 캠퍼스를 모르는 곳 · 날짜 없는 곳에는 없다');
       // 홀마다 나눈 자료
       const idx = await json('data/halls/index.json').catch(() => null);
       if (idx && (await exists('data/exhibitors.json'))) {
@@ -1044,7 +1049,7 @@ if (await exists('data/meta.json')) {
   let asked = 0;
   const noDet = fakeWin({ navigator: { mediaDevices: { getUserMedia: async () => { asked += 1; return { getTracks: () => [] }; } } } });
   const r1 = await S.startScan(fakeVideo(), () => {}, noDet);
-  check(!r1.ok && /BarcodeDetector/.test(r1.why) && asked === 0 && !S.cameraSupport(S.envOf(noDet)).ok, '카메라 읽기(꾸민 폰 1 · 지원 안 함): 이 폰에서는 안 됨과 까닭을 말하고, 카메라는 켜지 않는다');
+  check(!r1.ok && /여기서 QR을 못 읽는다/.test(r1.why) && !/BarcodeDetector/.test(r1.why) && S.cameraSupport(S.envOf(noDet)).kind === 'no-reader' && asked === 0 && !S.cameraSupport(S.envOf(noDet)).ok, '카메라 읽기(꾸민 폰 1 · 지원 안 함): 이 폰에서는 안 됨과 까닭을 말하고, 카메라는 켜지 않는다');
   const denied = fakeWin({ BarcodeDetector: class { async detect() { return []; } }, navigator: { mediaDevices: { getUserMedia: async () => { const e = new Error('x'); e.name = 'NotAllowedError'; throw e; } } } });
   const r2 = await S.startScan(fakeVideo(), () => {}, denied);
   check(!r2.ok && /거부/.test(r2.why) && /허용/.test(r2.why) && /찾지 못/.test(S.explainCameraError({ name: 'NotFoundError' })) && /다른 앱/.test(S.explainCameraError({ name: 'NotReadableError' })), '카메라 읽기(꾸민 폰 2 · 권한 거부): 까닭(거부 · 허용하는 법)을 보인다');

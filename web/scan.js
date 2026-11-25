@@ -4,7 +4,8 @@
 
 // env: { hasDetector, hasCamera, secure } → { ok, why }
 export function cameraSupport(env) {
-  if (!env.hasDetector) return { ok: false, why: '이 브라우저에는 QR을 읽는 기능(BarcodeDetector)이 없다. 아이폰 사파리 같은 곳이 그렇다.' };
+  // 브라우저에 QR을 읽는 기능(BarcodeDetector)이 없다. 아이폰이 그렇다. 화면에는 쉬운 말로 알리고 폰의 기본 카메라를 쓰게 한다(views/people.js).
+  if (!env.hasDetector) return { ok: false, kind: 'no-reader', why: '이 폰은 여기서 QR을 못 읽는다.' };
   if (!env.secure) return { ok: false, why: '카메라는 https 주소에서만 켜진다. 이 주소에서는 켤 수 없다.' };
   if (!env.hasCamera) return { ok: false, why: '이 브라우저에서는 카메라를 켤 수 없다.' };
   return { ok: true, why: '' };

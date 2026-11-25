@@ -9,7 +9,7 @@ import { dropAllAudio } from '../audio-store.js';
 import { bundle, fileName, talksFor } from '../diary.js';
 import { officialLinks } from '../share.js';
 import { handFile } from '../handoff.js';
-import { offline } from '../offline.js';
+import { offline, reopen } from '../offline.js';
 import { alerts, askPermission, checkAlerts, getPaper } from '../notify.js';
 import { paperPanel } from './card.js';
 import { fileRows } from './settings-files.js';
@@ -115,16 +115,20 @@ function offlineRow() {
     offline.install = null;
     paint();
   } });
+  // 받아 둔 새 판이 있으면 여기서 늘 볼 수 있다(탭 위의 띠를 닫았어도). 누르면 새 판으로 다시 연다.
+  const again = el('button', { class: 'pick', type: 'button', id: 'set-reopen', text: '다시 열기', hidden: true, onclick: (ev) => { ev.currentTarget.disabled = true; reopen(); } });
   function paint() {
     const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
     // 사실대로 말한다: 다 담았으면 "다 담았다", 30초가 넘도록 못 담았거나 담다 끊겼으면 "아직 담지 못했다".
     const ready = offline.ready ? '다 담았다' : !('serviceWorker' in navigator) ? '이 브라우저는 안 된다' : offline.late ? '아직 담지 못했다 · 와이파이에서 다시 연다' : '담는 중이다';
-    s.textContent = `${ready}${offline.version ? ` · 판 ${offline.version}${standalone ? ' · 홈 화면' : ''}` : ''}`;
-    button.hidden = !offline.install;
+    const now = offline.version ? `판 ${offline.version}${standalone ? " · 홈 화면" : ""}` : "";
+    s.textContent = offline.update ? `새 판이 있다${now ? ` · 지금 ${now}` : ""}` : `${ready}${now ? ` · ${now}` : ""}`;
+    again.hidden = !offline.update;
+    button.hidden = !offline.install || offline.update;
   }
   paint();
   window.addEventListener('ces-offline', paint);
-  return el('li', { class: 'setrow' }, main, button);
+  return el('li', { class: 'setrow' }, main, again, button);
 }
 
 // 받아 둔 모델: 이 폰에서 앱이 쓰는 크기와 "비우기"(받아 둔 받아쓰기 모델 · 옛 번역 모델 찌꺼기). 내 자료는 지우지 않는다.

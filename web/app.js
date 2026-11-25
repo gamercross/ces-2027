@@ -2,7 +2,7 @@
 
 import { getProfile } from './store.js';
 import { getInfo, getMeta, getPlaces, getSettings } from './data.js';
-import { healOnce, keepData, offline, reopen, startOffline } from './offline.js';
+import { closeBand, healOnce, keepData, offline, reopen, startOffline } from './offline.js';
 import { alerts, checkAlerts, startAlerts } from './notify.js';
 import { failed, frame, loading, missing } from './frame.js';
 
@@ -182,7 +182,9 @@ getSettings().then((s) => {
 });
 
 // 새 판이 있으면 탭 위에 알리고, 누르면 새 파일을 받아 둔 뒤 다시 연다(offline.js의 reopen). 폰에 남긴 것(명함 · 관심 · 갈 곳 · 일기)은 그대로다.
-window.addEventListener('ces-offline', () => { document.getElementById('update').hidden = !offline.update; });
+window.addEventListener('ces-offline', () => { document.getElementById('update').hidden = !offline.band; });
+// "닫기": 이 판의 띠는 다시 안 뜬다(더 새 판을 받으면 다시 뜬다). 설정의 "인터넷 없이" 줄에서 언제든 "다시 열기"를 누를 수 있다.
+document.getElementById('update-close').addEventListener('click', closeBand);
 document.getElementById('update-go').addEventListener('click', (ev) => { ev.currentTarget.disabled = true; reopen(); });
 
 // 알림을 누르고 들어오면 그 화면으로 간다.
