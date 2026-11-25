@@ -421,7 +421,7 @@ check(preloadOk, `첫 화면이 미리 받는 조각 ${preloads.length}개가 �
   const lazy = /speech|talk-ui|audio-store|talk\.js|views\/(listen|talk)/;
   check(!fixed.some((f) => lazy.test(f)) && !preloads.some((f) => lazy.test(f)) && appJs.includes("listen: () => import('./views/listen.js')"), '듣기는 첫 화면에 싣지 않고 누를 때 불러온다');
 }
-check(html.includes('id="update"') && appJs.includes('offline.update') && appJs.includes('startOffline'), '새 판 안내 자리가 있고, 서비스 워커는 첫 화면 뒤에 건다');
+check(html.includes('id="update"') && html.includes('id="update-close"') && appJs.includes('offline.band') && appJs.includes('closeBand') && appJs.includes('startOffline'), '새 판 안내 자리(다시 열기 · 닫기)가 있고, 서비스 워커는 첫 화면 뒤에 건다');
 const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 const version = await json('version.json').catch(() => null);
 const swFiles = JSON.parse(`[${(sw.match(/const FILES = \[(.*)\];/) || [])[1] || ''}]`);
