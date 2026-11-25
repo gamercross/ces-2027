@@ -1105,6 +1105,22 @@ if (await exists('data/meta.json')) {
   check(/navigator\.share/.test(sesT) && /clipboard/.test(sesT), '세션 일정: 나누기 단추가 폰의 나누기 창이나 복사를 쓴다');
   // 곧 시작하는 일정 알림.
   const vegas = al.vegasNow(new Date('2027-01-06T17:25:00Z'));
+  // 하루 끝 일기 챙기기(오프라인 점검 안 6): 전시 날이고 그 날 전시가 끝난 뒤일 때만, 보내지 않은 일기(초안 빼고) 수.
+  {
+    const show = { days: [{ date: '2027-01-06', close: '18:00' }, { date: '2027-01-09', close: '16:00' }] };
+    const d = [{ id: '1' }, { id: '2', sent: '2027-01-06T20:00:00Z' }, { id: '3', draft: true }, { id: '4' }];
+    const at = (iso) => al.vegasNow(new Date(iso));
+    check(al.unsentTonight(d, at('2027-01-07T02:30:00Z'), show) === 2 && al.unsentTonight(d, at('2027-01-07T01:30:00Z'), show) === 0 && al.unsentTonight(d, at('2027-01-06T02:30:00Z'), show) === 0
+      && al.unsentTonight(d, at('2027-01-10T00:30:00Z'), show) === 2 && al.unsentTonight([{ id: '2', sent: 'x' }], at('2027-01-07T02:30:00Z'), show) === 0 && al.unsentTonight(d, at('2027-01-07T02:30:00Z'), null) === 0,
+      '일기 챙기기: 전시 날 그 날 전시가 끝난 뒤(1/6은 18시, 1/9는 16시, 라스베이거스 시각)에만 보내지 않은 일기 수를 세고, 초안 · 보낸 것 · 전시 날이 아닌 때는 세지 않는다');
+    // 홈 화면에 추가 안내(안 4): 아이폰 · 아이패드의 브라우저 탭에서만. 홈 화면 앱 · 안드로이드 · 책상에서는 안 보인다.
+    const T = await import('../web/tips.js').catch(() => null);
+    const iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
+    check(!!T && T.homeKind({ userAgent: iphone }, false) === 'safari' && T.homeKind({ userAgent: iphone }, true) === null && T.homeKind({ userAgent: `${iphone} KAKAOTALK 11.0` }, false) === 'inapp'
+      && T.homeKind({ userAgent: 'Mozilla/5.0 (Linux; Android 15; Pixel 9) Chrome/130 Mobile Safari/537.36' }, false) === null && T.homeKind({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15', maxTouchPoints: 0 }, false) === null
+      && T.homeKind({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15', maxTouchPoints: 5 }, false) === 'safari' && T.TIPS.length === 1 && T.TIPS[0].text('safari', 'card').includes('홈 화면에 추가'),
+      '홈 화면에 추가 안내: 아이폰 · 아이패드의 Safari 탭이면 보이고(앱 안의 창이면 "Safari로 연 뒤"), 홈 화면 앱 · 안드로이드 · 책상에서는 안 보인다');
+  }
   const soon = al.soonEvents([{ id: 'a', date: '2027-01-06', from: '09:40', to: '10:00', name: 'A' }, { id: 'b', date: '2027-01-06', from: '09:00', to: '09:20', name: 'B' }, { id: 'c', date: '2027-01-06', from: '11:00', to: '11:20', name: 'C' }, { id: 'd', date: '2027-01-07', from: '09:30', to: '10:00', name: 'D' }], vegas, 30);
   const notifyT = await readFile(join(dist, 'notify.js'), 'utf8');
   check(vegas.date === '2027-01-06' && vegas.min === 565 && soon.length === 1 && soon[0].id === 'a' && soon[0].inMin === 15 && /soon:/.test(notifyT) && /setInterval/.test(notifyT), '일정 시작 전 알림: 라스베이거스 시각으로 30분 안에 시작하는 것만 고르고(이미 시작했거나 다른 날은 뺀다), 앱이 열려 있을 때 1분마다 본다');

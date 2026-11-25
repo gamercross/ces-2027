@@ -153,14 +153,22 @@ document.getElementById('update-go').addEventListener('click', (ev) => { ev.curr
 
 // 알림을 누르고 들어오면 그 화면으로 간다.
 navigator.serviceWorker?.addEventListener('message', (ev) => { if (typeof ev.data?.go === 'string' && ev.data.go.startsWith('#/')) go(ev.data.go); });
-// 가까이에 명함 이벤트 부스가 있는데 알림을 못 쓰거나 띄우지 못하면, 탭 위에 띠로 보인다.
-window.addEventListener('ces-alerts', () => {
+// 탭 위의 띠 하나(#notice)를 둘이 나눠 쓴다. 먼저인 것 하나만 보인다.
+//   ① 가까이에 명함 이벤트 부스가 있는데 알림을 못 쓰거나 띄우지 못할 때 → "명함 열기"
+//   ② 전시 날 저녁에 보내지 않은 일기가 있을 때 → "일기 열기" (일기 탭에서는 안 보인다: 거기에 보내기가 있다)
+let noticeTo = '#/card';
+function paintNotice() {
   const bar = document.getElementById('notice');
-  const show = alerts.near.length > 0 && (alerts.state !== 'granted' || alerts.fallback);
-  bar.hidden = !show;
-  if (show) document.getElementById('notice-text').textContent = `${alerts.error ? `${alerts.error} ` : ''}가까이에 명함 넣는 이벤트 부스 ${alerts.near.length}곳 (사람이 표시한 것)`;
-});
-document.getElementById('notice-go').addEventListener('click', () => go('#/card'));
+  const near = alerts.near.length > 0 && (alerts.state !== 'granted' || alerts.fallback);
+  const diary = !near && alerts.unsent > 0 && document.body.dataset.tab !== 'diary';
+  bar.hidden = !near && !diary;
+  if (near) document.getElementById('notice-text').textContent = `${alerts.error ? `${alerts.error} ` : ''}가까이에 명함 넣는 이벤트 부스 ${alerts.near.length}곳 (사람이 표시한 것)`;
+  if (diary) document.getElementById('notice-text').textContent = `보내지 않은 일기 ${alerts.unsent}개`;
+  document.getElementById('notice-go').textContent = diary ? '일기 열기' : '명함 열기';
+  noticeTo = diary ? '#/diary' : '#/card';
+}
+window.addEventListener('ces-alerts', paintNotice);
+document.getElementById('notice-go').addEventListener('click', () => go(noticeTo));
 
 window.addEventListener('hashchange', show);
 show();

@@ -1,10 +1,11 @@
 {
-  "about": "이재엽이 정하는 것을 적는 자리다. 정한 것: companyIntro(링크만, 2026-11-21) · collector(파일로 받기, 2026-11-21) · codysseyIcon(써도 된다는 답을 받아 넣음, 2026-11-21). speech(받아쓰기를 어디서 하나: 둘 다 두고 쓰는 사람이 화면에서 고른다, 2026-11-21. 여기 값은 고르기 전의 기본값이고 on-device = 폰 안에서만. device-service = 폰의 음성 인식 서비스, 소리가 폰 밖으로 간다). companyImage(회사 카드에 CES 공식 사이트의 로고를 누를 때만 보이는 단추, 켬 · 새 창 링크). 아직 정하지 않은 것: privateOn. 값의 뜻은 README의 '정하는 것'에 있다.",
+  "about": "이재엽이 정하는 것을 적는 자리다. 정한 것: companyIntro(링크만, 2026-11-21) · collector(파일로 받기, 2026-11-21) · codysseyIcon(써도 된다는 답을 받아 넣음, 2026-11-21). speech(받아쓰기를 어디서 하나: 둘 다 두고 쓰는 사람이 화면에서 고른다, 2026-11-21. 여기 값은 고르기 전의 기본값이고 on-device = 폰 안에서만. device-service = 폰의 음성 인식 서비스, 소리가 폰 밖으로 간다). companyImage(회사 카드에 CES 공식 사이트의 로고를 누를 때만 보이는 단추, 켬 · 새 창 링크). homeTip(아이폰 Safari 탭으로 열었을 때의 홈 화면에 추가 안내를 어디에 두나: both = 둘 다, card = 첫 명함 화면의 한 줄, map = 지도 위의 닫을 수 있는 칸, off = 안 보임. 2026-11-25에 이재엽이 버튼으로 둘 다로 정함). 아직 정하지 않은 것: privateOn. 값의 뜻은 README의 '정하는 것'에 있다.",
   "companyIntro": "link-only",
   "companyImage": true,
   "collector": "file",
   "collectorUrl": "",
   "codysseyIcon": "icon/codyssey.png",
   "privateOn": null,
-  "speech": "on-device"
+  "speech": "on-device",
+  "homeTip": "both"
 }

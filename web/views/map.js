@@ -5,7 +5,7 @@
 // 전시사 자료는 첫 화면에 다 받지 않는다: 홀로 가까이 갈 때 그 홀의 것만 받는다(찾기 · 관심 회사가 있으면 전체). 홀 안 부스 자리는 짐작이다.
 
 import { el, out } from '../dom.js';
-import { getCategories, getExhibitors, getHall, getIndoorPaths, getInfo, getOfficialSpots, getPlaces } from '../data.js';
+import { getCategories, getExhibitors, getHall, getIndoorPaths, getInfo, getOfficialSpots, getPlaces, getSettings } from '../data.js';
 import { boothColorer, legend, MODES } from '../colors.js';
 import { getInterests, getWhere, hasInterest, load, save, setInterests, setWhere, toggleInterest } from '../store.js';
 import { bbox, layout } from '../geo.js';
@@ -28,6 +28,7 @@ import { createSheet } from '../mapsheet.js';
 import { attachGestures } from '../mapgesture.js';
 import { estimate, fmtDistance } from '../nav.js';
 import { BOOTH_DOTS, MIN_FONT, clip, layoutLabels, levelOf, viewFor, widthOf } from '../mapmath.js';
+import { tipBox } from '../tips.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const FILL = { hall: T.hall, room: T.room, out: T.out, hotel: T.hotel };
@@ -89,6 +90,8 @@ export async function render({ rest = [] } = {}) {
   let colorMode = MODES.some((m) => m.k === load('mapColor.v1', 'plain')) ? load('mapColor.v1', 'plain') : 'plain';
   const mapx = el('div', { class: 'mapx', 'data-level': 'campus' });
   const page = el('div', { class: 'page mappage' });
+  // 첫 화면 위의 안내 칸 하나(web/tips.js). 설정 homeTip이 'map'이나 'both'일 때 붙이고, 아이폰 Safari 탭에서만 보인다(홈 화면 앱에서는 안 보인다). 닫을 수 있다.
+  if (!rest.length) getSettings().then((s) => { const box = ['map', 'both'].includes(s?.homeTip) ? tipBox('map') : null; if (box) { page.prepend(box); window.dispatchEvent(new Event('resize')); } }).catch(() => {});
   const navbar = el('div', { class: 'navbar', hidden: true });
   let nav = null;            // 길 안내 중인 곳 { id, name, key, code, place, spot }
   let navFollow = true;      // 걸으면 지도가 따라온다 (손으로 끌면 멈춘다)
