@@ -1059,7 +1059,7 @@ if (await exists('data/meta.json')) {
   let asked = 0;
   const noDet = fakeWin({ navigator: { mediaDevices: { getUserMedia: async () => { asked += 1; return { getTracks: () => [] }; } } } });
   const r1 = await S.startScan(fakeVideo(), () => {}, noDet);
-  check(!r1.ok && /BarcodeDetector/.test(r1.why) && asked === 0 && !S.cameraSupport(S.envOf(noDet)).ok, '카메라 읽기(꾸민 폰 1 · 지원 안 함): 이 폰에서는 안 됨과 까닭을 말하고, 카메라는 켜지 않는다');
+  check(!r1.ok && /여기서 QR을 못 읽는다/.test(r1.why) && !/BarcodeDetector/.test(r1.why) && S.cameraSupport(S.envOf(noDet)).kind === 'no-reader' && asked === 0 && !S.cameraSupport(S.envOf(noDet)).ok, '카메라 읽기(꾸민 폰 1 · 지원 안 함): 이 폰에서는 안 됨과 까닭을 말하고, 카메라는 켜지 않는다');
   const denied = fakeWin({ BarcodeDetector: class { async detect() { return []; } }, navigator: { mediaDevices: { getUserMedia: async () => { const e = new Error('x'); e.name = 'NotAllowedError'; throw e; } } } });
   const r2 = await S.startScan(fakeVideo(), () => {}, denied);
   check(!r2.ok && /거부/.test(r2.why) && /허용/.test(r2.why) && /찾지 못/.test(S.explainCameraError({ name: 'NotFoundError' })) && /다른 앱/.test(S.explainCameraError({ name: 'NotReadableError' })), '카메라 읽기(꾸민 폰 2 · 권한 거부): 까닭(거부 · 허용하는 법)을 보인다');
