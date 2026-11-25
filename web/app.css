@@ -132,6 +132,9 @@ body:has(.mappage) .bar .tag { display: none; }
 .subhead { padding: var(--s1) var(--s1) 0; font-size: var(--fs-small); font-weight: 700; color: var(--ink-2); }
 .meal { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); min-height: var(--tap-min); padding: var(--s1) var(--s3); border: 2px dashed var(--line); border-radius: var(--radius-ctl); color: var(--ink-2); font-size: var(--fs-small); }
 .meal-text { min-width: 0; overflow-wrap: anywhere; }
+/* 캠퍼스가 바뀌는 자리의 한 줄("LVCC에서 베네시안까지 걸어서 약 29분 또는 셔틀"): 다음에 갈 곳 카드 안과 줄 사이. 글자만, 누르는 곳이 아니다 */
+.hop { padding: 0 var(--s1); font-size: var(--fs-small); font-weight: 700; color: var(--ink); word-break: keep-all; overflow-wrap: anywhere; }
+.nextup .hop { padding: 0; }
 .daynotes { display: grid; gap: var(--s1); padding: 0 var(--s1); }
 .fold { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); min-height: 48px; padding-left: var(--s1); color: var(--ink-2); font-size: var(--fs-small); }
 .fold-text { min-width: 0; overflow-wrap: anywhere; }

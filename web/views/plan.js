@@ -9,6 +9,7 @@ import { clock, dayLimits, dayList, eventsOn, hoursFor, timeline, toMin } from '
 import { placeLink } from './days.js';
 import { getMarks } from '../notify.js';
 import { fillDays, placeTable, sortRoute, splitBooth } from '../route.js';
+import { campusHop } from '../nav.js';
 import { alertBands } from '../bands.js';
 import { createCardShell } from '../plancard.js';
 import { boothLines, sessionBlock } from '../company-extra.js';
@@ -149,6 +150,16 @@ export async function render() {
     const place = booth ? table.get(splitBooth(booth).place) : null;
     return booth ? `${place ? (short ? rowHall(place.ko) : place.ko) : '장소 모름'} · 부스 ${splitBooth(booth).code}` : (row ? '부스 미정' : '새로 받은 자료에 없다');
   };
+  // 캠퍼스가 바뀌는 자리의 한 줄: "LVCC에서 베네시안까지 걸어서 약 29분 또는 셔틀". 분은 지도의 길 안내 띠와 같은 어림이다(web/nav.js).
+  // 같은 캠퍼스 안이거나 부스 · 캠퍼스를 모르는 곳이면 빈 글이다(아무것도 더하지 않는다).
+  const campusBy = new Map(places.campuses.map((c) => [c.k, c]));
+  const campusOf = (id) => { const booth = firstBooth(id); return booth ? campusBy.get(table.get(splitBooth(booth).place)?.campus) || null : null; };
+  const campusName = (c) => c.ko.replace(/ 캠퍼스$/, '');
+  const hopText = (fromId, toId) => {
+    const from = fromId ? campusOf(fromId) : null, to = campusOf(toId);
+    const min = campusHop(from, to);
+    return min ? `${campusName(from)}에서 ${campusName(to)}까지 걸어서 약 ${min}분 또는 셔틀` : '';
+  };
   const openCard = (id, from) => { openId = id; hideToast(); shell.open(card(id), from); };
 
   // ---- 줄: 번호 · 이름 · 때와 곳. 줄 전체가 눌리고 회사 카드가 열린다. 다녀온 곳의 줄에만 오른쪽에 "다녀옴" 칸이 있다(눌러서 되돌린다).
@@ -245,6 +256,8 @@ export async function render() {
         el('h2', { class: 'daynav-now', 'aria-live': 'polite' }, el('span', { class: 'daynav-day', text: longDay(d) }), left ? el('span', { class: 'daynav-left', text: `· ${left}` }) : null),
         step(live[at + 1], false)));
 
+      // 이동 시간 한 줄은 날짜가 있는 날에만(날짜 없는 곳은 아직 차례가 아니다).
+      const hopOf = d.key ? hopText : () => '';
       // 다음에 갈 곳: 고른 날의 첫 안 간 곳 하나를 가장 크게. 검정 단추는 "길 안내" 하나.
       // 날짜 없는 곳(관심만 담은 곳): 다른 날을 보고 있어도 한 줄로 알린다. 그 날이 비었으면 빈 화면 말 아래 단추로 크게, 아니면 아래에 작게(2026-11-24).
       const noDate = d.key ? list.filter((it) => !it.day && !it.seen).length : 0;
@@ -252,11 +265,14 @@ export async function render() {
       const next = todo[0];
       if (next) {
         const hasBooth = !!firstBooth(next.id);
+        // 바로 앞에 다녀온 곳(그 날 차례에서 한 칸 앞)과 캠퍼스가 다르면 걸어서 몇 분쯤인지 한 줄.
+        const hop = hopOf(items[items.indexOf(next) - 1]?.id, next.id);
         sections.push(el('section', { class: 'panel nextup' },
           el('button', { class: 'nextup-open', type: 'button', 'aria-label': `${nameOf(next.id)} 카드 열기`, onclick: (ev) => openCard(next.id, ev.currentTarget) },
             el('span', { class: 'note', text: ['다음에 갈 곳', whenText(next.id)].filter(Boolean).join(' · ') }),
             el('span', { class: 'big', text: nameOf(next.id) }),
             el('span', { class: 'note', text: whereOf(next.id) })),
+          hop ? el('p', { class: 'hop', text: hop }) : null,
           el('div', { class: 'nextup-go' },
             hasBooth ? el('a', { class: 'btn', href: `#/map/go/${encodeURIComponent(next.id)}`, text: '길 안내' }) : null,
             el('button', { class: 'pick', type: 'button', text: '다녀왔다', 'aria-label': `${nameOf(next.id)} 다녀왔다고 표시`, onclick: () => setSeen(next.id, true) }))));
@@ -272,10 +288,15 @@ export async function render() {
       const rest = todo.slice(1);
       const kids = [];
       const waiting = [...evs];
+      let before = next;
       for (const it of rest) {
         const t = whenOf.get(it.id);
         while (waiting.length && typeof t === 'number' && (toMin(waiting[0].from) ?? 0) <= t) kids.push(eventRow(waiting.shift()));
+        // 앞 줄과 캠퍼스가 다른 줄 위에만 한 줄(같은 캠퍼스 안에는 없다).
+        const hop = hopOf(before.id, it.id);
+        if (hop) kids.push(el('li', { class: 'hop', text: hop }));
         kids.push(item(it, numberOf.get(it.id)));
+        before = it;
       }
       // 때를 모르는 날이면 내 일정이 먼저, 아니면 남은 일정은 맨 뒤에 선다.
       if (hours) kids.push(...waiting.map((e) => eventRow(e))); else kids.unshift(...waiting.map((e) => eventRow(e)));
