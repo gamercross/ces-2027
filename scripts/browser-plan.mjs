@@ -346,6 +346,48 @@ async (page) => {
   }
   await page.evaluate(() => { localStorage.setItem('ces2027.text.v1', JSON.stringify(1)); localStorage.setItem('ces2027.theme.v1', JSON.stringify('light')); });
 
+  // 13. 때 어림이 이동 시간을 셈한다 (R58): 캠퍼스가 바뀌는 곳과 그 뒤가 걷는 만큼(5분 단위로 올림) 밀린다. 같은 캠퍼스 안은 그대로다
+  const times = () => page.evaluate(() => [document.querySelector('.nextup .note')?.textContent.split(' · ')[1] || '', ...[...document.querySelectorAll('.stops > li.stop .where')].map((n) => n.textContent.split(' · ')[0])]);
+  const roomLine = async () => {
+    await page.getByRole('button', { name: '목록 고치기', exact: true }).click();
+    await page.locator('.pcard').waitFor();
+    return page.evaluate(() => document.querySelector('.pcard .tools .note')?.textContent || '');
+  };
+  const minOf = (s) => { const [h, m] = s.replace('쯤', '').split(':').map(Number); return h * 60 + m; };
+  await page.setViewportSize({ width: 390, height: 844 });
+  await put({ events: [] });
+  const sameTimes = await times();
+  check(sameTimes.join(' ') === '10:30쯤 11:00쯤 11:30쯤 12:00쯤', `같은 캠퍼스 안은 지금 그대로 한 곳 30분씩이다 (${sameTimes.join(' → ')})`);
+  check(/하루에 16곳쯤 볼 수 있다$/.test(await roomLine()), '같은 캠퍼스만 있는 날은 하루에 16곳쯤 그대로다');
+  await put({ list: two, events: [] });
+  const farTimes = await times();
+  const walk = Number(mixed.list[1].match(/약 (\d+)분/)[1]);
+  const slot = Math.ceil(walk / 5) * 5;
+  check(farTimes[0] === '10:00쯤' && farTimes[1] === '10:30쯤' && minOf(farTimes[2]) === 660 + slot && minOf(farTimes[3]) === 690 + slot && minOf(farTimes[2]) - minOf(farTimes[1]) >= 30 + walk,
+    `LVCC 둘 → 베네시안 둘: 캠퍼스가 바뀌는 셋째 곳과 그 뒤가 걷는 ${walk}분(5분 단위로 올려 ${slot}분)만큼 밀린다 (${farTimes.join(' → ')})`);
+  await shot('plan-hop-time-390.png');
+  await page.locator('.stops .stop-open').nth(1).click();
+  await page.locator('.pcard').waitFor();
+  check((await text('.pcard-sub')).endsWith(`3번째 · ${farTimes[2]}`), `회사 카드의 때도 같다: "${await text('.pcard-sub')}"`);
+  await put({ list: two, events: [] });
+  const farRoom = await roomLine();
+  check(new RegExp(`하루에 ${Math.floor((480 - slot) / 30)}곳쯤 볼 수 있다$`).test(farRoom), `걷는 시간만큼 하루에 볼 수 있는 수가 준다: "${farRoom}"`);
+  // 걷는 동안이 내 일정과 겹치면 일정이 끝난 뒤에 떠난다: 11:00에 떠날 것을 11:10 ~ 12:00 일정 뒤로
+  await put({ list: two, events: [{ id: 'e1', date: '2027-01-06', from: '11:10', to: '12:00', name: '팀 모임', place: '' }] });
+  const busyTimes = await times();
+  check(minOf(busyTimes[2]) === 720 + slot && minOf(busyTimes[3]) === 750 + slot, `걷는 동안이 내 일정(11:10 ~ 12:00)과 겹치면 일정 뒤에 떠난다 (${busyTimes.join(' → ')})`);
+  // 다녀온 뒤에도 때는 그 날 차례 그대로다("다음에 갈 곳"의 때도 밀린 그대로)
+  await put({ list: two.map((x, i) => ({ ...x, seen: i < 2 })), events: [] });
+  check((await times())[0] === farTimes[2], `앞의 둘을 다녀온 뒤 "다음에 갈 곳"의 때도 같다 (${farTimes[2]})`);
+  // 걷는 시간으로 밀려 내 시간을 넘으면 "내 시간 밖"이고 아래 한 줄이 그 수를 센다: 10 ~ 12시에 넷(30분씩)이면 꼭 맞지만 걷는 시간이 끼면 못 들어간다
+  await page.evaluate(() => localStorage.setItem('ces2027.hours.v1', JSON.stringify({ '2027-01-06': { from: '10:00', to: '12:00' } })));
+  await put({ list: two, events: [] });
+  const tight = await times();
+  const outside = tight.filter((t) => t === '내 시간 밖').length;
+  const warn = await page.evaluate(() => document.querySelector('.daynotes .warn')?.textContent || '');
+  check(outside >= 1 && warn.startsWith(`${outside}곳이 내 시간에 안 들어간다`), `걷는 시간으로 밀려 내 시간을 넘은 곳은 "내 시간 밖"이고 한 줄이 그 수를 센다 (${tight.join(' → ')} · "${warn}")`);
+  await page.evaluate(() => localStorage.removeItem('ces2027.hours.v1'));
+
   console.log(JSON.stringify(checks.map((c) => `${c.ok ? '됨' : '안 됨'} | ${c.what}`), null, 1));
   return `${checks.length}개 통과 · 첫 화면 누를 곳 ${taps.length}개 · 날짜 줄 ${[...new Set(dayLines)].join(' / ')}`;
 }
