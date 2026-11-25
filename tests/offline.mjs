@@ -798,6 +798,26 @@ await step('홈 화면에 추가 안내', '지도 위 칸(homeTip both): 아이�
   const again = await page.locator('.tip-box').count();
   return { status: /홈 화면에 추가/.test(box) && again === 0 ? '됨' : '안 됨', note: box };
 });
+// 홈(안): 설정 home을 끼워 본다. 꺼져 있으면 지금처럼 열면 명함(없을 때) · 지도, first면 열면 홈이고 탭은 넷, tab이면 탭이 다섯.
+await step('홈 (안)', '설정 home: off면 열면 명함부터(탭 넷), first면 열면 홈(탭 넷 · 지도 위 안내 칸이 홈에), tab이면 홈 탭이 맨 앞에 생겨 다섯', async () => {
+  const seen = {};
+  const base = JSON.parse(await readFile(join(dist, 'data/settings.json'), 'utf8'));
+  for (const home of ['off', 'first', 'tab']) {
+    await ctx.close();
+    ctx = await browser.newContext({ viewport: { width: 390, height: 780 }, userAgent: IPHONE, serviceWorkers: 'block' });
+    page = await ctx.newPage();
+    await page.route('**/data/settings.json', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ...base, home, homeTip: 'both' }) }));
+    await page.route('**/data/home.json', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ cards: [{ title: '자리 표시', text: ['시험용 칸이다.'], action: { label: '지도', href: '#/map' } }] }) }));
+    await page.goto(`${ORIGIN}/`);
+    await page.locator(home === 'off' ? 'form.panel' : '.homepage').waitFor({ timeout: 8000 });
+    await sleep(500);
+    seen[home] = await page.evaluate(() => ({ hash: location.hash, tabs: [...document.querySelectorAll('.tabs a')].map((a) => a.textContent.trim()).join(' '), tip: document.querySelector('.tip-box p, .tip-line')?.textContent || '', now: document.querySelector('.home-now a')?.textContent || '', card: document.querySelector('.home-card h2')?.textContent || '', brand: document.querySelector('.brand').getAttribute('href') }));
+  }
+  const ok = seen.off.hash === '#/card' && seen.off.tabs === '지도 갈 곳 일기 설정' && seen.off.brand === '#/map'
+    && seen.first.hash === '#/home' && seen.first.tabs === '지도 갈 곳 일기 설정' && /홈 화면에 추가/.test(seen.first.tip) && seen.first.now === '명함 만들기' && seen.first.card === '자리 표시' && seen.first.brand === '#/home'
+    && seen.tab.hash === '#/home' && seen.tab.tabs === '홈 지도 갈 곳 일기 설정';
+  return { status: ok ? '됨' : '안 됨', note: `off ${seen.off.hash} · first ${seen.first.hash}(${seen.first.tabs}) · tab(${seen.tab.tabs})` };
+});
 await step('일기 챙기기', '전시 날 저녁에 보내지 않은 일기가 있으면 탭 위 띠가 "보내지 않은 일기 1개 · 일기 열기"를 보이고, 일기 탭에서는 사라진다', async () => {
   await ctx.close();
   ctx = await browser.newContext({ viewport: { width: 390, height: 780 } });

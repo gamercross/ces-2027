@@ -18,6 +18,8 @@ const SETTINGS_DEFAULT = { companyIntro: 'link-only', companyImage: true, collec
 
 export const getSettings = () => cached('settings', () => getJson('data/settings.json').catch(() => SETTINGS_DEFAULT));
 export const getInfo = () => cached('info', () => getJson('data/info.json'));
+// 첫 화면(홈)의 안내 칸들. 파일이 없거나 못 읽으면 칸이 없는 것으로 본다.
+export const getHome = () => cached('home', () => getJson('data/home.json').catch(() => ({ cards: [] })));
 // 전시사 자료 요약. 받지 못한 날은 null.
 export const getMeta = () => cached('meta', () => getJson('data/meta.json').catch(() => null));
 export const getPlaces = () => cached('places', () => getJson('data/places.json'));

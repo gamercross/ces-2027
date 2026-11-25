@@ -16,14 +16,14 @@ export function homeKind(nav = navigator, standalone = nav.standalone === true |
   return /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\/|DaumApps|CriOS|FxiOS|EdgiOS/i.test(ua) ? 'inapp' : 'safari';
 }
 
-// 안내들. where: 'card'(첫 명함 화면의 한 줄) · 'map'(지도 위의 칸).
+// 안내들. where: 'card'(첫 명함 화면의 한 줄) · 'map'(지도 위의 칸) · 'home'(홈의 칸, 명함을 만들기 전).
 export const TIPS = [
   {
     id: 'home',
     when: () => homeKind(),
     text: (kind, where) => (kind === 'inapp'
       ? 'Safari로 연 뒤 공유 단추에서 "홈 화면에 추가"를 누른다.'
-      : where === 'card'
+      : where === 'card' || where === 'home'
         ? '먼저 아래 공유 단추에서 "홈 화면에 추가"를 누른다. 그 아이콘으로 열어 명함을 만든다.'
         : '아래 공유 단추에서 "홈 화면에 추가"를 누른다. 인터넷 없이도 열린다.'),
   },
