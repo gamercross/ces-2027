@@ -3,7 +3,7 @@
 // 폰에만 남고 일기 보내기 묶음에는 들어가지 않는다.
 
 import { el, out } from './dom.js';
-import { kindKo, parseScan, removePerson, safeHref, upsert } from './people.js';
+import { kindKo, NICK_MAX, NOTE_MAX, parseScan, removePerson, safeHref, upsert, withTalk } from './people.js';
 import { getPeople, setPeople } from './people-store.js';
 
 export const nameOf = (p) => p.nick || p.links[0]?.label || '이름 없음';
@@ -63,18 +63,48 @@ export function personCard(p, ctx) {
   ];
 }
 
-// 고치기(이름 · 회사 · 메모 · 연락처). fresh면 방금 읽은 사람의 "이름 적기"다(비워도 저장돼 있다).
-export function personEdit(p, ctx, { fresh = false } = {}) {
+// 받자마자 뜨는 두 칸(R61): "무슨 대화를 했나" 한 줄(위) + 부르는 이름(아래). 사람은 이미 폰에 남아 있어 "넘기기"를 눌러도 된다.
+// 하나라도 적으면 "저장"이 나온다. 한 줄은 그 사람의 메모, 이름은 고치기의 이름 칸과 같은 자리 · 같은 글자 수다.
+// 저장하면 그 사람 카드가 열리고, 이름을 적었으면 카드 제목이 이름이 된다(주소는 그 아래 줄). 회사 · 연락처는 카드의 "고치기"에서 적는다.
+// 엔터: 한 줄 칸에서는 이름 칸으로, 이름 칸에서는 저장(둘 다 비었으면 넘기기).
+export function talkLine(p, ctx) {
+  const { shell } = ctx;
+  const line = el('input', { name: 'talk', type: 'text', maxlength: NOTE_MAX, autocomplete: 'off', enterkeyhint: 'next', placeholder: '예: 로봇 팔 데모 · 채용 물어봄' });
+  const nick = el('input', { name: 'nick', type: 'text', maxlength: NICK_MAX, autocomplete: 'off', enterkeyhint: 'done', placeholder: '내가 부르는 이름 (비워도 된다)' });
+  const status = el('p', { class: 'note', role: 'status' });
+  const save = el('button', { class: 'btn', type: 'submit', text: '저장', hidden: true });
+  const skip = el('button', { class: 'linkish', type: 'button', text: '넘기기', onclick: () => shell.close() });
+  const typed = () => !!(line.value.trim() || nick.value.trim());
+  for (const box of [line, nick]) box.addEventListener('input', () => { save.hidden = !typed(); });
+  line.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' && !ev.isComposing) { ev.preventDefault(); nick.focus(); } });
+  const form = el('form', { class: 'talkline' },
+    el('label', { class: 'field' }, el('span', { class: 'pcard-tools-title', text: '무슨 대화를 했나' }), line),
+    el('label', { class: 'field' }, el('span', { class: 'label', text: '이름' }), nick),
+    status,
+    el('div', { class: 'talkline-actions' }, skip, save));
+  form.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    if (!typed()) { shell.close(); return; }
+    const r = withTalk(getPeople(), p.id, { note: line.value, nick: nick.value });
+    if (!r || !setPeople(r.list)) { status.textContent = '이 폰에 저장하지 못했다. 사생활 보호 창이면 보통 창으로 다시 연다.'; return; }
+    ctx.after(`${nameOf(r.person)} 님을 남겼다.`);
+    shell.update(personCard(r.person, ctx));
+  });
+  return [el('p', { class: 'pcard-sub talkline-saved', text: `폰에 남겼다 · ${nameOf(p)}` }), form];
+}
+
+// 고치기(이름 · 회사 · 메모 · 연락처). 방금 받은 사람에게는 이것 대신 talkLine(한 줄)이 먼저 뜬다(R61).
+export function personEdit(p, ctx) {
   const { shell, companies } = ctx;
   const links = [...p.links];
-  const nick = el('input', { name: 'nick', maxlength: 20, autocomplete: 'off', placeholder: '내가 부르는 이름', value: p.nick });
+  const nick = el('input', { name: 'nick', maxlength: NICK_MAX, autocomplete: 'off', placeholder: '내가 부르는 이름', value: p.nick });
   const known = companies.find((c) => c.id === p.exId);
   const pick = el('select', { name: 'company', 'aria-label': '어디서' },
     el('option', { value: '', text: companies.length ? '관심 회사에서 고른다' : '관심 회사가 없다' }),
     !known && p.exId ? el('option', { value: p.exId, selected: true, text: p.company || p.exId }) : null,
     companies.map((c) => el('option', { value: c.id, selected: c.id === p.exId, text: c.name })));
   const other = el('input', { name: 'other', maxlength: 80, placeholder: '목록에 없으면 회사 이름', value: p.exId ? '' : p.company });
-  const note = el('textarea', { name: 'note', rows: 2, maxlength: 200, placeholder: '한 줄 메모 (무슨 이야기를 했나)' });
+  const note = el('textarea', { name: 'note', rows: 2, maxlength: NOTE_MAX, placeholder: '한 줄 메모 (무슨 이야기를 했나)' });
   note.value = p.note || '';
   const status = el('p', { class: 'note', role: 'status' });
   const linkBox = el('ul', { class: 'contacts' });
@@ -108,12 +138,10 @@ export function personEdit(p, ctx, { fresh = false } = {}) {
     shell.update(personCard(result.person, ctx));
   };
   const field = (label, input) => el('label', { class: 'field' }, el('span', { class: 'label', text: label }), input);
-  if (fresh) setTimeout(() => nick.focus({ preventScroll: true }), 50);
   return [
     el('div', { class: 'pcard-top' },
-      el('h2', { class: 'pcard-tools-title', text: fresh ? '이름 적기' : '만난 사람 고치기' }),
-      el('button', { class: 'btn ghost pcard-close', type: 'button', text: fresh ? '나중에' : '닫기', onclick: () => (fresh ? shell.close() : shell.update(personCard(p, ctx))) })),
-    fresh ? el('p', { class: 'note', text: '폰에 남겼다. 이름은 비워 둬도 된다.' }) : null,
+      el('h2', { class: 'pcard-tools-title', text: '만난 사람 고치기' }),
+      el('button', { class: 'btn ghost pcard-close', type: 'button', text: '닫기', onclick: () => shell.update(personCard(p, ctx)) })),
     field('이름', nick), field('어디서', pick), el('label', { class: 'field' }, other),
     field('메모', note),
     linkBox, el('label', { class: 'field' }, addr),

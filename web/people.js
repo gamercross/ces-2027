@@ -81,19 +81,24 @@ export function personFromScan(text, ctx = {}) {
   return { ok: true, person: makePerson({ ...ctx, links: [r.link] }) };
 }
 
+// 만난 사람 한 줄 메모의 글자 수 한도. 고치기의 메모 칸과 받자마자 뜨는 "무슨 대화를 했나" 칸이 같이 쓴다.
+export const NOTE_MAX = 200;
+// 부르는 이름의 글자 수 한도. 고치기의 이름 칸과 받자마자 뜨는 이름 칸이 같이 쓴다.
+export const NICK_MAX = 20;
+
 const clip = (v, n) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
 const isDate = (s) => typeof s === 'string' && /^\d{4}-\d\d-\d\d$/.test(s);
 
 export function makePerson(p) {
   return {
     id: clip(p.id, 40) || `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`,
-    nick: clip(p.nick, 20),
+    nick: clip(p.nick, NICK_MAX),
     links: (Array.isArray(p.links) ? p.links : []).filter((l) => l && l.key && (l.kind === 'discord' || safeHref(l.url))).map((l) => ({ kind: l.kind, url: l.url || '', label: clip(l.label, 120), key: clip(l.key, 400) })),
     met: isDate(p.met) ? p.met : '',
     company: clip(p.company, 80),
     exId: clip(p.exId, 40),
     booth: clip(p.booth, 40),
-    note: clip(p.note, 200),
+    note: clip(p.note, NOTE_MAX),
   };
 }
 
@@ -135,6 +140,16 @@ export function upsert(list, incoming) {
   const idx = next.findIndex((p) => p.id === base.id);
   if (idx >= 0) next[idx] = base; else next.push(base);
   return { list: next, person: base, merged: others.length };
+}
+
+// 이미 남은 사람에게 받자마자 적은 두 칸을 넣는다(R61: "무슨 대화를 했나" 한 줄 → 메모, 이름 → 부르는 이름).
+// 비운 칸은 그대로 두고, 둘 다 비었거나 그 사람이 없으면 null.
+export function withTalk(list, id, { note = '', nick = '' } = {}) {
+  const p = list.find((x) => x.id === id);
+  const text = typeof note === 'string' ? note.trim() : '';
+  const name = typeof nick === 'string' ? nick.trim() : '';
+  if (!p || (!text && !name)) return null;
+  return upsert(list, { ...p, note: text || p.note, nick: name || p.nick });
 }
 
 export const removePerson = (list, id) => list.filter((p) => p.id !== id);
