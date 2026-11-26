@@ -99,6 +99,9 @@ export function makePerson(p) {
     exId: clip(p.exId, 40),
     booth: clip(p.booth, 40),
     note: clip(p.note, NOTE_MAX),
+    // 링크드인 팔로우함(R62): 켠 날. 비어 있으면 아직. metAt: 받은 순간(ms) — 이틀(48시간)을 잰다. 옛 사람은 0(만난 날로 잰다).
+    followed: isDate(p.followed) ? p.followed : '',
+    metAt: Number.isFinite(p.metAt) && p.metAt > 0 ? Math.round(p.metAt) : 0,
   };
 }
 
@@ -116,7 +119,7 @@ function mergeTwo(winner, other) {
   const links = [...winner.links, ...other.links.filter((l) => !seen.has(l.key))];
   const pick = (a, b) => a || b;
   const met = winner.met && other.met ? (winner.met < other.met ? winner.met : other.met) : pick(winner.met, other.met);
-  return { ...winner, links, met, nick: pick(winner.nick, other.nick), note: pick(winner.note, other.note), company: pick(winner.company, other.company), exId: winner.company ? winner.exId : other.exId, booth: winner.company ? winner.booth : other.booth };
+  return { ...winner, links, met, nick: pick(winner.nick, other.nick), note: pick(winner.note, other.note), followed: pick(winner.followed, other.followed), metAt: winner.metAt && other.metAt ? Math.min(winner.metAt, other.metAt) : pick(winner.metAt, other.metAt), company: pick(winner.company, other.company), exId: winner.company ? winner.exId : other.exId, booth: winner.company ? winner.booth : other.booth };
 }
 
 // 사람 하나를 목록에 넣는다. 같은 주소를 가진 사람이 이미 있으면 한 사람으로 합친다.
@@ -150,6 +153,13 @@ export function withTalk(list, id, { note = '', nick = '' } = {}) {
   const name = typeof nick === 'string' ? nick.trim() : '';
   if (!p || (!text && !name)) return null;
   return upsert(list, { ...p, note: text || p.note, nick: name || p.nick });
+}
+
+// 링크드인 팔로우함을 켜고 끈다(R62). 켜면 그 날(today)을 남기고, 끄면 비운다. 그 사람이 없으면 null.
+export function setFollowed(list, id, on, today) {
+  const p = list.find((x) => x.id === id);
+  if (!p) return null;
+  return upsert(list, { ...p, followed: on ? today : '' });
 }
 
 export const removePerson = (list, id) => list.filter((p) => p.id !== id);

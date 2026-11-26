@@ -187,6 +187,10 @@ body:has(.mappage) .bar .tag { display: none; }
 .talkline-saved { overflow-wrap: anywhere; }
 .talkline-actions { display: flex; align-items: center; gap: var(--s3); }
 .talkline-actions .btn { flex: 1 1 auto; }
+/* 만난 사람 카드의 "링크드인 팔로우함" 한 줄 (R62): 체크 칸 + 글, 링크드인 주소가 있으면 옆에 "링크드인 열기" */
+.follow-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+.follow-toggle { flex: 1 1 auto; min-height: var(--tap-min); }
+[data-offline] .follow-row:has(a[href*="linkedin.com"])::after { content: "링크드인은 인터넷이 있어야 열린다"; display: block; flex: 1 1 100%; font-size: var(--fs-note); color: var(--ink-2); }
 .seg.daychip { flex-direction: column; gap: 0; min-width: 44px; min-height: 56px; line-height: 1.2; }
 .dc-day { font-size: var(--fs-body); font-weight: 800; }
 .dc-n { font-size: var(--fs-note); font-weight: 400; opacity: 0.8; }
@@ -548,7 +552,10 @@ a.pick-row { text-decoration: none; }
   max-width: calc(var(--column) - var(--s4)); margin: 0 auto; padding: var(--s2) var(--s2) var(--s2) var(--s4); border-radius: var(--radius);
   background: var(--peach); font-weight: 700;
 }
-.notice-bar { background: var(--mint); bottom: calc(var(--tabs) + env(safe-area-inset-bottom) + 80px); }
+/* 띠는 한 번에 하나라서(app.js의 paintNotice) 아래 띠도 새 판 띠와 같은 자리에 뜬다 */
+.notice-bar { background: var(--mint); }
+/* 띠가 떠 있는 동안에는 화면 맨 아래 글이 띠에 가리지 않게 그만큼 비운다(지도 탭은 화면 전체를 쓰니 빼고) */
+body:not([data-tab="map"]):has(> .update:not([hidden])) #view { padding-bottom: calc(var(--s5) + 76px * var(--scale)); }
 .update-acts { display: flex; align-items: center; gap: var(--s1); flex: none; }
 .update > span:first-child { word-break: keep-all; }
 

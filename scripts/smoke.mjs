@@ -1130,6 +1130,35 @@ if (await exists('data/meta.json')) {
     && P.withTalk(c.list, who.id, { note: '   ', nick: ' ' }) === null && P.withTalk(c.list, who.id) === null && P.withTalk(c.list, 'nobody', { note: '글' }) === null
     && P.withTalk(c.list, who.id, { note: 'x'.repeat(300), nick: 'y'.repeat(30) }).person.note.length === P.NOTE_MAX && P.withTalk(c.list, who.id, { nick: 'y'.repeat(30) }).person.nick.length === P.NICK_MAX && P.NOTE_MAX === 200 && P.NICK_MAX === 20,
   '받자마자 적는 두 칸: "무슨 대화를 했나" 한 줄은 그 사람의 메모, 이름은 부르는 이름에 들어가고(새 칸 없음), 비운 칸은 그대로 두며 둘 다 비었거나 없는 사람은 넣지 않는다. 한도는 고치기와 같은 200자 · 20자다');
+  // R62: 링크드인 이틀. 팔로우함을 켜고 끄고, 이틀(48시간)이 지났는데 꺼진 사람만 세고, 닫은 날 · 같은 사람으로는 띠를 다시 띄우지 않는다
+  {
+    const AL = await import('../web/alerts.js');
+    const at = (s) => new Date(s).getTime();
+    const on = P.setFollowed(c.list, who.id, true, '2027-01-08');
+    const off = P.setFollowed(on.list, who.id, false, '2027-01-09');
+    const kept = P.upsert(on.list, { ...on.person, nick: '고친 이름' });
+    check(on.person.followed === '2027-01-08' && off.person.followed === '' && P.setFollowed(c.list, 'nobody', true, '2027-01-08') === null && kept.person.followed === '2027-01-08'
+      && P.makePerson({ id: 'x', followed: '2027-1-8', metAt: -5 }).followed === '' && P.makePerson({ id: 'x', metAt: -5 }).metAt === 0 && P.makePerson({ id: 'x', metAt: at('2027-01-06T09:00:00') }).metAt === at('2027-01-06T09:00:00')
+      && P.upsert([{ ...P.makePerson({ id: 'o', links: [gh], metAt: 100 }) }], { links: [gh], metAt: 900 }).person.metAt === 100,
+    '"링크드인 팔로우함"은 켠 날을 남기고 끄면 비운다. 고쳐 저장해도 그대로이고, 같은 사람을 다시 읽으면 처음 받은 때(metAt)가 남는다');
+    const ps = [
+      { id: 'a', met: '2027-01-06', metAt: at('2027-01-06T09:00:00'), followed: '' },
+      { id: 'b', met: '2027-01-06', metAt: at('2027-01-06T09:00:00'), followed: '2027-01-07' },
+      { id: 'c', met: '2027-01-07', metAt: at('2027-01-07T15:00:00'), followed: '' },
+      { id: 'd', met: '2027-01-06', metAt: 0, followed: '' },
+      { id: 'e', met: '', metAt: 0, followed: '' },
+    ];
+    const ids = (s) => AL.followOverdue(ps, at(s)).join();
+    check(ids('2027-01-08T08:59:00') === 'd' && ids('2027-01-08T09:00:00') === 'a,d' && ids('2027-01-09T15:00:00') === 'a,c,d' && AL.followOverdue(null, 0).length === 0 && AL.FOLLOW_MS === 172800000,
+      '이틀은 받은 순간부터 48시간이다(옛 사람은 만난 날 0시부터). 팔로우함이 있거나 만난 때를 모르면 세지 않는다');
+    check(AL.followBand(['a'], null, '2027-01-08') === 1 && AL.followBand([], null, '2027-01-08') === 0 && AL.followBand(['a'], { date: '2027-01-08', ids: [] }, '2027-01-08') === 0
+      && AL.followBand(['a'], { date: '2027-01-08', ids: ['a'] }, '2027-01-09') === 0 && AL.followBand(['a', 'c'], { date: '2027-01-08', ids: ['a'] }, '2027-01-09') === 2,
+      '띠: 닫은 날에는 안 뜨고, 그 뒤에는 닫을 때 없던 사람이 새로 이틀을 넘겼을 때만 다시 뜬다(뜨면 모두 센다)');
+    const appT = await readFile(join(dist, 'app.js'), 'utf8');
+    const order = ['const newer', 'const near = !newer', 'const diary = !newer && !near', 'const follow = !newer && !near && !diary'].map((k) => appT.indexOf(k));
+    check(order.every((n, i) => n > 0 && (i === 0 || n > order[i - 1])) && appT.includes("'#/people/follow'") && appT.includes('closeFollowBand') && !/people-store|people-ui/.test(appT),
+      '탭 위 띠는 한 번에 하나: 새 판 > 가까운 명함 이벤트 부스 > 보내지 않은 일기 > 링크드인 이틀. 첫 화면 조각은 만난 사람 화면을 미리 읽지 않는다');
+  }
   check(P.cleanPeople('x').length === 0 && P.cleanPeople([null, 1, { id: 'q', links: [{ kind: 'web', key: 'k', url: 'javascript:alert(1)' }, { kind: 'web', key: 'k2', url: 'https://example.com/' }], met: 'bad' }]).map((p) => p.links.length + p.met).join() === '1', '폰에 남은 값이 망가져 있어도 걸러 낸다 (https가 아닌 주소 · 틀린 날짜)');
   const people = [{ company: '가짜회사', exId: 'x1' }, { company: ' 가짜회사 ', exId: '' }, { company: '다른회사', exId: 'x2' }, { company: '', exId: '' }];
   check(P.countAt(people, { exId: 'x1', company: '가짜회사' }) === 2 && P.countAt(people, { exId: 'x2', company: '이름이 다름' }) === 1 && P.countAt(people, { exId: '', company: '가짜회사' }) === 2 && P.countAt(people, { exId: '', company: '' }) === 0, '일기 목록의 "이 회사에서 만난 사람 수": 양쪽에 회사 번호가 있으면 번호로, 아니면 이름으로 센다');
