@@ -4,13 +4,13 @@
 // 일기마다 사진 한 장(R49)을 넣을 수 있다: 폰에서 줄여(긴 변 1024px · 150KB 안, web/photo.js) 이 폰(IndexedDB, web/photo-store.js)에만 둔다. 파일로 내려받을 때만 그 파일에 들어가고 모으는 곳 주소로는 가지 않는다.
 // 듣기에서 만든 초안(draft)은 사람이 다듬어 남긴 뒤에만 보낸다. 들은 글(원문 · 번역)과 녹음은 모으는 곳 주소로는 보내지 않는다. 파일로 내려받을 때만 일기와 이어진 대화(들은 글)가 그 파일에 들어가고, 녹음은 어느 때도 가지 않는다.
 
-import { el } from '../dom.js';
+import { chevron, el } from '../dom.js';
 import { getExhibitors, getSettings } from '../data.js';
 import { getDiary, getInterests, getProfile, getTalks, load, save, setDiary, TAGS, tagKo } from '../store.js';
 import { asText, bundle, collectorUrl, fileName, talksFor } from '../diary.js';
 import { handFile } from '../handoff.js';
-import { countAt } from '../people.js';
-import { getPeople } from '../people-store.js';
+import { countAt, goalParts } from '../people.js';
+import { getGoal, getPeople } from '../people-store.js';
 import { createCardShell } from '../plancard.js';
 import { personCard, personRow } from '../people-ui.js';
 
@@ -334,6 +334,16 @@ export async function render({ rest, go }) {
       people.length > 3 ? el('a', { class: 'pick more', href: '#/people', text: `전체 ${people.length}명 ›` }) : null,
       el('p', { class: 'note', text: '이 폰에만 남는다. 일기와 함께 가지 않는다.' }));
 
+    // 목표 숫자(R63): 설정에서 정한 목표가 하나라도 있으면 맨 위 한 줄 "대화 3 / 10 · 링크드인 1 / 5". 누르면 만난 사람 목록.
+    // 목표에 닿은 숫자만 강조색이고 축하 글 · 그림은 없다.
+    const goals = goalParts(people, getGoal());
+    const goalLine = goals.length ? el('section', { class: 'panel glance goal' }, el('a', {
+      href: '#/people',
+      'aria-label': `목표: ${goals.map((g) => `${g.label} ${g.now}명, 목표 ${g.goal}명${g.reached ? ', 목표에 닿음' : ''}`).join(' · ')}. 만난 사람 보기`,
+    }, el('b', { text: '목표' }),
+    el('span', { class: 'goal-nums' }, ...goals.flatMap((g, i) => [i ? ' · ' : '', el('span', { class: 'goal-part' }, `${g.label} `, el('strong', { class: g.reached ? 'goal-hit' : '', text: String(g.now) }), ` / ${g.goal}`)])),
+    chevron())) : null;
+
     // 날짜별 일기
     const days = [];
     let day = null;
@@ -359,6 +369,7 @@ export async function render({ rest, go }) {
 
     holder.replaceChildren(el('div', { class: 'page listpage' },
       el('section', { class: 'head' }, el('h1', { text: '일기' })),
+      goalLine,
       metPanel,
       ...(all.length ? days.map((d) => el('section', { class: 'panel' }, el('h2', { text: d.date }), el('ul', { class: 'stops' }, d.items.map(row)))) : []),
       sendBand,

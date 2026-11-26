@@ -4,7 +4,8 @@
 import { el, num, out } from '../dom.js';
 import { getExhibitors, getInfo, getMeta, getPlaces } from '../data.js';
 import { clearMine, getDiary, getInterests, getProfile, getTalks, getTextSize, getTheme, setTextSize, setTheme, tagKo } from '../store.js';
-import { getPeople } from '../people-store.js';
+import { getGoal, getPeople, setGoal } from '../people-store.js';
+import { readGoal } from '../people.js';
 import { dropAllAudio } from '../audio-store.js';
 import { bundle, fileName, talksFor } from '../diary.js';
 import { officialLinks } from '../share.js';
@@ -293,6 +294,48 @@ function paperRow(shell, showFrom) {
   return el('li', { class: 'setrow' }, main, el('button', { class: 'pick', type: 'button', text: '바꾸기', onclick: open }));
 }
 
+// 목표(R63): "대화 몇 명 · 링크드인 몇 명". 정하면 일기 탭 맨 위에 지금 / 목표 한 줄이 보인다. 숫자만 0 ~ 99, 비우면 목표 없음.
+// 이 폰에만 남고(ces2027.goal.v1) "이 폰의 내 자료 지우기"에 같이 지워진다. 일기 내보내기에는 없다.
+function goalRow(shell) {
+  const { s, main } = rowState('목표');
+  const paint = () => {
+    const g = getGoal();
+    const parts = [g.talk != null && `대화 ${g.talk}명`, g.linkedin != null && `링크드인 ${g.linkedin}명`].filter(Boolean);
+    s.textContent = parts.length ? parts.join(' · ') : '정하지 않았다';
+  };
+  paint();
+  const open = (ev) => {
+    const g = getGoal();
+    const box = (name, value) => el('input', { name, type: 'text', inputmode: 'numeric', pattern: '[0-9]*', maxlength: 2, autocomplete: 'off', placeholder: '없음', value: value == null ? '' : String(value) });
+    const talk = box('goal-talk', g.talk);
+    const linkedin = box('goal-linkedin', g.linkedin);
+    const bad = () => el('p', { class: 'field-error', role: 'status', hidden: true, text: '0 ~ 99의 숫자만 적는다.' });
+    const talkBad = bad();
+    const linkedinBad = bad();
+    talk.addEventListener('input', () => { talkBad.hidden = true; });
+    linkedin.addEventListener('input', () => { linkedinBad.hidden = true; });
+    const field = (label, input, err) => el('label', { class: 'field' }, el('span', { class: 'label', text: label }), input, err);
+    const save = () => {
+      const a = readGoal(talk.value);
+      const b = readGoal(linkedin.value);
+      talkBad.hidden = !a.bad;
+      linkedinBad.hidden = !b.bad;
+      if (a.bad || b.bad) return;
+      setGoal({ talk: a.value, linkedin: b.value });
+      paint();
+      shell.close();
+    };
+    shell.open([
+      el('div', { class: 'pcard-top' }, el('h2', { class: 'pcard-tools-title', text: '목표' }), el('button', { class: 'btn ghost pcard-close', type: 'button', text: '닫기', onclick: () => shell.close() })),
+      el('p', { class: 'note', text: '정하면 일기 탭 맨 위에 지금 / 목표가 보인다. 비워 두면 목표 없음.' }),
+      field('대화 (만난 사람)', talk, talkBad),
+      field('링크드인 (팔로우함)', linkedin, linkedinBad),
+      el('div', { class: 'actions' }, el('button', { class: 'btn', type: 'button', text: '저장', onclick: save })),
+    ], ev.currentTarget);
+  };
+  return el('li', { class: 'setrow' }, main, el('button', { class: 'pick', type: 'button', text: '정하기', onclick: open }));
+}
+
 // 권한: 막혀 있는 것만 한 줄(왜 안 되고 어디서 켜는가). 물어볼 수 없는 브라우저에서는 줄이 안 보인다.
 function permissionRows() {
   const box = el('li', { class: 'setrow-more', hidden: true });
@@ -332,7 +375,7 @@ export async function render() {
   window.addEventListener('hashchange', () => shell.close(), { once: true });
   const showFrom = (await getInfo().catch(() => null))?.show.from || '2027-01-06';
   const list = el('ul', { class: 'setlist' },
-    ...cardRow(), paperRow(shell, showFrom), ...notifyRow(), offlineRow(), ...storageRow(), ...exportRow(), ...fileRows(), ...linksRow(), mineRow(shell), permissionRows(), await dataRow(shell));
+    ...cardRow(), paperRow(shell, showFrom), goalRow(shell), ...notifyRow(), offlineRow(), ...storageRow(), ...exportRow(), ...fileRows(), ...linksRow(), mineRow(shell), permissionRows(), await dataRow(shell));
   return el('div', { class: 'page listpage settingspage' },
     el('section', { class: 'head' }, el('h1', { text: '설정' })),
     sizeBox(),

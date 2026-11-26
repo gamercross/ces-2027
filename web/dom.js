@@ -34,3 +34,15 @@ export function cross() {
   icon.append(path);
   return icon;
 }
+
+// 줄 끝의 › 그림(눌러서 다른 화면으로 간다는 표시). 색은 CSS가 정한다. 홈의 한눈에 보기 · 일기 탭의 목표 줄이 쓴다.
+export function chevron() {
+  const NS = 'http://www.w3.org/2000/svg';
+  const s = document.createElementNS(NS, 'svg');
+  s.setAttribute('viewBox', '0 0 24 24');
+  s.setAttribute('aria-hidden', 'true');
+  const p = document.createElementNS(NS, 'path');
+  p.setAttribute('d', 'm9 5 7 7-7 7');
+  s.append(p);
+  return s;
+}
