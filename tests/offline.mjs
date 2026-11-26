@@ -646,7 +646,14 @@ await step('설정', '"이 폰의 내 자료 지우기"는 두 번 묻고, 지�
   await page.locator('#mine-open').click();
   await page.locator('#mine-next').click();
   await page.locator('#mine-wipe').click();
-  await page.waitForFunction(() => location.hash === '#/home' && !localStorage.getItem('ces2027.profile.v1') && !!document.querySelector('.home-now'), null, { timeout: 12000 });
+  // 지운 뒤 0.9초 있다가 다시 연다. 다시 여는 동안에는 물어볼 수 없어서(문서가 바뀐다) 잠깐씩 다시 묻는다.
+  let home = false;
+  for (let i = 0; i < 40 && !home; i++) {
+    home = await page.evaluate(() => location.hash === '#/home' && !localStorage.getItem('ces2027.profile.v1') && !!document.querySelector('.home-now')).catch(() => false);
+    if (!home) await sleep(300);
+  }
+  if (!home) return { status: '안 됨', note: '지운 뒤 12초 안에 홈이 뜨지 않았다' };
+  await sleep(300);
   const keep = await page.evaluate(async (v) => caches.has(`ces2027-${v}`), version);
   return { status: keep ? '됨' : '일부', note: keep ? '앱 파일은 남았다' : '앱 파일까지 지워졌다' };
 });
