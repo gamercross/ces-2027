@@ -274,6 +274,13 @@ input[type="date"], input[type="time"] { -webkit-appearance: none; appearance: n
 .qr-empty { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; padding: 10px; border-radius: var(--radius-ctl); background: var(--panel); font-size: var(--fs-note); color: var(--ink-2); }
 .qr figcaption { display: grid; font-size: var(--fs-fine); color: var(--ink-2); overflow-wrap: anywhere; }
 .qr figcaption b { font-size: var(--fs-small); color: var(--ink); }
+/* 배경화면으로 저장(R60): 글자 단추 하나, QR이 둘 이상이면 누른 뒤 고르는 줄 하나 */
+.wall { margin-top: var(--s2); }
+.wall-pick { display: grid; gap: var(--s1); }
+.wall-pick[hidden] { display: none; }
+.wall-pick .linkish { justify-self: start; }
+.wall .note { margin-top: var(--s1); }
+.wall-pick, .wall .note { scroll-margin-bottom: calc(var(--tabs) + env(safe-area-inset-bottom) + var(--s3)); }
 
 /* ---- 회사 목록 · 분야 ---- */
 .hits { display: grid; gap: var(--s2); }

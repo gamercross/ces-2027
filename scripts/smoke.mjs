@@ -433,7 +433,7 @@ const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 const version = await json('version.json').catch(() => null);
 const swFiles = JSON.parse(`[${(sw.match(/const FILES = \[(.*)\];/) || [])[1] || ''}]`);
 check(!!version && sw.includes(JSON.stringify(version.v)) && !sw.includes('__VERSION__'), `판 이름이 찍혔다 (${version?.v})`);
-const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'tokens.js', 'frame.js', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/card.js', 'views/plan.js', 'plancard.js', 'people-ui.js', 'views/rec.js', 'views/map.js', 'mapfind.js', 'views/list.js', 'exlist.js', 'hallgroups.js', 'bands.js', 'views/settings.js', 'views/diary.js', 'views/days.js', 'views/listen.js', 'views/talk.js', 'talk.js', 'speech.js', 'talk-ui.js', 'audio-store.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'alerts.js', 'notify.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
+const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'tokens.js', 'frame.js', 'core.js', 'core.wasm', 'qr.js', 'wallpaper.js', 'route.js', 'map3d.js', 'views/card.js', 'views/plan.js', 'plancard.js', 'people-ui.js', 'views/rec.js', 'views/map.js', 'mapfind.js', 'views/list.js', 'exlist.js', 'hallgroups.js', 'bands.js', 'views/settings.js', 'views/diary.js', 'views/days.js', 'views/listen.js', 'views/talk.js', 'talk.js', 'speech.js', 'talk-ui.js', 'audio-store.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'alerts.js', 'notify.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
 // 디자인 토큰: tokens.css가 값의 원본이고, 지도 코드가 쓰는 tokens.js의 기본값이 한 글자도 다르지 않아야 한다.
 // 화면 파일(app.css · views · 지도 코드)이 색을 직접 적지 않는 것도 본다 (design.md).
 {
@@ -589,6 +589,31 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       const outNew = JSON.stringify(diary.bundle(wrote, newCard, when)), outOld = JSON.stringify(diary.bundle(wrote, oldCard, when));
       check(outNew === outOld && !/linkedin|jaeyeup-lee/.test(outNew + diary.asText(wrote, newCard, () => '') + diary.fileName(newCard)) && diary.bundle(wrote, newCard, when).v === 1,
         '일기 파일 · 내보내기: 링크드인을 적은 명함으로 내보내도 옛 명함과 글자 하나 다르지 않다(판 1 그대로, 명함에서는 별명과 태그만 간다)');
+    }
+    // 배경화면으로 저장(R60): 이 폰 화면 크기의 그림에 QR 하나 크게 + 별명 한 줄. 시계(위) · 손전등 · 카메라(아래)를 피한다. 인터넷 없이.
+    {
+      const W = await import('../web/wallpaper.js');
+      const wallJs = await readFile(join(dist, 'wallpaper.js'), 'utf8');
+      const sizes = [[393, 852, 3], [390, 844, 3], [375, 667, 2], [430, 932, 3], [360, 800, 3], [412, 915, 2.625], [320, 568, 2]];
+      const bad = [];
+      for (const [w, h, d] of sizes) {
+        const s = W.wallSize(w, h, d);
+        for (const text of [QR[0][0], 'https://www.linkedin.com/in/jaeyeup-lee', 'https://discord.gg/' + 'a'.repeat(150)]) {
+          const n = qrCells(text).length;
+          const L = W.wallLayout(s.w, s.h, n);
+          const ok = Number.isInteger(L.qr.cell) && L.qr.cell >= 3 && L.qr.size === L.qr.cell * n && L.quiet >= L.qr.cell * 4
+            && L.card.y >= L.safe.top && L.card.y + L.card.h <= L.safe.bottom && L.card.x >= 0 && L.card.x + L.card.w <= s.w
+            && L.qr.size >= s.w * 0.4 && L.safe.top >= s.h * 0.38 && L.safe.bottom <= s.h * 0.88;
+          if (!ok) bad.push(`${w}x${h}@${d} n${n}`);
+        }
+      }
+      const iphone = W.wallSize(393, 852, 3), turned = W.wallSize(852, 393, 3), huge = W.wallSize(2000, 3000, 3);
+      check(bad.length === 0 && iphone.w === 1179 && iphone.h === 2556 && turned.w === 1179 && turned.h === 2556 && huge.h === 4096 && Math.abs(huge.w / huge.h - 2 / 3) < 0.01,
+        `배경화면 그림: 이 폰 화면 크기(아이폰 15 = 1179 × 2556, 가로로 들어도 세로 그림, 긴 변 4096까지)이고 폰 ${sizes.length}가지 × QR 셋에서 QR이 폭의 40% 이상 · 한 칸 정수 픽셀 · 흰 여백 넷 칸 이상이며 카드가 시계(위 40%)와 아래 단추(아래 14%) 사이에 든다 (어긋난 것 ${bad.join(', ') || '없음'})`);
+      check(W.PAPER.ink === '#000000' && W.PAPER.card === '#ffffff' && /wallBg: \['--wall-bg', '#2b2b2b'\]/.test(await readFile(join(dist, 'tokens.js'), 'utf8'))
+        && /from '\.\/qr\.js'/.test(wallJs) && !/fetch\(|XMLHttpRequest|https?:\/\/(?!www\.w3)/.test(wallJs.replace(/^\s*\/\/.*$/gm, ''))
+        && cardV.includes("text: '배경화면으로 저장'") && /import\('\.\.\/wallpaper\.js'\)/.test(cardV) && !/from '\.\.\/wallpaper\.js'/.test(cardV) && cardV.includes("'aria-pressed': i === 0 ? 'true' : 'false'"),
+        '배경화면 그림: QR은 화면 색과 상관없이 검정 칸 · 흰 카드이고, 명함 QR과 같은 길(qr.js)로 인터넷 없이 만들며, 명함 화면의 글자 단추 "배경화면으로 저장"은 누를 때만 그림 코드를 부르고 QR이 둘 이상이면 맨 앞이 먼저 골라져 있다');
     }
     // 4단계(11/22): 지도 자세히. 확대 단계 셋 · 글자 13px · 겹치면 숨김 · 홀마다 나눠 받기 · 손짓 · 카드.
     {

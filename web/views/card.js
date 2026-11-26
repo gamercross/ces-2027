@@ -182,6 +182,63 @@ async function qrBlock({ title, text, shown }, lead) {
   return box;
 }
 
+// 배경화면으로 저장(R60): 글자 단추 하나. 누르면 이 폰 화면 크기의 그림(QR 하나 크게 + 별명 한 줄)을 만들어 공유 창이나 내려받기로 건넨다.
+// QR이 둘 이상이면 누른 뒤에 어느 것을 담을지 고르는 줄 하나가 나온다(기본은 맨 앞). 인터넷 없이 된다.
+// 그림은 미리 만들어 둔다: 아이폰은 누른 바로 그때에만 공유 창을 열어 주므로, 누른 뒤에 그리느라 늦으면 창이 안 뜬다.
+export const WALL_SAVED = 'ces2027.wallSaved.v1';
+function wallpaperBlock(profile, links) {
+  const status = el('p', { class: 'note', role: 'status', hidden: true });
+  let pick = 0;
+  let ready = null; // { i, job: Promise<{ blob, w, h }> }
+  const make = (i) => {
+    if (ready?.i === i) return ready.job;
+    const job = import('../wallpaper.js').then((w) => w.wallpaperBlob(links[i].text, profile.nick, screen.width || innerWidth, screen.height || innerHeight, devicePixelRatio || 1));
+    job.catch(() => {});
+    ready = { i, job };
+    return job;
+  };
+  const save = async (btn) => {
+    btn.disabled = true;
+    status.hidden = false;
+    try {
+      const [{ handImage }, { blob }] = await Promise.all([import('../wallpaper.js'), make(pick)]);
+      const how = await handImage(blob, `ces2027-qr-${links[pick].kind}.png`);
+      // 건넨 적이 있으면 "이 폰의 내 자료 지우기"가 사진 속 그림은 따로 지운다고 한 줄 알린다(그 지우기에 같이 지워지는 표시).
+      if (how !== 'cancel') { try { localStorage.setItem(WALL_SAVED, '1'); } catch { /* 막힌 폰이면 알림 줄만 안 뜬다 */ } }
+      status.textContent = how === 'cancel' ? '저장하지 않았다.'
+        : how === 'shared' ? '그림을 건넸다. 사진에서 그 그림을 열어 배경화면으로 고른다.'
+          : '그림을 내려받았다. 사진이나 파일에서 열어 배경화면으로 고른다.';
+    } catch {
+      status.textContent = '그림을 만들지 못했다. 다시 눌러 본다.';
+    }
+    btn.disabled = false;
+  };
+  const choice = el('div', { class: 'wall-pick', hidden: true });
+  const open = el('button', { class: 'linkish', type: 'button', id: 'wall-save', text: '배경화면으로 저장', onclick: (ev) => {
+    if (links.length === 1) return save(ev.currentTarget);
+    // 둘 이상: 고르는 줄을 펴고, 그 줄의 "저장"으로 건넨다.
+    open.hidden = true;
+    choice.hidden = false;
+    choice.querySelector('.seg[aria-pressed=true]')?.focus({ preventScroll: true });
+    // 펴진 줄의 "저장"까지 아래 탭에 가리지 않게 올린다.
+    choice.scrollIntoView({ block: 'end' });
+  } });
+  if (links.length > 1) {
+    const segs = links.map((l, i) => el('button', { class: 'seg', type: 'button', text: l.title, 'aria-pressed': i === 0 ? 'true' : 'false', onclick: () => {
+      pick = i;
+      segs.forEach((s, j) => s.setAttribute('aria-pressed', j === i ? 'true' : 'false'));
+      make(i);
+    } }));
+    choice.append(
+      el('p', { class: 'label', id: 'wall-pick-label', text: '배경화면에 담을 QR' }),
+      el('div', { class: 'segs', role: 'group', 'aria-labelledby': 'wall-pick-label' }, segs),
+      el('button', { class: 'linkish', type: 'button', id: 'wall-pick-save', text: '저장', onclick: (ev) => save(ev.currentTarget) }));
+  }
+  // 화면이 그려진 뒤 한가할 때 맨 앞 QR의 그림을 만들어 둔다.
+  (window.requestIdleCallback || ((f) => setTimeout(f, 300)))(() => make(0));
+  return el('div', { class: 'wall' }, open, choice, status);
+}
+
 async function card(profile, edit, showFrom, first) {
   const links = cardLinks(profile);
   // 홀수 개(하나 · 셋)면 맨 앞 것을 크게 한 줄에 두고, 나머지는 둘씩 나란히 선다.
@@ -197,7 +254,8 @@ async function card(profile, edit, showFrom, first) {
       el('p', { class: 'note', text: qrs.length ? '폰에서 만든 QR이라 인터넷 없이도 보인다.' : '"명함 고치기"에서 링크드인 · 깃허브 · 디스코드를 적으면 QR이 생긴다.' }),
       el('div', { class: 'actions' },
         el('a', { class: 'btn', href: '#/map', text: '지도로' }),
-        el('button', { class: 'btn ghost', type: 'button', text: '명함 고치기', onclick: edit }))));
+        el('button', { class: 'btn ghost', type: 'button', text: '명함 고치기', onclick: edit })),
+      links.length ? wallpaperBlock(profile, links) : null));
 }
 
 export async function render({ go, rest = [] }) {

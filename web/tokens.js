@@ -6,7 +6,7 @@ export const DEFAULTS = {
   bg: ['--bg', '#f2f2f2'], panel: ['--panel', '#ffffff'], panel2: ['--panel-2', '#ebebeb'],
   ink: ['--ink', '#111111'], ink2: ['--ink-2', '#5c5c5c'], accent: ['--accent', '#5a6f96'],
   mint: ['--mint', '#e8ecf3'], warn: ['--warn', '#a3342a'],
-  qrBg: ['--qr-bg', '#ffffff'], qrInk: ['--qr-ink', '#111111'],
+  qrBg: ['--qr-bg', '#ffffff'], qrInk: ['--qr-ink', '#111111'], wallBg: ['--wall-bg', '#2b2b2b'], wallInk: ['--wall-ink', '#000000'],
   hall: ['--map-hall', '#d8d8d8'], room: ['--map-room', '#e3e3e3'], out: ['--map-out', '#e9e9e9'], hotel: ['--map-hotel', '#dedede'],
   place: ['--map-place', '#e6e6e6'], road: ['--map-road', '#cfcfcf'], decor: ['--map-decor', '#ececec'], link: ['--map-link', '#a0a0a0'],
   plain: ['--map-plain', '#8f8f8f'], none: ['--map-none', '#c9c9c9'],

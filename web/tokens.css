@@ -24,6 +24,9 @@
   /* QR은 어둡게에서도 같은 색: 밝은 바탕 + 어두운 모듈이어야 카메라가 읽는다 */
   --qr-bg: #ffffff;
   --qr-ink: #111111;
+  /* 배경화면 그림(R60): 잠금 화면의 흰 시계가 보이는 짙은 회색 바탕 + 검정 QR. 밝게 · 어둡게 모두 같다 */
+  --wall-bg: #2b2b2b;
+  --wall-ink: #000000;
 
   /* 글꼴: 시스템 한글 고딕 하나 */
   --font: system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;

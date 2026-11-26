@@ -11,7 +11,7 @@ import { officialLinks } from '../share.js';
 import { handFile } from '../handoff.js';
 import { offline, reopen } from '../offline.js';
 import { alerts, askPermission, checkAlerts, getPaper } from '../notify.js';
-import { paperPanel } from './card.js';
+import { paperPanel, WALL_SAVED } from './card.js';
 import { fileRows } from './settings-files.js';
 import { createCardShell } from '../plancard.js';
 
@@ -200,6 +200,8 @@ function mineCounts() {
   const profile = !!getProfile();
   return { diary, people, plan, profile, any: diary + people + plan > 0 || profile };
 }
+// 명함의 "배경화면으로 저장"으로 그림을 건넨 적이 있나(R60). 막힌 폰이면 없는 것으로 본다.
+const wallSaved = () => { try { return localStorage.getItem(WALL_SAVED) === '1'; } catch { return false; } };
 function mineRow(shell) {
   const c = mineCounts();
   const parts = [c.diary ? `일기 ${c.diary}` : '', c.people ? `만난 사람 ${c.people}` : '', c.plan ? `갈 곳 ${c.plan}곳` : ''].filter(Boolean);
@@ -219,6 +221,8 @@ function mineRow(shell) {
       el('p', { class: 'pcard-where', text: '지우기 전에 일기를 내보내 두는 것을 권한다.' }),
       list(),
       el('p', { class: 'note', text: '내보내기 파일에는 일기와 대화와 일기 사진이 들어간다. 지우면 되돌릴 수 없다. 앱 파일(인터넷 없이 열리는 것)은 그대로다.' }),
+      // 명함의 "배경화면으로 저장"을 쓴 폰만(R60): 사진에 들어간 그림은 앱이 지우지 못한다.
+      wallSaved() ? el('p', { class: 'note', id: 'mine-wall', text: '배경화면으로 저장한 QR 그림은 사진에 있어 여기서 지워지지 않는다. 사진에서 따로 지운다.' }) : null,
       status,
       el('div', { class: 'actions' },
         el('button', { class: 'btn', type: 'button', id: 'mine-export', text: ready ? '일기 내보내기' : '내보낼 일기가 없다', disabled: !ready, onclick: async () => { const { count, photos, how } = await downloadExport(); status.textContent = how === 'cancel' ? '내보내지 않았다.' : `일기 ${count}개${photos ? ` · 사진 ${photos}장` : ''}를 ${how === 'shared' ? '건넸다' : '파일로 내보냈다'}.`; } }),

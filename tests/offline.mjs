@@ -196,6 +196,17 @@ await step('첫 실행', '별명 · 나 · 깃허브 · 디스코드를 적고 "
   return { status: n === 2 ? '됨' : '일부', note: `QR ${n}개` };
 });
 await step('첫 실행', '명함이 이 폰에 남는다(localStorage ces2027.profile.v1)', async () => (await store('profile.v1'))?.nick === '시험');
+await step('첫 실행', '"배경화면으로 저장" → 깃허브 QR을 고르고 저장하면 그림(PNG)이 폰 안에서 만들어져 내려온다(R60)', async () => {
+  // 맥의 크롬은 공유 창을 띄워 시험이 멈추므로 내려받기 길로 본다(공유 창 길은 scripts/browser-wallpaper.mjs).
+  await page.evaluate(() => { navigator.canShare = () => false; });
+  await page.getByRole('button', { name: '배경화면으로 저장' }).click();
+  await page.getByRole('button', { name: '깃허브', exact: true }).click();
+  const dl = page.waitForEvent('download', { timeout: 8000 });
+  await page.getByRole('button', { name: '저장', exact: true }).click();
+  const d = await dl;
+  const said = await page.locator('.wall .note').innerText();
+  return { status: d.suggestedFilename() === 'ces2027-qr-github.png' && said.includes('내려받았다') ? '됨' : '안 됨', note: d.suggestedFilename() };
+});
 
 // ================= 4. 지도 =================
 await step('지도', '지도 탭: 그림(SVG) · 캠퍼스 셋 · 홀 칩이 열린다', async () => {
