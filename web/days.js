@@ -63,18 +63,22 @@ export function freeMinutes(hours, events) {
   return hours.to - hours.from - busy(hours, events).reduce((a, [x, y]) => a + (y - x), 0);
 }
 
-// 그 시간에 몇 곳까지 볼 수 있나.
-export function capacity(hours, events, pace) {
-  return Math.floor(freeMinutes(hours, events) / pace);
+// 그 시간에 몇 곳까지 볼 수 있나. travel(분)은 그 날 캠퍼스 사이를 걷는 데 드는 시간이다(갈 곳 탭이 넣는다, R58). 그만큼 볼 시간이 준다.
+export function capacity(hours, events, pace, travel = 0) {
+  return Math.max(0, Math.floor((freeMinutes(hours, events) - travel) / pace));
 }
 
 // 동선의 차례대로 "몇 시쯤"을 어림한다. 내 일정이 있는 시간은 건너뛴다. 시간 밖이면 null.
-export function timeline(count, hours, events, pace) {
+// travel[i]는 i번째 곳에 닿기 전에 걷는 시간(분)이다: 캠퍼스가 바뀌는 자리에만 있고(web/nav.js의 hopSlot) 없으면 0이다. 그 뒤의 곳들도 그만큼 밀린다.
+export function timeline(count, hours, events, pace, travel = []) {
   const out = [];
   if (hours.off) return Array.from({ length: count }, () => null);
   const blocks = busy(hours, events);
   let t = hours.from;
   for (let i = 0; i < count; i++) {
+    // 캠퍼스가 바뀌는 자리: 걷는 만큼 늦게 닿는다. 걷는 동안이 내 일정과 겹치면 일정이 끝난 뒤에 떠난다.
+    const walk = i ? travel[i] || 0 : 0;
+    if (walk) { for (const [a, b] of blocks) if (t < b && t + walk > a) t = b; t += walk; }
     // 이 한 곳이 일정과 겹치면 일정이 끝난 뒤로 민다.
     for (const [a, b] of blocks) if (t < b && t + pace > a) t = b;
     if (t + pace > hours.to) { out.push(null); continue; }
@@ -85,9 +89,10 @@ export function timeline(count, hours, events, pace) {
 }
 
 // "날짜 채우기"에 줄 하루하루의 한도: 시간으로 볼 수 있는 수와 내가 정한 수 가운데 작은 것. [0, 첫날, …]
-export function dayLimits(info, savedHours, events, pace, dayLimit) {
-  return [0, ...info.show.days.map((d) => {
-    const byTime = capacity(hoursFor(d.date, savedHours, info), eventsOn(events, d.date), pace);
+// travel은 날마다 캠퍼스 사이를 걷는 시간(분) [0, 첫날, …]이다. 없으면 0으로 센다.
+export function dayLimits(info, savedHours, events, pace, dayLimit, travel = []) {
+  return [0, ...info.show.days.map((d, i) => {
+    const byTime = capacity(hoursFor(d.date, savedHours, info), eventsOn(events, d.date), pace, travel[i + 1] || 0);
     return dayLimit ? Math.min(dayLimit, byTime) : byTime;
   })];
 }

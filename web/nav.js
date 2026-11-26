@@ -54,3 +54,11 @@ export function campusHop(campusFrom, campusTo) {
   if (!campusFrom?.geo || !campusTo?.geo || campusFrom.k === campusTo.k) return null;
   return estimate([0, 0], [0, 0], { campusFrom, campusTo }).minutes;
 }
+
+// 때 어림(갈 곳의 "10:30쯤")에 더하는 이동 시간(R58): 위의 분을 5분 단위로 올린다.
+// 때가 5분 단위로 서고, 걷는 시간보다 일찍 닿는다고 적지 않기 위해서다. 캠퍼스가 같거나 모르면 0.
+export const HOP_STEP = 5;
+export function hopSlot(campusFrom, campusTo) {
+  const min = campusHop(campusFrom, campusTo);
+  return min ? Math.ceil(min / HOP_STEP) * HOP_STEP : 0;
+}

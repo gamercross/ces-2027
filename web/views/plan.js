@@ -9,7 +9,7 @@ import { clock, dayLimits, dayList, eventsOn, hoursFor, timeline, toMin } from '
 import { placeLink } from './days.js';
 import { getMarks } from '../notify.js';
 import { fillDays, placeTable, sortRoute, splitBooth } from '../route.js';
-import { campusHop } from '../nav.js';
+import { campusHop, hopSlot } from '../nav.js';
 import { alertBands } from '../bands.js';
 import { createCardShell } from '../plancard.js';
 import { boothLines, sessionBlock } from '../company-extra.js';
@@ -160,6 +160,11 @@ export async function render() {
     const min = campusHop(from, to);
     return min ? `${campusName(from)}에서 ${campusName(to)}까지 걸어서 약 ${min}분 또는 셔틀` : '';
   };
+  // 때 어림에 더하는 이동 시간(R58): 그 날 차례에서 한 칸 앞과 캠퍼스가 다른 곳 앞에만 있다(분은 위 한 줄의 어림을 5분 단위로 올린 것).
+  // [0, 둘째 곳 앞, 셋째 곳 앞, …]. 같은 캠퍼스 안 · 부스를 모르는 곳은 0이다.
+  const travelOf = (items) => items.map((it, i) => (i ? hopSlot(campusOf(items[i - 1].id), campusOf(it.id)) : 0));
+  // 날마다 걷는 시간의 합 [0, 첫날, …]: "하루에 n곳쯤"과 날마다 나누기가 그만큼 덜 센다.
+  const travelByDay = (list) => [0, 1, 2, 3, 4].map((k) => (k ? travelOf(list.filter((it) => it.day === k)).reduce((a, b) => a + b, 0) : 0));
   const openCard = (id, from) => { openId = id; hideToast(); shell.open(card(id), from); };
 
   // ---- 줄: 번호 · 이름 · 때와 곳. 줄 전체가 눌리고 회사 카드가 열린다. 다녀온 곳의 줄에만 오른쪽에 "다녀옴" 칸이 있다(눌러서 되돌린다).
@@ -220,7 +225,7 @@ export async function render() {
     const events = getEvents();
     const savedHours = getHours();
     const pace = getPace();
-    const limits = dayLimits(info, savedHours, events, pace, getDayLimit());
+    const limits = dayLimits(info, savedHours, events, pace, getDayLimit(), travelByDay(list));
     const sections = [];
     whenOf.clear();
 
@@ -243,7 +248,7 @@ export async function render() {
       const evs = d.date ? eventsOn(events, d.date) : [];
       // 1/5와 날짜 없음은 걷는 시간을 어림하지 않는다(쓸 시간 · 몇 곳쯤이 없다).
       const hours = d.date && !d.pre ? hoursFor(d.date, savedHours, info) : null;
-      const when = hours ? timeline(items.length, hours, evs, pace) : [];
+      const when = hours ? timeline(items.length, hours, evs, pace, travelOf(items)) : [];
       items.forEach((it, i) => { if (hours) whenOf.set(it.id, when[i]); });
 
       // 날짜 한 줄: ‹ 1월 6일 (수) · 남은 4곳 ›. 남은 곳 = 그 날 회사 가운데 "다녀왔다"를 누르지 않은 곳(내 일정은 세지 않는다).
@@ -308,6 +313,8 @@ export async function render() {
 
       // 이 날에 대해 알아야 할 한 줄(있을 때만)
       const room = hours ? limits[d.key] : null;
+      // 내 시간에 안 들어가는 곳: 하루에 들어가는 수를 넘은 곳과 때가 "내 시간 밖"으로 나온 곳 가운데 많은 쪽(이동 시간으로 밀린 곳도 센다).
+      const over = hours && !hours.off ? Math.max(items.length - room, when.filter((t) => t === null).length) : 0;
       const allMarks = getMarks();
       const cardCount = todo.filter((it) => (byId.get(it.id)?.[7] || []).some((b) => { const a = b.lastIndexOf('@'); return allMarks[`${b.slice(a + 1)}|${b.slice(0, a)}`]; })).length;
       const notes = [
@@ -315,7 +322,7 @@ export async function render() {
         !d.key ? el('p', { class: 'note', text: '날짜를 정하지 않은 곳이다. 이름을 눌러 날짜를 고른다.' }) : null,
         hours?.off ? el('p', { class: 'note', text: '이 날은 안 보는 날로 정했다.' }) : null,
         // 그 날에 들어가는 수를 넘으면 알려 준다 (막지는 않는다).
-        hours && !hours.off && items.length > room ? el('p', { class: 'note warn', text: `${items.length - room}곳이 내 시간에 안 들어간다. 다른 날로 옮기거나 내 시간을 늘린다.` }) : null,
+        over > 0 ? el('p', { class: 'note warn', text: `${over}곳이 내 시간에 안 들어간다. 다른 날로 옮기거나 내 시간을 늘린다.` }) : null,
         cardCount ? el('p', { class: 'note', text: `명함 넣는 부스 ${cardCount}곳 · 명함 ${cardCount}장 필요` }) : null,
       ].filter(Boolean);
       if (notes.length) sections.push(el('div', { class: 'daynotes' }, notes));
@@ -371,12 +378,12 @@ export async function render() {
     if (!d?.date || d.pre) return '';
     const hours = hoursFor(d.date, getHours(), info);
     if (hours.off) return `${longDay(d)}은 안 보는 날로 정했다.`;
-    return `${longDay(d)} · ${hourKo(hours.from)} ~ ${hourKo(hours.to)} · 하루에 ${dayLimits(info, getHours(), getEvents(), getPace(), getDayLimit())[d.key]}곳쯤 볼 수 있다`;
+    return `${longDay(d)} · ${hourKo(hours.from)} ~ ${hourKo(hours.to)} · 하루에 ${dayLimits(info, getHours(), getEvents(), getPace(), getDayLimit(), travelByDay(getInterests()))[d.key]}곳쯤 볼 수 있다`;
   };
   const fill = () => {
     const limit = getDayLimit();
     // 날마다 들어가는 수: 쓸 시간(내 일정을 뺀 것)으로 셈한 수와 내가 정한 수 가운데 작은 것.
-    const { items, filled, moved, over } = fillDays(getInterests(), firstBooth, table, dayLimits(info, getHours(), getEvents(), getPace(), limit));
+    const { items, filled, moved, over } = fillDays(getInterests(), firstBooth, table, dayLimits(info, getHours(), getEvents(), getPace(), limit, travelByDay(getInterests())));
     setInterests(items);
     shell.close();
     status.textContent = !filled ? '날짜 없는 곳이 없다. 가까운 곳끼리 줄만 다시 세웠다.'

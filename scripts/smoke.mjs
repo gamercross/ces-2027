@@ -242,6 +242,13 @@ check(diary.fileName(who, new Date(2027, 0, 7)) === 'ces2027-일기-물개-20270
   const on7 = D.eventsOn(evs, '2027-01-07');
   check(!h6.mine && h6.from === 600 && h7.mine && h7.to === 840 && h8.off && !h9.mine && h9.to === 960 && D.freeMinutes(h7, on7) === 150 && D.capacity(h7, on7, 30) === 5 && D.capacity(h8, [], 30) === 0 && String(D.dayLimits(inf, saved, evs, 30, 0)) === '0,16,5,0,14' && String(D.dayLimits(inf, saved, evs, 30, 10)) === '0,10,5,0,10', '날마다 쓸 시간: 기본은 공식 전시 시간, 고친 날은 그 시간, 일정(겹친 것은 한 번만)을 빼고 몇 곳인지 센다');
   check(String(D.timeline(6, h7, on7, 30).map((t) => (t == null ? 'x' : D.clock(t)))) === '10:00,10:30,12:30,13:00,13:30,x' && D.timeline(2, h8, [], 30).every((t) => t === null), '몇 시쯤: 일정이 있는 시간은 건너뛰고, 쓸 시간을 넘으면 "시간 밖"');
+  // 캠퍼스 사이 이동 시간(R58): 걷는 만큼 그 곳과 그 뒤가 밀린다. 첫 곳 앞은 세지 않고, 걷는 동안이 내 일정과 겹치면 일정 뒤에 떠난다. 하루에 볼 수 있는 수도 그만큼 준다.
+  const at = (list) => String(list.map((t) => (t == null ? 'x' : D.clock(t))));
+  check(at(D.timeline(4, h6, [], 30, [0, 0, 30, 0])) === '10:00,10:30,11:30,12:00' && at(D.timeline(4, h6, [], 30)) === '10:00,10:30,11:00,11:30' && at(D.timeline(2, h6, [], 30, [30, 0])) === '10:00,10:30'
+    && at(D.timeline(5, h7, on7, 30, [0, 0, 30, 0, 0])) === '10:00,10:30,13:00,13:30,x' && at(D.timeline(3, h7, on7, 30, [0, 30, 0])) === '10:00,12:30,13:00'
+    && D.capacity(h6, [], 30) === 16 && D.capacity(h6, [], 30, 30) === 15 && D.capacity(h6, [], 30, 10) === 15 && D.capacity(h8, [], 30, 30) === 0
+    && String(D.dayLimits(inf, saved, evs, 30, 0, [0, 30])) === '0,15,5,0,14' && String(D.dayLimits(inf, saved, evs, 30, 10, [0, 30, 30])) === '0,10,4,0,10',
+  '몇 시쯤 + 이동 시간(R58): 캠퍼스가 바뀌는 곳과 그 뒤가 걷는 만큼 밀리고(10:30 → 11:30), 같은 캠퍼스는 그대로, 걷는 동안이 내 일정과 겹치면 일정 뒤에 떠나고, 하루에 볼 수 있는 수도 그만큼 준다');
   const file = JSON.stringify({ app: 'ces-2027-myplan', v: 1, hours: [{ date: '2027-01-06', from: '9:30', to: '17:00' }, { date: '2027-01-08', off: true }, { date: '나쁜 날', from: '1', to: '2' }, { date: '2027-01-09', from: '12:00', to: '11:00' }], events: [{ date: '2027-01-07', from: '11:00', to: '12:00', name: '모임', place: '스피어' }, { date: '2027-01-07', from: '13:00', to: '12:00', name: '거꾸로' }, { date: '2027-01-10', from: '06:00', to: '08:00', name: '  이동  ' }], perStopMinutes: 20 });
   const got = D.readFile(file);
   const merged = D.mergeIn({ hours: { '2027-01-07': saved['2027-01-07'] }, events: [D.cleanEvent(evs[0])] }, got);
@@ -663,8 +670,13 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       // 갈 곳 탭의 캠퍼스 사이 한 줄 (R57): 길 안내 띠와 같은 분, 같은 캠퍼스이거나 캠퍼스를 모르면 없다
       const planHop = await readFile(join(dist, 'views/plan.js'), 'utf8');
       check(nv.campusHop(lvcc, ven) === far.minutes && nv.campusHop(ven, lvcc) === far.minutes && nv.campusHop(lvcc, lvcc) === null && nv.campusHop(null, ven) === null && nv.campusHop(lvcc, { k: 'x' }) === null
-        && planHop.includes("import { campusHop } from '../nav.js';") && planHop.includes('까지 걸어서 약 ${min}분 또는 셔틀') && (planHop.match(/class: 'hop'/g) || []).length === 2 && planHop.includes("const hopOf = d.key ? hopText : () => '';"),
+        && planHop.includes("import { campusHop, hopSlot } from '../nav.js';") && planHop.includes('까지 걸어서 약 ${min}분 또는 셔틀') && (planHop.match(/class: 'hop'/g) || []).length === 2 && planHop.includes("const hopOf = d.key ? hopText : () => '';"),
       '갈 곳: 캠퍼스가 바뀌는 자리(다음에 갈 곳 카드 · 줄 사이)에만 "걸어서 약 n분 또는 셔틀" 한 줄. 분은 길 안내 띠의 어림과 같고, 같은 캠퍼스 안 · 캠퍼스를 모르는 곳 · 날짜 없는 곳에는 없다');
+      // 때 어림에 더하는 이동 시간 (R58): 같은 어림을 5분 단위로 올린 것. 갈 곳 탭이 때 · 하루에 볼 수 있는 수 · 날마다 나누기에 같이 쓴다
+      const slot = nv.hopSlot(lvcc, ven);
+      check(slot % 5 === 0 && slot >= far.minutes && slot - far.minutes < 5 && nv.hopSlot(ven, lvcc) === slot && nv.hopSlot(lvcc, lvcc) === 0 && nv.hopSlot(null, ven) === 0 && nv.hopSlot(lvcc, { k: 'x' }) === 0
+        && planHop.includes('timeline(items.length, hours, evs, pace, travelOf(items))') && (planHop.match(/travelByDay\(/g) || []).length === 3,
+      '갈 곳: 때 어림이 캠퍼스 사이 이동 시간을 셈한다(R58). 분은 한 줄의 어림을 5분 단위로 올린 것이고, 같은 캠퍼스 · 캠퍼스를 모르는 곳은 0이다. 때 · 하루에 볼 수 있는 수 · 날마다 나누기가 같은 셈을 쓴다');
       // 홀마다 나눈 자료
       const idx = await json('data/halls/index.json').catch(() => null);
       if (idx && (await exists('data/exhibitors.json'))) {
