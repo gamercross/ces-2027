@@ -458,11 +458,13 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
     const views = [...app.matchAll(/^  (\w+): \(\) => import\('\.\/views\/(\w+)\.js'\),$/gm)].map((m) => m[1]);
     const tabOf = Object.fromEntries([...(app.match(/const TAB_OF = \{([^}]*)\}/)?.[1] || '').matchAll(/(\w+): '(\w+)'/g)].map((m) => [m[1], m[2]]));
     const want = { map: 'map', list: 'map', transit: 'map', plan: 'plan', rec: 'plan', days: 'plan', sessions: 'plan', diary: 'diary', listen: 'diary', talk: 'diary', people: 'diary', settings: 'settings', card: 'settings', collect: 'settings' };
-    const gone = ['views/home.js', 'views/find.js', 'views/topics.js', 'views/askall.js', 'views/apply.js', 'views/onsite.js', 'views/info.js', 'askall.js', 'onsite.js', 'separate.js', 'topics.js', 'data/separate.json', 'data/onsite.json', 'data/topics.json', 'data/faq.json'];
+    // 홈(11/25, 이재엽이 그림을 보고 정함): 앱을 열면 홈이 먼저이고 아래 탭은 넷 그대로다(홈은 탭이 아니다). 설정 home이 off면 예전처럼 열면 지도.
+    const homeOn = (await json('data/settings.json').catch(() => ({}))).home === 'on' && tabOf.home === 'home' && views.includes('home') && /const homeMode = getSettings\(\)\.then\(\(s\) => \(s\?\.home === 'off' \? 'off' : 'on'\)\);/.test(app) && !html.includes('data-tab="home"') && html.includes('<a class="brand" href="#/home" aria-label="홈으로">');
+    const gone = ['views/find.js', 'views/topics.js', 'views/askall.js', 'views/apply.js', 'views/onsite.js', 'views/info.js', 'askall.js', 'onsite.js', 'separate.js', 'topics.js', 'data/separate.json', 'data/onsite.json', 'data/topics.json', 'data/faq.json'];
     const stillThere = [];
     for (const f of gone) if (await exists(f)) stillThere.push(f);
-    check(Object.entries(want).every(([k, v]) => tabOf[k] === v) && views.length === Object.keys(want).length && /replaceTo\(!getProfile\(\) && !sessionStorage\.getItem\('ces2027\.introLater'\) \? '#\/card' : '#\/map'\)/.test(app) && /new Set\(\['map', 'plan', 'diary', 'settings'\]\)/.test(app) && stillThere.length === 0,
-      `탭 넷 틀: 앱을 열면 지도(명함이 없으면 명함부터), 화면 ${views.length}개가 지도 · 동선 · 일기 · 설정 아래에 서고, 첫 화면 · 회사 · 주제 판 · 알아둘 것 · 따로 신청 · 현장 안내 · 물어보기의 코드와 자료는 지은 것에 없다 (남은 것 ${stillThere.join(' ') || '없음'})`);
+    check(Object.entries(want).every(([k, v]) => tabOf[k] === v) && views.length === Object.keys(want).length + 1 && homeOn && /replaceTo\(mode !== 'off' \? '#\/home' : !getProfile\(\) && !sessionStorage\.getItem\('ces2027\.introLater'\) \? '#\/card' : '#\/map'\)/.test(app) && /new Set\(\['home', 'map', 'plan', 'diary', 'settings'\]\)/.test(app) && stillThere.length === 0,
+      `탭 넷 틀: 앱을 열면 홈(설정으로 끄면 예전처럼 지도, 명함이 없으면 명함부터), 아래 탭은 넷이고 홈은 탭이 아니며 머리의 앱 이름이 홈으로 간다. 화면 ${views.length - 1}개가 지도 · 갈 곳 · 일기 · 설정 아래에 서고, 회사 · 주제 판 · 알아둘 것 · 따로 신청 · 현장 안내 · 물어보기의 코드와 자료는 지은 것에 없다 (남은 것 ${stillThere.join(' ') || '없음'})`);
     const planV = await readFile(join(dist, 'views/plan.js'), 'utf8');
     const diaryV = await readFile(join(dist, 'views/diary.js'), 'utf8');
     const transitV = await readFile(join(dist, 'views/transit.js'), 'utf8');
@@ -1154,12 +1156,23 @@ if (await exists('data/meta.json')) {
     check(al.unsentTonight(d, at('2027-01-07T02:30:00Z'), show) === 2 && al.unsentTonight(d, at('2027-01-07T01:30:00Z'), show) === 0 && al.unsentTonight(d, at('2027-01-06T02:30:00Z'), show) === 0
       && al.unsentTonight(d, at('2027-01-10T00:30:00Z'), show) === 2 && al.unsentTonight([{ id: '2', sent: 'x' }], at('2027-01-07T02:30:00Z'), show) === 0 && al.unsentTonight(d, at('2027-01-07T02:30:00Z'), null) === 0,
       '일기 챙기기: 전시 날 그 날 전시가 끝난 뒤(1/6은 18시, 1/9는 16시, 라스베이거스 시각)에만 보내지 않은 일기 수를 세고, 초안 · 보낸 것 · 전시 날이 아닌 때는 세지 않는다');
+    // 홈(안, 11/25): 자료 파일의 안내 칸을 고르는 셈과 "지금 할 일 하나". 칸이 없으면 아무것도 안 그린다. 자료 파일과 화면 조각은 인터넷 없이 담아 둘 목록에 있다.
+    {
+      const H = await import('../web/views/home.js');
+      const cards = H.cleanCards({ cards: [{ title: ' 가 ', text: ['1', '2', '3', '4'], action: { label: '열기', href: '#/map' } }, { title: '나', text: '한 줄', action: { label: '밖', href: 'https://www.ces.tech/' } }, { title: '다', action: { label: '나쁜 주소', href: 'javascript:alert(1)' } }, { title: '', text: ['제목 없음'] }, null] });
+      const shipped = await json('data/home.json').catch(() => null);
+      const listed = JSON.parse(`[${(await readFile(join(dist, 'sw.js'), 'utf8')).match(/const FILES = \[(.*)\];/)[1]}]`);
+      check(cards.length === 3 && cards[0].title === '가' && cards[0].text.length === 3 && cards[0].action.href === '#/map' && cards[1].text[0] === '한 줄' && cards[1].action.href.startsWith('https://') && cards[2].action === null && H.cleanCards(null).length === 0
+        && H.oneThing(null, []).href === '#/card' && H.oneThing({ nick: 'a' }, []).href === '#/map' && H.oneThing({ nick: 'a' }, [{ id: '1' }, { id: '2', seen: true }]).title === '갈 곳 1곳' && H.oneThing({ nick: 'a' }, [{ id: '2', seen: true }]).href === '#/map'
+        && Array.isArray(shipped?.cards) && shipped.cards.length === 0 && listed.includes('data/home.json') && listed.includes('views/home.js'),
+        '홈: 안내 칸은 자료 파일에서 읽고(제목 없는 칸 · 틀린 주소의 단추는 버리고 글은 세 줄까지), 지금 할 일은 명함 → 지도 → 갈 곳 차례로 하나만 고른다. 실은 파일에는 칸이 없고(내용은 지어내지 않는다), 자료 파일과 화면 조각은 미리 담는 목록에 있다');
+    }
     // 홈 화면에 추가 안내(안 4): 아이폰 · 아이패드의 브라우저 탭에서만. 홈 화면 앱 · 안드로이드 · 책상에서는 안 보인다.
     const T = await import('../web/tips.js').catch(() => null);
     const iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
     check(!!T && T.homeKind({ userAgent: iphone }, false) === 'safari' && T.homeKind({ userAgent: iphone }, true) === null && T.homeKind({ userAgent: `${iphone} KAKAOTALK 11.0` }, false) === 'inapp'
       && T.homeKind({ userAgent: 'Mozilla/5.0 (Linux; Android 15; Pixel 9) Chrome/130 Mobile Safari/537.36' }, false) === null && T.homeKind({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15', maxTouchPoints: 0 }, false) === null
-      && T.homeKind({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15', maxTouchPoints: 5 }, false) === 'safari' && T.TIPS.length === 1 && T.TIPS[0].text('safari', 'card').includes('홈 화면에 추가'),
+      && T.homeKind({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15', maxTouchPoints: 5 }, false) === 'safari' && T.TIPS.length === 1 && T.TIPS[0].text('safari', 'before').includes('홈 화면에 추가'),
       '홈 화면에 추가 안내: 아이폰 · 아이패드의 Safari 탭이면 보이고(앱 안의 창이면 "Safari로 연 뒤"), 홈 화면 앱 · 안드로이드 · 책상에서는 안 보인다');
   }
   const soon = al.soonEvents([{ id: 'a', date: '2027-01-06', from: '09:40', to: '10:00', name: 'A' }, { id: 'b', date: '2027-01-06', from: '09:00', to: '09:20', name: 'B' }, { id: 'c', date: '2027-01-06', from: '11:00', to: '11:20', name: 'C' }, { id: 'd', date: '2027-01-07', from: '09:30', to: '10:00', name: 'D' }], vegas, 30);

@@ -89,7 +89,7 @@ async (page) => {
   check(wrap === 'wrap' && (await page.locator('.textsegs .seg').first().evaluate((n) => n.getBoundingClientRect().width)) < 200, '큰 단계에서는 글자 크기 칩이 2 × 2로 접힌다');
 
   // 2. 네 단계 × (360 · 390) × 화면: 가로 넘침 0 · 글자 잘림 0 · 누르는 곳 44px · 탭이 안 가림
-  const screens = [['지도', '#/map', null], ['갈 곳', '#/plan', null], ['갈 곳 카드', '#/plan', 'card'], ['일기', '#/diary', null], ['만난 사람 카드', '#/diary', 'person'], ['일기 쓰기', '#/diary/new', null], ['일기 쓰기 더 적기', '#/diary/new', 'more'], ['설정', '#/settings', null], ['명함 QR', '#/card', null], ['지도 회사 카드', '#/map', 'mapcard']];
+  const screens = [['홈', '#/home', null], ['지도', '#/map', null], ['갈 곳', '#/plan', null], ['갈 곳 카드', '#/plan', 'card'], ['일기', '#/diary', null], ['만난 사람 카드', '#/diary', 'person'], ['일기 쓰기', '#/diary/new', null], ['일기 쓰기 더 적기', '#/diary/new', 'more'], ['설정', '#/settings', null], ['명함 QR', '#/card', null], ['지도 회사 카드', '#/map', 'mapcard']];
   const problems = [];
   let audited = 0;
   for (const [W, H] of [[360, 740], [390, 780]]) {
@@ -102,6 +102,7 @@ async (page) => {
         if (hash === '#/map') await page.locator('svg.map').waitFor();
         else if (hash === '#/plan') await page.locator('.stops .stop').first().waitFor();
         else if (hash === '#/diary') await page.locator('.met').waitFor();
+        else if (hash === '#/home') await page.locator('.home-now').waitFor();
         else await settle(500);
         await settle(extra === 'mapcard' ? 1500 : 500);
         if (extra === 'card') { await page.locator('.stops .stop-open').first().click(); await page.locator('.pcard').waitFor(); }
@@ -122,7 +123,7 @@ async (page) => {
       }
     }
   }
-  check(problems.length === 0, `네 단계 × 360 · 390px × 화면 아홉(${audited}가지): 가로 넘침 0 · 글자 잘림 0 · 누르는 곳 44px 이상 · 탭이 안 가림${problems.length ? ` — 문제 ${problems.length}: ${problems.slice(0, 6).join(' | ')}` : ''}`);
+  check(problems.length === 0, `네 단계 × 360 · 390px × 화면 열하나(${audited}가지): 가로 넘침 0 · 글자 잘림 0 · 누르는 곳 44px 이상 · 탭이 안 가림${problems.length ? ` — 문제 ${problems.length}: ${problems.slice(0, 6).join(' | ')}` : ''}`);
 
   console.log(JSON.stringify(checks.map((c) => `${c.ok ? '됨' : '안 됨'} | ${c.what}`), null, 1));
   return `${checks.length}개 통과`;
