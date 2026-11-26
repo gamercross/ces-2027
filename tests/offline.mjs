@@ -454,7 +454,7 @@ await step('일기', '앱을 껐다 켜도(새로 열기) 일기 · 사진이 �
 }, blobOk ? '됨' : '안 됨');
 
 // ================= 9. 만난 사람 · 명함 받기 =================
-await step('만난 사람', '명함 받기(주소 붙여넣기): 주소를 적어 남기면 만난 사람에 쌓인다 · 남자마자 "무슨 대화를 했나" 한 줄 칸이 뜬다(R61)', async () => {
+await step('만난 사람', '명함 받기(주소 붙여넣기): 주소를 적어 남기면 만난 사람에 쌓인다 · 남자마자 "무슨 대화를 했나" 두 칸(대화 한 줄 · 이름)이 뜬다(R61)', async () => {
   await go('#/people/new', '명함 받기');
   // 앱 안 카메라가 안 되는 폰에서는 붙여 넣는 칸이 처음부터 펴져 있다. 접혀 있을 때만 편다.
   if (!(await page.locator('input[name=addr]').isVisible())) await page.getByRole('button', { name: '주소 붙여넣기' }).click();
@@ -462,8 +462,8 @@ await step('만난 사람', '명함 받기(주소 붙여넣기): 주소를 적�
   await page.getByRole('button', { name: '남기기' }).click();
   await sleep(700);
   const list = await store('people.v1');
-  const talk = await page.locator('input[name=talk]').isVisible();
-  return { status: list?.length === 1 && talk ? '됨' : '안 됨', note: `한 줄 칸 ${talk ? '뜸' : '안 뜸'} · 만난 사람 ${list?.length || 0}명 (key: ${await page.evaluate(() => Object.keys(localStorage).filter((k) => /people|met/.test(k)).join(','))})` };
+  const talk = (await page.locator('input[name=talk]').isVisible()) && (await page.locator('.pcard input[name=nick]').isVisible());
+  return { status: list?.length === 1 && talk ? '됨' : '안 됨', note: `두 칸 ${talk ? '뜸' : '안 뜸'} · 만난 사람 ${list?.length || 0}명 (key: ${await page.evaluate(() => Object.keys(localStorage).filter((k) => /people|met/.test(k)).join(','))})` };
 });
 // 카메라로 QR을 읽는 기능(BarcodeDetector)은 브라우저마다 다르다: Mac의 Chromium에는 있고, 리눅스(CI)의 Chromium과 WebKit에는 없다. 있는 곳에서만 "됨"을 기대한다.
 const canScan = await page.evaluate(() => 'BarcodeDetector' in window).catch(() => false);
