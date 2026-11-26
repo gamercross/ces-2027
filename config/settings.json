@@ -7,5 +7,7 @@
   "codysseyIcon": "icon/codyssey.png",
   "privateOn": null,
   "speech": "on-device",
-  "home": "on"
+  "home": "on",
+  "homeGlance": "on",
+  "homeTab": "same"
 }
