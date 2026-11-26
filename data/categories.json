@@ -29,5 +29,30 @@
     "job": ["Artificial Intelligence", "Enterprise", "Cloud Computing", "Cybersecurity", "Computing", "Robotics", "Vehicle Tech & Advanced Mobility", "Next G & Wireless", "Quantum", "IoT/Sensors", "Startups", "Supply & Logistics", "Marketing & Advertising", "Fintech", "Construction & Industrial Tech", "Sourcing & Manufacturing", "Additive Manufacturing & 3D Printing"],
     "ret": ["Health", "Longevity", "Accessibility", "Smart Home & Appliances", "Biotech", "Fitness", "Travel & Tourism", "Smart Communities", "Food Tech", "Lifestyle", "Pet & Animal Tech"],
     "mid": ["Smart Home & Appliances", "Vehicle Tech & Advanced Mobility", "Energy Future", "Fintech", "Investment & Venture Capital", "Health", "Fitness", "Home Entertainment & Office Hardware", "Sustainability", "Smart Communities", "Travel & Tourism", "Video & Display", "Food Tech"]
+  },
+  "topicsAbout": "분야마다 CES 공식 토픽 쪽(기사 모음) 주소다(R71 안, 설정 topicLinks). 공식 토픽 목록 https://www.ces.tech/topics/ 을 2026-11-26에 읽고 이름이 같은 분야만 짝지었다. 공식 쪽이 다른 토픽으로 넘기는 셋(Audio and Video · Marketing and Advertising → Content and Entertainment, Fitness → Lifestyle)은 넘어간 곳을 적었다. 짝이 없는 분야는 링크 줄이 없다. 글 · 그림은 가져오지 않고 링크만 둔다.",
+  "topicsRead": "2026-11-26",
+  "topics": {
+    "Accessibility": "https://www.ces.tech/topics/accessibility/",
+    "Artificial Intelligence": "https://www.ces.tech/topics/artificial-intelligence/",
+    "Audio": "https://www.ces.tech/topics/content-and-entertainment/",
+    "Content & Entertainment": "https://www.ces.tech/topics/content-and-entertainment/",
+    "Enterprise": "https://www.ces.tech/topics/enterprise/",
+    "Fintech": "https://www.ces.tech/topics/fintech/",
+    "Fitness": "https://www.ces.tech/topics/lifestyle/",
+    "Food Tech": "https://www.ces.tech/topics/food-tech/",
+    "Gaming & Esports": "https://www.ces.tech/topics/gaming-and-esports/",
+    "Health": "https://www.ces.tech/topics/health/",
+    "Lifestyle": "https://www.ces.tech/topics/lifestyle/",
+    "Marketing & Advertising": "https://www.ces.tech/topics/content-and-entertainment/",
+    "Next G & Wireless": "https://www.ces.tech/topics/next-g-and-wireless/",
+    "Robotics": "https://www.ces.tech/topics/robotics/",
+    "Smart Communities": "https://www.ces.tech/topics/smart-communities/",
+    "Smart Home & Appliances": "https://www.ces.tech/topics/smart-home/",
+    "Sports": "https://www.ces.tech/topics/sports/",
+    "Startups": "https://www.ces.tech/topics/startups/",
+    "Sustainability": "https://www.ces.tech/topics/sustainability/",
+    "Vehicle Tech & Advanced Mobility": "https://www.ces.tech/topics/vehicle-tech-and-advanced-mobility/",
+    "XR & Spatial Computing": "https://www.ces.tech/topics/xr-and-spatial-computing/"
   }
 }

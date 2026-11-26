@@ -2,16 +2,16 @@
 // 줄을 누르면 지도에서 그 회사 카드를 연다. 관심은 줄 오른쪽에서 바로 담는다(폰에만 남는다).
 // 전시사 자료는 이 화면을 열 때 받는다(첫 화면에 싣지 않는다). 3,751곳을 한 번에 그리지 않고 아래로 내릴 때 조금씩 붙인다.
 
-import { el, num } from '../dom.js';
-import { getExhibitors, getFinder, getPlaces } from '../data.js';
+import { el, num, out } from '../dom.js';
+import { getCategories, getExhibitors, getFinder, getLastYear, getPlaces, getSettings } from '../data.js';
 import { hasInterest, toggleInterest } from '../store.js';
 import { failed } from '../frame.js';
 import { HALL_GROUPS, shortName } from '../hallgroups.js';
-import { LETTERS, countryKo, filterRows, initialOf, letterStarts, placeGroups, sortRows } from '../exlist.js';
+import { LETTERS, countryKo, filterRows, initialOf, lastYearSet, letterStarts, placeGroups, sortRows } from '../exlist.js';
 
 const STEP = 60;
 // 고른 것은 이 화면을 떠났다 돌아와도 남는다(회사 카드를 보고 "뒤로"). 폰 저장소에는 두지 않는다.
-const state = { q: '', award: false, korea: false, place: null, country: null, cat: null, by: 'name', open: null, scrollY: 0, shown: STEP };
+const state = { q: '', award: false, korea: false, fresh: false, place: null, country: null, cat: null, by: 'name', open: null, scrollY: 0, shown: STEP };
 
 const stamp = (iso) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? '' : `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`; };
 const placeOfBooth = (b) => b.slice(b.lastIndexOf('@') + 1);
@@ -20,6 +20,13 @@ const codeOfBooth = (b) => b.slice(0, b.lastIndexOf('@'));
 export async function render() {
   let data, places;
   try { [data, places] = await Promise.all([getExhibitors(), getPlaces()]); } catch { return failed({ retry: () => location.reload() }); }
+  // 그림으로 보고 고를 안 둘(기본은 꺼 둔다): "올해 처음" 칩(R70 안, newThisYear) · 분야를 고르면 공식 토픽 기사 링크 한 줄(R71 안, topicLinks).
+  const settings = await getSettings().catch(() => ({}));
+  const [lastYear, catTable] = await Promise.all([
+    settings.newThisYear ? getLastYear().then(lastYearSet) : null,
+    settings.topicLinks ? getCategories().catch(() => null) : null,
+  ]);
+  if (!lastYear) state.fresh = false;
   const ex = data.ex;
   const placeKo = new Map(places.places.map((p) => [p.k, p.ko]));
   const short = (k) => shortName(placeKo.get(k) || k);
@@ -44,24 +51,43 @@ export async function render() {
   const input = el('input', { type: 'search', inputmode: 'search', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search', placeholder: '이름 · 부스 번호 · 분야(한글)', 'aria-label': '전시사 이름 · 부스 번호 · 분야로 거르기', value: state.q });
   const chips = el('div', { class: 'chips list-filters', role: 'group', 'aria-label': '거르기' });
   const picker = el('div', { class: 'list-pick', hidden: true });
+  const extra = el('div', { class: 'list-extra' }); // 올해 처음의 까닭 한 줄 · 분야의 공식 기사 한 줄 (켰을 때만)
   const sortSegs = el('div', { class: 'list-sort', role: 'group', 'aria-label': '줄 세우기' });
   const jump = el('div', { class: 'chips list-jump', role: 'group', 'aria-label': '바로 가기' });
   const list = el('ul', { class: 'exlist', 'aria-label': '전시사' });
   const more = el('li', { class: 'ex-more', 'aria-hidden': 'true' });
 
   const groupName = () => groups.find((g) => g.keys === state.place || (state.place && g.keys.join() === state.place.join()))?.ko;
-  const active = () => state.award || state.korea || state.place || state.country != null || state.cat != null;
+  const active = () => state.award || state.korea || state.fresh || state.place || state.country != null || state.cat != null;
 
   function paintChips() {
-    const chip = (text, pressed, onclick, label) => el('button', { class: 'chip-go', type: 'button', text, 'aria-pressed': pressed ? 'true' : 'false', 'aria-label': label, onclick });
+    const chip = (text, pressed, onclick, label, off) => el('button', { class: 'chip-go', type: 'button', text, 'aria-pressed': pressed ? 'true' : 'false', 'aria-label': label, onclick, disabled: !!off });
     const opener = (key, ko, value) => chip(value ? `${ko}: ${value}` : `${ko} ▾`, !!value || state.open === key, () => { state.open = state.open === key ? null : key; paintPicker(); paintChips(); }, `${ko} 고르기${value ? ` (지금 ${value})` : ''}`);
     chips.replaceChildren(
       chip('혁신상', state.award, () => { state.award = !state.award; refresh(); }),
       chip('한국', state.korea, () => { state.korea = !state.korea; refresh(); }),
+      ...(settings.newThisYear ? [chip('올해 처음', state.fresh, () => { state.fresh = !state.fresh; refresh(); }, lastYear ? '올해 처음 나온 회사만' : '올해 처음: 지난해 명단이 없어 지금은 못 거른다', !lastYear)] : []),
       opener('place', '위치', groupName()),
       opener('country', '나라', state.country != null ? countryKo(data.countries[state.country]) : ''),
       opener('cat', '분야', state.cat != null ? cats.find((c) => c.key === state.cat)?.ko : ''));
+    paintExtra();
   }
+  // 칩 아래 한 줄씩: 올해 처음을 못 쓰는 까닭 · 고른 분야의 CES 공식 기사(인터넷이 없으면 글만).
+  function paintExtra() {
+    const lines = [];
+    if (settings.newThisYear && !lastYear) lines.push(el('p', { class: 'note', text: '올해 처음: 지난해 전시사 명단이 없어 지금은 못 거른다.' }));
+    const catEn = state.cat != null ? data.cats?.[state.cat] : null;
+    const url = catEn && catTable?.topics?.[catEn];
+    if (url) {
+      const ko = cats.find((c) => c.key === state.cat)?.ko || catEn;
+      lines.push(navigator.onLine === false
+        ? el('p', { class: 'note', text: `${ko} 공식 기사는 인터넷이 있어야 열린다.` })
+        : el('p', { class: 'topic-line' }, out(url, `${ko} · CES 공식 기사 보기`, 'pick')));
+    }
+    extra.replaceChildren(...lines);
+    extra.hidden = !lines.length;
+  }
+  if (settings.topicLinks) { addEventListener('online', paintExtra); addEventListener('offline', paintExtra); addEventListener('hashchange', () => { removeEventListener('online', paintExtra); removeEventListener('offline', paintExtra); }, { once: true }); }
   function paintPicker() {
     if (!state.open) { picker.hidden = true; picker.replaceChildren(); return; }
     const defs = {
@@ -122,7 +148,7 @@ export async function render() {
   const headNode = (text) => el('li', { class: 'ex-head', 'data-head': text, text });
 
   function build() {
-    sorted = sortRows(filterRows(ex, state, { koreaAt, hits }), state.by, { placeOrder, place: state.place });
+    sorted = sortRows(filterRows(ex, state, { koreaAt, hits, lastYear }), state.by, { placeOrder, place: state.place });
     items = [];
     heads = new Map();
     let last = null;
@@ -151,7 +177,7 @@ export async function render() {
   }
   const countLine = () => `${num(sorted.length)}곳${active() || state.q.trim() ? ` / ${num(ex.length)}` : ''}`;
   function paintCount() {
-    count.replaceChildren(...[el('b', { text: countLine() }), active() ? el('button', { class: 'pick', type: 'button', text: '풀기', 'aria-label': '거르기 풀기', onclick: () => { Object.assign(state, { award: false, korea: false, place: null, country: null, cat: null, open: null }); refresh(); } }) : null].filter(Boolean));
+    count.replaceChildren(...[el('b', { text: countLine() }), active() ? el('button', { class: 'pick', type: 'button', text: '풀기', 'aria-label': '거르기 풀기', onclick: () => { Object.assign(state, { award: false, korea: false, fresh: false, place: null, country: null, cat: null, open: null }); refresh(); } }) : null].filter(Boolean));
   }
   function paintList(keepScroll) {
     list.replaceChildren(more);
@@ -199,7 +225,7 @@ export async function render() {
       el('h1', { text: '전시사' }),
       el('p', { class: 'note', text: `CES 공식 전시사 목록 · ${stamp(data.fetchedAt)} 받음` }),
       el('label', { class: 'find-field' }, input),
-      chips, picker),
+      chips, extra, picker),
     jump, el('div', { class: 'list-bar' }, count, sortSegs), said, list);
 
   const back = state.scrollY;

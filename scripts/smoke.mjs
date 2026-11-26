@@ -152,7 +152,7 @@ const settings = await json('data/settings.json');
 }
 check(['companyIntro', 'collector', 'collectorUrl', 'codysseyIcon', 'companyImage', 'privateOn'].every((k) => k in settings), `정한 것과 아직 정하지 않은 항목의 자리가 설정에 있다 (회사 소개 ${settings.companyIntro} · 모으는 곳 ${settings.collector}${settings.collectorUrl ? ' 주소 있음' : ' 주소 비어 있음'} · 아이콘 ${settings.codysseyIcon} · 로고 ${settings.companyImage} · 비공개 날 ${settings.privateOn})`);
 check(settings.codysseyIcon === false || (typeof settings.codysseyIcon === 'string' && (await exists(settings.codysseyIcon))), `코디세이 아이콘: ${settings.codysseyIcon ? `그림이 있다 (${settings.codysseyIcon})` : '글자만'}`);
-for (const f of ['app.js', 'store.js', 'views/map.js', 'views/settings.js', 'theme.js', 'views/card.js', 'views/plan.js', 'views/rec.js', 'qr.js', 'route.js']) check(await exists(f), `${f}가 있다`);
+for (const f of ['app.js', 'store.js', 'views/map.js', 'views/settings.js', 'theme.js', 'views/card.js', 'views/plan.js', 'views/rec.js', 'qr.js', 'route.js', 'halfday.js']) check(await exists(f), `${f}가 있다`);
 
 // 동선: 날짜 채우기와 걷는 차례.
 const { placeTable, sortRoute, fillDays } = await import('../web/route.js');
@@ -273,6 +273,34 @@ check(diary.fileName(who, new Date(2027, 0, 7)) === 'ces2027-일기-물개-20270
   const all = R.recommend(fake, tbl, { tag: 'stu', topics: [{ cats: ['Health'] }], have: new Set(['B']) });
   const names = (list) => list.map((r) => r.row[0]).join('');
   check(names(all) === 'ADFC' && all[0].why.join(' · ') === '최고 혁신상 2027 · 한국 기업 · 내 분야: 로봇' && all[1].why[0] === '내 분야: 로봇 · 헬스케어' && names(R.recommend(fake, tbl, { tag: 'stu', filter: 'award' })) === 'AB' && names(R.recommend(fake, tbl, { filter: 'korea' })) === 'AC' && names(R.recommend(fake, tbl, { filter: 'mine' })) === '' && all.every((r) => r.why.length > 0), '추천: 혁신상 · 한국 기업 · 내 분야(태그와 주제 판)로만 뽑고, 까닭을 붙이고, 관심에 있는 곳과 까닭 없는 곳은 뺀다');
+}
+
+// 그림으로 보고 고를 안 셋(2026-11-26, 기본은 꺼 둔다): 반나절에 캠퍼스 하나(R69) · 올해 처음(R70) · 공식 토픽 기사(R71). 지어낸 작은 자료로 셈만 본다.
+{
+  const H = await import('../web/halfday.js');
+  const camp = { a: 'L', b: 'V', c: 'L', d: 'V', e: 'L', x: null, z: 'C' };
+  const of = (id) => camp[id] ?? null;
+  const day = ['a', 'b', 'c', 'd', 'e'].map((id) => ({ id, day: 1 }));
+  const list = [{ id: 'q', day: 2 }, ...day.slice(0, 2), { id: 'x', day: 1 }, ...day.slice(2)];
+  const half = H.halves(day, of);
+  const split = H.splitDay(list, 1, of, ['L', 'V']);
+  const swapped = H.splitDay(split, 1, of, ['V', 'L']);
+  const ids = (l) => l.filter((it) => it.day === 1).map((it) => it.id).join('');
+  check(H.hops(day, of) === 4 && half && !half.grouped && half.am.campus === 'L' && half.am.n === 3 && half.pm.campus === 'V' && half.pm.n === 2, '반나절: 섞인 날은 곳이 많은 캠퍼스를 오전으로 나눈 안을 낸다');
+  check(ids(split) === 'acebdx' && split[0].id === 'q' && H.halves(split.filter((it) => it.day === 1), of).grouped, '반나절: 나누면 그 날만 캠퍼스끼리 모이고(모르는 곳은 맨 뒤) 다른 날은 그대로다');
+  check(ids(swapped) === 'bdacex', '반나절: 바꾸면 오전 · 오후 캠퍼스가 바뀌고 캠퍼스 안 차례는 그대로다');
+  check(H.halves([{ id: 'a' }, { id: 'c' }, { id: 'x' }], of) === null, '반나절: 캠퍼스가 하나뿐인 날은 칸이 없다');
+  const three = H.halves([...day, { id: 'z' }], of);
+  check(three.extra.length === 1 && three.extra[0].campus === 'C', '반나절: 셋째 캠퍼스는 반나절에 안 들어간다고 따로 센다');
+  const X = await import('../web/exlist.js');
+  const ly = X.lastYearSet({ names: ['Acme, Inc.', 'Beta Co., Ltd.'] });
+  const rows = [[1, 'ACME Inc'], [2, 'Beta Co Ltd'], [3, 'Gamma']].map((r) => [...r, '', null, '', 0, 0, []]);
+  check(X.lastYearSet(null) === null && X.lastYearSet({ names: [] }) === null, '올해 처음: 지난해 명단이 없으면 거르지 않는다(칩은 꺼진 채)');
+  check(X.filterRows(rows, { fresh: true }, { lastYear: ly }).map((r) => r[0]).join() === '3' && X.filterRows(rows, { fresh: true }, {}).length === 3, '올해 처음: 지난해 이름(꼴이 달라도)을 빼고, 명단이 없으면 다 남긴다');
+  const cat = await json('data/categories.json');
+  const st = await json('data/settings.json');
+  check(Object.entries(cat.topics || {}).every(([k, u]) => cat.ko[k] && /^https:\/\/www\.ces\.tech\/topics\/[a-z-]+\/$/.test(u)) && Object.keys(cat.topics).length === 21, '공식 토픽 기사: 분야 21개에 CES 공식 토픽 주소만 짝지었다');
+  check(st.halfDay === false && st.newThisYear === false && st.topicLinks === false, '안 셋은 설정에서 꺼 둔 채 나간다(지금 앱 그대로)');
 }
 
 // 전시사 목록 (공식 앱의 A–Z 목록 + 거르기): 진짜 자료로 거르기 · 줄 세우기 · 글자 자리 · 위치 묶음을 본다.
@@ -433,7 +461,7 @@ const sw = await readFile(join(dist, 'sw.js'), 'utf8');
 const version = await json('version.json').catch(() => null);
 const swFiles = JSON.parse(`[${(sw.match(/const FILES = \[(.*)\];/) || [])[1] || ''}]`);
 check(!!version && sw.includes(JSON.stringify(version.v)) && !sw.includes('__VERSION__'), `판 이름이 찍혔다 (${version?.v})`);
-const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'tokens.js', 'frame.js', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/card.js', 'views/plan.js', 'plancard.js', 'people-ui.js', 'views/rec.js', 'views/map.js', 'mapfind.js', 'views/list.js', 'exlist.js', 'hallgroups.js', 'bands.js', 'views/settings.js', 'views/diary.js', 'views/days.js', 'views/listen.js', 'views/talk.js', 'talk.js', 'speech.js', 'talk-ui.js', 'audio-store.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'alerts.js', 'notify.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
+const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'tokens.js', 'frame.js', 'core.js', 'core.wasm', 'qr.js', 'route.js', 'map3d.js', 'views/card.js', 'views/plan.js', 'plancard.js', 'people-ui.js', 'views/rec.js', 'views/map.js', 'mapfind.js', 'views/list.js', 'exlist.js', 'halfday.js', 'hallgroups.js', 'bands.js', 'views/settings.js', 'views/diary.js', 'views/days.js', 'views/listen.js', 'views/talk.js', 'talk.js', 'speech.js', 'talk-ui.js', 'audio-store.js', 'share.js', 'colors.js', 'days.js', 'recommend.js', 'guide.js', 'alerts.js', 'notify.js', 'diary.js', 'locate.js', 'maps.js', 'data/places.json', 'data/booth-spots.json', 'data/info.json', 'version.json', 'manifest.webmanifest', 'icon/icon-192.png'];
 // 디자인 토큰: tokens.css가 값의 원본이고, 지도 코드가 쓰는 tokens.js의 기본값이 한 글자도 다르지 않아야 한다.
 // 화면 파일(app.css · views · 지도 코드)이 색을 직접 적지 않는 것도 본다 (design.md).
 {
