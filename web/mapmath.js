@@ -4,7 +4,8 @@
 // 확대 단계 셋: 캠퍼스 셋(멀리) → 홀 → 부스(가까이). 칸 너비(w, 실제 미터)가 기준이다. 홀 하나는 300 ~ 550m라 홀 칩은 홀 단계, 더 가까이(330m 아래) 가면 부스 단계.
 export const LEVEL_HALL = 1300;
 export const LEVEL_BOOTH = 330;
-export const BOOTH_DOTS = 360;
+export const BOOTH_DOTS = 360;   // 이보다 가까우면 부스 칸을 눌러 회사 카드를 연다
+export const BOOTH_BOXES = 900;  // 이보다 가까우면(홀 · 부스 단계) 부스 칸(대략 네모)을 그린다. 캠퍼스 단계는 홀만
 export const MIN_W = 90;
 export const MAX_W = 3800;
 export const MIN_FONT = 13;
@@ -42,12 +43,12 @@ export function mixBox(a, b, t) {
 }
 export const easeOut = (t) => 1 - (1 - t) ** 3;
 
-// 글자 하나의 너비(px)를 어림한다: 한글 · 한자는 한 칸, 영문 대문자 0.66, 숫자 0.6, 그 밖 0.56.
+// 글자 하나의 너비(px)를 어림한다: 한글 · 한자는 한 칸, 영문 대문자 0.7, 숫자 0.62, 그 밖 0.6 (굵은 글자 기준, 부스 칸이 붙어 서면 글자도 가까워져 넉넉히 잡는다).
 export function textWidth(text, px) {
   let n = 0;
   for (const ch of String(text)) {
     const c = ch.codePointAt(0);
-    n += c >= 0x1100 ? 1 : /[A-Z]/.test(ch) ? 0.66 : /\d/.test(ch) ? 0.6 : ch === ' ' ? 0.32 : 0.56;
+    n += c >= 0x1100 ? 1 : /[A-Z]/.test(ch) ? 0.7 : /\d/.test(ch) ? 0.62 : ch === ' ' ? 0.32 : 0.6;
   }
   return n * px;
 }

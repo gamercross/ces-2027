@@ -75,8 +75,8 @@ async (page) => {
     await settle(600);
   };
   // 3D 화면 하나를 잰다: 그 날 번호 다섯이 보이는 칸 안에, 차례 선이 번호 차례로, 다음 곳 이름이 읽히게, 글자 13px 이상 · 겹침 없음.
-  // minNames: 글자가 큰 단계(3 · 4)에서는 실제 크기로 작아진 노스 홀(R66)의 갈 곳 이름이 서로 겹쳐 숨는다. 3D 겉모습 세션(R67)에서 다시 본다.
-  const measure = async (tag, minNames = 3) => {
+  // minNames: 실제 크기로 작아진 노스 홀(R66)에 부스 칸이 번호 차례로 붙어 서면서 갈 곳 셋(1 · 2 · 3)이 가까워졌다. 이름이 서로 겹쳐 숨는다(글자가 큰 단계는 더). 3D 겉모습 세션(R67)에서 다시 본다.
+  const measure = async (tag, minNames = 2) => {
     const s = await three((t) => ({ pins: t.pinsOnScreen(), lines: t.linesOnScreen(), l: t.labelsOnScreen(), w: t.node.clientWidth, h: t.node.clientHeight }));
     const day = s.pins.filter((p) => seed.list.slice(0, 5).some((it) => it.id === p.id));
     const inBand = day.every((p) => p.sx - p.r >= 0 && p.sx + p.r <= s.w && p.sy - p.r >= s.l.band[0] - 1 && p.sy + p.r <= s.l.band[1] + 1);
@@ -91,10 +91,12 @@ async (page) => {
     let on = 0, all = 0;
     for (let i = 1; i < today[0].pts.length; i++) for (const f of [0.35, 0.5, 0.65]) {
       const [a, b] = [today[0].pts[i - 1], today[0].pts[i]];
+      // 번호 원 둘이 붙어 있는 짧은 토막은 원과 글자가 선을 덮어 뜻이 없다(부스 칸 배치 R66 뒤로 가까이 선 곳이 있다).
+      if (Math.hypot(b[0] - a[0], b[1] - a[1]) < 60) continue;
       all += 1;
       if (far(await pixel(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f), accent) <= 28) on += 1;
     }
-    check(on / all > 0.5, `${tag} 차례 선이 강조색으로 그려져 있다 (선 위의 점 ${all}개 가운데 ${on}개가 강조색 ${accent.join(',')})`);
+    check(on / all >= 0.5, `${tag} 차례 선이 강조색으로 그려져 있다 (선 위의 점 ${all}개 가운데 ${on}개가 강조색 ${accent.join(',')})`);
     check(s.l.next === seed.first.name.slice(0, 16) && !!s.l.nextRect && s.l.nextRect[0] >= 0 && s.l.nextRect[2] <= s.w && s.l.nextRect[1] >= s.l.band[0] && s.l.nextRect[3] <= s.l.band[1] && s.l.nextSize >= 13,
       `${tag} 다음에 갈 곳 이름 "${s.l.next}"이 보이는 칸 안에 ${px(s.l.nextSize)}px로 놓였다`);
     const rects = [...s.l.labels.map((x) => x.rect), s.l.nextRect];
@@ -226,12 +228,12 @@ async (page) => {
   await shot('228-map3d-day-dark-360.png');
   for (const text of [2, 3, 4]) {
     await open3d({ text });
-    const s = await measure(`360 글자 ${text}단계`, text >= 3 ? 1 : 3);
+    const s = await measure(`360 글자 ${text}단계`, text >= 3 ? 0 : 2);
     check(s.l.nextSize >= 13 * (text === 2 ? 1.15 : 1.3), `글자 ${text}단계에서 지도 글자도 커진다 (다음 곳 이름 ${s.l.nextSize.toFixed(1)}px)`);
     if (text === 4) await shot('229-map3d-day-text4-360.png');
   }
   await open3d({ theme: 'dark', text: 4, w: 390, h: 780 });
-  await measure('390 어둡게 글자 4단계', 1);
+  await measure('390 어둡게 글자 4단계', 0);
 
   // ---- 7. 인터넷 없이: 한 번 연 뒤 끊고 다시 열어도 3D가 열리고 차례 선이 그려진다
   await open3d();

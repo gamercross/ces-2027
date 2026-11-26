@@ -741,6 +741,7 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       const place = { k: 'T', poly: [[100, 200], [300, 200], [300, 260], [100, 260]] };
       const got = fp.convert({ plan: { bbox: [0, 0, 1000, 300] }, booths: { A1: [0, 0], A2: [1000, 300], A3: [500, 150], B1: [2000, 150], bad: ['x', 1] } }, place);
       const swapped = fp.convert({ booths: { A1: [0, 0], A2: [300, 1000] } }, place, { swap: true });
+      const sized = fp.convert({ plan: { bbox: [0, 0, 1000, 300] }, booths: { A1: [500, 150, 50, 30], A2: [100, 100, 0, 5] } }, place);
       const merged = fp.merge({ about: 'x', edition: null, source: null, places: { OLD: { 1: [1, 2] }, T: { A1: [9, 9], Z: [5, 5] } } }, 'T', { A1: [1, 1] }, { edition: '2026-12-01', source: 'u' });
       const cov = fp.coverage(['A1', 'A2', 'A2', 'A9'], { A1: [1, 1], A2: [2, 2] });
       const text = '{ "k": "T", "c": "x", "boothSpots": "guess", "maps": {} },\n{ "k": "U", "boothSpots": "guess" }';
@@ -749,6 +750,7 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
         && got.spots.A1.join() === '100,200' && got.spots.A2.join() === '300,260' && got.spots.A3.join() === '200,230' && got.outside.join() === 'B1' && !('bad' in got.spots) && swapped.spots.A2.join() === '300,260' && merged.places.OLD[1].join() === '1,2' && merged.places.T.A1.join() === '1,1' && merged.places.T.Z.join() === '5,5' && merged.edition === '2026-12-01'
         && cov.total === 3 && cov.have === 2 && cov.missing.join() === 'A9' && marked.includes('"boothSpots": "official"') && marked.split('official').length === 2 && fp.markOfficial(text, 'Q') === null,
       '정식 배치도 자동 반영의 셈: validHalls 읽기 · 배치도 좌표를 장소 상자에 맞춰 옮기기(방향 바꿈 포함) · 벗어난 것 거르기 · booth-spots.json에 합치기 · 모자라는 부스 세기 · 한 장소만 official로 바꾸기');
+      check(sized.spots.A1.join() === '200,230,10,6' && !('A2' in sized.spots), '정식 배치도의 부스 네모 크기([x, y, 너비, 높이])도 같은 배율로 미터로 옮긴다(크기 0은 버린다) — 지도의 부스 칸이 실제 크기로 바뀐다');
       const wf = await readFile(new URL('../.github/workflows/floorplan-watch.yml', import.meta.url), 'utf8');
       check(wf.includes('cron:') && wf.includes('check-floorplan.mjs') && wf.includes("steps.plan.outputs.state == 'open'") && wf.includes('gh issue create') && wf.includes('issues: write') && wf.includes('gh issue list --label floorplan --state open'), '정식 배치도 감시: 매일 한 번 공식 사이트를 보고, 열렸을 때만 이슈 하나를 만든다(이미 열린 이슈가 있으면 또 만들지 않는다)');
       check(/startNav\(/.test(mapSrc) && /길 안내 시작/.test(mapSrc) && /function endNav/.test(mapSrc) && /navFollow/.test(mapSrc) && /map\/go|rest\[0\] === 'go'/.test(mapSrc) && /estimate\(/.test(mapSrc) && /\/\/ ---- 길 안내/.test(mapSrc),
@@ -1034,6 +1036,27 @@ if (await exists('data/meta.json')) {
   const saysOfficial = places.places.filter((p) => p.boothSpots === 'official').map((p) => p.k);
   check(saysOfficial.every((k) => Object.keys(officialFile.places?.[k] || {}).length > 0), `공식 자리라고 적은 장소 ${saysOfficial.length}곳에는 정식 자리가 들어 있다 (지금 정식 자리 ${officialCount}개)`);
   check(placed === meta.booths - meta.unplacedBooths && outside === 0, `부스 자리 짐작: ${placed}개가 제 장소 모양 안에 있다 (밖 ${outside})`);
+  // 부스 칸(대략 네모, web/boothgrid.js): 같은 홀 안에서 겹치지 않고, 큰 홀은 한 변 3m 넘게, 홀 부스는 홀 안에 그린 회의실 자리를 비운다.
+  {
+    const bg = await import('../web/boothgrid.js');
+    const counts = bg.countByPlace(spots);
+    const halls = places.places.filter((p) => p.kind === 'hall').map((p) => p.k);
+    let overlap = 0, inRoom = 0;
+    const rooms = L.list.filter((p) => p.kind === 'room');
+    for (const k of halls) {
+      const list = [...spots].filter(([key]) => key.startsWith(`${k}|`)).map(([, v]) => v);
+      for (let i = 0; i < list.length; i += 1) for (let j = i + 1; j < list.length; j += 1) { const a = list[i], b = list[j]; if (Math.abs(a.x - b.x) < (a.w + b.w) / 2 - 0.01 && Math.abs(a.z - b.z) < (a.d + b.d) / 2 - 0.01) overlap += 1; }
+      for (const v of list) if (rooms.some((r) => inside([v.x, v.z], r.world))) inRoom += 1;
+    }
+    const sizes = Object.fromEntries(halls.map((k) => { const v = [...spots].find(([key]) => key.startsWith(`${k}|`))?.[1]; return [k, v ? Math.round(v.w * 10) / 10 : 0]; }));
+    const big = ['LVCC_W', 'LVCC_N', 'LVCC_C', 'LVCC_S3', 'VEN_AD', 'VEN_G'];
+    const segs = bg.segmentsOf(['14731', '14702', '14700', '14801', '15000']);
+    const off = bg.boothBoxes(places, data, { places: { LVCC_N: { [someCode]: [600, -300], '10002': [610, -310, 12, 9] } } });
+    const o1 = off.get(`LVCC_N|${someCode}`), o2 = off.get('LVCC_N|10002'), guessN = spots.get(`LVCC_N|${someCode}`);
+    check(overlap === 0 && inRoom === 0 && big.every((k) => sizes[k] >= 3) && segs.map((x) => `${x.aisle}:${x.even.join('/')}|${x.odd.join('/')}`).join(' ') === '147:14700/14702|14731 148:|14801 150:15000|' && segs[2].group === 15
+      && o1.official && o1.x === 600 && o1.w === guessN.w && (!o2 || (o2.official && o2.w === 12 && o2.d === 9)),
+      `부스 칸(대략 네모): 홀 안 겹침 ${overlap} · 회의실 자리에 든 홀 부스 ${inRoom} · 한 변(m) ${big.map((k) => `${k} ${sizes[k]}`).join(' · ')} · 홀마다 칸 수 ${halls.map((k) => `${k} ${counts[k] || 0}`).join(' · ')}. 번호 → 통로 토막(짝수 한쪽 · 홀수 맞은편), 정식 자리는 그 자리(크기가 있으면 그 크기)로 바뀐다`);
+  }
   const rows = core.loadIndex(await readFile(join(dist, 'data/search-index.txt')));
   check(rows === data.n, `찾기 색인의 줄 수가 전시사 수와 같다 (${rows})`);
   const names = (q) => core.search(q, 5).map((i) => data.ex[i][1]);

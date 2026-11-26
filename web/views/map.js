@@ -28,7 +28,7 @@ import { findBox } from '../mapfind.js';
 import { createSheet } from '../mapsheet.js';
 import { attachGestures } from '../mapgesture.js';
 import { estimate, fmtDistance } from '../nav.js';
-import { BOOTH_DOTS, MIN_FONT, clip, layoutLabels, levelOf, viewFor, widthOf } from '../mapmath.js';
+import { BOOTH_BOXES, BOOTH_DOTS, MIN_FONT, clip, layoutLabels, levelOf, viewFor, widthOf } from '../mapmath.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const FILL = { hall: T.hall, room: T.room, out: T.out, hotel: T.hotel };
@@ -117,7 +117,7 @@ export async function render({ rest = [] } = {}) {
       const rs = boothEx.get(key) || [];
       const best = rs.reduce((a, r) => ((r[5] || 0) > (a?.[5] || 0) ? r : a), rs[0]);
       const bar = key.indexOf('|');
-      return { key, x: s.x, z: s.z, code: key.slice(bar + 1), name: best?.[1] || '', award: best?.[5] || 0, n: rs.length };
+      return { key, x: s.x, z: s.z, w: s.w, d: s.d, code: key.slice(bar + 1), name: best?.[1] || '', award: best?.[5] || 0, n: rs.length };
     });
     colorOf = null;
     afterData();
@@ -198,9 +198,13 @@ export async function render({ rest = [] } = {}) {
     lastUnit = unit;
     for (const g of marks.children) g.querySelector('circle').setAttribute('r', (unit * (g.dataset.city ? 8 : 5)).toFixed(2));
     for (const g of pinLayer.children) {
-      g.querySelector('circle').setAttribute('r', (unit * 11 * (LABEL / MIN_FONT)).toFixed(2));
+      const r = unit * 11 * (LABEL / MIN_FONT);
+      g.querySelector('circle').setAttribute('r', r.toFixed(2));
       const t = g.querySelector('text');
       t.setAttribute('font-size', (unit * LABEL).toFixed(2));
+      // 부스 칸이 번호 원보다 크게 보이면 번호를 칸의 오른쪽 위 모서리로 옮겨 강조색 칸이 보이게 한다.
+      const bw = Number(g.dataset.bw) || 0, bd = Number(g.dataset.bd) || 0;
+      g.setAttribute('transform', bw > r * 1.2 ? `translate(${(bw / 2).toFixed(2)} ${(-bd / 2).toFixed(2)})` : '');
     }
     for (const node of routeLayer.children) node.setAttribute('stroke-width', node.dataset.today ? 4 : 2.5);
   }
@@ -215,32 +219,33 @@ export async function render({ rest = [] } = {}) {
   }
   function needDots() {
     const w = widthOf(view);
-    if (w >= BOOTH_DOTS) { if (drawn) { boothLayer.replaceChildren(); drawn = null; } return; }
+    if (w >= BOOTH_BOXES) { if (drawn) { boothLayer.replaceChildren(); drawn = null; } return; }
     if (!drawn || view[0] < drawn[0] || view[1] < drawn[1] || view[2] > drawn[2] || view[3] > drawn[3] || w / drawn.w > 1.4 || w / drawn.w < 0.55) drawBooths();
   }
   const setView = (v) => { view = v; };
 
-  // 부스 점: 보이는 칸보다 조금 넓게 그려 두어, 끌 때 빈 곳이 보이지 않게 한다.
+  // 부스 칸(대략 네모, web/boothgrid.js): 보이는 칸보다 조금 넓게 그려 두어, 끌 때 빈 곳이 보이지 않게 한다.
+  // 관심 · 갈 곳에 넣은 회사의 칸은 강조색, 나머지는 회색(칠하기를 고르면 그 색). 고른 칸은 검은 테, 명함 넣는 부스는 붉은 테.
   function drawBooths() {
     const w = widthOf(view);
-    if (w >= BOOTH_DOTS) { boothLayer.replaceChildren(); drawn = null; return; }
+    if (w >= BOOTH_BOXES) { boothLayer.replaceChildren(); drawn = null; return; }
     const mx = (view[2] - view[0]) * 0.5, mz = (view[3] - view[1]) * 0.5;
     const box = [view[0] - mx, view[1] - mz, view[2] + mx, view[3] + mz];
     box.w = w;
     drawn = box;
-    const unit = unitNow();
-    const r = (unit * 5).toFixed(2);
     const marksNow = getMarks();
     colorOf ||= makeColorer();
+    const mine = new Set(pins.map((p) => boothKey(p.booth)));
     const nodes = [];
     for (const b of boothList) {
       if (b.x < box[0] || b.x > box[2] || b.z < box[1] || b.z > box[3]) continue;
       const on1 = b.key === chosenBooth;
       const marked = !!marksNow[b.key];
-      const dot = svg('circle', { cx: b.x.toFixed(1), cy: b.z.toFixed(1), r: marked ? (Number(r) * 1.35).toFixed(2) : r, fill: colorOf(b.key), stroke: on1 ? T.ink : marked ? T.warn : T.panel, 'stroke-width': on1 || marked ? 3 : 1, 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' });
-      dot.dataset.key = b.key;
-      nodes.push(dot);
-      if (nodes.length >= 1500) break;
+      const cell = svg('rect', { x: (b.x - b.w / 2).toFixed(2), y: (b.z - b.d / 2).toFixed(2), width: b.w.toFixed(2), height: b.d.toFixed(2), fill: mine.has(b.key) ? T.accent : colorOf(b.key), stroke: on1 ? T.ink : marked ? T.warn : 'none', 'stroke-width': on1 || marked ? 2.5 : 0, 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' });
+      cell.dataset.key = b.key;
+      if (mine.has(b.key)) cell.dataset.mine = '1';
+      nodes.push(cell);
+      if (nodes.length >= 2500) break;
     }
     boothLayer.replaceChildren(...nodes);
   }
@@ -328,7 +333,7 @@ export async function render({ rest = [] } = {}) {
     const { width: W, height: H } = boardSize();
     const level = levelOf(widthOf(view));
     const unit = widthOf(view) / W;
-    const placed = layoutLabels(candidates(level, W, H), { width: W, height: H });
+    const placed = layoutLabels(candidates(level, W, H), { width: W, height: H }, { pad: 5 });
     const nodes = [];
     for (const c of placed) {
       const x = view[0] + (c.x + (c.dx || 0)) * unit, z = view[1] + (c.y + (c.dy || 0)) * unit;
@@ -379,7 +384,7 @@ export async function render({ rest = [] } = {}) {
   }
   function drawPins() {
     pinLayer.replaceChildren(...pins.map((pin) => {
-      const g = svg('g', { 'data-pin': pin.id, role: 'button', tabindex: 0, 'aria-label': `${pin.no}번 ${pin.name}` },
+      const g = svg('g', { 'data-pin': pin.id, 'data-bw': pin.w || 0, 'data-bd': pin.d || 0, role: 'button', tabindex: 0, 'aria-label': `${pin.no}번 ${pin.name}` },
         svg('circle', { cx: pin.x, cy: pin.z, fill: T.accent, stroke: T.panel, 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke', opacity: dayFocus != null && pin.day !== dayFocus ? 0.25 : pin.seen ? 0.5 : 1 }));
       const text = svg('text', { x: pin.x, y: pin.z, 'text-anchor': 'middle', 'dominant-baseline': 'central', fill: T.panel, 'font-weight': 800, 'pointer-events': 'none' });
       text.textContent = String(pin.no);
@@ -560,7 +565,7 @@ export async function render({ rest = [] } = {}) {
       logoBox);
     return box;
   }
-  const afterInterests = () => { pins = interestPins(rows, spots); drawPins(); relayout(); drawMe(); };
+  const afterInterests = () => { pins = interestPins(rows, spots); drawPins(); drawBooths(); relayout(); drawMe(); };
   // 명함 넣는 이벤트가 있는 부스인지 사람이 표시한다. 공식 자료에는 없다.
   function markBlock(key) {
     if (!key) return null;
@@ -1163,7 +1168,7 @@ export async function render({ rest = [] } = {}) {
     drawBooths();
     three?.redraw();
     // 점은 가까이 봐야 찍힌다. 멀리 보고 있으면 알려 준다.
-    if (!in3d() && widthOf(view) > BOOTH_DOTS) whereNote.textContent = '부스 점은 지도를 가까이 봐야 찍힌다. 홀을 누르거나 홀 바로 가기를 누른다.';
+    if (!in3d() && widthOf(view) > BOOTH_BOXES) whereNote.textContent = '부스 칸은 지도를 가까이 봐야 보인다. 홀을 누르거나 홀 바로 가기를 누른다.';
   } }));
   paintLegend();
   if (colorMode === 'group') getCategories().then((t) => { table = t; colorOf = null; paintLegend(); drawBooths(); }).catch(() => {});
@@ -1181,7 +1186,9 @@ export async function render({ rest = [] } = {}) {
   }
   // ---- 조립
   const osmDay = () => { const d = (places.sources || []).find((x) => /openstreetmap/.test(x.url))?.edition || ''; const [, m, dd] = d.split('-'); return m ? `${Number(m)}/${Number(dd)}` : '날짜 모름'; };
-  const topBar = el('div', { class: 'mapx-top' }, finder.node, chips, daybar);
+  // 홀 · 부스 단계에서만 보이는 한 줄: 부스 칸은 대략이다(정식 배치도가 열린 장소만 있으면 안 보인다).
+  const rough = places.places.some((p) => p.boothSpots === 'guess') ? el('p', { class: 'map-rough', text: '부스 자리는 대략 · 정식 배치도가 열리면 바뀐다' }) : null;
+  const topBar = el('div', { class: 'mapx-top' }, finder.node, chips, daybar, rough);
   const ctls = el('div', { class: 'ctls' }, plus, minus, locate, solid);
   mapx.append(el('h1', { class: 'sr-only', text: '지도' }), frame,
     topBar,
