@@ -20,9 +20,11 @@ export function bboxOf(points) {
 
 // 배치도 그림의 좌표(plan.bbox 또는 booths 전체의 상자)를 그 장소의 모양(poly) 상자에 맞춰 늘이고 옮긴다.
 // opt.swap: 배치도가 옆으로 누워 있으면(x · y가 바뀌어 있으면) true · opt.flipX / opt.flipY: 방향이 거꾸로면 true
-// 돌려주는 것: { spots: { 부스: [x, z] }, outside: [부스…] (장소 상자에서 10% 넘게 벗어난 것), box }
+// 부스마다 [x, y](가운데) 또는 [x, y, 너비, 높이](배치도의 부스 네모)를 받는다. 크기가 있으면 같은 배율로 미터로 바꿔 [x, z, 너비, 깊이]로 둔다
+// (지도의 부스 칸이 실제 크기로 그려진다, web/boothgrid.js).
+// 돌려주는 것: { spots: { 부스: [x, z] 또는 [x, z, w, d] }, outside: [부스…] (장소 상자에서 10% 넘게 벗어난 것), box }
 export function convert(input, place, opt = {}) {
-  const raw = Object.entries(input.booths || {}).filter(([, p]) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite));
+  const raw = Object.entries(input.booths || {}).filter(([, p]) => Array.isArray(p) && (p.length === 2 || p.length === 4) && p.every(Number.isFinite) && (p.length === 2 || (p[2] > 0 && p[3] > 0)));
   if (!raw.length) return { spots: {}, outside: [], box: null };
   const pts = raw.map(([, [x, y]]) => (opt.swap ? [y, x] : [x, y]));
   const src = input.plan?.bbox ? (opt.swap ? [input.plan.bbox[1], input.plan.bbox[0], input.plan.bbox[3], input.plan.bbox[2]] : input.plan.bbox) : bboxOf(pts);
@@ -36,7 +38,9 @@ export function convert(input, place, opt = {}) {
     let nx = dst[0] + (x - src[0]) * sx, ny = dst[1] + (y - src[1]) * sy;
     if (opt.flipX) nx = dst[0] + dst[2] - nx;
     if (opt.flipY) ny = dst[1] + dst[3] - ny;
-    spots[code] = [Math.round(nx * 10) / 10, Math.round(ny * 10) / 10];
+    const r1 = (v) => Math.round(v * 10) / 10;
+    const size = raw[i][1].length === 4 ? (opt.swap ? [raw[i][1][3] * sx, raw[i][1][2] * sy] : [raw[i][1][2] * sx, raw[i][1][3] * sy]) : null;
+    spots[code] = size ? [r1(nx), r1(ny), r1(size[0]), r1(size[1])] : [r1(nx), r1(ny)];
     if (nx < dst[0] - padX || nx > dst[2] + padX || ny < dst[1] - padY || ny > dst[3] + padY) outside.push(code);
   });
   return { spots, outside, box: dst };

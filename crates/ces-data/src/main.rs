@@ -17,6 +17,9 @@ ces-data: CES 공식 전시사 검색에서 자료를 받아 줄이고 찾기 �
   ces-data sessions [고름]      CES 공식 일정(ces.tech/schedule)에서 기조연설 · 세션을 받아 sessions.json을 쓴다 (--out · --from · --save-raw)
   ces-data sort-diary --in <폴더나 파일> [--in ...] [--out <파일>]
                                 폰에서 내보낸 일기 파일들을 네 태그로 나누고 회사로 묶은 한 장(마크다운)으로 만든다
+  ces-data osm [--from <폴더>] [--save-raw <폴더>] [--out <파일>]
+                                오픈스트리트맵에서 LVCC · 베네시안 둘레의 건물 · 길 · 모노레일 · 출입구를 받아
+                                data/osm-map.json(ODbL)을 쓴다. 사람이 다시 받을 때만 부른다 (물음 두 번)
   ces-data check-links --in <파일> [--in ...]
                                 자료 파일에 적은 출처 링크가 살아 있는지 본다. 없어진 주소가 있으면 실패로 끝난다
 
@@ -181,6 +184,37 @@ fn run_sessions(a: &Args) -> Result<(), String> {
     Ok(())
 }
 
+/// 오픈스트리트맵에서 받아 지도 파일 한 장으로 줄인다. 못 받으면 파일을 쓰지 않는다.
+fn run_osm(a: &Args) -> Result<(), String> {
+    use ces_data::osm;
+    let geo = osm::GeoRef::from_places(&read_json(&a.places)?)?;
+    let mut log = |line: &str| println!("{line}");
+    let (answers, at) = match &a.from {
+        Some(dir) => {
+            println!("받아 둔 폴더에서 읽는다: {}", dir.display());
+            let stamp = std::fs::read_to_string(dir.join("fetched-at.txt")).map(|s| s.trim().to_string()).ok();
+            (osm::read_dir(dir)?, stamp.filter(|s| time::looks_iso(s)).unwrap_or_else(time::now_iso))
+        }
+        None => {
+            println!("오픈스트리트맵(Overpass)에서 받는다: {} · 물음 {}번", osm::OVERPASS, osm::AREAS.len());
+            let got = osm::fetch(a.save_raw.as_deref(), &mut log)?;
+            let at = time::now_iso();
+            if let Some(dir) = &a.save_raw {
+                write(&dir.join("fetched-at.txt"), &at)?;
+            }
+            (got, at)
+        }
+    };
+    let v = osm::shrink(&answers, &geo, &at)?;
+    let out = if a.out_given { a.out.clone() } else { PathBuf::from("data/osm-map.json") };
+    let text = osm::to_text(&v);
+    write(&out, &text)?;
+    let c = &v["counts"];
+    println!("끝: 건물 {} (우리 말 이름 {} · 높이를 아는 곳 {}) · 길 {} · 모노레일 {} · 정거장 {} · 출입구 {} · {} KB · 받은 때 {}", c["buildings"], c["named"], c["withHeight"], c["roads"], c["rail"], c["stations"], c["entrances"], text.len() / 1024, at);
+    println!("쓴 곳: {}", out.display());
+    Ok(())
+}
+
 /// 자료 파일의 출처 링크를 하나씩 열어 본다.
 fn run_check_links(a: &Args) -> Result<(), String> {
     if a.inputs.is_empty() {
@@ -256,6 +290,7 @@ fn main() -> ExitCode {
         Some("sessions") => parse_args(&args[1..]).and_then(|a| run_sessions(&a)),
         Some("check-places") => parse_args(&args[1..]).and_then(|a| run_check_places(&a)),
         Some("sort-diary") => parse_args(&args[1..]).and_then(|a| run_sort_diary(&a)),
+        Some("osm") => parse_args(&args[1..]).and_then(|a| run_osm(&a)),
         Some("check-links") => parse_args(&args[1..]).and_then(|a| run_check_links(&a)),
         Some("--help" | "-h" | "help") | None => {
             print!("{HELP}");

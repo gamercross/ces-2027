@@ -353,6 +353,10 @@ body.pcard-open { overflow: hidden; }
 /* 지도 칸: 화면을 채운다(높이는 지도가 정한다). 위에 찾기 칸과 홀 바로 가기, 오른쪽에 확대 단추, 아래에서 카드가 올라온다 */
 .mapx { position: relative; margin: 0 calc(-1 * var(--s4)); height: 520px; overflow: hidden; background: var(--bg); touch-action: pan-y; }
 .map-frame { position: absolute; inset: 0; }
+/* 지도 아래 출처 한 줄 (오픈스트리트맵). 카드 · 길 안내 띠가 올라오면 그 밑에 가린다. */
+.map-rough { margin: -2px 0 0; padding: 0 var(--s1); font-size: var(--fs-fine); color: var(--ink-2); line-height: 1.3; }
+.mapx[data-level="campus"] .map-rough { display: none; }
+.map-credit { position: absolute; left: 8px; bottom: 4px; margin: 0; padding: 1px 6px; border-radius: 6px; font-size: var(--fs-fine); color: var(--ink-2); background: color-mix(in srgb, var(--panel) 80%, transparent); pointer-events: none; }
 .map { display: block; width: 100%; height: 100%; touch-action: none; user-select: none; -webkit-user-select: none; }
 .map-frame canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 .map polygon { cursor: pointer; }

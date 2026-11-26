@@ -87,23 +87,23 @@ async (page) => {
     const wPinch = await api((m) => m.view[2] - m.view[0]);
     check(wPinch < wAfter * 0.75, `${tag} 두 손가락 벌리기: 칸 너비 ${Math.round(wAfter)} → ${Math.round(wPinch)} (가까이)`);
 
-    // 5. 부스 점을 누르면 아래에서 카드가 올라온다 (자리는 짐작 · 관심 · 갈 곳 · 길)
+    // 5. 부스 칸을 누르면 아래에서 카드가 올라온다 (자리는 짐작 · 관심 · 갈 곳 · 길)
     await api((m) => m.fit(m.pad([m.L.list.find((p) => p.k === 'LVCC_N').world[0][0] + 60, m.L.list.find((p) => p.k === 'LVCC_N').world[0][1] + 10, m.L.list.find((p) => p.k === 'LVCC_N').world[0][0] + 220, m.L.list.find((p) => p.k === 'LVCC_N').world[0][1] + 140], 0)));
     await settle(1300);
     const dot = await api((m) => {
       const r = m.board.getBoundingClientRect();
-      const one = [...document.querySelectorAll('circle[data-key]')].map((c) => ({ c, key: c.dataset.key })).filter((d) => (m.boothEx.get(d.key) || []).length === 1);
+      const one = [...document.querySelectorAll('rect[data-key]')].map((c) => ({ c, key: c.dataset.key })).filter((d) => (m.boothEx.get(d.key) || []).length === 1);
       for (const d of one) { const b = d.c.getBoundingClientRect(); if (b.y > r.top + 150 && b.y < r.bottom - 330 && b.x > r.left + 20 && b.x < r.right - 70) return { x: b.x + b.width / 2, y: b.y + b.height / 2, key: d.key, name: m.boothEx.get(d.key)[0][1] }; }
       return null;
     });
-    check(!!dot, `${tag} 눌러 볼 부스 점이 있다`);
+    check(!!dot, `${tag} 눌러 볼 부스 칸이 있다`);
     await page.mouse.click(dot.x, dot.y);
     await page.locator('.sheet .card h2').waitFor();
     await settle(900);
     const cardInfo = await page.evaluate(() => ({ h2: document.querySelector('.sheet .card h2').textContent, state: document.querySelector('.sheet').dataset.state, text: document.querySelector('.sheet').innerText, h2px: parseFloat(getComputedStyle(document.querySelector('.sheet .card h2')).fontSize), sheetH: Math.round(document.querySelector('.sheet').getBoundingClientRect().height), mapH: Math.round(document.querySelector('.mapx').getBoundingClientRect().height) }));
     check(cardInfo.h2 === dot.name && cardInfo.state === 'half' && cardInfo.text.includes('자리는 짐작') && cardInfo.text.includes('관심 담기') && cardInfo.text.includes('갈 곳에 넣기') && cardInfo.text.includes('여기까지 길') && cardInfo.text.includes('공식 링크') && cardInfo.h2px >= 24, `${tag} 부스를 누르면 반쯤 올라온 카드: ${cardInfo.h2}(${cardInfo.h2px}px) · 부스 · 홀 · 자리는 짐작 · 관심 · 갈 곳 · 길 · 공식 링크`);
-    const spotShown = await page.evaluate(() => { const s = document.querySelector('.sheet').getBoundingClientRect(); const d = document.querySelector('circle[data-key].on, circle[data-key]'); const b = [...document.querySelectorAll('circle[data-key]')].map((c) => c.getBoundingClientRect()).filter((r2) => r2.y > 120 && r2.y < s.top - 10); return b.length; });
-    check(spotShown > 0, `${tag} 카드가 올라와도 위의 지도에 부스 점이 보인다 (${spotShown}개)`);
+    const spotShown = await page.evaluate(() => { const s = document.querySelector('.sheet').getBoundingClientRect(); const d = document.querySelector('rect[data-key].on, rect[data-key]'); const b = [...document.querySelectorAll('rect[data-key]')].map((c) => c.getBoundingClientRect()).filter((r2) => r2.y > 120 && r2.y < s.top - 10); return b.length; });
+    check(spotShown > 0, `${tag} 카드가 올라와도 위의 지도에 부스 칸이 보인다 (${spotShown}개)`);
     await noSideScroll(`${tag} 카드`);
     await shot(W === 360 ? '94-after-card.png' : '97-after-card-390.png');
 
@@ -161,15 +161,15 @@ async (page) => {
   check((await page.locator('.sheet .card h2').textContent()) === two[1].name, '다른 화면의 "지도" 링크로 오면 그 회사 카드가 열린다');
   await page.evaluate(() => localStorage.removeItem('ces2027.interests.v1'));
 
-  // 8d. 공식 지도 기준: 길 이름 글자 · 홀 카드의 부스 번호 범위 · 회사 자료에 없는 번호도 홀을 알려 준다
+  // 8d. 길 이름(우리 말, 실제 모양은 오픈스트리트맵) 글자 · 홀 카드의 부스 번호 범위 · 회사 자료에 없는 번호도 홀을 알려 준다
   await page.goto('about:blank');
   await page.goto(`${URL}#/map`);
   await page.locator('svg.map').waitFor();
   await settle(1600);
-  const roadWords = await api((m) => [...m.board.querySelectorAll('g[pointer-events="none"] text')].map((t) => t.textContent).filter((s) => /Rd|Dr|Blvd|Ave/.test(s)));
+  const roadWords = await api((m) => [...m.board.querySelectorAll('g[pointer-events="none"] text')].map((t) => t.textContent).filter((s) => / (길|대로)$/.test(s)));
   await api((m) => m.fit(m.pad(m.L.campuses.find((c) => c.k === 'lvcc').box, 30)));
   await settle(1400);
-  const roadWords2 = await api((m) => [...m.board.querySelectorAll('g[pointer-events="none"] text')].map((t) => t.textContent).filter((s) => /Rd|Dr|Blvd|Ave/.test(s)));
+  const roadWords2 = await api((m) => [...m.board.querySelectorAll('g[pointer-events="none"] text')].map((t) => t.textContent).filter((s) => / (길|대로)$/.test(s)));
   check(roadWords.length >= 1 && roadWords2.length >= 3, `길 이름이 글자로 나온다: 전체 ${roadWords.length}개, LVCC 캠퍼스 ${roadWords2.length}개 (${roadWords2.slice(0, 4).join(' · ')})`);
   await api((m) => m.pickPlace(m.L.list.find((p) => p.k === 'LVCC_N')));
   await page.waitForFunction(() => /부스 번호 10000–16999/.test(document.querySelector('.sheet').innerText), null, { timeout: 15000 });
@@ -209,5 +209,50 @@ async (page) => {
   });
   await client.send('Emulation.setCPUThrottlingRate', { rate: 1 });
   check(frames.p95 <= 50, `끌기(CPU 4배 느리게, 부스 점이 가득한 홀): 프레임 간격 중앙값 ${frames.median}ms · 95% ${frames.p95}ms`);
+
+  // 11. 실제 좌표(R66): 부스 번호를 찾으면 맞는 홀 카드가 열리고, 위 홀 칩도 그 홀에 불이 켜진다(앞자리만 쳐도). 지도 아래에 출처 한 줄.
+  await page.setViewportSize({ width: 390, height: 780 });
+  await page.goto('about:blank');
+  await page.goto(`${URL}#/map`);
+  await page.locator('svg.map').waitFor();
+  await settle(1500);
+  check((await page.locator('.map-credit').innerText()) === '© OpenStreetMap 기여자' && Number(await page.locator('.mapx').getAttribute('data-osm')) > 200, '지도 아래에 "© OpenStreetMap 기여자" 한 줄이 있고, 건물 윤곽(오픈스트리트맵)을 그렸다');
+  const want = { 14731: '노스', 147: '노스', 3061: '웨스트', 20000: '센트럴', 30001: '사우스', 56: '베네시안 A-D', 52000: '베네시안 A-D', 61000: '베네시안 G' };
+  const got = [];
+  for (const [q, chip] of Object.entries(want)) {
+    const input = page.locator('.mapx-top input').first();
+    await input.fill('');
+    await input.fill(q);
+    await settle(800);
+    await page.locator('.mapx-top [role="option"]').first().click();
+    await settle(1500);
+    const lit = await page.evaluate(() => [...document.querySelectorAll('.chip-go[aria-pressed="true"]')].map((n) => n.textContent));
+    got.push(`${q}→${lit.join(',')}`);
+    check(lit.length === 1 && lit[0] === chip, `부스 번호 "${q}"를 찾으면 홀 칩 "${chip}"에 불이 켜진다 (켜진 칩: ${lit.join(',') || '없음'})`);
+  }
+  info.push(`부스 번호 찾기 → 홀 칩: ${got.join(' · ')}`);
+  // 12. 부스 칸(대략 네모): 캠퍼스 단계에는 없고, 홀 단계부터 네모로 보이며 위에 "대략" 한 줄. 관심 회사의 칸은 강조색.
+  await page.locator('.mapx-top input').first().fill('');
+  await page.locator('.chip-go', { hasText: /^전체$/ }).click();
+  await settle(1500);
+  const campusBoxes = await page.locator('rect[data-key]').count();
+  const roughHidden = await page.locator('.map-rough').evaluate((n) => getComputedStyle(n).display === 'none');
+  await page.locator('.chip-go', { hasText: /^웨스트$/ }).click();
+  await settle(2200);
+  const hallBoxes = await page.evaluate(() => { const r = document.querySelector('svg.map').getBoundingClientRect(); return [...document.querySelectorAll('rect[data-key]')].filter((n) => { const b = n.getBoundingClientRect(); return b.x > r.left && b.right < r.right && b.y > r.top && b.bottom < r.bottom; }).length; });
+  const rough = await page.locator('.map-rough').evaluate((n) => ({ text: n.textContent, shown: getComputedStyle(n).display !== 'none', px: parseFloat(getComputedStyle(n).fontSize) }));
+  const accent = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim().toLowerCase());
+  // 노스 홀 회사 하나를 갈 곳에 넣고 다시 연다.
+  const mineN = await page.evaluate(async () => { const d = await (await fetch('data/exhibitors.json')).json(); const r = d.ex.find((x) => /^1\d{4}@LVCC_N$/.test(x[7][0] || '')); localStorage.setItem('ces2027.interests.v1', JSON.stringify([{ id: r[0], day: 1 }])); return 1; });
+  await page.goto('about:blank');
+  await page.goto(`${URL}#/map`);
+  await page.locator('svg.map').waitFor();
+  await settle(2500);
+  await page.locator('.chip-go', { hasText: /^노스$/ }).click();
+  await settle(2200);
+  const mineFill = await page.evaluate(() => [...document.querySelectorAll('rect[data-mine]')].map((n) => n.getAttribute('fill').toLowerCase()));
+  check(campusBoxes === 0 && roughHidden && hallBoxes >= 100 && rough.shown && rough.text === '부스 자리는 대략 · 정식 배치도가 열리면 바뀐다' && rough.px >= 13,
+    `부스 칸: 캠퍼스 단계 0개 · 웨스트 홀 단계 ${hallBoxes}개, 위에 "${rough.text}" (${rough.px}px), 캠퍼스 단계에서는 이 줄이 없다`);
+  check((mineN === 0 || mineFill.length >= 1) && mineFill.every((c) => c === accent), `관심 · 갈 곳에 넣은 회사의 칸은 강조색이다 (노스 홀 ${mineFill.length}칸, 담은 회사 ${mineN}곳)`);
   return checks.map((c) => `됨 | ${c.what}`).join('\n');
 }

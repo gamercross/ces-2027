@@ -1,5 +1,5 @@
 {
-  "about": "정식 배치도가 열리면 부스의 진짜 자리를 여기에 적는다. 지금은 비어 있어 모든 자리가 짐작이다. places 아래에 장소 기호마다 '부스 글': [x, z]를 적는다. 좌표는 data/places.json의 그 캠퍼스 좌표(장소 모양 poly와 같은 자)다. 여기에 적힌 부스는 짐작 대신 이 자리를 쓴다. 한 장소의 부스를 다 적었으면 data/places.json에서 그 장소의 boothSpots를 official로 바꾼다. 넣는 차례는 docs/정식배치도_넣는법.md.",
+  "about": "정식 배치도가 열리면 부스의 진짜 자리를 여기에 적는다. 지금은 비어 있어 모든 자리가 짐작이다. places 아래에 장소 기호마다 '부스 글': [x, z] 또는 [x, z, 너비, 깊이](미터, 지도의 부스 칸 크기)를 적는다. 좌표는 data/places.json의 실제 미터 좌표(geoRef, x 동쪽 · z 남쪽, 장소 모양 poly와 같은 자)다. 여기에 적힌 부스는 짐작 대신 이 자리를 쓴다. 한 장소의 부스를 다 적었으면 data/places.json에서 그 장소의 boothSpots를 official로 바꾼다. 넣는 차례는 docs/정식배치도_넣는법.md.",
   "edition": null,
   "source": null,
   "places": {}
