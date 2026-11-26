@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-title" content="CES 준비 지도">
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="app.css">
-<!-- 첫 화면(지도)에 쓰는 조각을 한꺼번에 받는다 (하나씩 이어 받느라 늦어지지 않게). 3D · 찾기 자료는 여기 없다. -->
+<!-- 첫 화면(홈)에 쓰는 조각을 한꺼번에 받는다 (하나씩 이어 받느라 늦어지지 않게). 3D · 찾기 자료는 여기 없다. -->
 <!-- 새 판으로 바뀐 뒤 처음 열릴 때: Safari는 미리 받는 조각을 메모리의 옛 것으로 다시 써서 새 화면 조각과 안 맞는다("화면을 불러오지 못했다").
      담아 둔 판이 지난번과 다르면(또는 새로 고침인데 적어 둔 것이 없으면) 새 파일을 한 번씩 받고 한 번만 다시 연다. web/offline.js의 freshen과 같은 열쇠를 쓴다. -->
 <script>(function(){try{if(!window.caches||!navigator.serviceWorker||!navigator.serviceWorker.controller)return;var K="ces2027.boot.v1";fetch("version.json",{cache:"reload"}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||!j.v)return;var cur="ces2027-"+j.v,seen=null,nav=(performance.getEntriesByType("navigation")[0]||{}).type;try{seen=localStorage.getItem(K);localStorage.setItem(K,cur)}catch(e){return}if(seen===cur||(!seen&&nav!=="reload"))return;return caches.has(cur).then(function(has){if(!has)return;return caches.open(cur).then(function(c){return c.keys()}).then(function(keys){return Promise.all(keys.map(function(q){return fetch(q.url,{cache:"reload"}).catch(function(){return null})}))}).then(function(){location.reload()})})}).catch(function(){})}catch(e){}})();</script>
@@ -27,14 +27,15 @@
 <link rel="modulepreload" href="alerts.js">
 <link rel="modulepreload" href="dom.js">
 <link rel="modulepreload" href="frame.js">
-<link rel="modulepreload" href="views/card.js">
-<!-- 명함이 있는 사람은 앱을 열면 지도다: 지도 조각도 같이 받는다 (명함부터 만드는 사람에게는 받지 않는다) -->
-<script>try{if(localStorage.getItem('ces2027.profile.v1'))for(const f of ["views/map.js","mapsheet.js","mapgesture.js","mapmath.js","colors.js","tokens.js","geo.js","spots.js","route.js","maps.js","locate.js","company.js","company-image.js","guide.js","indoor-path.js","mapfind.js","nav.js","hallgroups.js"]){const l=document.createElement('link');l.rel='modulepreload';l.href=f;document.head.append(l)}}catch(e){}</script>
+<link rel="modulepreload" href="views/home.js">
+<link rel="modulepreload" href="tips.js">
+<!-- 앱을 열면 홈이다. 홈을 꺼 두어(설정 home: off) 열면 지도인 폰만 지도 조각을 미리 받는다 -->
+<script>try{if(localStorage.getItem('ces2027.profile.v1')&&localStorage.getItem('ces2027.homeMode.v1')==='off')for(const f of ["views/map.js","mapsheet.js","mapgesture.js","mapmath.js","colors.js","tokens.js","geo.js","spots.js","route.js","maps.js","locate.js","company.js","company-image.js","guide.js","indoor-path.js","mapfind.js","nav.js","hallgroups.js"]){const l=document.createElement('link');l.rel='modulepreload';l.href=f;document.head.append(l)}}catch(e){}</script>
 </head>
 <body>
 <header class="bar">
   <button class="back" id="back" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg><span>뒤로</span></button>
-  <a class="brand" href="#/map" aria-label="지도">
+  <a class="brand" href="#/home" aria-label="홈으로">
     <span class="brand-icon" id="brand-icon" hidden></span>
     <span class="brand-name">글로벌 어학연수</span>
     <span class="tag">비공식</span>

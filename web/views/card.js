@@ -4,8 +4,7 @@
 
 import { el } from '../dom.js';
 import { getProfile, setProfile, TAGS, tagKo } from '../store.js';
-import { getInfo, getSettings } from '../data.js';
-import { tipLine } from '../tips.js';
+import { getInfo } from '../data.js';
 import { dateOf, defaultRemind } from '../alerts.js';
 import { checkAlerts, getPaper, setPaper } from '../notify.js';
 
@@ -131,14 +130,10 @@ function form(profile, done, go) {
       el('input', { type: 'radio', name: 'tag', value: t.k, checked: p.tag === t.k }), el('span', { text: t.ko }))));
   const error = el('p', { class: 'error', role: 'alert', hidden: true });
 
-  // 설정 homeTip이 'card'나 'both'일 때: 아이폰 Safari 탭으로 처음 열면 명함을 만들기 전에 "홈 화면에 추가"부터 하라는 한 줄(web/tips.js). 홈 화면 앱에서는 안 보인다.
-  const homeSlot = first ? el('div', { class: 'tip-slot' }) : null;
-  if (homeSlot) getSettings().then((s) => { const line = ['card', 'both'].includes(s?.homeTip) ? tipLine('card', ['home']) : null; if (line) homeSlot.append(line); }).catch(() => {});
   const node = el('form', { class: 'panel form big', novalidate: true },
     first ? el('p', { class: 'welcome', text: '환영한다. CES 2027 준비 지도다.' }) : null,
     el('h1', { text: profile ? '명함 고치기' : '명함부터 만든다' }),
     el('p', { class: 'lead', text: first ? '별명과 나만 있으면 된다. 나머지는 건너뛰어도 된다. 이 폰에만 남는다.' : '이 폰에만 남는다. QR로 보여 줄 때만 상대가 읽는다.' }),
-    homeSlot,
     field('별명', nick),
     el('div', { class: 'field' }, el('span', { class: 'label', text: '나' }), tags),
     error,

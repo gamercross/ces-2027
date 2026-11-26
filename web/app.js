@@ -7,6 +7,7 @@ import { alerts, checkAlerts, startAlerts } from './notify.js';
 import { failed, frame, loading, missing } from './frame.js';
 
 const VIEWS = {
+  home: () => import('./views/home.js'),
   card: () => import('./views/card.js'),
   map: () => import('./views/map.js'),
   list: () => import('./views/list.js'),
@@ -23,15 +24,28 @@ const VIEWS = {
   collect: () => import('./views/collect.js'),
 };
 // 어느 탭 아래의 화면인가: 지도(전시사 목록 · 셔틀 · 오가는 법) · 갈 곳(추천 · 시간과 일정 · 강연 일정) · 일기(듣기 · 대화 칸 · 만난 사람) · 설정(명함 · 모은 일기).
-const TAB_OF = { map: 'map', list: 'map', transit: 'map', plan: 'plan', rec: 'plan', days: 'plan', sessions: 'plan', diary: 'diary', listen: 'diary', talk: 'diary', people: 'diary', settings: 'settings', card: 'settings', collect: 'settings' };
+const TAB_OF = { home: 'home', map: 'map', list: 'map', transit: 'map', plan: 'plan', rec: 'plan', days: 'plan', sessions: 'plan', diary: 'diary', listen: 'diary', talk: 'diary', people: 'diary', settings: 'settings', card: 'settings', collect: 'settings' };
 
-// 메인 틀: 아래 탭은 넷(지도 · 갈 곳 · 일기 · 설정). 앱을 열면 지도.
+// 메인 틀: 아래 탭은 넷(지도 · 갈 곳 · 일기 · 설정). 앱을 열면 홈(탭이 아니다).
 // 탭이 아닌 화면(명함 · 시간과 일정 · 듣기 …)은 위에 "뒤로"가 생기고, 돌아갈 곳은 TAB_OF의 탭이다.
-const ROOTS = new Set(['map', 'plan', 'diary', 'settings']);
+const ROOTS = new Set(['home', 'map', 'plan', 'diary', 'settings']);
+
+// 홈: 앱을 열면 홈이 먼저 뜬다(아래 탭은 넷 그대로이고 홈은 탭이 아니다). 머리의 앱 이름을 누르면 홈으로 돌아온다.
+// 설정 home이 'off'면 예전처럼 열면 지도다(명함이 없으면 명함부터). 그때는 앱 이름도 지도로 간다.
+const homeMode = getSettings().then((s) => (s?.home === 'off' ? 'off' : 'on'));
+homeMode.then((mode) => {
+  // 다음에 열 때 index.html이 지도 조각을 미리 받을지 정하도록 적어 둔다(홈이 꺼져 있을 때만 받는다).
+  try { if (mode === 'off') localStorage.setItem('ces2027.homeMode.v1', 'off'); else localStorage.removeItem('ces2027.homeMode.v1'); } catch { /* 막힌 폰이면 그대로 둔다 */ }
+  if (mode !== 'off') return;
+  const brand = document.querySelector('.brand');
+  brand.setAttribute('href', '#/map');
+  brand.setAttribute('aria-label', '지도');
+});
 for (const k of Object.keys(VIEWS)) frame.views.add(k);
 
-// 명함이 있으면 첫 화면(지도)이 쓸 자료(장소)를 화면 조각과 같이 받기 시작한다. 전시사 자료는 지도가 홀로 가까이 갈 때 홀마다 받는다.
-if (getProfile()) { getInfo().catch(() => {}); getMeta(); getPlaces().catch(() => {}); }
+// 홈을 꺼 두어 첫 화면이 지도인 폰만: 명함이 있으면 지도가 쓸 자료(장소)를 화면 조각과 같이 받기 시작한다. 홈이 첫 화면이면 받지 않는다(홈은 폰에 담아 둔 것만 쓴다).
+const homeWasOff = (() => { try { return localStorage.getItem('ces2027.homeMode.v1') === 'off'; } catch { return false; } })();
+if (getProfile() && homeWasOff) { getInfo().catch(() => {}); getMeta(); getPlaces().catch(() => {}); }
 
 // 지운 번역 기능이 폰에 남긴 설정(받아 둔 모델 표시 · 번역 앱 고름)을 치운다.
 for (const k of ['translationModel.v1', 'translatorApp.v1', 'translatorPrep.v1']) { try { localStorage.removeItem(`ces2027.${k}`); } catch { /* 막힌 폰이면 그대로 둔다 */ } }
@@ -86,7 +100,10 @@ async function show() {
   const { name, rest, lost } = route();
   // 앱을 열면(주소에 화면이 없으면) 지도. 처음 들어오면 명함부터 만든다. "나중에"를 누르면 이번에는 묻지 않는다.
   if (name === '' && !lost) {
-    replaceTo(!getProfile() && !sessionStorage.getItem('ces2027.introLater') ? '#/card' : '#/map');
+    // 열면 홈이 먼저다. 처음 연 사람도 홈에서 "명함 만들기"로 간다. 홈을 꺼 두었으면(설정 home: off) 예전처럼 명함 · 지도.
+    const mode = await homeMode;
+    if (mine !== turn) return;
+    replaceTo(mode !== 'off' ? '#/home' : !getProfile() && !sessionStorage.getItem('ces2027.introLater') ? '#/card' : '#/map');
     return;
   }
   stamp();
