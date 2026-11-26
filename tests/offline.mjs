@@ -916,6 +916,32 @@ await step('일기 챙기기', '전시 날 저녁에 보내지 않은 일기가 
   const at = await page.evaluate(() => ({ hash: location.hash, hidden: document.getElementById('notice').hidden }));
   return { status: /보내지 않은 일기 1개/.test(text) && /일기 열기/.test(text) && at.hash === '#/diary' && at.hidden ? '됨' : '안 됨', note: `${text.replace(/\n/g, ' · ')} → ${at.hash}` };
 });
+await step('링크드인 이틀', '만난 지 이틀이 지났는데 "팔로우함"이 없는 사람이 있으면, 인터넷을 끊어도 탭 위 띠 "링크드인 팔로우 안 한 사람 n명 · 보기 · 닫기"가 뜨고 "보기"는 그 사람들만 모인 목록이다(R62)', async () => {
+  await ctx.close();
+  ctx = await browser.newContext({ viewport: { width: 390, height: 780 } });
+  page = await ctx.newPage();
+  await page.clock.install({ time: new Date('2027-01-08T18:00:00Z') }); // 1/6 받은 사람의 이틀 뒤
+  await page.goto(`${ORIGIN}/`);
+  await page.evaluate(() => {
+    localStorage.setItem('ces2027.profile.v1', JSON.stringify({ nick: '시험', tag: 'student', line: '', github: '', discord: '' }));
+    localStorage.setItem('ces2027.people.v1', JSON.stringify([
+      { id: 'p1', nick: '이부스', links: [], met: '2027-01-06', metAt: Date.parse('2027-01-06T17:00:00Z'), company: '', exId: '', booth: '', note: '', followed: '' },
+      { id: 'p2', nick: '김로봇', links: [], met: '2027-01-06', metAt: Date.parse('2027-01-06T17:00:00Z'), company: '', exId: '', booth: '', note: '', followed: '2027-01-07' },
+    ]));
+  });
+  await page.goto('about:blank'); await page.goto(`${ORIGIN}/#/plan`);
+  await page.locator('#notice:not([hidden])').waitFor({ timeout: 8000 }).catch(() => {});
+  await ctx.setOffline(true);
+  await page.evaluate(() => { location.hash = '#/diary'; });
+  await sleep(800);
+  const text = await page.locator('#notice:not([hidden])').innerText({ timeout: 8000 }).catch(() => '');
+  // 이 새 창에는 서비스 워커가 없어 끊긴 채로는 만난 사람 화면 조각을 못 받는다(실제 폰은 담아 둔다 — 위 "끊은 채 한 바퀴"). 띠는 끊긴 채로 보고, 목록은 다시 이어 본다
+  await ctx.setOffline(false);
+  await page.locator('#notice-go').click().catch(() => {});
+  await sleep(1200);
+  const at = await page.evaluate(() => ({ hash: location.hash, rows: document.querySelectorAll('.stops .stop').length, hidden: document.getElementById('notice').hidden }));
+  return { status: /링크드인 팔로우 안 한 사람 1명/.test(text) && /보기/.test(text) && /닫기/.test(text) && at.hash === '#/people/follow' && at.rows === 1 && at.hidden ? '됨' : '안 됨', note: `${text.replace(/\n/g, ' · ')} → ${at.hash} · ${at.rows}명` };
+});
 
 await ctx.close(); await browser.close(); server.close();
 

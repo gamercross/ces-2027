@@ -4,7 +4,7 @@
 
 import { load, save, getDiary, getEvents, getInterests, getProfile, getWhere } from './store.js';
 import { dayKeyOf } from './days.js';
-import { cardsNeeded, dateOf, fresh, nearMarks, notifyState, shouldAskPaper, soonEvents, unsentTonight, vegasNow } from './alerts.js';
+import { cardsNeeded, dateOf, followBand, followOverdue, fresh, nearMarks, notifyState, shouldAskPaper, soonEvents, unsentTonight, vegasNow } from './alerts.js';
 
 export const getPaper = () => load('paper.v1', null);
 export const setPaper = (paper) => save('paper.v1', paper);
@@ -17,7 +17,7 @@ export function setMarks(marks) {
 }
 
 // 지금 화면에 띠로 보일 것. { paper, needs, near, state, fallback, error }
-export const alerts = { paper: null, needs: [], near: [], soon: [], unsent: 0, state: 'unsupported', fallback: false, error: '' };
+export const alerts = { paper: null, needs: [], near: [], soon: [], unsent: 0, follow: 0, followIds: [], state: 'unsupported', fallback: false, error: '' };
 // 일정(세션 포함)이 시작하기 몇 분 전부터 알리나.
 export const SOON_MIN = 30;
 const changed = () => window.dispatchEvent(new Event('ces-alerts'));
@@ -71,6 +71,9 @@ async function checkAlertsNow() {
   if (getDiary().some((e) => !e.draft && !e.sent)) {
     try { const { getInfo } = await import('./data.js'); alerts.unsent = unsentTonight(getDiary(), vegasNow(new Date()), (await getInfo()).show); } catch { /* 자료를 못 읽으면 챙기지 않는다 */ }
   }
+  // 링크드인 이틀(R62): 만난 지 이틀이 지났는데 "팔로우함"이 없는 사람. 폰에 남은 만난 사람만 본다(서버 · 알림 없이). 닫은 날에는 띠를 안 보인다.
+  alerts.followIds = followOverdue(load('people.v1', []), Date.now());
+  alerts.follow = followBand(alerts.followIds, load('followBand.v1', null), today);
   for (const e of alerts.soon) {
     if (!fresh(sent, `soon:${e.id}`, today)) continue;
     const where = e.place ? ` · ${e.place}` : '';
@@ -144,4 +147,11 @@ export function startAlerts() {
   setInterval(() => { if (!document.hidden && getEvents().length) checkAlerts(); }, 60000);
   checkAlerts();
   return true;
+}
+
+// 링크드인 이틀 띠의 "닫기": 오늘과 지금 센 사람들을 남긴다. 오늘은 다시 안 뜨고, 새로 이틀을 넘긴 사람이 생기면 다음 날 다시 뜬다.
+export function closeFollowBand() {
+  save('followBand.v1', { date: dateOf(new Date()), ids: alerts.followIds });
+  alerts.follow = 0;
+  changed();
 }
