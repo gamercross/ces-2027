@@ -136,6 +136,12 @@ body:has(.mappage) .bar .tag { display: none; }
 .hop { padding: 0 var(--s1); font-size: var(--fs-small); font-weight: 700; color: var(--ink); word-break: keep-all; overflow-wrap: anywhere; }
 .nextup .hop { padding: 0; }
 .daynotes { display: grid; gap: var(--s1); padding: 0 var(--s1); }
+/* 반나절에 캠퍼스 하나(R69, 설정 halfDay): 날짜 줄 아래 한 칸. 오전 · 오후 두 줄과 글자 단추 하나. 검정 단추는 아니다(검정은 "길 안내" 하나) */
+.planpage .panel.halfday { display: grid; gap: var(--s1); padding: var(--s3) var(--s4); }
+.halfday > * + * { margin-top: 0; }
+.halfday .note { font-size: var(--fs-small); overflow-wrap: anywhere; }
+.halfday-plan { display: grid; gap: 2px; font-size: calc(17px * var(--scale)); font-weight: 700; overflow-wrap: anywhere; }
+.halfday .pick { justify-self: start; padding-inline: 0; font-size: var(--fs-body); }
 .fold { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); min-height: 48px; padding-left: var(--s1); color: var(--ink-2); font-size: var(--fs-small); }
 .fold-text { min-width: 0; overflow-wrap: anywhere; }
 .fold .pick { flex: none; font-size: var(--fs-body); }
@@ -396,6 +402,11 @@ a.chip-go { display: inline-flex; align-items: center; gap: 6px; text-decoration
 .list-jump[hidden] { display: none; }
 .jump-key { min-width: var(--tap-min); padding: 0; justify-content: center; }
 .jump-key[disabled] { opacity: 0.35; cursor: default; }
+.list-extra { display: grid; gap: var(--s1); }
+.list-extra[hidden] { display: none; }
+.list-extra .note { font-size: var(--fs-small); overflow-wrap: anywhere; }
+/* 분야를 고르면 그 분야의 CES 공식 기사로 가는 링크 한 줄(R71, 설정 topicLinks) */
+.topic-line .pick { justify-content: flex-start; padding-inline: 0; white-space: normal; text-align: left; font-size: var(--fs-body); }
 .list-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s1) var(--s2); }
 .list-count { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); font-size: var(--fs-small); }
 .list-count b { font-size: var(--fs-body); }

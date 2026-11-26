@@ -3,7 +3,7 @@
 // 기준: docs/디자인/동선_쉽게_안.md의 안 1 (2026-11-23).
 
 import { el, out } from '../dom.js';
-import { getExhibitors, getInfo, getMeta, getPlaces } from '../data.js';
+import { getExhibitors, getInfo, getMeta, getPlaces, getSettings } from '../data.js';
 import { getDayLimit, getEvents, getHours, getInterests, getPace, setDayLimit, setInterests } from '../store.js';
 import { clock, dayLimits, dayList, eventsOn, hoursFor, timeline, toMin } from '../days.js';
 import { placeLink } from './days.js';
@@ -14,6 +14,7 @@ import { alertBands } from '../bands.js';
 import { createCardShell } from '../plancard.js';
 import { boothLines, sessionBlock } from '../company-extra.js';
 import { mergeItems, planText, readCode, shareLink } from '../share.js';
+import { halves, hops, splitDay } from '../halfday.js';
 
 const DAY_KEY = 'ces2027.planDay';
 // 날짜를 화면에 보일 때: "1월 6일 (수)" (긴 꼴) · "1/6" (칩).
@@ -51,7 +52,7 @@ export async function render() {
     return el('section', { class: 'panel' }, el('h1', { text: '갈 곳' }), el('p', { text: '전시사 자료를 아직 받지 못했다. 인터넷에 닿으면 다시 열어 본다.' }),
       el('div', { class: 'actions' }, el('button', { class: 'btn', type: 'button', text: '다시 열기', onclick: () => location.reload() }), el('a', { class: 'btn ghost', href: '#/map', text: '지도로' })));
   }
-  const [data, places, info] = await Promise.all([getExhibitors(), getPlaces(), getInfo()]);
+  const [data, places, info, settings] = await Promise.all([getExhibitors(), getPlaces(), getInfo(), getSettings()]);
   const table = placeTable(places);
   const byId = new Map(data.ex.map((r) => [r[0], r]));
   const firstBooth = (id) => byId.get(id)?.[7]?.[0] || null;
@@ -165,6 +166,23 @@ export async function render() {
   const travelOf = (items) => items.map((it, i) => (i ? hopSlot(campusOf(items[i - 1].id), campusOf(it.id)) : 0));
   // 날마다 걷는 시간의 합 [0, 첫날, …]: "하루에 n곳쯤"과 날마다 나누기가 그만큼 덜 센다.
   const travelByDay = (list) => [0, 1, 2, 3, 4].map((k) => (k ? travelOf(list.filter((it) => it.day === k)).reduce((a, b) => a + b, 0) : 0));
+  // 반나절에 캠퍼스 하나(R69, 설정 halfDay). 날짜가 있는 날에 캠퍼스가 둘 이상이면 한 칸: 오전 · 오후에 어느 캠퍼스인지와 단추 하나.
+  // 아직 섞여 있으면 저절로 나눈 안("이대로 나누기"), 나눴으면 "오전 · 오후 바꾸기". 누르면 그 날 차례만 다시 선다(폰에만 남는다).
+  const campusKey = (id) => campusOf(id)?.k || null;
+  const halfBand = (items, dayKey) => {
+    const half = halves(items, campusKey);
+    if (!half) return null;
+    const nameOfCampus = (h) => campusName(campusBy.get(h.campus));
+    const ko = (h) => `${nameOfCampus(h)} ${h.n}곳`;
+    const apply = (order, note) => change((l) => splitDay(l, dayKey, campusKey, order), note);
+    const swap = () => apply([half.pm.campus, half.am.campus, ...half.extra.map((h) => h.campus)], `바꿨다: 오전 ${nameOfCampus(half.pm)} · 오후 ${nameOfCampus(half.am)}`);
+    const split = () => apply([half.am, half.pm, ...half.extra].map((h) => h.campus), `나눴다: 오전 ${nameOfCampus(half.am)} · 오후 ${nameOfCampus(half.pm)}`);
+    return el('section', { class: 'panel halfday', 'aria-label': '반나절 나누기' },
+      el('p', { class: 'note', text: half.grouped ? '반나절에 캠퍼스 하나' : `캠퍼스를 ${hops(items, campusKey)}번 오간다. 반나절에 하나씩 나누면` }),
+      el('p', { class: 'halfday-plan' }, el('span', { text: `오전 · ${ko(half.am)}` }), el('span', { text: `오후 · ${ko(half.pm)}` })),
+      half.extra.length ? el('p', { class: 'note', text: `${half.extra.map(ko).join(' · ')}은 반나절에 안 들어간다. 다른 날로 옮긴다.` }) : null,
+      el('button', { class: 'pick', type: 'button', text: half.grouped ? '오전 · 오후 바꾸기' : '이대로 나누기', onclick: half.grouped ? swap : split }));
+  };
   const openCard = (id, from) => { openId = id; hideToast(); shell.open(card(id), from); };
 
   // ---- 줄: 번호 · 이름 · 때와 곳. 줄 전체가 눌리고 회사 카드가 열린다. 다녀온 곳의 줄에만 오른쪽에 "다녀옴" 칸이 있다(눌러서 되돌린다).
@@ -268,6 +286,7 @@ export async function render() {
       const noDate = d.key ? list.filter((it) => !it.day && !it.seen).length : 0;
       const goNoDate = () => { showDay(0); status.textContent = ''; hideToast(); draw(); window.scrollTo(0, 0); holder.querySelector('.nextup-open')?.focus({ preventScroll: true }); };
       const next = todo[0];
+      if (settings?.halfDay && d.key && !d.pre) { const band = halfBand(items, d.key); if (band) sections.push(band); }
       if (next) {
         const hasBooth = !!firstBooth(next.id);
         // 바로 앞에 다녀온 곳(그 날 차례에서 한 칸 앞)과 캠퍼스가 다르면 걸어서 몇 분쯤인지 한 줄.
