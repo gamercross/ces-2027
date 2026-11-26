@@ -2,7 +2,7 @@
 // 명함 · 알림 · 인터넷 없이 · 저장 공간 · 내보내기 · 자료. 폰 안에서만 일어나고 밖으로 보내지 않는다.
 
 import { el, num, out } from '../dom.js';
-import { getExhibitors, getInfo, getMeta } from '../data.js';
+import { getExhibitors, getInfo, getMeta, getPlaces } from '../data.js';
 import { clearMine, getDiary, getInterests, getProfile, getTalks, getTextSize, getTheme, setTextSize, setTheme, tagKo } from '../store.js';
 import { getPeople } from '../people-store.js';
 import { dropAllAudio } from '../audio-store.js';
@@ -311,12 +311,14 @@ function permissionRows() {
 
 // 자료: 어디서 언제 받은 것인지. 공식 출처와 받은 날짜는 늘 볼 수 있다(눌러서 카드로).
 async function dataRow(shell) {
-  const [meta, info] = await Promise.all([getMeta().catch(() => null), getInfo().catch(() => null)]);
+  const [meta, info, places] = await Promise.all([getMeta().catch(() => null), getInfo().catch(() => null), getPlaces().catch(() => null)]);
+  const osm = places?.sources?.find((x) => /openstreetmap/.test(x.url)) || null;
   const md = (read) => { const [, m, d] = String(read || '').split('-'); return m ? `${Number(m)}/${Number(d)}` : ''; };
   const open = (ev) => shell.open([
     el('div', { class: 'pcard-top' }, el('h2', { class: 'pcard-tools-title', text: '자료 출처' }), el('button', { class: 'btn ghost pcard-close', type: 'button', text: '닫기', onclick: () => shell.close() })),
     meta ? el('p', {}, `전시사 ${num(meta.exhibitors)}곳 · 받은 날 ${meta.v} · `, out('https://exhibitors.ces.tech/8_0/', 'CES 공식 전시사 검색')) : el('p', { class: 'note', text: '전시사 자료를 아직 받지 못했다.' }),
     info ? el('p', {}, `날짜와 시간 · 오가는 법: ${md(info.show.source.read)} 확인 · `, out(info.show.source.url, '출처')) : null,
+    osm ? el('p', {}, `건물 · 길 모양: © OpenStreetMap 기여자 (ODbL) · ${md(osm.edition)} 받음 · `, out(osm.url, '출처')) : null,
     el('p', { class: 'note', text: '부스 자리는 정식 배치도 전이라 홀 안은 짐작이다.' }),
     el('p', { class: 'note', text: '이 앱은 사용 기록을 보내지 않는다. 명함 · 일기 · 갈 곳은 이 폰에만 남는다.' }),
   ], ev.currentTarget);

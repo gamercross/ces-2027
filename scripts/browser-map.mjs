@@ -161,15 +161,15 @@ async (page) => {
   check((await page.locator('.sheet .card h2').textContent()) === two[1].name, '다른 화면의 "지도" 링크로 오면 그 회사 카드가 열린다');
   await page.evaluate(() => localStorage.removeItem('ces2027.interests.v1'));
 
-  // 8d. 공식 지도 기준: 길 이름 글자 · 홀 카드의 부스 번호 범위 · 회사 자료에 없는 번호도 홀을 알려 준다
+  // 8d. 길 이름(우리 말, 실제 모양은 오픈스트리트맵) 글자 · 홀 카드의 부스 번호 범위 · 회사 자료에 없는 번호도 홀을 알려 준다
   await page.goto('about:blank');
   await page.goto(`${URL}#/map`);
   await page.locator('svg.map').waitFor();
   await settle(1600);
-  const roadWords = await api((m) => [...m.board.querySelectorAll('g[pointer-events="none"] text')].map((t) => t.textContent).filter((s) => /Rd|Dr|Blvd|Ave/.test(s)));
+  const roadWords = await api((m) => [...m.board.querySelectorAll('g[pointer-events="none"] text')].map((t) => t.textContent).filter((s) => / (길|대로)$/.test(s)));
   await api((m) => m.fit(m.pad(m.L.campuses.find((c) => c.k === 'lvcc').box, 30)));
   await settle(1400);
-  const roadWords2 = await api((m) => [...m.board.querySelectorAll('g[pointer-events="none"] text')].map((t) => t.textContent).filter((s) => /Rd|Dr|Blvd|Ave/.test(s)));
+  const roadWords2 = await api((m) => [...m.board.querySelectorAll('g[pointer-events="none"] text')].map((t) => t.textContent).filter((s) => / (길|대로)$/.test(s)));
   check(roadWords.length >= 1 && roadWords2.length >= 3, `길 이름이 글자로 나온다: 전체 ${roadWords.length}개, LVCC 캠퍼스 ${roadWords2.length}개 (${roadWords2.slice(0, 4).join(' · ')})`);
   await api((m) => m.pickPlace(m.L.list.find((p) => p.k === 'LVCC_N')));
   await page.waitForFunction(() => /부스 번호 10000–16999/.test(document.querySelector('.sheet').innerText), null, { timeout: 15000 });
@@ -209,5 +209,27 @@ async (page) => {
   });
   await client.send('Emulation.setCPUThrottlingRate', { rate: 1 });
   check(frames.p95 <= 50, `끌기(CPU 4배 느리게, 부스 점이 가득한 홀): 프레임 간격 중앙값 ${frames.median}ms · 95% ${frames.p95}ms`);
+
+  // 11. 실제 좌표(R66): 부스 번호를 찾으면 맞는 홀 카드가 열리고, 위 홀 칩도 그 홀에 불이 켜진다(앞자리만 쳐도). 지도 아래에 출처 한 줄.
+  await page.setViewportSize({ width: 390, height: 780 });
+  await page.goto('about:blank');
+  await page.goto(`${URL}#/map`);
+  await page.locator('svg.map').waitFor();
+  await settle(1500);
+  check((await page.locator('.map-credit').innerText()) === '© OpenStreetMap 기여자' && Number(await page.locator('.mapx').getAttribute('data-osm')) > 200, '지도 아래에 "© OpenStreetMap 기여자" 한 줄이 있고, 건물 윤곽(오픈스트리트맵)을 그렸다');
+  const want = { 14731: '노스', 147: '노스', 3061: '웨스트', 20000: '센트럴', 30001: '사우스', 56: '베네시안 A-D', 52000: '베네시안 A-D', 61000: '베네시안 G' };
+  const got = [];
+  for (const [q, chip] of Object.entries(want)) {
+    const input = page.locator('.mapx-top input').first();
+    await input.fill('');
+    await input.fill(q);
+    await settle(800);
+    await page.locator('.mapx-top [role="option"]').first().click();
+    await settle(1500);
+    const lit = await page.evaluate(() => [...document.querySelectorAll('.chip-go[aria-pressed="true"]')].map((n) => n.textContent));
+    got.push(`${q}→${lit.join(',')}`);
+    check(lit.length === 1 && lit[0] === chip, `부스 번호 "${q}"를 찾으면 홀 칩 "${chip}"에 불이 켜진다 (켜진 칩: ${lit.join(',') || '없음'})`);
+  }
+  info.push(`부스 번호 찾기 → 홀 칩: ${got.join(' · ')}`);
   return checks.map((c) => `됨 | ${c.what}`).join('\n');
 }

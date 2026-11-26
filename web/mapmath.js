@@ -1,10 +1,10 @@
 // 지도의 셈: 확대 단계 · 보는 칸 옮기기 · 글자 자리 정하기. 화면과 따로 두어 Node에서도 시험한다 (scripts/smoke.mjs).
 // 보는 칸(view)은 세계 좌표의 [x0, z0, x1, z1]이고, 화면 한 칸(px)이 세계 몇 칸인지가 unit이다.
 
-// 확대 단계 셋: 캠퍼스 셋(멀리) → 홀 → 부스(가까이). 칸 너비(w)가 기준이다.
+// 확대 단계 셋: 캠퍼스 셋(멀리) → 홀 → 부스(가까이). 칸 너비(w, 실제 미터)가 기준이다. 홀 하나는 300 ~ 550m라 홀 칩은 홀 단계, 더 가까이(330m 아래) 가면 부스 단계.
 export const LEVEL_HALL = 1300;
-export const LEVEL_BOOTH = 520;
-export const BOOTH_DOTS = 560;
+export const LEVEL_BOOTH = 330;
+export const BOOTH_DOTS = 360;
 export const MIN_W = 90;
 export const MAX_W = 3800;
 export const MIN_FONT = 13;

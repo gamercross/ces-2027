@@ -21,6 +21,8 @@ export const getInfo = () => cached('info', () => getJson('data/info.json'));
 // 전시사 자료 요약. 받지 못한 날은 null.
 export const getMeta = () => cached('meta', () => getJson('data/meta.json').catch(() => null));
 export const getPlaces = () => cached('places', () => getJson('data/places.json'));
+// 오픈스트리트맵의 건물 · 길 모양(ODbL). 지도 탭을 열 때만 받고, 못 받으면 장소 모양만으로 그린다.
+export const getOsm = () => cached('osm', () => getJson('data/osm-map.json').catch(() => null));
 export const getExhibitors = () => cached('exhibitors', () => getJson('data/exhibitors.json'));
 // 홀 하나의 전시사 줄(지도가 가까이 갈 때 받는다). 없으면 null — 그때는 전체를 쓴다.
 const hallDocs = new Map();

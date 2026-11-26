@@ -75,7 +75,8 @@ async (page) => {
     await settle(600);
   };
   // 3D 화면 하나를 잰다: 그 날 번호 다섯이 보이는 칸 안에, 차례 선이 번호 차례로, 다음 곳 이름이 읽히게, 글자 13px 이상 · 겹침 없음.
-  const measure = async (tag) => {
+  // minNames: 글자가 큰 단계(3 · 4)에서는 실제 크기로 작아진 노스 홀(R66)의 갈 곳 이름이 서로 겹쳐 숨는다. 3D 겉모습 세션(R67)에서 다시 본다.
+  const measure = async (tag, minNames = 3) => {
     const s = await three((t) => ({ pins: t.pinsOnScreen(), lines: t.linesOnScreen(), l: t.labelsOnScreen(), w: t.node.clientWidth, h: t.node.clientHeight }));
     const day = s.pins.filter((p) => seed.list.slice(0, 5).some((it) => it.id === p.id));
     const inBand = day.every((p) => p.sx - p.r >= 0 && p.sx + p.r <= s.w && p.sy - p.r >= s.l.band[0] - 1 && p.sy + p.r <= s.l.band[1] + 1);
@@ -100,7 +101,7 @@ async (page) => {
     const minPx = Math.min(...s.l.labels.map((x) => x.size), s.l.nextSize);
     const names = s.l.labels.filter((x) => x.id.startsWith('n:')).map((x) => x.text);
     check(minPx >= 13 && overlaps(rects) === 0, `${tag} 글자 ${rects.length}개 · 가장 작은 글자 ${px(minPx)}px(13px 이상) · 겹침 ${overlaps(rects)}`);
-    check(names.length >= 3, `${tag} 나머지 갈 곳 이름이 ${names.length}개 보인다 (${names.join(' / ')})`);
+    check(names.length >= minNames, `${tag} 나머지 갈 곳 이름이 ${names.length}개 보인다 (${names.join(' / ')})`);
     // 번호 원과 글자가 겹치지 않는다
     const pinRects = s.pins.map((p) => [p.sx - p.r, p.sy - p.r, p.sx + p.r, p.sy + p.r]);
     const hit = rects.filter((r) => pinRects.some((p) => r[0] < p[2] - 0.5 && p[0] < r[2] - 0.5 && r[1] < p[3] - 0.5 && p[1] < r[3] - 0.5)).length;
@@ -116,10 +117,12 @@ async (page) => {
   await shot('221-map3d-day-360.png');
 
   // ---- 2. 누른 곳 = 열리는 카드
-  // 2-1. 화면 가운데(편의성 점검에서 "베네시안 캠퍼스"가 뜨던 곳): 손가락 아래의 홀이 열린다
+  // 2-1. 화면 가운데 둘레(편의성 점검에서 "베네시안 캠퍼스"가 뜨던 곳): 손가락 아래의 홀이 열린다
   let b = await canvasBox();
-  const mid = await three((t, [x, y]) => t.whatAt(x, y), [b.width / 2, b.height / 2]);
-  await tapAt(b.width / 2, b.height / 2);
+  // 가운데에 번호 점(갈 곳)이 서 있으면 그 회사가 열리는 것이 맞다. 가운데에서 가장 가까운, 홀이 서 있는 곳을 누른다(실제 좌표로 바꾼 뒤 R66).
+  const midAt = await three((t, [w, h]) => { for (let r = 0; r <= 120; r += 12) for (let k = 0; k < 8; k += 1) { const x = w / 2 + r * Math.cos((k * Math.PI) / 4), y = h / 2 + r * Math.sin((k * Math.PI) / 4); if (t.whatAt(x, y).kind === 'place') return [x, y]; } return [w / 2, h / 2]; }, [b.width, b.height]);
+  const mid = await three((t, [x, y]) => t.whatAt(x, y), midAt);
+  await tapAt(midAt[0], midAt[1]);
   let sh = await sheet();
   const midKo = mid.kind === 'place' ? await api((m, k) => m.L.list.find((p) => p.k === k).ko, mid.name) : '';
   check(mid.kind === 'place' && sh.state !== 'closed' && midKo.includes(sh.title) && !sh.title.includes('캠퍼스'), `가운데를 누르면 손가락 아래의 홀 "${sh.title}" 카드가 열린다 (다른 캠퍼스 카드가 아니다)`);
@@ -223,12 +226,12 @@ async (page) => {
   await shot('228-map3d-day-dark-360.png');
   for (const text of [2, 3, 4]) {
     await open3d({ text });
-    const s = await measure(`360 글자 ${text}단계`);
+    const s = await measure(`360 글자 ${text}단계`, text >= 3 ? 1 : 3);
     check(s.l.nextSize >= 13 * (text === 2 ? 1.15 : 1.3), `글자 ${text}단계에서 지도 글자도 커진다 (다음 곳 이름 ${s.l.nextSize.toFixed(1)}px)`);
     if (text === 4) await shot('229-map3d-day-text4-360.png');
   }
   await open3d({ theme: 'dark', text: 4, w: 390, h: 780 });
-  await measure('390 어둡게 글자 4단계');
+  await measure('390 어둡게 글자 4단계', 1);
 
   // ---- 7. 인터넷 없이: 한 번 연 뒤 끊고 다시 열어도 3D가 열리고 차례 선이 그려진다
   await open3d();

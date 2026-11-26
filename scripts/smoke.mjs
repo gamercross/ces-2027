@@ -598,7 +598,7 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       const tiny = mm.zoomBox([0, 0, 100, 150], 0.1, 50, 75);
       const huge = mm.zoomBox([0, 0, 3000, 4500], 5, 0, 0);
       const vf = mm.viewFor([100, 100, 300, 160], 360, 600, { top: 120, bottom: 300 });
-      check(mm.levelOf(3000) === 'campus' && mm.levelOf(1300) === 'campus' && mm.levelOf(900) === 'hall' && mm.levelOf(519) === 'booth' && mm.levelOf(100) === 'booth' && mm.MIN_FONT === 13, '확대 단계 셋: 칸 너비 1300 이상은 캠퍼스, 520 ~ 1300은 홀, 520 아래는 부스이고 글자는 13px 아래로 줄지 않는다');
+      check(mm.levelOf(3000) === 'campus' && mm.levelOf(1300) === 'campus' && mm.levelOf(900) === 'hall' && mm.levelOf(329) === 'booth' && mm.levelOf(400) === 'hall' && mm.levelOf(100) === 'booth' && mm.MIN_FONT === 13, '확대 단계 셋: 칸 너비 1300 이상은 캠퍼스, 520 ~ 1300은 홀, 520 아래는 부스이고 글자는 13px 아래로 줄지 않는다');
       check(Math.abs((fit[3] - fit[1]) / (fit[2] - fit[0]) - ratio) < 1e-9 && fit[0] <= 0 && fit[2] >= 400 && fit[1] <= 0 && fit[3] >= 100, '보는 칸 맞추기: 상자가 다 보이고 화면 비율과 같다');
       check(Math.abs(z[0] - 45) < 1e-9 && Math.abs(z[2] - 225) < 1e-9 && Math.abs(z[1] - 67.5) < 1e-9 && mm.widthOf(tiny) >= mm.MIN_W - 1e-9 && mm.widthOf(huge) <= mm.MAX_W + 1e-9, '확대 · 축소는 누른 점을 그대로 두고, 너비는 한계(90 ~ 3800) 안이다');
       const sx = (x) => (x - vf[0]) / ((vf[2] - vf[0]) / 360);
@@ -659,20 +659,22 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       const ven = { k: 'ven', toWorld: { scale: 0.5 }, geo: { lat: 36.1216, lng: -115.1658 } };
       const near = nv.estimate([0, 0], [300, -300], { campusFrom: lvcc, campusTo: lvcc });
       const scaled = nv.estimate([0, 0], [100, 0], { campusFrom: ven, campusTo: ven });
-      const far = nv.estimate([0, 0], [0, 0], { campusFrom: lvcc, campusTo: ven });
+      // 좌표가 실제 미터라 다른 캠퍼스도 두 점 사이 거리다. 캠퍼스 사이 한 줄(R57)은 두 캠퍼스 가운데(geo)의 실제 거리.
+      const far = nv.estimate([0, 0], [-1200, 1100], { campusFrom: lvcc, campusTo: { ...ven, toWorld: { scale: 1 } } });
+      const hopMin = Math.round((nv.geoMeters(lvcc.geo.lat, lvcc.geo.lng, ven.geo.lat, ven.geo.lng) * 1.25) / 70);
       const here = nv.estimate([0, 0], [10, 10], { campusFrom: lvcc, campusTo: lvcc });
       const coarse = nv.estimate([0, 0], [10, 10], { campusFrom: lvcc, campusTo: lvcc, coarse: true });
       check(nv.bearingWord(10, -10) === '북동쪽' && nv.bearingWord(0, 50) === '남쪽' && nv.bearingWord(-30, 0) === '서쪽' && nv.fmtDistance(42) === '40m' && nv.fmtDistance(433) === '450m' && nv.fmtDistance(1530) === '1.5km'
-        && near.sameCampus && Math.abs(near.meters - 530.33) < 0.5 && near.minutes === 8 && near.word === '북동쪽' && Math.abs(scaled.meters - 250) < 0.01 && !far.sameCampus && far.meters > 1900 && far.meters < 2300 && here.arrived && !coarse.arrived,
-      '길 안내 셈: 방향(북동쪽 · 남쪽 …) · 거리(40m · 450m · 1.5km) · 걷는 시간(분당 70m) · 줄여 그린 캠퍼스는 그만큼 더 멀다 · 다른 캠퍼스는 실제 위도 · 경도 거리 · 30m 안이면 도착이고 GPS가 캠퍼스까지만 맞았으면 도착으로 치지 않는다');
+        && near.sameCampus && Math.abs(near.meters - 530.33) < 0.5 && near.minutes === 8 && near.word === '북동쪽' && Math.abs(scaled.meters - 250) < 0.01 && !far.sameCampus && Math.abs(far.meters - Math.hypot(1200, 1100) * 1.25) < 0.5 && here.arrived && !coarse.arrived,
+      '길 안내 셈: 방향(북동쪽 · 남쪽 …) · 거리(40m · 450m · 1.5km) · 걷는 시간(분당 70m) · 줄여 그린 캠퍼스는 그만큼 더 멀다 · 좌표가 실제 미터라 다른 캠퍼스도 두 점 사이 거리 · 30m 안이면 도착이고 GPS가 캠퍼스까지만 맞았으면 도착으로 치지 않는다');
       // 갈 곳 탭의 캠퍼스 사이 한 줄 (R57): 길 안내 띠와 같은 분, 같은 캠퍼스이거나 캠퍼스를 모르면 없다
       const planHop = await readFile(join(dist, 'views/plan.js'), 'utf8');
-      check(nv.campusHop(lvcc, ven) === far.minutes && nv.campusHop(ven, lvcc) === far.minutes && nv.campusHop(lvcc, lvcc) === null && nv.campusHop(null, ven) === null && nv.campusHop(lvcc, { k: 'x' }) === null
+      check(nv.campusHop(lvcc, ven) === hopMin && nv.campusHop(ven, lvcc) === hopMin && nv.campusHop(lvcc, lvcc) === null && nv.campusHop(null, ven) === null && nv.campusHop(lvcc, { k: 'x' }) === null
         && planHop.includes("import { campusHop, hopSlot } from '../nav.js';") && planHop.includes('까지 걸어서 약 ${min}분 또는 셔틀') && (planHop.match(/class: 'hop'/g) || []).length === 2 && planHop.includes("const hopOf = d.key ? hopText : () => '';"),
-      '갈 곳: 캠퍼스가 바뀌는 자리(다음에 갈 곳 카드 · 줄 사이)에만 "걸어서 약 n분 또는 셔틀" 한 줄. 분은 길 안내 띠의 어림과 같고, 같은 캠퍼스 안 · 캠퍼스를 모르는 곳 · 날짜 없는 곳에는 없다');
+      '갈 곳: 캠퍼스가 바뀌는 자리(다음에 갈 곳 카드 · 줄 사이)에만 "걸어서 약 n분 또는 셔틀" 한 줄. 분은 두 캠퍼스 가운데의 실제 거리를 길 안내 띠와 같은 셈(1.25배 · 분당 70m)으로 센 것이고, 같은 캠퍼스 안 · 캠퍼스를 모르는 곳 · 날짜 없는 곳에는 없다');
       // 때 어림에 더하는 이동 시간 (R58): 같은 어림을 5분 단위로 올린 것. 갈 곳 탭이 때 · 하루에 볼 수 있는 수 · 날마다 나누기에 같이 쓴다
       const slot = nv.hopSlot(lvcc, ven);
-      check(slot % 5 === 0 && slot >= far.minutes && slot - far.minutes < 5 && nv.hopSlot(ven, lvcc) === slot && nv.hopSlot(lvcc, lvcc) === 0 && nv.hopSlot(null, ven) === 0 && nv.hopSlot(lvcc, { k: 'x' }) === 0
+      check(slot % 5 === 0 && slot >= hopMin && slot - hopMin < 5 && nv.hopSlot(ven, lvcc) === slot && nv.hopSlot(lvcc, lvcc) === 0 && nv.hopSlot(null, ven) === 0 && nv.hopSlot(lvcc, { k: 'x' }) === 0
         && planHop.includes('timeline(items.length, hours, evs, pace, travelOf(items))') && (planHop.match(/travelByDay\(/g) || []).length === 3,
       '갈 곳: 때 어림이 캠퍼스 사이 이동 시간을 셈한다(R58). 분은 한 줄의 어림을 5분 단위로 올린 것이고, 같은 캠퍼스 · 캠퍼스를 모르는 곳은 0이다. 때 · 하루에 볼 수 있는 수 · 날마다 나누기가 같은 셈을 쓴다');
       // 홀마다 나눈 자료
@@ -703,13 +705,35 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
       const htmlNow = await readFile(join(dist, 'index.html'), 'utf8');
       check((mapSrc.match(/getExhibitors\(/g) || []).length === 1 && !/getExhibitors\(/.test(appJs2) && !/^import .*map3d/m.test(mapSrc) && mapSrc.includes("import('../map3d.js')") && mapSrc.includes('HALL_GROUPS') && ['웨스트', '센트럴', '노스', '사우스', '베네시안'].every((w) => hallSrc.includes(w)) && /ensureHall\(/.test(mapSrc) && !htmlNow.includes('map3d'),
         '지도 첫 열기: 전시사 전체 자료는 찾기 · 3D · 관심 회사가 있을 때만 받고(홀로 가까이 가면 그 홀 것만), 3D는 단추를 누를 때 불러오며, 홀 바로 가기 칩이 있다');
-      // 공식 지도 기준: 길 이름 · 홀별 부스 번호 범위
+      // 실제 좌표(R66): 장소 · 오픈스트리트맵 손질본이 같은 자(geoRef)를 쓰고, 홀 윤곽이 손질본과 같고, 출처 한 줄이 지도 · 설정에 있다
+      {
+        const pl0 = await json('data/places.json');
+        const osm = await json('data/osm-map.json').catch(() => null);
+        const geoSrc = await readFile(join(dist, 'geo.js'), 'utf8');
+        const setSrc = await readFile(join(dist, 'views/settings.js'), 'utf8');
+        const appSrc = await readFile(join(dist, 'app.js'), 'utf8');
+        const mapSrcR = await readFile(join(dist, 'views/map.js'), 'utf8');
+        const same = osm && ['lat', 'lng', 'mx', 'mz'].every((k) => osm.geoRef[k] === pl0.geoRef[k]);
+        const flat = (p) => p.flat().join(',');
+        const west = osm?.buildings.find((b) => b[0] === 19515850);
+        const halls = pl0.places.filter((p) => p.kind === 'hall');
+        const geoMod = await import('../web/geo.js');
+        const lv = pl0.campuses.find((c) => c.k === 'lvcc');
+        const back = geoMod.xzOf(pl0, lv.geo.lat, lv.geo.lng), ll = geoMod.latLngOf(pl0, ...back);
+        const kb = (await readFile(join(dist, 'data/osm-map.json'))).length / 1024;
+        check(same && west && flat(pl0.places.find((p) => p.k === 'LVCC_W').poly) === west[4].join(',') && osm.credit === '© OpenStreetMap 기여자' && /ODbL/.test(osm.license) && osm.fetchedAt && osm.buildings.length > 200 && osm.roads.length > 300
+          && pl0.campuses.every((c) => c.toWorld.scale === 1 && c.toWorld.offset.every((v) => v === 0)) && halls.every((h) => h.reg && h.reg[2] - h.reg[0] > 40)
+          && Math.abs(ll.lat - lv.geo.lat) < 1e-9 && Math.abs(ll.lng - lv.geo.lng) < 1e-9 && geoSrc.includes('export function xzOf')
+          && swFiles.includes('data/osm-map.json') && !/osm-map/.test(appSrc) && mapSrcR.includes('getOsm()') && mapSrcR.includes("'© OpenStreetMap 기여자'") && setSrc.includes('© OpenStreetMap 기여자 (ODbL)')
+          && pl0.sources.some((x) => /openstreetmap\.org\/copyright/.test(x.url)) && (await readFile(new URL('../.github/workflows/pages.yml', import.meta.url), 'utf8')).includes('data/osm-map.json'),
+        `실제 좌표: 장소와 오픈스트리트맵 손질본(${osm?.buildings.length}채 · 길 ${osm?.roads.length}줄 · ${kb.toFixed(0)} KB)이 같은 자(geoRef)를 쓰고, 웨스트 홀 윤곽이 손질본과 같고, 손질본은 지도를 열 때만 받으며 인터넷 없이 담기고, "© OpenStreetMap 기여자"가 지도 · 설정 · 출처에 있다`);
+      }
       const pl = await json('data/places.json');
       const mf = await import('../web/mapfind.js');
       const named = new Set(pl.roads.filter((r) => r.name).map((r) => r.name));
-      check(['Las Vegas Blvd', 'Paradise Rd', 'Desert Inn Rd', 'Convention Center Dr', 'Sierra Vista Dr', 'Elvis Presley Dr', 'North Rd', 'Joe W. Brown Dr'].every((n) => named.has(n)) && mapSrc.includes('roadLabels') && mapSrc.includes('boothRange(')
+      check(['라스베이거스 대로', '패러다이스 길', '데저트 인 길', '컨벤션 센터 길', '시에라 비스타 길', '엘비스 프레슬리 길', '노스 길', '조 브라운 길', '샌즈 길'].every((n) => named.has(n)) && [...named].every((n) => !/[A-Za-z]/.test(n)) && mapSrc.includes('roadLabels') && mapSrc.includes('boothRange(')
         && mf.hallOfNumber('14731', pl.boothRules.numbers)?.place === 'LVCC_N' && mf.hallOfNumber('30001', pl.boothRules.numbers)?.place === 'LVCC_S1' && mf.hallOfNumber('5000A', pl.boothRules.numbers)?.place === 'LVCC_W' && mf.hallOfNumber('2999', pl.boothRules.numbers) === null && mf.hallOfNumber('삼성', pl.boothRules.numbers) === null,
-      '공식 LVCC 지도의 길 이름 여덟이 지도에 글자로 나오고, 홀 카드에 부스 번호 범위가 있으며, 회사 자료에 없는 부스 번호도 번호 범위로 어느 홀인지 알려 준다');
+      'LVCC · 베네시안의 큰길 아홉이 우리 말 이름으로(실제 모양은 오픈스트리트맵) 지도에 글자로 나오고, 홀 카드에 부스 번호 범위가 있으며, 회사 자료에 없는 부스 번호도 번호 범위로 어느 홀인지 알려 준다');
       // 정식 배치도 자동 반영의 셈 (scripts/floorplan-lib.mjs · check-floorplan.mjs · import-booth-spots.mjs)
       const fp = await import('../scripts/floorplan-lib.mjs');
       const place = { k: 'T', poly: [[100, 200], [300, 200], [300, 260], [100, 260]] };
