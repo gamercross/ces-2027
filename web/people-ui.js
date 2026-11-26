@@ -3,7 +3,9 @@
 // 폰에만 남고 일기 보내기 묶음에는 들어가지 않는다.
 
 import { el, out } from './dom.js';
-import { kindKo, NICK_MAX, NOTE_MAX, parseScan, removePerson, safeHref, upsert, withTalk } from './people.js';
+import { kindKo, NICK_MAX, NOTE_MAX, parseScan, removePerson, safeHref, setFollowed, upsert, withTalk } from './people.js';
+import { dateOf } from './alerts.js';
+import { checkAlerts } from './notify.js';
 import { getPeople, setPeople } from './people-store.js';
 
 export const nameOf = (p) => p.nick || p.links[0]?.label || '이름 없음';
@@ -31,6 +33,23 @@ function linkLine(l) {
     href ? out(href, ` ${l.label}`, 'link-text') : el('span', { class: 'link-text', text: ` ${l.label}` }));
 }
 
+// 링크드인 팔로우함(R62): 카드 안 한 줄. 누르면 켜지고(그 날을 남긴다) 다시 누르면 꺼진다. 링크드인 주소가 있으면 옆에 "링크드인 열기".
+// 만난 지 이틀이 지났는데 꺼져 있으면 탭 위 띠가 챙긴다(app.js · notify.js). 폰에만 남는다.
+function followRow(p, ctx) {
+  const box = el('input', { type: 'checkbox', name: 'followed', checked: !!p.followed });
+  const label = el('label', { class: 'toggle follow-toggle' }, box, el('span', { text: p.followed ? `링크드인 팔로우함 · ${dateKo(p.followed)}` : '링크드인 팔로우함' }));
+  box.addEventListener('change', () => {
+    const r = setFollowed(getPeople(), p.id, box.checked, dateOf(new Date()));
+    if (!r || !setPeople(r.list)) { box.checked = !box.checked; return; }
+    checkAlerts();
+    ctx.after(box.checked ? `${nameOf(r.person)} 님을 팔로우함으로 남겼다.` : `${nameOf(r.person)} 님의 팔로우함을 껐다.`);
+    ctx.shell.update(personCard(r.person, ctx));
+  });
+  const li = p.links.find((l) => l.kind === 'linkedin');
+  const href = li ? safeHref(li.url) : '';
+  return el('div', { class: 'follow-row' }, label, href ? out(href, '링크드인 열기', 'linkish') : null);
+}
+
 // ctx: { shell, companies: [{id,name,booth}], after(message) } — after는 바뀐 뒤 화면 목록을 다시 그린다.
 export function personCard(p, ctx) {
   const { shell } = ctx;
@@ -56,6 +75,7 @@ export function personCard(p, ctx) {
     whereOf(p) ? el('p', { class: 'pcard-where', text: [p.company, p.booth && `부스 ${p.booth.split('@')[0]}`].filter(Boolean).join(' · ') || ' ' }) : null,
     p.links.length ? el('ul', { class: 'contacts' }, p.links.map(linkLine)) : null,
     p.note ? el('p', { class: 'pcard-note', text: p.note }) : null,
+    followRow(p, ctx),
     el('div', { class: 'actions' },
       href ? el('a', { class: 'btn', href, text: `${p.company} 일기 쓰기` }) : null,
       el('button', { class: 'btn ghost', type: 'button', text: '고치기', onclick: () => shell.update(personEdit(p, ctx)) })),
@@ -131,7 +151,7 @@ export function personEdit(p, ctx) {
       id: p.id, nick: nick.value, links, met: p.met, company,
       exId: chosen ? chosen.id : keep ? p.exId : '',
       booth: chosen ? chosen.booth : keep ? p.booth : '',
-      note: note.value,
+      note: note.value, followed: p.followed, metAt: p.metAt,
     });
     if (!setPeople(result.list)) { status.textContent = '이 폰에 저장하지 못했다. 사생활 보호 창이면 보통 창으로 다시 연다.'; return; }
     ctx.after(`${nameOf(result.person)} 님을 남겼다.`);

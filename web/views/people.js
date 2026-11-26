@@ -3,6 +3,7 @@
 // 카메라는 단추를 눌렀을 때만 켠다. 화면을 떠나면 꺼진다(scan.js). 밖으로 보내지 않고, 일기 보내기 묶음에도 들어가지 않는다.
 //   #/people      전체 목록(찾기 칸 하나) + "명함 받기"
 //   #/people/new  남의 명함 받기: 카메라 한 칸 + "주소 붙여넣기"
+//   #/people/follow  링크드인 이틀 띠(R62)에서 온 목록: 만난 지 이틀이 지났는데 팔로우함이 없는 사람만
 
 import { el } from '../dom.js';
 import { getExhibitors } from '../data.js';
@@ -10,6 +11,7 @@ import { getInterests } from '../store.js';
 import { cameraSupport, envOf, startScan } from '../scan.js';
 import { parseScan, upsert } from '../people.js';
 import { getPeople, setPeople } from '../people-store.js';
+import { followOverdue } from '../alerts.js';
 import { createCardShell } from '../plancard.js';
 import { nameOf, personCard, personRow, talkLine } from '../people-ui.js';
 
@@ -32,8 +34,18 @@ export async function render({ rest = [] } = {}) {
   const note = el('p', { class: 'note', role: 'status' });
   const ctx = { shell, companies, after: (m) => { note.textContent = m || ''; drawList(); } };
   const open = (p, from) => shell.open(personCard(p, ctx), from);
+  // #/people/follow: 링크드인 이틀 띠(R62)를 눌러 온 목록. 만난 지 이틀이 지났는데 "팔로우함"이 없는 사람만 모인다. 카드에서 켜면 빠진다.
+  const onlyFollow = rest[0] === 'follow';
   function drawList() {
     const all = getPeople().sort((a, b) => (b.met || '').localeCompare(a.met || ''));
+    if (onlyFollow) {
+      const late = new Set(followOverdue(all, Date.now()));
+      const left = all.filter((p) => late.has(p.id));
+      countText.textContent = `링크드인 팔로우 안 한 사람 ${left.length}명`;
+      q.hidden = true;
+      listBox.replaceChildren(...(left.length ? left.map((p) => personRow(p, open)) : [el('li', { class: 'note', text: '다 했다. 이틀이 지난 사람은 모두 팔로우함이다.' })]));
+      return;
+    }
     const k = q.value.trim().toLowerCase();
     const shown = k ? all.filter((p) => `${nameOf(p)} ${p.company} ${p.links.map((l) => l.label).join(' ')}`.toLowerCase().includes(k)) : all;
     countText.textContent = `만난 사람 ${all.length}명`;
@@ -47,7 +59,7 @@ export async function render({ rest = [] } = {}) {
   function keep(text, hint, by) {
     const r = parseScan(text, hint);
     if (!r.ok) { scanNote.textContent = `${by}: ${r.why}`; return false; }
-    const result = upsert(getPeople(), { links: [r.link], met: today() });
+    const result = upsert(getPeople(), { links: [r.link], met: today(), metAt: Date.now() });
     if (!setPeople(result.list)) { scanNote.textContent = '이 폰에 저장하지 못했다. 사생활 보호 창이면 보통 창으로 다시 연다.'; return false; }
     stopCam();
     video.hidden = true;
@@ -101,6 +113,13 @@ export async function render({ rest = [] } = {}) {
       el('section', { class: 'head' }, el('h1', { text: '남의 명함 받기' })),
       el('section', { class: 'panel' }, camNote, camBtn, video, scanNote, pasteBtn, pasteForm),
       el('div', { class: 'row-actions' }, el('a', { href: '#/people', text: '만난 사람 보기' })),
+      shell.node);
+  } else if (onlyFollow) {
+    drawList();
+    holder.append(
+      el('section', { class: 'head' }, el('h1', { text: '링크드인 팔로우' })),
+      el('section', { class: 'panel' }, countText, el('p', { class: 'note', text: '만난 지 이틀이 지났다. 카드에서 "링크드인 팔로우함"을 누르면 빠진다.' }), note, listBox),
+      el('div', { class: 'row-actions' }, el('a', { href: '#/people', text: '만난 사람 전체 보기' })),
       shell.node);
   } else {
     drawList();

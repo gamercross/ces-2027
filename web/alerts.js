@@ -113,3 +113,27 @@ export function mergeMarks(marks, keys) {
 }
 
 export const markLabel = (mark) => (mark?.by === 'team' ? '팀이 표시' : '내가 표시');
+
+// 링크드인 이틀(R62): 만난 지 이틀(48시간)이 지났는데 "링크드인 팔로우함"이 없는 사람들의 id.
+// 만난 때는 받은 순간(metAt, ms)으로 재고, 옛 사람처럼 그 값이 없으면 만난 날(met)의 0시로 잰다. 만난 때를 모르면 세지 않는다.
+export const FOLLOW_MS = 48 * 60 * 60 * 1000;
+export function followOverdue(people, nowMs) {
+  const metMs = (p) => {
+    if (Number.isFinite(p?.metAt) && p.metAt > 0) return p.metAt;
+    const m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(p?.met || '');
+    return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime() : null;
+  };
+  return (Array.isArray(people) ? people : []).filter((p) => p && typeof p.id === 'string' && !p.followed && metMs(p) != null && nowMs - metMs(p) >= FOLLOW_MS).map((p) => p.id);
+}
+
+// 띠에 보일 사람 수. closed: { date: 'YYYY-MM-DD', ids: [...] } — "닫기"를 누른 날과 그때 센 사람들.
+// 닫은 날에는 다시 안 뜨고, 그 뒤에는 그때 없던 사람이 새로 이틀을 넘겼을 때만 다시 뜬다(같은 사람들로 날마다 조르지 않는다).
+export function followBand(ids, closed, today) {
+  if (!ids?.length) return 0;
+  if (closed && typeof closed.date === 'string') {
+    if (closed.date >= today) return 0;
+    const seen = new Set(Array.isArray(closed.ids) ? closed.ids : []);
+    if (ids.every((id) => seen.has(id))) return 0;
+  }
+  return ids.length;
+}
