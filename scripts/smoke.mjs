@@ -475,19 +475,19 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
   const html = await readFile(join(dist, 'index.html'), 'utf8');
   const app = await readFile(join(dist, 'app.js'), 'utf8');
   const tabs = (html.match(/data-tab="/g) || []).length;
-  check(tabs === 4 && html.includes('id="back"') && html.includes('id="net"') && html.includes('href="frame.js"'), `메인 틀: 아래 탭 ${tabs}개(넷) · 뒤로 · 인터넷 없음 줄이 있고 frame.js를 첫 화면과 같이 받는다`);
+  check(tabs === 5 && html.includes('id="back"') && html.includes('id="net"') && html.includes('href="frame.js"'), `메인 틀: 아래 탭 ${tabs}개(다섯, 가운데 홈) · 뒤로 · 인터넷 없음 줄이 있고 frame.js를 첫 화면과 같이 받는다`);
   // 2단계(11/22): 탭 넷 틀. 첫 화면 · 회사 탭이 없고, 열면 지도, 합친 화면은 알맞은 탭 아래에 선다. 지운 화면의 파일은 지은 것에 없다.
   {
     const views = [...app.matchAll(/^  (\w+): \(\) => import\('\.\/views\/(\w+)\.js'\),$/gm)].map((m) => m[1]);
     const tabOf = Object.fromEntries([...(app.match(/const TAB_OF = \{([^}]*)\}/)?.[1] || '').matchAll(/(\w+): '(\w+)'/g)].map((m) => [m[1], m[2]]));
     const want = { map: 'map', list: 'map', transit: 'map', plan: 'plan', rec: 'plan', days: 'plan', sessions: 'plan', diary: 'diary', listen: 'diary', talk: 'diary', people: 'diary', settings: 'settings', card: 'settings', collect: 'settings' };
-    // 홈(11/25, 이재엽이 그림을 보고 정함): 앱을 열면 홈이 먼저이고 아래 탭은 넷 그대로다(홈은 탭이 아니다). 설정 home이 off면 예전처럼 열면 지도.
-    const homeOn = (await json('data/settings.json').catch(() => ({}))).home === 'on' && tabOf.home === 'home' && views.includes('home') && /const homeMode = getSettings\(\)\.then\(\(s\) => \(s\?\.home === 'off' \? 'off' : 'on'\)\);/.test(app) && !html.includes('data-tab="home"') && html.includes('<a class="brand" href="#/home" aria-label="홈으로">');
+    // 홈(11/25 정함 → 11/26 안): 앱을 열면 홈이 먼저이고 아래 탭은 다섯, 홈이 가운데다. 설정 home이 off면 예전처럼 열면 지도(홈 탭을 뺀다).
+    const homeOn = (await json('data/settings.json').catch(() => ({}))).home === 'on' && tabOf.home === 'home' && views.includes('home') && /const homeMode = getSettings\(\)\.then\(\(s\) => \(s\?\.home === 'off' \? 'off' : 'on'\)\);/.test(app) && /data-tab="plan"[\s\S]*?data-tab="home"[\s\S]*?data-tab="diary"/.test(html) && /a\[data-tab="home"\]'\)\?\.remove\(\)/.test(app) && html.includes('<a class="brand" href="#/home" aria-label="홈으로">');
     const gone = ['views/find.js', 'views/topics.js', 'views/askall.js', 'views/apply.js', 'views/onsite.js', 'views/info.js', 'askall.js', 'onsite.js', 'separate.js', 'topics.js', 'data/separate.json', 'data/onsite.json', 'data/topics.json', 'data/faq.json'];
     const stillThere = [];
     for (const f of gone) if (await exists(f)) stillThere.push(f);
     check(Object.entries(want).every(([k, v]) => tabOf[k] === v) && views.length === Object.keys(want).length + 1 && homeOn && /replaceTo\(mode !== 'off' \? '#\/home' : !getProfile\(\) && !sessionStorage\.getItem\('ces2027\.introLater'\) \? '#\/card' : '#\/map'\)/.test(app) && /new Set\(\['home', 'map', 'plan', 'diary', 'settings'\]\)/.test(app) && stillThere.length === 0,
-      `탭 넷 틀: 앱을 열면 홈(설정으로 끄면 예전처럼 지도, 명함이 없으면 명함부터), 아래 탭은 넷이고 홈은 탭이 아니며 머리의 앱 이름이 홈으로 간다. 화면 ${views.length - 1}개가 지도 · 갈 곳 · 일기 · 설정 아래에 서고, 회사 · 주제 판 · 알아둘 것 · 따로 신청 · 현장 안내 · 물어보기의 코드와 자료는 지은 것에 없다 (남은 것 ${stillThere.join(' ') || '없음'})`);
+      `탭 틀: 앱을 열면 홈(설정으로 끄면 예전처럼 지도, 명함이 없으면 명함부터), 아래 탭은 다섯이고 홈이 가운데이며 머리의 앱 이름도 홈으로 간다. 화면 ${views.length - 1}개가 지도 · 갈 곳 · 일기 · 설정 아래에 서고, 회사 · 주제 판 · 알아둘 것 · 따로 신청 · 현장 안내 · 물어보기의 코드와 자료는 지은 것에 없다 (남은 것 ${stillThere.join(' ') || '없음'})`);
     const planV = await readFile(join(dist, 'views/plan.js'), 'utf8');
     const diaryV = await readFile(join(dist, 'views/diary.js'), 'utf8');
     const transitV = await readFile(join(dist, 'views/transit.js'), 'utf8');
@@ -842,7 +842,7 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
   check(headPos('src="theme.js"') > 0 && headPos('src="theme.js"') < headPos('href="tokens.css"') + 1000 && /prefers-color-scheme: dark/.test(themeJs) && /'light'/.test(themeJs) && /'dark'/.test(themeJs) && ['자동', '밝게', '어둡게'].every((w) => settingsJs.includes(w)) && /ces2027\.theme\.v1/.test(themeJs) && settingsJs.includes('setTheme') && /settings: \(\) => import/.test(app) && html.includes('href="#/settings"'), '테마: 설정에서 자동 · 밝게 · 어둡게를 고르고, theme.js가 첫 그림 전에 폰 설정(prefers-color-scheme)을 읽어 정한다');
   check(!/askPermission|offline\.install/.test(mapV2) && /askPermission/.test(settingsJs) && ['명함', '알림', '인터넷 없이', '내보내기'].every((w) => settingsJs.includes(w)), '명함 · 알림 · 인터넷 없이 · 내보내기는 설정 탭에 있다');
   const tabN = (html.match(/<a href="#\/[a-z]+" data-tab=/g) || []).length;
-  check(tabN === 4 && ['map', 'plan', 'diary', 'settings'].every((k) => html.includes(`data-tab="${k}"`)) && /\.segs \{[^}]*overflow-x: auto/.test(appCss), `아래 탭은 넷(지도 · 동선 · 일기 · 설정, ${tabN}개)이고, 칩 줄은 한 줄 가로 스크롤이다`);
+  check(tabN === 5 && ['map', 'plan', 'home', 'diary', 'settings'].every((k) => html.includes(`data-tab="${k}"`)) && /\.segs \{[^}]*overflow-x: auto/.test(appCss), `아래 탭은 다섯(지도 · 갈 곳 · 홈 · 일기 · 설정, ${tabN}개)이고, 칩 줄은 한 줄 가로 스크롤이다`);
 }
 const missing = mustCache.filter((f) => !swFiles.includes(f));
 const gone = [];
@@ -1165,6 +1165,13 @@ if (await exists('data/meta.json')) {
         && H.oneThing(null, []).href === '#/card' && H.oneThing({ nick: 'a' }, []).href === '#/map' && H.oneThing({ nick: 'a' }, [{ id: '1' }, { id: '2', seen: true }]).title === '갈 곳 1곳' && H.oneThing({ nick: 'a' }, [{ id: '2', seen: true }]).href === '#/map'
         && Array.isArray(shipped?.cards) && shipped.cards.length === 0 && listed.includes('data/home.json') && listed.includes('views/home.js'),
         '홈: 안내 칸은 자료 파일에서 읽고(제목 없는 칸 · 틀린 주소의 단추는 버리고 글은 세 줄까지), 지금 할 일은 명함 → 지도 → 갈 곳 차례로 하나만 고른다. 실은 파일에는 칸이 없고(내용은 지어내지 않는다), 자료 파일과 화면 조각은 미리 담는 목록에 있다');
+      // 한눈에 보기(11/26 안): 갈 곳 줄은 오늘이 전시 날이면 오늘, 아니면 남은 곳이 있는 첫 날. 일기 줄은 오늘 수 · 보내지 않은 수(초안 빼고).
+      const infoJ = await json('data/info.json');
+      const L = [{ id: 'a', day: 1, seen: true }, { id: 'b', day: 1 }, { id: 'c', day: 2 }, { id: 'd', day: 0 }];
+      const before = H.planLine(L, infoJ, '2026-12-01'), onDay2 = H.planLine(L, infoJ, '2027-01-07'), onDay3 = H.planLine(L, infoJ, '2027-01-08');
+      check(before.text === '1/6 (수) 남은 1곳' && before.nextId === 'b' && onDay2.text === '오늘 남은 1곳' && onDay2.nextId === 'c' && onDay3.text === '오늘 남은 곳 없음' && H.planLine([], infoJ).text === '아직 담은 곳이 없다' && H.planLine([{ id: 'd', day: 0 }], infoJ, '2026-12-01').text === '날짜 없는 곳 1곳'
+        && H.diaryLine([]) === '아직 없다' && H.diaryLine([{ date: '2027-01-06' }, { date: '2027-01-06', sent: 'x' }, { date: '2027-01-05', draft: true }], '2027-01-06') === '오늘 2개 · 보내지 않은 1개',
+        '홈 한눈에 보기: 갈 곳(오늘 · 아니면 남은 곳이 있는 첫 날, 다음 곳) · 일기(오늘 수 · 보내지 않은 수) 줄을 셈한다');
     }
     // 홈 화면에 추가 안내(안 4): 아이폰 · 아이패드의 브라우저 탭에서만. 홈 화면 앱 · 안드로이드 · 책상에서는 안 보인다.
     const T = await import('../web/tips.js').catch(() => null);

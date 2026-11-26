@@ -26,17 +26,18 @@ const VIEWS = {
 // 어느 탭 아래의 화면인가: 지도(전시사 목록 · 셔틀 · 오가는 법) · 갈 곳(추천 · 시간과 일정 · 강연 일정) · 일기(듣기 · 대화 칸 · 만난 사람) · 설정(명함 · 모은 일기).
 const TAB_OF = { home: 'home', map: 'map', list: 'map', transit: 'map', plan: 'plan', rec: 'plan', days: 'plan', sessions: 'plan', diary: 'diary', listen: 'diary', talk: 'diary', people: 'diary', settings: 'settings', card: 'settings', collect: 'settings' };
 
-// 메인 틀: 아래 탭은 넷(지도 · 갈 곳 · 일기 · 설정). 앱을 열면 홈(탭이 아니다).
+// 메인 틀: 아래 탭은 다섯(지도 · 갈 곳 · 홈 · 일기 · 설정, 11/26). 앱을 열면 홈.
 // 탭이 아닌 화면(명함 · 시간과 일정 · 듣기 …)은 위에 "뒤로"가 생기고, 돌아갈 곳은 TAB_OF의 탭이다.
 const ROOTS = new Set(['home', 'map', 'plan', 'diary', 'settings']);
 
-// 홈: 앱을 열면 홈이 먼저 뜬다(아래 탭은 넷 그대로이고 홈은 탭이 아니다). 머리의 앱 이름을 누르면 홈으로 돌아온다.
-// 설정 home이 'off'면 예전처럼 열면 지도다(명함이 없으면 명함부터). 그때는 앱 이름도 지도로 간다.
+// 홈(11/26 이재엽이 그림을 보고 정함): 앱을 열면 홈이 먼저 뜬다. 아래 탭은 다섯이고 홈이 가운데다(지도 · 갈 곳 · 홈 · 일기 · 설정). 가운데 홈 칸은 늘 강조색이다(app.css). 머리의 앱 이름을 눌러도 홈으로 온다.
+// 설정 home이 'off'면 예전처럼 열면 지도다(명함이 없으면 명함부터). 그때는 홈 탭이 없고 앱 이름도 지도로 간다.
 const homeMode = getSettings().then((s) => (s?.home === 'off' ? 'off' : 'on'));
 homeMode.then((mode) => {
   // 다음에 열 때 index.html이 지도 조각을 미리 받을지 정하도록 적어 둔다(홈이 꺼져 있을 때만 받는다).
   try { if (mode === 'off') localStorage.setItem('ces2027.homeMode.v1', 'off'); else localStorage.removeItem('ces2027.homeMode.v1'); } catch { /* 막힌 폰이면 그대로 둔다 */ }
   if (mode !== 'off') return;
+  document.querySelector('.tabs a[data-tab="home"]')?.remove();
   const brand = document.querySelector('.brand');
   brand.setAttribute('href', '#/map');
   brand.setAttribute('aria-label', '지도');
