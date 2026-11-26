@@ -30,7 +30,7 @@
     "ret": ["Health", "Longevity", "Accessibility", "Smart Home & Appliances", "Biotech", "Fitness", "Travel & Tourism", "Smart Communities", "Food Tech", "Lifestyle", "Pet & Animal Tech"],
     "mid": ["Smart Home & Appliances", "Vehicle Tech & Advanced Mobility", "Energy Future", "Fintech", "Investment & Venture Capital", "Health", "Fitness", "Home Entertainment & Office Hardware", "Sustainability", "Smart Communities", "Travel & Tourism", "Video & Display", "Food Tech"]
   },
-  "topicsAbout": "분야마다 CES 공식 토픽 쪽(기사 모음) 주소다(R71 안, 설정 topicLinks). 공식 토픽 목록 https://www.ces.tech/topics/ 을 2026-11-26에 읽고 이름이 같은 분야만 짝지었다. 공식 쪽이 다른 토픽으로 넘기는 셋(Audio and Video · Marketing and Advertising → Content and Entertainment, Fitness → Lifestyle)은 넘어간 곳을 적었다. 짝이 없는 분야는 링크 줄이 없다. 글 · 그림은 가져오지 않고 링크만 둔다.",
+  "topicsAbout": "분야마다 CES 공식 토픽 쪽(기사 모음) 주소다(R71, 설정 topicLinks). 공식 토픽 목록 https://www.ces.tech/topics/ 을 2026-11-26에 읽고 이름이 같은 분야만 짝지었다. 공식 쪽이 다른 토픽으로 넘기는 셋(Audio and Video · Marketing and Advertising → Content and Entertainment, Fitness → Lifestyle)은 넘어간 곳을 적었다. 짝이 없는 분야는 링크 줄이 없다. 글 · 그림은 가져오지 않고 링크만 둔다.",
   "topicsRead": "2026-11-26",
   "topics": {
     "Accessibility": "https://www.ces.tech/topics/accessibility/",

@@ -14,11 +14,9 @@ async function getJson(path) {
   return res.json();
 }
 
-const SETTINGS_DEFAULT = { companyIntro: 'link-only', companyImage: true, collector: 'file', collectorUrl: '', codysseyIcon: false, privateOn: null, speech: 'on-device', home: 'on', halfDay: false, newThisYear: false, topicLinks: false };
+const SETTINGS_DEFAULT = { companyIntro: 'link-only', companyImage: true, collector: 'file', collectorUrl: '', codysseyIcon: false, privateOn: null, speech: 'on-device', home: 'on', halfDay: true, topicLinks: true };
 
 export const getSettings = () => cached('settings', () => getJson('data/settings.json').catch(() => SETTINGS_DEFAULT));
-// 지난해(CES 2026) 전시사 이름 명단(R70 안). 공식 명단을 아직 구하지 못해 파일이 없다 — 없으면 null이고 "올해 처음" 칩은 꺼진 채 보인다.
-export const getLastYear = () => cached('lastYear', () => getJson('data/lastyear.json').catch(() => null));
 export const getInfo = () => cached('info', () => getJson('data/info.json'));
 // 첫 화면(홈)의 안내 칸들. 파일이 없거나 못 읽으면 칸이 없는 것으로 본다.
 export const getHome = () => cached('home', () => getJson('data/home.json').catch(() => ({ cards: [] })));

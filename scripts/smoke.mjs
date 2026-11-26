@@ -275,7 +275,7 @@ check(diary.fileName(who, new Date(2027, 0, 7)) === 'ces2027-일기-물개-20270
   check(names(all) === 'ADFC' && all[0].why.join(' · ') === '최고 혁신상 2027 · 한국 기업 · 내 분야: 로봇' && all[1].why[0] === '내 분야: 로봇 · 헬스케어' && names(R.recommend(fake, tbl, { tag: 'stu', filter: 'award' })) === 'AB' && names(R.recommend(fake, tbl, { filter: 'korea' })) === 'AC' && names(R.recommend(fake, tbl, { filter: 'mine' })) === '' && all.every((r) => r.why.length > 0), '추천: 혁신상 · 한국 기업 · 내 분야(태그와 주제 판)로만 뽑고, 까닭을 붙이고, 관심에 있는 곳과 까닭 없는 곳은 뺀다');
 }
 
-// 그림으로 보고 고를 안 셋(2026-11-26, 기본은 꺼 둔다): 반나절에 캠퍼스 하나(R69) · 올해 처음(R70) · 공식 토픽 기사(R71). 지어낸 작은 자료로 셈만 본다.
+// 반나절에 캠퍼스 하나(R69) · 공식 토픽 기사(R71). 2026-11-26 이재엽이 넣기로 정함(올해 처음 R70은 뺌). 지어낸 작은 자료로 셈만 본다.
 {
   const H = await import('../web/halfday.js');
   const camp = { a: 'L', b: 'V', c: 'L', d: 'V', e: 'L', x: null, z: 'C' };
@@ -292,15 +292,10 @@ check(diary.fileName(who, new Date(2027, 0, 7)) === 'ces2027-일기-물개-20270
   check(H.halves([{ id: 'a' }, { id: 'c' }, { id: 'x' }], of) === null, '반나절: 캠퍼스가 하나뿐인 날은 칸이 없다');
   const three = H.halves([...day, { id: 'z' }], of);
   check(three.extra.length === 1 && three.extra[0].campus === 'C', '반나절: 셋째 캠퍼스는 반나절에 안 들어간다고 따로 센다');
-  const X = await import('../web/exlist.js');
-  const ly = X.lastYearSet({ names: ['Acme, Inc.', 'Beta Co., Ltd.'] });
-  const rows = [[1, 'ACME Inc'], [2, 'Beta Co Ltd'], [3, 'Gamma']].map((r) => [...r, '', null, '', 0, 0, []]);
-  check(X.lastYearSet(null) === null && X.lastYearSet({ names: [] }) === null, '올해 처음: 지난해 명단이 없으면 거르지 않는다(칩은 꺼진 채)');
-  check(X.filterRows(rows, { fresh: true }, { lastYear: ly }).map((r) => r[0]).join() === '3' && X.filterRows(rows, { fresh: true }, {}).length === 3, '올해 처음: 지난해 이름(꼴이 달라도)을 빼고, 명단이 없으면 다 남긴다');
   const cat = await json('data/categories.json');
   const st = await json('data/settings.json');
   check(Object.entries(cat.topics || {}).every(([k, u]) => cat.ko[k] && /^https:\/\/www\.ces\.tech\/topics\/[a-z-]+\/$/.test(u)) && Object.keys(cat.topics).length === 21, '공식 토픽 기사: 분야 21개에 CES 공식 토픽 주소만 짝지었다');
-  check(st.halfDay === false && st.newThisYear === false && st.topicLinks === false, '안 셋은 설정에서 꺼 둔 채 나간다(지금 앱 그대로)');
+  check(st.halfDay === true && st.topicLinks === true && !('newThisYear' in st), '반나절 · 공식 토픽 기사는 켜고, 올해 처음은 설정에서도 뺐다');
 }
 
 // 전시사 목록 (공식 앱의 A–Z 목록 + 거르기): 진짜 자료로 거르기 · 줄 세우기 · 글자 자리 · 위치 묶음을 본다.

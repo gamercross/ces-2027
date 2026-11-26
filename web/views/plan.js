@@ -166,7 +166,7 @@ export async function render() {
   const travelOf = (items) => items.map((it, i) => (i ? hopSlot(campusOf(items[i - 1].id), campusOf(it.id)) : 0));
   // 날마다 걷는 시간의 합 [0, 첫날, …]: "하루에 n곳쯤"과 날마다 나누기가 그만큼 덜 센다.
   const travelByDay = (list) => [0, 1, 2, 3, 4].map((k) => (k ? travelOf(list.filter((it) => it.day === k)).reduce((a, b) => a + b, 0) : 0));
-  // 반나절에 캠퍼스 하나(R69 안, 설정 halfDay). 날짜가 있는 날에 캠퍼스가 둘 이상이면 한 칸: 오전 · 오후에 어느 캠퍼스인지와 단추 하나.
+  // 반나절에 캠퍼스 하나(R69, 설정 halfDay). 날짜가 있는 날에 캠퍼스가 둘 이상이면 한 칸: 오전 · 오후에 어느 캠퍼스인지와 단추 하나.
   // 아직 섞여 있으면 저절로 나눈 안("이대로 나누기"), 나눴으면 "오전 · 오후 바꾸기". 누르면 그 날 차례만 다시 선다(폰에만 남는다).
   const campusKey = (id) => campusOf(id)?.k || null;
   const halfBand = (items, dayKey) => {

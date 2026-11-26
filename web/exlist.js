@@ -35,17 +35,7 @@ export function placeGroups(groups, placeKo, ex) {
   return [...out, ...rest];
 }
 
-// 이름 견주기 열쇠(R70 안): 작은 글자 · 글자와 숫자만 · 끝의 회사 꼴(Inc · LLC · Ltd · Co · Corp · GmbH)을 뺀다. 지난해와 올해 이름을 같은 꼴로 맞춘다.
-export function nameKey(name) {
-  return String(name || '').toLowerCase().replace(/[^a-z0-9가-힣]+/g, ' ').trim().replace(/( (inc|llc|ltd|co|corp|corporation|company|gmbh|limited))+$/, '').replace(/ /g, '');
-}
-// 지난해 명단 파일({ names: [...] }) → 열쇠 Set. 파일이 없거나 이름이 없으면 null.
-export function lastYearSet(doc) {
-  const names = Array.isArray(doc?.names) ? doc.names : null;
-  return names && names.length ? new Set(names.map(nameKey).filter(Boolean)) : null;
-}
-
-// 거르기. f: { q, award, korea, fresh(올해 처음: 지난해 명단 ctx.lastYear에 없는 이름만), place: [장소 기호] | null, country: 나라 번호 | null, cat: 분야 번호(글) | null }
+// 거르기. f: { q, award, korea, place: [장소 기호] | null, country: 나라 번호 | null, cat: 분야 번호(글) | null }
 // ctx: { koreaAt: 한국의 나라 번호, hits: 찾기 코어가 돌려준 줄 번호 Set(한글로 찾을 때) | null }
 // q가 영문 · 숫자면 이름 · 부스 번호에 든 것으로 거른다. 한글이면 ctx.hits(한글 별칭 · 분야 이름 색인)를 쓴다.
 export function filterRows(ex, f, ctx = {}) {
@@ -56,7 +46,6 @@ export function filterRows(ex, f, ctx = {}) {
     const row = ex[i];
     if (f.award && !row[5]) continue;
     if (f.korea && row[3] !== ctx.koreaAt) continue;
-    if (f.fresh && ctx.lastYear && ctx.lastYear.has(nameKey(row[1]))) continue;
     if (f.country != null && row[3] !== f.country) continue;
     if (f.cat != null && !String(row[4] || '').split('.').includes(String(f.cat))) continue;
     if (f.place && !(row[7] || []).some((b) => f.place.includes(placeOfBooth(b)))) continue;
