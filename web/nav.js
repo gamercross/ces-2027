@@ -1,11 +1,11 @@
 // 길 안내의 셈: 남은 거리 · 걷는 시간 · 방향. 화면과 따로 두어 Node에서도 시험한다 (scripts/smoke.mjs).
-// 지도 좌표(world)는 캠퍼스마다 줄여 그린 것이라 미터는 어림이다. 같은 캠퍼스는 지도 좌표 × 캠퍼스 배율,
-// 다른 캠퍼스는 캠퍼스 중심의 실제 위도 · 경도 거리를 쓴다. 걷는 시간은 사람이 많은 전시장을 걷는 속도(분당 70m)로 센다.
+// 지도 좌표(world)는 실제 미터다(장소 자료의 geoRef). 캠퍼스가 같든 다르든 두 점 사이 곧은 거리를 쓰고, 길을 돌아가는 몫을 조금 더한다.
+// 걷는 시간은 사람이 많은 전시장을 걷는 속도(분당 70m)로 센다.
 
 export const WALK_M_PER_MIN = 70;
 export const ARRIVED_M = 30;
 
-// 캠퍼스의 지도 한 칸이 몇 미터쯤인가: toWorld.scale이 1보다 작으면 줄여 그린 것이라 그만큼 더 멀다.
+// 지도 한 칸이 몇 미터인가: 지금은 모든 캠퍼스가 실제 미터라 1이다(toWorld.scale이 1). 옛 자료(줄여 그린 캠퍼스)를 읽을 때만 1보다 크다.
 export const mPerUnit = (campus) => 1 / (campus?.toWorld?.scale || 1);
 
 // 지도는 위가 북쪽이고 z는 아래(남쪽)로 늘어난다. (dx, dz)가 가리키는 방향의 말.
@@ -32,27 +32,24 @@ export function geoMeters(lat1, lng1, lat2, lng2) {
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
-// from: [x, z] 내 자리(지도 좌표) · to: [x, z] 목적지 · opt: { campusFrom, campusTo(캠퍼스 자료), me(GPS {lat, lng} 또는 null), coarse(GPS가 캠퍼스까지만 맞았나) }
+// from: [x, z] 내 자리(지도 좌표) · to: [x, z] 목적지 · opt: { campusFrom, campusTo(캠퍼스 자료), coarse(GPS가 캠퍼스까지만 맞았나) }
 // 돌려주는 것: { meters, minutes, word, sameCampus, arrived, coarse }
 export function estimate(from, to, opt = {}) {
-  const { campusFrom, campusTo, me, coarse = false } = opt;
+  const { campusFrom, campusTo, coarse = false } = opt;
   const dx = to[0] - from[0], dz = to[1] - from[1];
   const sameCampus = !campusFrom || !campusTo || campusFrom.k === campusTo.k;
-  let meters;
-  if (sameCampus) meters = Math.hypot(dx, dz) * mPerUnit(campusTo || campusFrom);
-  else if (me && campusTo?.geo) meters = geoMeters(me.lat, me.lng, campusTo.geo.lat, campusTo.geo.lng);
-  else if (campusFrom?.geo && campusTo?.geo) meters = geoMeters(campusFrom.geo.lat, campusFrom.geo.lng, campusTo.geo.lat, campusTo.geo.lng);
-  else meters = Math.hypot(dx, dz);
+  const meters = Math.hypot(dx, dz) * mPerUnit(campusTo || campusFrom);
   // 곧게 가는 거리보다 길을 돌아가니 조금 더 센다.
   const walk = meters * 1.25;
   return { meters: walk, minutes: Math.max(1, Math.round(walk / WALK_M_PER_MIN)), word: bearingWord(dx, dz), deg: bearingDeg(dx, dz), sameCampus, arrived: sameCampus && walk <= ARRIVED_M && !coarse, coarse };
 }
 
-// 캠퍼스가 바뀌는 걸음(갈 곳 탭의 한 줄): 걸어서 몇 분쯤인가. 길 안내 띠가 다른 캠퍼스에 쓰는 어림 그대로다(캠퍼스 중심 사이 거리).
+// 캠퍼스가 바뀌는 걸음(갈 곳 탭의 한 줄): 걸어서 몇 분쯤인가. 두 캠퍼스 가운데(geo) 사이의 실제 거리에 길 안내와 같은 셈을 쓴다.
 // 같은 캠퍼스이거나 캠퍼스 · 자리를 모르면 null.
 export function campusHop(campusFrom, campusTo) {
   if (!campusFrom?.geo || !campusTo?.geo || campusFrom.k === campusTo.k) return null;
-  return estimate([0, 0], [0, 0], { campusFrom, campusTo }).minutes;
+  const walk = geoMeters(campusFrom.geo.lat, campusFrom.geo.lng, campusTo.geo.lat, campusTo.geo.lng) * 1.25;
+  return Math.max(1, Math.round(walk / WALK_M_PER_MIN));
 }
 
 // 때 어림(갈 곳의 "10:30쯤")에 더하는 이동 시간(R58): 위의 분을 5분 단위로 올린다.

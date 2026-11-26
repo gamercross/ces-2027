@@ -7,6 +7,7 @@
 pub mod diary;
 pub mod fetch;
 pub mod links;
+pub mod osm;
 pub mod places;
 pub mod sessions;
 pub mod shrink;

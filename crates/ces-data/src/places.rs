@@ -75,6 +75,12 @@ pub fn check(json: &Value) -> Vec<String> {
         bad.push("sources(출처)가 없다".to_string());
     }
 
+    // 좌표의 자: 위도 · 경도 → 미터 (오픈스트리트맵 손질 · GPS 내 자리 · 지도가 같은 값을 쓴다).
+    let g = &json["geoRef"];
+    if !(g["lat"].as_f64().is_some_and(|v| (-90.0..=90.0).contains(&v)) && g["lng"].as_f64().is_some_and(|v| (-180.0..=180.0).contains(&v)) && g["mx"].as_f64().is_some_and(|v| v > 0.0) && g["mz"].as_f64().is_some_and(|v| v > 0.0)) {
+        bad.push("geoRef(lat · lng · mx · mz: 좌표 0점과 경도 · 위도 1도의 미터)가 맞지 않다".to_string());
+    }
+
     let mut campuses = BTreeSet::new();
     for (i, c) in json["campuses"].as_array().into_iter().flatten().enumerate() {
         let k = str_of(c, "k");

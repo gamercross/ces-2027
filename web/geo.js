@@ -1,4 +1,4 @@
-// 장소 자료의 좌표를 한 장(세계 좌표)에 놓는다. 지도 · 3D · 위치 맞추기가 같이 쓴다.
+// 장소 자료의 좌표를 한 장(세계 좌표)에 놓는다. 지도 · 3D · 위치 맞추기가 같이 쓴다. 세계 좌표는 실제 미터다(geoRef, x 동쪽 · z 남쪽).
 
 // 캠퍼스 기호 → (x, z) => [세계 x, 세계 z]
 export function worldOf(places) {
@@ -52,4 +52,14 @@ export function layout(places) {
   // 전시장 밖 공개 장소 (자리는 어림).
   const city = (places.cityPlaces || []).map((p) => ({ ...p, center: W(p.c, p.at[0], p.at[1]) }));
   return { W, list, campuses, city, box: bbox(list.flatMap((p) => p.world)), boxAll: bbox([...list.flatMap((p) => p.world), ...city.map((p) => p.center)]) };
+}
+
+// 위도 · 경도 ↔ 세계 좌표(미터). 장소 자료의 geoRef가 0점과 1도의 미터다(x 동쪽 · z 남쪽). 오픈스트리트맵 손질본 · GPS 내 자리가 같은 자를 쓴다.
+export function xzOf(places, lat, lng) {
+  const g = places.geoRef;
+  return g ? [(lng - g.lng) * g.mx, (g.lat - lat) * g.mz] : null;
+}
+export function latLngOf(places, x, z) {
+  const g = places.geoRef;
+  return g ? { lat: g.lat - z / g.mz, lng: g.lng + x / g.mx } : null;
 }
