@@ -1,5 +1,5 @@
 {
-  "about": "이재엽이 정하는 것을 적는 자리다. 정한 것: companyIntro(링크만, 2026-11-21) · collector(파일로 받기, 2026-11-21) · codysseyIcon(써도 된다는 답을 받아 넣음, 2026-11-21). speech(받아쓰기를 어디서 하나: 둘 다 두고 쓰는 사람이 화면에서 고른다, 2026-11-21. 여기 값은 고르기 전의 기본값이고 on-device = 폰 안에서만. device-service = 폰의 음성 인식 서비스, 소리가 폰 밖으로 간다). companyImage(회사 카드에 CES 공식 사이트의 로고를 누를 때만 보이는 단추, 켬 · 새 창 링크). home(앱을 열면 처음 보이는 화면 홈: on = 열면 홈이 먼저이고 아래 탭은 넷, off = 예전처럼 열면 지도. 2026-11-25에 이재엽이 그림을 보고 버튼으로 정함: 열면 홈 · 탭 넷 · 지금 할 일 하나를 둔다 · 홈 화면에 추가 안내는 홈에만. 홈의 안내 칸은 data/home.json의 cards에 적는다). 아직 정하지 않은 것: privateOn. 값의 뜻은 README의 '정하는 것'에 있다.",
+  "about": "이재엽이 정하는 것을 적는 자리다. 정한 것: companyIntro(링크만, 2026-11-21) · collector(파일로 받기, 2026-11-21) · codysseyIcon(써도 된다는 답을 받아 넣음, 2026-11-21). speech(받아쓰기를 어디서 하나: 둘 다 두고 쓰는 사람이 화면에서 고른다, 2026-11-21. 여기 값은 고르기 전의 기본값이고 on-device = 폰 안에서만. device-service = 폰의 음성 인식 서비스, 소리가 폰 밖으로 간다). companyImage(회사 카드에 CES 공식 사이트의 로고를 누를 때만 보이는 단추, 켬 · 새 창 링크). home(앱을 열면 처음 보이는 화면 홈: on = 열면 홈이 먼저이고 아래 탭은 넷, off = 예전처럼 열면 지도. 2026-11-25에 이재엽이 그림을 보고 버튼으로 정함: 열면 홈 · 탭 넷 · 지금 할 일 하나를 둔다 · 홈 화면에 추가 안내는 홈에만. 홈의 안내 칸은 data/home.json의 cards에 적는다). 2026-11-26에 이재엽이 그림을 보고 버튼으로 정함: halfDay(켬 · 갈 곳에서 하루를 오전 · 오후로 나눠 반나절에 캠퍼스 하나, R69) · topicLinks(켬 · 목록에서 분야를 고르면 그 분야의 CES 공식 토픽 기사로 가는 링크 한 줄, 분야와 토픽의 짝은 data/categories.json의 topics, R71). 올해 처음 나온 회사 거르기(R70)는 뺐다(지난해 전시사 명단을 구하면 다시). 아직 정하지 않은 것: privateOn. 값의 뜻은 README의 '정하는 것'에 있다.",
   "companyIntro": "link-only",
   "companyImage": true,
   "collector": "file",
@@ -8,6 +8,6 @@
   "privateOn": null,
   "speech": "on-device",
   "home": "on",
-  "homeGlance": "on",
-  "homeTab": "same"
+  "halfDay": true,
+  "topicLinks": true
 }
