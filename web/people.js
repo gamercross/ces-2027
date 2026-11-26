@@ -81,6 +81,9 @@ export function personFromScan(text, ctx = {}) {
   return { ok: true, person: makePerson({ ...ctx, links: [r.link] }) };
 }
 
+// 만난 사람 한 줄 메모의 글자 수 한도. 고치기의 메모 칸과 받자마자 뜨는 "무슨 대화를 했나" 칸이 같이 쓴다.
+export const NOTE_MAX = 200;
+
 const clip = (v, n) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
 const isDate = (s) => typeof s === 'string' && /^\d{4}-\d\d-\d\d$/.test(s);
 
@@ -93,7 +96,7 @@ export function makePerson(p) {
     company: clip(p.company, 80),
     exId: clip(p.exId, 40),
     booth: clip(p.booth, 40),
-    note: clip(p.note, 200),
+    note: clip(p.note, NOTE_MAX),
   };
 }
 
@@ -135,6 +138,14 @@ export function upsert(list, incoming) {
   const idx = next.findIndex((p) => p.id === base.id);
   if (idx >= 0) next[idx] = base; else next.push(base);
   return { list: next, person: base, merged: others.length };
+}
+
+// 이미 남은 사람의 메모에 한 줄을 넣는다(R61: 받자마자 뜨는 "무슨 대화를 했나"). 비운 글은 넣지 않는다. 그 사람이 없으면 null.
+export function withNote(list, id, note) {
+  const p = list.find((x) => x.id === id);
+  const text = typeof note === 'string' ? note.trim() : '';
+  if (!p || !text) return null;
+  return upsert(list, { ...p, note: text });
 }
 
 export const removePerson = (list, id) => list.filter((p) => p.id !== id);

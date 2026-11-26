@@ -182,6 +182,11 @@ body:has(.mappage) .bar .tag { display: none; }
 .people-q[hidden] { display: none; }
 .paste { display: grid; gap: var(--s2); }
 .paste[hidden] { display: none; }
+/* 받자마자 뜨는 한 줄 (R61): 칸 하나 + 넘기기 · 적으면 저장 */
+.talkline { display: grid; gap: var(--s3); }
+.talkline-saved { overflow-wrap: anywhere; }
+.talkline-actions { display: flex; align-items: center; gap: var(--s3); }
+.talkline-actions .btn { flex: 1 1 auto; }
 .seg.daychip { flex-direction: column; gap: 0; min-width: 44px; min-height: 56px; line-height: 1.2; }
 .dc-day { font-size: var(--fs-body); font-weight: 800; }
 .dc-n { font-size: var(--fs-note); font-weight: 400; opacity: 0.8; }

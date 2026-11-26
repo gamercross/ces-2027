@@ -531,9 +531,9 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
     const peopleUiV = await readFile(join(dist, 'people-ui.js'), 'utf8');
     check(diaryV.includes("class: 'panel met'") && diaryV.includes('slice(0, 3)') && diaryV.includes('#/people/new') && !diaryV.includes("class: 'segs'")
       && diaryV.includes("class: 'dock solo'") && diaryV.includes('본 것을 한 줄 적는다') && diaryV.includes('diaryDraft.v1') && diaryV.includes('#/listen') && diaryV.includes('#/talk')
-      && peopleV.includes("rest[0] === 'new'") && peopleV.includes('result.merged > 0') && peopleV.includes('fresh: true') && /camBtn\.disabled = !can\.ok|disabled: !can\.ok/.test(peopleV) && !peopleV.includes("el('h2', { text: '카메라로 읽기' })")
+      && peopleV.includes("rest[0] === 'new'") && peopleV.includes('result.merged > 0') && peopleV.includes('talkLine(result.person') && peopleUiV.includes("name: 'talk'") && peopleUiV.includes('maxlength: NOTE_MAX') && peopleUiV.includes("text: '넘기기'") && /camBtn\.disabled = !can\.ok|disabled: !can\.ok/.test(peopleV) && !peopleV.includes("el('h2', { text: '카메라로 읽기' })")
       && peopleUiV.includes('safeHref') && peopleUiV.includes('removePerson'),
-      '일기 + 만난 사람: 일기 첫 묶음이 "만난 사람"(최근 세 명 · 명함 받기 · 전체), 맨 위 회색 단추 셋이 없고, 검정 단추는 "일기 쓰기" 하나 · 명함을 읽으면(또는 붙여 넣으면) 바로 저장하고 같은 사람은 새 줄을 만들지 않는다 · 일기는 본 것 한 칸이면 저장되고 적던 글이 남는다 · 듣기 · 대화는 일기 쓰기 안에 있다');
+      '일기 + 만난 사람: 일기 첫 묶음이 "만난 사람"(최근 세 명 · 명함 받기 · 전체), 맨 위 회색 단추 셋이 없고, 검정 단추는 "일기 쓰기" 하나 · 명함을 읽으면(또는 붙여 넣으면) 바로 저장하고 같은 사람은 새 줄을 만들지 않는다 · 새 사람은 받자마자 "무슨 대화를 했나" 한 줄 칸(넘기기 · 적으면 저장, 메모와 같은 한도)이 뜬다(R61) · 일기는 본 것 한 칸이면 저장되고 적던 글이 남는다 · 듣기 · 대화는 일기 쓰기 안에 있다');
     // 서비스 워커: 지운 영한 번역 모델이 폰에 남긴 것만 비우고 받아쓰기 모델 파일은 건드리지 않는다.
     const { default: vm } = await import('node:vm');
     const handlers = {};
@@ -1073,6 +1073,9 @@ if (await exists('data/meta.json')) {
   check(a.merged === 0 && b.merged === 1 && b.list.length === 1 && b.person.id === 'a1' && b.person.nick === '가' && b.person.links.length === 2 && b.person.met === '2027-01-06' && b.person.note === '로봇 이야기' && b.person.exId === 'x1' && c.list.length === 2 && c.merged === 0, '같은 주소를 다시 읽으면 새 사람을 만들지 않고 먼저 있던 사람에 합친다 (주소는 겹치지 않게 늘고, 빈 칸은 채운다)');
   const edit = P.upsert(c.list, { ...c.list[1], links: [web, gh], nick: '합친 사람' });
   check(edit.list.length === 1 && edit.merged === 1 && edit.person.links.length === 3 && edit.person.nick === '합친 사람' && P.removePerson(edit.list, edit.person.id).length === 0, '고치다가 다른 사람의 주소를 넣으면 한 사람으로 합치고, 지우면 빠진다');
+  // R61: 받자마자 적는 한 줄은 그 사람의 메모(note)에 들어간다. 새 칸이 아니고 한도도 같다
+  const t1 = P.withNote(c.list, c.list[1].id, '  로봇 팔 데모 · 채용 물어봄  ');
+  check(t1 && t1.list.length === 2 && t1.person.note === '로봇 팔 데모 · 채용 물어봄' && t1.person.id === c.list[1].id && Object.keys(t1.person).join() === Object.keys(c.list[1]).join() && P.withNote(c.list, c.list[1].id, '   ') === null && P.withNote(c.list, 'nobody', '글') === null && P.withNote(c.list, c.list[0].id, 'x'.repeat(300)).person.note.length === P.NOTE_MAX && P.NOTE_MAX === 200, '받자마자 적는 "무슨 대화를 했나" 한 줄은 그 사람의 메모에 들어가고(새 칸 없음), 빈 글 · 없는 사람은 넣지 않으며 한도는 메모와 같은 200자다');
   check(P.cleanPeople('x').length === 0 && P.cleanPeople([null, 1, { id: 'q', links: [{ kind: 'web', key: 'k', url: 'javascript:alert(1)' }, { kind: 'web', key: 'k2', url: 'https://example.com/' }], met: 'bad' }]).map((p) => p.links.length + p.met).join() === '1', '폰에 남은 값이 망가져 있어도 걸러 낸다 (https가 아닌 주소 · 틀린 날짜)');
   const people = [{ company: '가짜회사', exId: 'x1' }, { company: ' 가짜회사 ', exId: '' }, { company: '다른회사', exId: 'x2' }, { company: '', exId: '' }];
   check(P.countAt(people, { exId: 'x1', company: '가짜회사' }) === 2 && P.countAt(people, { exId: 'x2', company: '이름이 다름' }) === 1 && P.countAt(people, { exId: '', company: '가짜회사' }) === 2 && P.countAt(people, { exId: '', company: '' }) === 0, '일기 목록의 "이 회사에서 만난 사람 수": 양쪽에 회사 번호가 있으면 번호로, 아니면 이름으로 센다');

@@ -10,6 +10,14 @@ export function createCardShell() {
   let opener = null;
 
   const onKey = (ev) => { if (ev.key === 'Escape') close(); };
+  // 키보드가 뜨면 창이 키보드 위로 올라온다(R61: 받자마자 뜨는 한 줄 칸이 가리지 않게). 보이는 높이(visualViewport)만큼만 덮는다.
+  const vv = globalThis.visualViewport;
+  const lift = () => {
+    // 손가락으로 키운 때(scale ≠ 1)는 키보드가 아니라서 그대로 둔다.
+    const gap = Math.abs((vv.scale || 1) - 1) > 0.01 ? 0 : Math.max(0, Math.round(document.documentElement.clientHeight - vv.height - vv.offsetTop));
+    back.style.bottom = gap ? `${gap}px` : '';
+    panel.style.maxHeight = gap ? `${Math.round(vv.height * 0.9)}px` : '';
+  };
   back.addEventListener('click', (ev) => { if (ev.target === back) close(); });
 
   function open(children, from) {
@@ -18,6 +26,7 @@ export function createCardShell() {
     back.hidden = false;
     document.body.classList.add('pcard-open');
     document.addEventListener('keydown', onKey);
+    if (vv) { vv.addEventListener('resize', lift); vv.addEventListener('scroll', lift); lift(); }
     body.scrollTop = 0;
     panel.focus({ preventScroll: true });
   }
@@ -32,6 +41,7 @@ export function createCardShell() {
     back.hidden = true;
     document.body.classList.remove('pcard-open');
     document.removeEventListener('keydown', onKey);
+    if (vv) { vv.removeEventListener('resize', lift); vv.removeEventListener('scroll', lift); back.style.bottom = ''; panel.style.maxHeight = ''; }
     if (opener?.isConnected) opener.focus({ preventScroll: true });
     opener = null;
   }

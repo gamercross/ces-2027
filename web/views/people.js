@@ -1,4 +1,4 @@
-// 만난 사람: 남의 QR을 카메라로 읽거나 주소를 붙여 넣으면 읽자마자 "만난 사람"으로 폰에만 남는다(이름은 나중에 적어도 된다).
+// 만난 사람: 남의 QR을 카메라로 읽거나 주소를 붙여 넣으면 읽자마자 "만난 사람"으로 폰에만 남고, "무슨 대화를 했나" 한 줄 칸이 뜬다(R61, 넘겨도 된다. 이름은 나중에 적어도 된다).
 // 같은 사람(같은 연락처)을 다시 읽으면 새 줄을 만들지 않고 "이미 있다"고 알린다.
 // 카메라는 단추를 눌렀을 때만 켠다. 화면을 떠나면 꺼진다(scan.js). 밖으로 보내지 않고, 일기 보내기 묶음에도 들어가지 않는다.
 //   #/people      전체 목록(찾기 칸 하나) + "명함 받기"
@@ -11,7 +11,7 @@ import { cameraSupport, envOf, startScan } from '../scan.js';
 import { parseScan, upsert } from '../people.js';
 import { getPeople, setPeople } from '../people-store.js';
 import { createCardShell } from '../plancard.js';
-import { nameOf, personCard, personEdit, personRow } from '../people-ui.js';
+import { nameOf, personCard, personRow, talkLine } from '../people-ui.js';
 
 const today = () => { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
 
@@ -55,7 +55,10 @@ export async function render({ rest = [] } = {}) {
     const again = result.merged > 0;
     scanNote.textContent = again ? `이미 있다: ${nameOf(result.person)}` : `폰에 남겼다: ${nameOf(result.person)}`;
     const c = { shell, companies, after: (m) => { scanNote.textContent = m || ''; } };
-    shell.open(again ? personCard(result.person, c) : personEdit(result.person, c, { fresh: true }), camBtn);
+    // 새 사람이면 "무슨 대화를 했나" 한 줄(R61)부터. 이미 있던 사람이면 그 사람 카드.
+    shell.open(again ? personCard(result.person, c) : talkLine(result.person, c), camBtn);
+    // 붙여넣기(아이폰)는 누른 손길 안에서 바로 칸으로 옮겨야 키보드가 그대로 남는다.
+    if (!again) shell.node.querySelector('input[name=talk]')?.focus({ preventScroll: true });
     return true;
   }
   const can = cameraSupport(envOf(window));

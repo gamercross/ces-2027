@@ -98,7 +98,7 @@ async (page) => {
   check(band === '보내지 않은 일기 2개', `보내기 띠: ${band}`);
   check((await page.locator('.band .pick').count()) === 2, '띠에 보내기 · 글로 복사 둘뿐이다');
 
-  // 5. 명함 받기: 붙여넣으면 바로 저장되고 이름 적기 카드가 열린다. 같은 사람은 다시 만들지 않는다
+  // 5. 명함 받기: 붙여넣으면 바로 저장되고 "무슨 대화를 했나" 한 줄 칸이 뜬다(R61, 11/26. 전에는 "이름 적기" 카드). 같은 사람은 다시 만들지 않는다
   await page.locator('.met a[href="#/people/new"]').click();
   await page.getByRole('button', { name: '주소 붙여넣기', exact: true }).waitFor();
   check((await page.locator('h1').textContent()).trim() === '남의 명함 받기', '남의 명함 받기 화면');
@@ -107,11 +107,11 @@ async (page) => {
   await page.locator('.paste input[name=addr]').fill('https://github.com/newone');
   await page.locator('.paste button[type=submit]').click();
   await page.locator('.pcard').waitFor();
-  check((await page.locator('.pcard h2').first().textContent()).includes('이름 적기'), '붙여넣자 바로 저장되고 "이름 적기" 카드가 열린다');
+  check((await page.locator('.pcard .pcard-tools-title').first().textContent()).includes('무슨 대화를 했나'), '붙여넣자 바로 저장되고 "무슨 대화를 했나" 한 줄 칸이 뜬다');
   const saved1 = await page.evaluate(() => JSON.parse(localStorage.getItem('ces2027.people.v1')).length);
-  check(saved1 === 5, `이름을 적기 전에 이미 폰에 남았다(${saved1}명)`);
+  check(saved1 === 5, `한 줄을 적기 전에 이미 폰에 남았다(${saved1}명)`);
   await shot('114-people-new.png');
-  await page.locator('.pcard button', { hasText: '나중에' }).click();
+  await page.locator('.pcard button', { hasText: '넘기기' }).click();
   await page.locator('.paste input[name=addr]').fill('github.com/newone');
   await page.locator('.paste button[type=submit]').click();
   await page.locator('.pcard').waitFor();
