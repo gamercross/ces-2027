@@ -194,8 +194,10 @@ async (page) => {
   await page.locator('#mine-wipe').click();
   await page.waitForTimeout(300);
   await shot('152-finish-mine-done');
-  await page.waitForURL(/#\/card$/, { timeout: 6000 });
-  await page.waitForTimeout(800);
+  // 지운 뒤에는 처음 들어온 사람과 같은 첫 화면이다: 홈(11/25 R59)의 "명함부터 만든다" 하나(한눈에 보기는 명함 전이라 없다).
+  await page.waitForURL(/#\/home$/, { timeout: 6000 });
+  await page.locator('.homepage .home-now').waitFor({ timeout: 6000 });
+  await page.waitForTimeout(500);
   const done = await page.evaluate(async () => ({
     hash: location.hash,
     // ces2027.boot.v1은 내 자료가 아니라 앱이 본 판 이름이다(index.html이 열 때마다 다시 적는다, #87). 앱 껍데기 캐시처럼 남아도 된다.
@@ -203,14 +205,19 @@ async (page) => {
     sess: Object.keys(sessionStorage).filter((k) => k.startsWith('ces2027.')),
     caches: (await caches.keys()).filter((k) => k.startsWith('ces2027')),
     dbs: (await indexedDB.databases?.())?.map((d) => d.name) || [],
-    h1: document.querySelector('#view h1')?.textContent,
-    nick: !!document.querySelector('#view input'),
-    tabsHidden: document.body.dataset.tab,
+    now: document.querySelector('.home-now h2')?.textContent,
+    go: document.querySelector('.home-now a')?.getAttribute('href'),
+    glance: !!document.querySelector('.glance'),
+    tab: document.body.dataset.tab,
   }));
-  ok(`${W} 지운 뒤: 처음 들어온 것처럼 첫 실행 명함(#/card)부터 시작한다`, done.hash === '#/card' && done.nick && done.tabsHidden === 'intro', JSON.stringify(done));
+  ok(`${W} 지운 뒤: 처음 들어온 것처럼 홈의 "명함부터 만든다"부터 시작한다(한눈에 보기 없음)`, done.hash === '#/home' && done.now === '명함부터 만든다' && done.go === '#/card' && !done.glance && done.tab === 'home', JSON.stringify(done));
   ok(`${W} 지운 뒤: 내 자료 열쇠(명함 · 일기 · 갈 곳 · 설정)가 하나도 남지 않고, 녹음 보관소도 없다`, done.keys.length === 0 && !done.dbs.includes('ces2027'), JSON.stringify(done));
   ok(`${W} 지운 뒤: 앱 껍데기 캐시는 남는다`, done.caches.includes('ces2027-shell-test'), JSON.stringify(done.caches));
   await shot('153-finish-mine-after-first-card');
+  // 그 단추를 누르면 첫 실행 명함(머리에 탭 표시 없음)이다.
+  await page.locator('.home-now a').click();
+  await page.locator('#view input').first().waitFor({ timeout: 6000 });
+  ok(`${W} 지운 뒤: "명함 만들기"를 누르면 첫 실행 명함 화면이다`, (await page.evaluate(() => location.hash)) === '#/card' && (await page.evaluate(() => document.body.dataset.tab)) === 'intro', 'card');
   // 열쇠를 쓰지 않는 새 첫 화면이 다시 정상으로 쓰이는지: 명함을 만들면 지도로 간다
   return JSON.stringify({ ...out, pass: out.checks.every((c) => c.pass), failed: out.checks.filter((c) => !c.pass) });
 }
