@@ -722,23 +722,25 @@ export async function render({ rest = [] } = {}) {
     solid.setAttribute('aria-pressed', is3d ? 'true' : 'false');
     solid.textContent = is3d ? '2D' : '3D';
     solid.setAttribute('aria-label', is3d ? '2D 지도로 돌아가기' : '3D 지도 (누를 때 불러온다)');
-    if (!is3d) { frame.replaceChildren(board); requestAnimationFrame(() => { draw(); settle(); }); return; }
+    if (!is3d) { frame.replaceChildren(board, credit); requestAnimationFrame(() => { draw(); settle(); }); return; }
     frame.replaceChildren(el('p', { class: 'note map-wait', text: '3D를 불러오는 중이다.' }));
     try {
       // 3D는 여기서 처음 불러온다. 첫 화면에는 싣지 않는다. 부스 점이 있어야 해서 전시사 자료를 다 받는다.
       await ensureFull().catch(() => {});
-      three ??= (await import('../map3d.js')).create(L, places, { onPlace: (p) => pickPlace(p), onCampus: (c) => pickCampus(c), onBooth: (key) => pickBooth(key), onPin: (id) => openCompany(rows.get(id)), booths: boothList, colorOf: (key) => (colorOf ||= makeColorer())(key), isMarked: (key) => !!getMarks()[key], scale: LABEL / MIN_FONT, inset: () => inset3d() });
+      // 둘레 건물 · 길 · 모노레일(오픈스트리트맵). 2D가 이미 받은 것이라 새로 받지 않는다. 못 받았으면 장소만 세운다.
+      const osm = await getOsm().catch(() => null);
+      three ??= (await import('../map3d.js')).create(L, places, { osm, onLevel: (lv) => { if (in3d()) mapx.dataset.level = lv; }, onPlace: (p) => pickPlace(p), onCampus: (c) => pickCampus(c), onBooth: (key) => pickBooth(key), onPin: (id) => openCompany(rows.get(id)), booths: boothList, colorOf: (key) => (colorOf ||= makeColorer())(key), isMarked: (key) => !!getMarks()[key], scale: LABEL / MIN_FONT, inset: () => inset3d() });
       page.three = three;
       // 2D에서 보던 곳(찾기 칸 아래 ~ 띠 위)을 3D에서도 그대로 본다.
       const { width, height } = boardSize();
       const unit = widthOf(view) / width;
       const seen = inset3d();
       const box = [view[0] + 12 * unit, view[1] + TOP * unit, view[2] - 12 * unit, view[1] + Math.max(TOP + 60, height - seen.bottom) * unit];
-      frame.replaceChildren(three.node);
+      frame.replaceChildren(three.node, credit);
       drawMe();
       three.look(box, seen);
     } catch {
-      frame.replaceChildren(board);
+      frame.replaceChildren(board, credit);
       flat.setAttribute('aria-pressed', 'true');
       solid.setAttribute('aria-pressed', 'false');
       solid.textContent = '3D';
@@ -782,7 +784,7 @@ export async function render({ rest = [] } = {}) {
     const defs = [{ ko: '전체', all: true, box: null }, ...HALL_CHIPS.map(([ko, keys]) => ({ ko, list: keys.map((k) => placeBy.get(k)).filter(Boolean) })).filter((d) => d.list.length).map((d) => ({ ko: d.ko, list: d.list, box: wrapBox(d.list) }))];
     if (pins.length) defs.push({ ko: '내 갈 곳', box: pad(bbox(pins.map((p) => [p.x, p.z])), 90) });
     for (const d of defs) {
-      d.node = el('button', { class: 'chip-go', type: 'button', text: d.ko, 'aria-pressed': 'false', onclick: () => { sheet.close(); finder.clear(); goBox(d.box || all); } });
+      d.node = el('button', { class: 'chip-go', type: 'button', text: d.ko, 'aria-pressed': 'false', onclick: () => { sheet.close(); finder.clear(); goBox(d.box || all); if (in3d()) for (const c of chipBoxes) c.node.setAttribute('aria-pressed', c === d ? 'true' : 'false'); } });
       chipBoxes.push(d);
     }
     // 맨 앞: 전시사 목록(공식 앱의 전시사 A–Z 목록 + 거르기). 홀 칩이 아니라 다른 화면으로 가는 칩이다.
