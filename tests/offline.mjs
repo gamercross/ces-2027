@@ -646,7 +646,14 @@ await step('설정', '"이 폰의 내 자료 지우기"는 두 번 묻고, 지�
   await page.locator('#mine-open').click();
   await page.locator('#mine-next').click();
   await page.locator('#mine-wipe').click();
-  await page.waitForFunction(() => location.hash === '#/home' && !localStorage.getItem('ces2027.profile.v1') && !!document.querySelector('.home-now'), null, { timeout: 12000 });
+  // 지운 뒤 0.9초 있다가 다시 연다. 다시 여는 동안에는 물어볼 수 없어서(문서가 바뀐다) 잠깐씩 다시 묻는다.
+  let home = false;
+  for (let i = 0; i < 40 && !home; i++) {
+    home = await page.evaluate(() => location.hash === '#/home' && !localStorage.getItem('ces2027.profile.v1') && !!document.querySelector('.home-now')).catch(() => false);
+    if (!home) await sleep(300);
+  }
+  if (!home) return { status: '안 됨', note: '지운 뒤 12초 안에 홈이 뜨지 않았다' };
+  await sleep(300);
   const keep = await page.evaluate(async (v) => caches.has(`ces2027-${v}`), version);
   return { status: keep ? '됨' : '일부', note: keep ? '앱 파일은 남았다' : '앱 파일까지 지워졌다' };
 });
@@ -815,11 +822,11 @@ const freshCtx = async ({ userAgent = IPHONE, app = false, home = null, cards = 
   if (cards) await page.route('**/data/home.json', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ cards }) }));
 };
 const tips = () => page.evaluate(() => [...document.querySelectorAll('.tip-box p, .tip-line')].map((n) => n.textContent).join(' / '));
-await step('홈', '아이폰 Safari 탭으로 처음 열면 홈에 "홈 화면에 추가" 칸이 명함 만들기 위에 보인다. 명함 화면과 지도에는 없고, 닫으면 다시 열어도 안 뜬다', async () => {
+await step('홈', '아이폰 Safari 탭으로 처음 열면 홈(아래 탭 다섯의 가운데가 켜짐)에 "홈 화면에 추가" 칸이 명함 만들기 위에 보인다(명함 전에는 한눈에 보기가 없다). 명함 화면과 지도에는 없고, 닫으면 다시 열어도 안 뜬다', async () => {
   await freshCtx();
   await page.goto(`${ORIGIN}/`);
   await page.locator('.homepage .home-now').waitFor({ timeout: 8000 });
-  const first = await page.evaluate(() => ({ hash: location.hash, tip: document.querySelector('.tip-box p')?.textContent || '', above: !!document.querySelector('.tip-box + .home-now'), now: document.querySelector('.home-now a')?.textContent, tabs: [...document.querySelectorAll('.tabs a')].map((a) => a.textContent.trim()).join(' ') }));
+  const first = await page.evaluate(() => ({ hash: location.hash, tip: document.querySelector('.tip-box p')?.textContent || '', above: !!document.querySelector('.tip-box + .home-now'), now: document.querySelector('.home-now a')?.textContent, tabs: [...document.querySelectorAll('.tabs a')].map((a) => a.textContent.trim()).join(' '), cur: document.querySelector('.tabs a[aria-current=page]')?.dataset.tab, glance: !!document.querySelector('.glance') }));
   await page.locator('.home-now a').click();
   await page.locator('form.panel').waitFor({ timeout: 8000 });
   const onCard = await tips();
@@ -836,11 +843,11 @@ await step('홈', '아이폰 Safari 탭으로 처음 열면 홈에 "홈 화면�
   await page.locator('.homepage .home-now').waitFor({ timeout: 8000 });
   await sleep(400);
   const closed = await tips();
-  const ok = first.hash === '#/home' && /먼저 아래 공유 단추에서 "홈 화면에 추가"/.test(first.tip) && first.above && first.now === '명함 만들기' && first.tabs === '지도 갈 곳 일기 설정'
+  const ok = first.hash === '#/home' && /먼저 아래 공유 단추에서 "홈 화면에 추가"/.test(first.tip) && first.above && first.now === '명함 만들기' && first.tabs === '지도 갈 곳 홈 일기 설정' && first.cur === 'home' && !first.glance
     && onCard === '' && onMap === '' && /인터넷 없이도 열린다/.test(after) && closed === '';
   return { status: ok ? '됨' : '안 됨', note: `${first.tip} · 명함 화면 "${onCard}" · 지도 "${onMap}" · 닫은 뒤 "${closed}"` };
 });
-await step('홈', '홈 화면 앱으로 열었거나 아이폰이 아니면 "홈 화면에 추가" 칸이 없다. 머리의 앱 이름은 44px 넘게 눌리고 홈으로 간다', async () => {
+await step('홈', '홈 화면 앱으로 열었거나 아이폰이 아니면 "홈 화면에 추가" 칸이 없다. 머리의 앱 이름과 아래 줄 가운데 홈은 44px 넘게 눌리고 홈으로 간다. 한눈에 보기 줄을 누르면 그 탭이다', async () => {
   await freshCtx({ app: true });
   await page.goto(`${ORIGIN}/`);
   await page.locator('.homepage .home-now').waitFor({ timeout: 8000 });
@@ -858,10 +865,21 @@ await step('홈', '홈 화면 앱으로 열었거나 아이폰이 아니면 "홈
   await page.locator('.brand').click();
   await page.locator('.homepage .home-now').waitFor({ timeout: 8000 });
   const back = await page.evaluate(() => ({ hash: location.hash, now: document.querySelector('.home-now a')?.textContent }));
-  const ok = inApp === '' && other === '' && brand.h >= 44 && brand.w >= 44 && brand.label === '홈으로' && brand.href === '#/home' && back.hash === '#/home' && back.now === '지도 열기';
-  return { status: ok ? '됨' : '안 됨', note: `앱 이름 ${brand.w}x${brand.h} "${brand.label}" → ${back.hash} · 명함이 있고 담은 곳이 없으면 "${back.now}"` };
+  // 아래 줄 가운데 "홈"으로도 온다(11/26 안). 명함이 있으면 할 일 아래에 한눈에 보기 줄 넷이 있고, 줄을 누르면 그 탭이다.
+  await page.goto('about:blank'); await page.goto(`${ORIGIN}/#/diary`);
+  await sleep(800);
+  const tab = await page.locator('.tabs a[data-tab="home"]').evaluate((a) => { const r = a.getBoundingClientRect(); return { h: Math.round(r.height), w: Math.round(r.width) }; });
+  await page.locator('.tabs a[data-tab="home"]').click();
+  await page.locator('.homepage .glance').waitFor({ timeout: 8000 });
+  const rows = await page.evaluate(() => [...document.querySelectorAll('.glance a b')].map((b) => b.textContent).join(' '));
+  await page.locator('.glance a[href="#/people"]').click();
+  await sleep(800);
+  const went = await page.evaluate(() => location.hash);
+  const ok = inApp === '' && other === '' && brand.h >= 44 && brand.w >= 44 && brand.label === '홈으로' && brand.href === '#/home' && back.hash === '#/home' && back.now === '지도 열기'
+    && tab.h >= 44 && tab.w >= 44 && rows === '갈 곳 일기 만난 사람 내 명함' && went === '#/people';
+  return { status: ok ? '됨' : '안 됨', note: `앱 이름 ${brand.w}x${brand.h} "${brand.label}" → ${back.hash} · 명함이 있고 담은 곳이 없으면 "${back.now}" · 아래 홈 칸 ${tab.w}x${tab.h} · 한눈에 보기 "${rows}" → ${went}` };
 });
-await step('홈', '안내 칸은 자료 파일(data/home.json)에 적은 대로 보이고, 비어 있으면 그 자리는 없다. 설정 home을 off로 두면 예전처럼 열면 명함부터이고 앱 이름은 지도로 간다', async () => {
+await step('홈', '안내 칸은 자료 파일(data/home.json)에 적은 대로 보이고, 비어 있으면 그 자리는 없다. 설정 home을 off로 두면 예전처럼 열면 명함부터이고 탭은 넷 · 앱 이름은 지도로 간다', async () => {
   await freshCtx({ userAgent: null, cards: [{ title: '자리 표시', text: ['시험용 칸이다.'], action: { label: '지도', href: '#/map' } }] });
   await page.goto(`${ORIGIN}/`);
   await page.locator('.homepage .home-now').waitFor({ timeout: 8000 });
@@ -876,9 +894,9 @@ await step('홈', '안내 칸은 자료 파일(data/home.json)에 적은 대로 
   await page.goto(`${ORIGIN}/`);
   await page.locator('form.panel').waitFor({ timeout: 8000 });
   await sleep(400);
-  const off = await page.evaluate(() => ({ hash: location.hash, brand: document.querySelector('.brand').getAttribute('href') }));
-  const ok = withCard === '자리 표시|#/map' && shipped === 0 && off.hash === '#/card' && off.brand === '#/map';
-  return { status: ok ? '됨' : '안 됨', note: `칸 "${withCard}" · 실은 파일의 칸 ${shipped}개 · off면 ${off.hash}` };
+  const off = await page.evaluate(() => ({ hash: location.hash, brand: document.querySelector('.brand').getAttribute('href'), tabs: document.querySelectorAll('.tabs a').length }));
+  const ok = withCard === '자리 표시|#/map' && shipped === 0 && off.hash === '#/card' && off.brand === '#/map' && off.tabs === 4;
+  return { status: ok ? '됨' : '안 됨', note: `칸 "${withCard}" · 실은 파일의 칸 ${shipped}개 · off면 ${off.hash} · 탭 ${off.tabs}개` };
 });
 await step('일기 챙기기', '전시 날 저녁에 보내지 않은 일기가 있으면 탭 위 띠가 "보내지 않은 일기 1개 · 일기 열기"를 보이고, 일기 탭에서는 사라진다', async () => {
   await ctx.close();

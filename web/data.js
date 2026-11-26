@@ -14,7 +14,7 @@ async function getJson(path) {
   return res.json();
 }
 
-const SETTINGS_DEFAULT = { companyIntro: 'link-only', companyImage: true, collector: 'file', collectorUrl: '', codysseyIcon: false, privateOn: null, speech: 'on-device', home: 'on' };
+const SETTINGS_DEFAULT = { companyIntro: 'link-only', companyImage: true, collector: 'file', collectorUrl: '', codysseyIcon: false, privateOn: null, speech: 'on-device', home: 'on', halfDay: true, topicLinks: true };
 
 export const getSettings = () => cached('settings', () => getJson('data/settings.json').catch(() => SETTINGS_DEFAULT));
 export const getInfo = () => cached('info', () => getJson('data/info.json'));
