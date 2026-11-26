@@ -75,35 +75,34 @@ async (page) => {
     await settle(600);
   };
   // 3D 화면 하나를 잰다: 그 날 번호 다섯이 보이는 칸 안에, 차례 선이 번호 차례로, 다음 곳 이름이 읽히게, 글자 13px 이상 · 겹침 없음.
-  // minNames: 실제 크기로 작아진 노스 홀(R66)에 부스 칸이 번호 차례로 붙어 서면서 갈 곳 셋(1 · 2 · 3)이 가까워졌다. 이름이 서로 겹쳐 숨는다(글자가 큰 단계는 더). 3D 겉모습 세션(R67)에서 다시 본다.
-  const measure = async (tag, minNames = 2) => {
+  const measure = async (tag) => {
     const s = await three((t) => ({ pins: t.pinsOnScreen(), lines: t.linesOnScreen(), l: t.labelsOnScreen(), w: t.node.clientWidth, h: t.node.clientHeight }));
     const day = s.pins.filter((p) => seed.list.slice(0, 5).some((it) => it.id === p.id));
     const inBand = day.every((p) => p.sx - p.r >= 0 && p.sx + p.r <= s.w && p.sy - p.r >= s.l.band[0] - 1 && p.sy + p.r <= s.l.band[1] + 1);
     check(day.length === 5 && inBand, `${tag} 3D를 켜면 2D에서 보던 그 날의 번호 다섯이 모두 보이는 칸(찾기 칸 아래 ~ 아래 띠 위) 안에 있다`);
     const today = s.lines.filter((l) => l.today);
     check(today.length === 1 && today[0].pts.length === 5 && !today[0].dash && today[0].width === 4, `${tag} 그 날 차례 선이 하나, 다섯 곳을 잇는 굵은 실선이다 (2D와 같은 굵기)`);
-    // 선의 꺾이는 점이 번호 차례(1 → 5)의 번호 원 바로 아래(막대 길이 안)에 있다
+    // 선의 꺾이는 점이 번호 차례(1 → 5)의 번호가 꽂힌 자리에 있다
     const order = seed.list.slice(0, 5).map((it) => s.pins.find((p) => p.id === it.id));
-    check(today[0].pts.every(([x, y], i) => Math.abs(x - order[i].sx) < 1 && y >= order[i].sy - 1 && y - order[i].sy < 60), `${tag} 선은 번호 1 → 5 차례로 번호 자리를 지난다`);
+    // 가까이 꽂힌 번호 원은 서로 비켜 줄기가 기울 수 있다(R67): 선은 줄기가 꽂힌 자리를 지나고, 원은 그 자리에서 멀지 않다.
+    check(today[0].pts.every(([x, y], i) => Math.abs(x - order[i].bx) < 1 && Math.abs(y - order[i].by) < 1 && Math.hypot(order[i].sx - order[i].bx, order[i].sy - order[i].by) < 120 && order[i].sy < order[i].by), `${tag} 선은 번호 1 → 5 차례로 번호가 꽂힌 자리를 지난다`);
     // 실제로 그려졌나: 선 위의 점들(구간마다 셋)의 색이 강조색에 가깝다. 번호 원 · 글자에 가린 점이 있어 절반 넘게 맞으면 된다.
     const accent = rgb(await token('--accent'));
     let on = 0, all = 0;
     for (let i = 1; i < today[0].pts.length; i++) for (const f of [0.35, 0.5, 0.65]) {
       const [a, b] = [today[0].pts[i - 1], today[0].pts[i]];
-      // 번호 원 둘이 붙어 있는 짧은 토막은 원과 글자가 선을 덮어 뜻이 없다(부스 칸 배치 R66 뒤로 가까이 선 곳이 있다).
-      if (Math.hypot(b[0] - a[0], b[1] - a[1]) < 60) continue;
       all += 1;
       if (far(await pixel(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f), accent) <= 28) on += 1;
     }
-    check(on / all >= 0.5, `${tag} 차례 선이 강조색으로 그려져 있다 (선 위의 점 ${all}개 가운데 ${on}개가 강조색 ${accent.join(',')})`);
+    check(on / all > 0.5, `${tag} 차례 선이 강조색으로 그려져 있다 (선 위의 점 ${all}개 가운데 ${on}개가 강조색 ${accent.join(',')})`);
     check(s.l.next === seed.first.name.slice(0, 16) && !!s.l.nextRect && s.l.nextRect[0] >= 0 && s.l.nextRect[2] <= s.w && s.l.nextRect[1] >= s.l.band[0] && s.l.nextRect[3] <= s.l.band[1] && s.l.nextSize >= 13,
       `${tag} 다음에 갈 곳 이름 "${s.l.next}"이 보이는 칸 안에 ${px(s.l.nextSize)}px로 놓였다`);
     const rects = [...s.l.labels.map((x) => x.rect), s.l.nextRect];
     const minPx = Math.min(...s.l.labels.map((x) => x.size), s.l.nextSize);
     const names = s.l.labels.filter((x) => x.id.startsWith('n:')).map((x) => x.text);
     check(minPx >= 13 && overlaps(rects) === 0, `${tag} 글자 ${rects.length}개 · 가장 작은 글자 ${px(minPx)}px(13px 이상) · 겹침 ${overlaps(rects)}`);
-    check(names.length >= minNames, `${tag} 나머지 갈 곳 이름이 ${names.length}개 보인다 (${names.join(' / ')})`);
+    // 360px · 글자 4단계만 둘: 아래 카드가 올라와 글자를 놓을 칸이 140px쯤이고, 실제 크기의 노스 홀에 갈 곳 셋이 붙어 있다(번호는 다 보이고 다음 곳 이름은 남는다, R67).
+    check(names.length >= (tag === '360 글자 4단계' ? 2 : 3), `${tag} 나머지 갈 곳 이름이 ${names.length}개 보인다 (${names.join(' / ')})`);
     // 번호 원과 글자가 겹치지 않는다
     const pinRects = s.pins.map((p) => [p.sx - p.r, p.sy - p.r, p.sx + p.r, p.sy + p.r]);
     const hit = rects.filter((r) => pinRects.some((p) => r[0] < p[2] - 0.5 && p[0] < r[2] - 0.5 && r[1] < p[3] - 0.5 && p[1] < r[3] - 0.5)).length;
@@ -228,12 +227,12 @@ async (page) => {
   await shot('228-map3d-day-dark-360.png');
   for (const text of [2, 3, 4]) {
     await open3d({ text });
-    const s = await measure(`360 글자 ${text}단계`, text >= 3 ? 0 : 2);
+    const s = await measure(`360 글자 ${text}단계`);
     check(s.l.nextSize >= 13 * (text === 2 ? 1.15 : 1.3), `글자 ${text}단계에서 지도 글자도 커진다 (다음 곳 이름 ${s.l.nextSize.toFixed(1)}px)`);
     if (text === 4) await shot('229-map3d-day-text4-360.png');
   }
   await open3d({ theme: 'dark', text: 4, w: 390, h: 780 });
-  await measure('390 어둡게 글자 4단계', 0);
+  await measure('390 어둡게 글자 4단계');
 
   // ---- 7. 인터넷 없이: 한 번 연 뒤 끊고 다시 열어도 3D가 열리고 차례 선이 그려진다
   await open3d();
@@ -252,6 +251,15 @@ async (page) => {
   const off = await three((t) => ({ pins: t.pinsOnScreen().length, lines: t.linesOnScreen().length, next: t.labelsOnScreen().next }));
   check(off.pins === 7 && off.lines >= 1 && off.next === seed.first.name.slice(0, 16), `인터넷 없이도 3D가 열리고 번호 ${off.pins}개 · 차례 선 · 다음 곳 이름이 그려진다`);
   } finally { await page.context().setOffline(false); }
+
+  // ---- 8. 3D 겉모습(R67): 둘레 건물 · 길 · 모노레일(오픈스트리트맵) · 출처 한 줄 · 홀을 가까이 보면 지붕을 벗기고 부스 칸 상자
+  await open3d({ hash: '#/map' });
+  await page.locator('.chip-go', { hasText: /^웨스트$/ }).click();
+  await settle(1200);
+  const ext = await page.evaluate(() => { const c = document.querySelector('canvas.map'); const cr = document.querySelector('.map-credit'); const rough = document.querySelector('.map-rough'); return { open: c.dataset.open, faces: Number(c.dataset.faces), ms: Number(c.dataset.ms), credit: cr?.textContent, creditShown: !!cr && cr.getBoundingClientRect().height > 0, rough: rough && getComputedStyle(rough).display !== 'none', level: document.querySelector('.mapx').dataset.level }; });
+  const boxes = await three((t) => t.boothsOnScreen().filter((b) => b.key.startsWith('LVCC_W|')).length);
+  check(ext.open.split(',').includes('LVCC_W') && boxes >= 100 && ext.faces > 500 && ext.credit === '© OpenStreetMap 기여자' && ext.creditShown && ext.rough && ext.level !== 'campus',
+    `3D 웨스트 홀: 지붕을 벗기고 부스 칸 상자 ${boxes}개 · 그린 면 ${ext.faces}개(둘레 건물 포함, 한 번 그리는 데 ${ext.ms}ms) · 아래 "${ext.credit}" · 위 "부스 자리는 대략" 한 줄`);
 
   check(errors.length === 0, `화면 오류 없음 (${errors.length}건${errors.length ? `: ${errors[0]}` : ''})`);
   return JSON.stringify(checks, null, 2);

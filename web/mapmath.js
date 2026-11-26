@@ -59,6 +59,7 @@ export const clip = (text, max) => { const s = String(text); return [...s].lengt
 // 글자 자리 정하기: 먼저 온 것(prio가 큰 것)부터 놓고, 이미 놓은 것과 겹치거나 화면 밖으로 나가면 숨긴다.
 // cands: [{ id, x, y, text, alts?, size, prio, anchor: 'middle' | 'start', dx, dy, flip? }] (x · y는 화면 px). alts는 text가 안 들어갈 때 쓸 더 짧은 글.
 // flip이 있으면 오른쪽(start)에 안 들어갈 때 왼쪽에 놓아 본다(놓인 글자의 side가 'left'가 된다).
+// around가 있으면 그다음 위 · 아래에도 놓아 본다(가운데 맞춤, around는 위아래로 띄울 px). 놓인 글자의 side가 'above' · 'below'가 된다.
 // blocked: 글자를 놓으면 안 되는 칸들 [[x0, y0, x1, y1]] (3D 지도의 갈 곳 번호 · 화면 단추).
 // 돌려주는 것: 놓은 글자들 [{ ...cand, rect: [x0, y0, x1, y1] }]
 export function layoutLabels(cands, bounds, { pad = 3, max = 160, cell = 48, blocked = [] } = {}) {
@@ -79,16 +80,18 @@ export function layoutLabels(cands, bounds, { pad = 3, max = 160, cell = 48, blo
   for (const c of order) {
     if (out.length >= max) break;
     // 긴 글이 안 들어가면 짧은 글(alts)로 한 번 더 해 본다. 그래도 안 되면(flip) 왼쪽에 놓아 본다.
-    const tries = [c.text, ...(c.alts || [])].map((text) => [text, false]);
-    if (c.flip && c.anchor === 'start') tries.push([c.text, true]);
-    for (const [text, left] of tries) {
+    const texts = [c.text, ...(c.alts || [])];
+    const tries = texts.map((text) => [text, null]);
+    if (c.flip && c.anchor === 'start') for (const text of texts) tries.push([text, 'left']);
+    if (c.around) for (const text of texts) tries.push([text, 'above'], [text, 'below']);
+    for (const [text, side] of tries) {
       const w = textWidth(text, c.size);
       const h = c.size * 1.25;
-      const y = c.y + (c.dy || 0);
-      const x0 = left ? c.x - (c.dx || 0) - w : c.anchor === 'start' ? c.x + (c.dx || 0) : c.x + (c.dx || 0) - w / 2;
+      const y = c.y + (c.dy || 0) + (side === 'above' ? -c.around : side === 'below' ? c.around : 0);
+      const x0 = side === 'left' ? c.x - (c.dx || 0) - w : side === 'above' || side === 'below' ? c.x - w / 2 : c.anchor === 'start' ? c.x + (c.dx || 0) : c.x + (c.dx || 0) - w / 2;
       const rect = [x0 - pad, y - h / 2 - pad, x0 + w + pad, y + h / 2 + pad];
       if (!fits(rect)) continue;
-      out.push(left ? { ...c, text, rect, side: 'left' } : { ...c, text, rect });
+      out.push(side ? { ...c, text, rect, side } : { ...c, text, rect });
       keep(rect);
       break;
     }
