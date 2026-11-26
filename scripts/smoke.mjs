@@ -470,8 +470,8 @@ const mustCache = ['./', 'index.html', 'app.js', 'app.css', 'tokens.css', 'token
     const transitV = await readFile(join(dist, 'views/transit.js'), 'utf8');
     const mapfindV = await readFile(join(dist, 'mapfind.js'), 'utf8');
     const mapV3 = await readFile(join(dist, 'views/map.js'), 'utf8');
-    check(planV.includes('다음에 갈 곳') && planV.includes('alertBands(') && ['#/rec', '#/days', '#/sessions'].every((h) => planV.includes(h)) && ['#/listen', '#/talk', '#/people'].every((h) => diaryV.includes(h)) && transitV.includes('info.moving') && mapV3.includes('findBox(') && mapV3.includes('#/transit') && mapV3.includes("href: '#/list'") && mapfindV.includes('getFinder'),
-      '합친 자리: 갈 곳 맨 위에 "다음에 갈 곳" 한 곳과 띠, 갈 곳 아래에 강연 일정 · 추천 회사 · 내 시간, 일기 안에 듣기 · 대화 칸 · 만난 사람, 지도 위에 찾기 칸과 셔틀 · 오가는 법 · 전시사 목록');
+    check(planV.includes('다음에 갈 곳') && planV.includes('alertBands(') && ['#/rec', '#/days', '#/sessions'].every((h) => planV.includes(h)) && ['#/listen', '#/talk', '#/people'].every((h) => diaryV.includes(h)) && transitV.includes('info.moving') && mapV3.includes('findBox(') && mapV3.includes('#/transit') && mapV3.includes("href: '#/list'") && mapfindV.includes('getFinder') && mapfindV.includes("class: 'find-home', href: '#/home', 'aria-label': '홈으로'"),
+      '합친 자리: 갈 곳 맨 위에 "다음에 갈 곳" 한 곳과 띠, 갈 곳 아래에 강연 일정 · 추천 회사 · 내 시간, 일기 안에 듣기 · 대화 칸 · 만난 사람, 지도 위에 찾기 칸(왼쪽에 홈으로 가는 앱 아이콘)과 셔틀 · 오가는 법 · 전시사 목록');
     // 갈 곳(2026-11-23, 안 1): 날짜 한 줄(‹ 1월 6일 (수) · 남은 n곳 ›) → 다음에 갈 곳 한 곳 크게 → 그다음 곳들 → 다녀온 곳 접기 → "목록 고치기 · 지도에서 보기".
     // 줄에는 줄 전체 단추 하나(다녀온 곳의 줄에만 "다녀옴" 칸), 고치기는 회사 카드, 지도와 같은 번호, 도크 없음. "안 본 곳" 칩(R47)은 다녀온 곳 접기가 대신한다.
     const pcardV = await readFile(join(dist, 'plancard.js'), 'utf8');

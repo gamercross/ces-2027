@@ -356,6 +356,12 @@ body.pcard-open { overflow: hidden; }
 .mapx-top { position: absolute; left: 0; right: 0; top: 0; z-index: 4; display: grid; gap: 6px; padding: var(--s2); background: var(--bg); pointer-events: none; }
 .mapx-top > * { pointer-events: auto; }
 .find { position: relative; }
+/* 찾기 칸 왼쪽의 앱 아이콘(홈으로). 칸과 같은 높이 · 같은 바탕, 폭은 누르는 곳 최소만 쓴다(찾기 칸이 덜 좁아지게). */
+.find-row { display: flex; gap: 6px; align-items: stretch; }
+.find-row > .find { flex: 1; min-width: 0; }
+.find-home { flex: none; display: flex; align-items: center; justify-content: center; width: var(--tap-min); min-height: var(--tap-min); border-radius: var(--radius-ctl); background: var(--panel); }
+.find-home img { display: block; border-radius: 6px; }
+.find-home:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .find-field input { width: 100%; min-height: 52px; padding: 0 var(--s4); border: 2px solid transparent; border-radius: var(--radius-ctl); background: var(--panel); color: var(--ink); font-size: calc(17px * var(--scale)); font-weight: 700; }
 .find-field input::placeholder { color: var(--ink-2); font-weight: 400; }
 .find-field input:focus { outline: none; border-color: var(--accent); }

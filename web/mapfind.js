@@ -3,7 +3,7 @@
 // 찾기 자료(코어 · 색인 · 전시사 · 세션)는 글자를 칠 때 불러온다. 첫 화면에는 싣지 않는다.
 
 import { cross, el } from './dom.js';
-import { getFinder, getMeta, getSessions } from './data.js';
+import { getFinder, getMeta, getSessions, getSettings } from './data.js';
 import { splitBooth } from './route.js';
 
 const SHOW = 8;
@@ -34,7 +34,13 @@ export function findBox({ places, ranges = [], onCompany, onPlace, onType }) {
   const note = el('p', { class: 'results-note', role: 'status', hidden: true });
   // 지우기(×): 글자가 있을 때만 보인다(app.css의 :placeholder-shown). 누르면 칸이 비고 결과 줄이 닫힌다.
   const wipe = el('button', { class: 'find-clear', type: 'button', 'aria-label': '찾는 글자 지우기', onclick: () => { input.value = ''; find(); input.focus(); } }, cross());
-  const node = el('div', { class: 'find' }, el('label', { class: 'find-field' }, input), el('span', { class: 'tag find-tag', text: '비공식' }), wipe, note, list);
+  const field = el('div', { class: 'find' }, el('label', { class: 'find-field' }, input), el('span', { class: 'tag find-tag', text: '비공식' }), wipe, note, list);
+  // 찾기 칸 왼쪽의 앱 아이콘: 지도 탭은 머리를 접어 두어 앱 이름이 안 보이니, 여기서 홈으로 간다(11/26, R59). 글은 없고 읽어 주는 이름만 있다.
+  // 그림은 머리의 앱 이름 옆과 같은 것(설정 codysseyIcon, 없으면 앱 아이콘). 홈을 꺼 둔 판(설정 home: off)에는 없다.
+  const homeIcon = el('img', { alt: '', width: 28, height: 28 });
+  const home = el('a', { class: 'find-home', href: '#/home', 'aria-label': '홈으로' }, homeIcon);
+  getSettings().then((st) => { if (st?.home === 'off') home.remove(); else homeIcon.src = typeof st?.codysseyIcon === 'string' && st.codysseyIcon ? st.codysseyIcon : 'icon/icon-192.png'; }).catch(() => { homeIcon.src = 'icon/icon-192.png'; });
+  const node = el('div', { class: 'find-row' }, home, field);
   let turn = 0;
   let current = [];
 
