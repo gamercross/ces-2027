@@ -4,7 +4,7 @@
 // 할 일 아래에 "한눈에 보기"(11/26 이재엽이 고름): 다른 탭을 한 줄씩(갈 곳 · 일기 · 만난 사람 · 내 명함). 명함을 만든 뒤에만 보인다.
 // 첫 화면이라 가볍게 둔다: 전시사 자료는 읽지 않는다(갈 곳은 폰에 담아 둔 수만 센다).
 
-import { el, out } from '../dom.js';
+import { chevron, el, out } from '../dom.js';
 import { getDiary, getInterests, getProfile } from '../store.js';
 import { getExhibitors, getHome, getInfo } from '../data.js';
 import { getPeople } from '../people-store.js';
@@ -56,7 +56,6 @@ export function diaryLine(diary, today = todayStr()) {
   return `오늘 ${diary.filter((e) => e.date === today).length}개 · 보내지 않은 ${ready.filter((e) => !e.sent).length}개`;
 }
 
-const chevron = () => { const NS = 'http://www.w3.org/2000/svg'; const s = document.createElementNS(NS, 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true'); const p = document.createElementNS(NS, 'path'); p.setAttribute('d', 'm9 5 7 7-7 7'); s.append(p); return s; };
 
 function glance(info) {
   const rows = [];

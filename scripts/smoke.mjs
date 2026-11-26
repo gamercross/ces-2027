@@ -1158,6 +1158,19 @@ if (await exists('data/meta.json')) {
     const order = ['const newer', 'const near = !newer', 'const diary = !newer && !near', 'const follow = !newer && !near && !diary'].map((k) => appT.indexOf(k));
     check(order.every((n, i) => n > 0 && (i === 0 || n > order[i - 1])) && appT.includes("'#/people/follow'") && appT.includes('closeFollowBand') && !/people-store|people-ui/.test(appT),
       '탭 위 띠는 한 번에 하나: 새 판 > 가까운 명함 이벤트 부스 > 보내지 않은 일기 > 링크드인 이틀. 첫 화면 조각은 만난 사람 화면을 미리 읽지 않는다');
+    // R63: 목표 숫자. 0 ~ 99의 정수만, 비우면 없음. 대화 = 만난 사람 수, 링크드인 = 팔로우함을 켠 사람 수. 닿거나 넘으면 reached
+    const gp = (people, goal) => P.goalParts(people, goal).map((x) => `${x.label}${x.now}/${x.goal}${x.reached ? '!' : ''}`).join(' ');
+    const three = [{ followed: '2027-01-06' }, { followed: '' }, {}];
+    check(gp(three, { talk: 10, linkedin: 5 }) === '대화3/10 링크드인1/5' && gp(three, { talk: 3, linkedin: 1 }) === '대화3/3! 링크드인1/1!' && gp(three, { linkedin: 0 }) === '링크드인1/0!' && gp(three, null) === '' && gp(null, { talk: 2 }) === '대화0/2'
+      && JSON.stringify(P.cleanGoal({ talk: 100, linkedin: -1 })) === '{"talk":null,"linkedin":null}' && JSON.stringify(P.cleanGoal({ talk: 7.5, linkedin: '5' })) === '{"talk":null,"linkedin":null}' && P.cleanGoal({ talk: 99, linkedin: 0 }).talk === 99
+      && P.readGoal('').value === null && P.readGoal(' 07 ').value === 7 && P.readGoal('99').value === 99 && P.readGoal('100').bad && P.readGoal('-1').bad && P.readGoal('1a').bad && P.readGoal('3.5').bad && P.GOAL_MAX === 99,
+      '목표 숫자: 0 ~ 99의 정수만 받고 비우면 없음. 대화는 만난 사람 수, 링크드인은 팔로우함을 켠 사람 수, 목표에 닿거나 넘으면 표시한다');
+    const diaryT = await readFile(join(dist, 'views/diary.js'), 'utf8');
+    const settingsT = await readFile(join(dist, 'views/settings.js'), 'utf8');
+    const storeT = await readFile(join(dist, 'people-store.js'), 'utf8');
+    check(diaryT.includes('goalParts(people, getGoal())') && diaryT.indexOf('goalLine,') < diaryT.indexOf('metPanel,', diaryT.indexOf('goalLine,')) && diaryT.includes("href: '#/people'") && settingsT.includes('goalRow(shell)') && settingsT.includes("inputmode: 'numeric'") && storeT.includes("'goal.v1'")
+      && !/goal/i.test(await readFile(join(dist, 'diary.js'), 'utf8')),
+      '목표 줄은 일기 탭 맨 위(만난 사람 위)이고 만난 사람 목록으로 간다. 설정에 "목표" 줄(숫자 자판), 값은 이 폰(ces2027.goal.v1)에만 있고 일기 내보내기 묶음에는 없다');
   }
   check(P.cleanPeople('x').length === 0 && P.cleanPeople([null, 1, { id: 'q', links: [{ kind: 'web', key: 'k', url: 'javascript:alert(1)' }, { kind: 'web', key: 'k2', url: 'https://example.com/' }], met: 'bad' }]).map((p) => p.links.length + p.met).join() === '1', '폰에 남은 값이 망가져 있어도 걸러 낸다 (https가 아닌 주소 · 틀린 날짜)');
   const people = [{ company: '가짜회사', exId: 'x1' }, { company: ' 가짜회사 ', exId: '' }, { company: '다른회사', exId: 'x2' }, { company: '', exId: '' }];

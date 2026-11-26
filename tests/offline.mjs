@@ -942,6 +942,29 @@ await step('링크드인 이틀', '만난 지 이틀이 지났는데 "팔로우�
   const at = await page.evaluate(() => ({ hash: location.hash, rows: document.querySelectorAll('.stops .stop').length, hidden: document.getElementById('notice').hidden }));
   return { status: /링크드인 팔로우 안 한 사람 1명/.test(text) && /보기/.test(text) && /닫기/.test(text) && at.hash === '#/people/follow' && at.rows === 1 && at.hidden ? '됨' : '안 됨', note: `${text.replace(/\n/g, ' · ')} → ${at.hash} · ${at.rows}명` };
 });
+await step('목표 숫자', '설정에서 정한 목표(대화 · 링크드인)가 인터넷을 끊어도 일기 탭 맨 위에 지금 / 목표로 보이고, 닿거나 넘은 숫자만 강조색이며 누르면 만난 사람 목록이다(R63)', async () => {
+  await page.goto('about:blank'); await page.goto(`${ORIGIN}/#/diary`);
+  await page.locator('.met').waitFor({ timeout: 8000 });
+  await page.goto(`${ORIGIN}/#/settings`);
+  await page.locator('.setlist').waitFor({ timeout: 8000 });
+  await ctx.setOffline(true);
+  const row = page.locator('.setrow', { has: page.locator('b', { hasText: /^목표$/ }) });
+  await row.getByRole('button', { name: '정하기' }).click();
+  await page.locator('.pcard input[name=goal-talk]').fill('2');
+  await page.locator('.pcard input[name=goal-linkedin]').fill('2');
+  await page.getByRole('button', { name: '저장', exact: true }).click();
+  await page.evaluate(() => { location.hash = '#/diary'; });
+  await page.locator('.goal a').waitFor({ timeout: 8000 });
+  const g = await page.evaluate(() => {
+    const a = document.querySelector('.goal a');
+    return { text: a?.querySelector('.goal-nums')?.textContent || '', hits: [...a.querySelectorAll('.goal-hit')].map((x) => x.textContent).join(','), href: a?.getAttribute('href') || '' };
+  });
+  await page.locator('.goal a').click();
+  await sleep(600);
+  const hash = await page.evaluate(() => location.hash);
+  await ctx.setOffline(false);
+  return { status: g.text === '대화 2 / 2 · 링크드인 1 / 2' && g.hits === '2' && g.href === '#/people' && hash === '#/people' ? '됨' : '안 됨', note: `${g.text} (닿음: ${g.hits}) → ${hash}` };
+});
 
 await ctx.close(); await browser.close(); server.close();
 

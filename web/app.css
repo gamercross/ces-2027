@@ -666,3 +666,10 @@ a.link-text { display: inline-flex; align-items: center; min-height: var(--tap-m
 .glance a b { flex: none; min-width: 4.5em; font-size: var(--fs-body); }
 .glance a span { flex: 1 1 auto; min-width: 0; font-size: var(--fs-small); color: var(--ink-2); overflow-wrap: anywhere; word-break: keep-all; }
 .glance a svg { flex: none; width: 18px; height: 18px; fill: none; stroke: var(--ink-2); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* 일기 탭 맨 위의 목표 줄 (R63): 한눈에 보기 줄과 같은 꼴 한 줄. 목표에 닿은 숫자만 강조색 */
+.glance.goal { padding-top: 0; padding-bottom: 0; }
+.glance.goal a { border-top: 0; }
+.glance.goal a span.goal-nums { font-size: var(--fs-body); color: var(--ink); }
+.glance.goal a span.goal-part { white-space: nowrap; font-size: inherit; color: inherit; }
+.goal-nums strong { font-weight: 800; }
+.goal-nums .goal-hit { color: var(--accent); }

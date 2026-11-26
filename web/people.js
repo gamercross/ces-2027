@@ -171,3 +171,27 @@ export function sameCompany(person, entry) {
   return !!person.company && norm(person.company) === norm(entry.company);
 }
 export const countAt = (people, entry) => people.filter((p) => sameCompany(p, entry)).length;
+
+// 목표 숫자(R63): 설정에서 정한 "대화 몇 명 · 링크드인 몇 명". 0 ~ 99의 정수만, 비우면 없음(null).
+export const GOAL_MAX = 99;
+const goalNum = (v) => (Number.isInteger(v) && v >= 0 && v <= GOAL_MAX ? v : null);
+export const cleanGoal = (g) => ({ talk: goalNum(g?.talk), linkedin: goalNum(g?.linkedin) });
+
+// 칸에 적은 글 → 숫자. 빈 칸은 null(목표 없음), 0 ~ 99의 숫자가 아니면 { bad: true }.
+export function readGoal(text) {
+  const t = String(text ?? '').trim();
+  if (!t) return { value: null };
+  if (!/^\d{1,2}$/.test(t)) return { bad: true };
+  return { value: Number(t) };
+}
+
+// 일기 탭 맨 위 한 줄에 쓸 몫. 목표가 있는 것만, 대화 → 링크드인 차례.
+// 대화 = 이 폰에 남은 만난 사람 수, 링크드인 = "링크드인 팔로우함"을 켠 사람 수(R62). reached는 목표에 닿거나 넘었는지.
+export function goalParts(people, goal) {
+  const g = cleanGoal(goal);
+  const list = Array.isArray(people) ? people : [];
+  const now = { talk: list.length, linkedin: list.filter((p) => p?.followed).length };
+  return [['talk', '대화'], ['linkedin', '링크드인']]
+    .filter(([k]) => g[k] != null)
+    .map(([k, label]) => ({ key: k, label, now: now[k], goal: g[k], reached: now[k] >= g[k] }));
+}
