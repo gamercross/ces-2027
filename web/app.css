@@ -522,9 +522,9 @@ a.pick-row { text-decoration: none; }
 .tabs svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .tabs a[aria-current="page"] { color: var(--ink); }
 .tabs a[aria-current="page"] svg { background: var(--panel-2); stroke-width: 2.8; }
-/* 가운데 홈을 도드라지게 한 안(설정 homeTab: raised): 홈 칸의 그림 바탕만 강조색이다. 켜져 있지 않아도 늘 그렇다. */
-body[data-hometab="raised"] .tabs a[data-tab="home"] svg { background: var(--accent); color: var(--on-accent); }
-body[data-hometab="raised"] .tabs a[data-tab="home"] { color: var(--ink); }
+/* 가운데 홈 칸(11/26 이재엽이 고름): 그림 바탕은 늘 강조색이다. 켜져 있지 않아도 그렇다. 이름은 다른 칸처럼 진하게. */
+.tabs a[data-tab="home"] svg { background: var(--accent); color: var(--on-accent); }
+.tabs a[data-tab="home"] { color: var(--ink); }
 
 /* 넓은 화면에서도 탭은 한 줄(가운데)에 선다 */
 @media (min-width: 600px) {
@@ -641,7 +641,7 @@ a.link-text { display: inline-flex; align-items: center; min-height: var(--tap-m
 .homepage .home-now h2 { font-size: var(--fs-now); }
 .homepage .home-card p { color: var(--ink-2); word-break: keep-all; overflow-wrap: break-word; }
 .homepage .home-card .actions { margin-top: var(--s1); }
-/* 한눈에 보기(설정 homeGlance: on): 다른 탭을 한 줄씩. 줄 전체가 눌리고 그 탭으로 간다. 검정 단추는 맨 위 할 일 하나뿐이라 줄은 글자와 꺾쇠만 쓴다. */
+/* 한눈에 보기(명함을 만든 뒤): 다른 탭을 한 줄씩. 줄 전체가 눌리고 그 탭으로 간다. 검정 단추는 맨 위 할 일 하나뿐이라 줄은 글자와 꺾쇠만 쓴다. */
 .glance { padding-top: var(--s2); padding-bottom: var(--s2); }
 .glance h2 { font-size: var(--fs-body); color: var(--ink-2); }
 .glance ul { list-style: none; margin: 0; padding: 0; }

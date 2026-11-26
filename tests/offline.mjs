@@ -805,13 +805,13 @@ await step('처음 담다 끊김', '앱을 열어 둔 채 인터넷이 돌아오
 // ================= 18. 아이폰 Safari 탭으로 열었을 때의 안내 · 저녁의 일기 띠 =================
 const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
 // 새 창을 연다. 설정 파일을 받는 길에서 home 값만 바꿔 끼울 수 있다(끼우지 않으면 지은 값 그대로).
-const freshCtx = async ({ userAgent = IPHONE, app = false, home = null, cards = null, settings = null } = {}) => {
+const freshCtx = async ({ userAgent = IPHONE, app = false, home = null, cards = null } = {}) => {
   await ctx.close();
   ctx = await browser.newContext({ viewport: { width: 390, height: 780 }, ...(userAgent ? { userAgent } : {}), serviceWorkers: 'block' });
   if (app) await ctx.addInitScript(() => { Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true, configurable: true }); });
   page = await ctx.newPage();
   const base = JSON.parse(await readFile(join(dist, 'data/settings.json'), 'utf8'));
-  if (home || settings) await page.route('**/data/settings.json', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ...base, ...(home ? { home } : {}), ...settings }) }));
+  if (home) await page.route('**/data/settings.json', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ...base, home }) }));
   if (cards) await page.route('**/data/home.json', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ cards }) }));
 };
 const tips = () => page.evaluate(() => [...document.querySelectorAll('.tip-box p, .tip-line')].map((n) => n.textContent).join(' / '));
@@ -872,7 +872,7 @@ await step('홈', '홈 화면 앱으로 열었거나 아이폰이 아니면 "홈
     && tab.h >= 44 && tab.w >= 44 && rows === '갈 곳 일기 만난 사람 내 명함' && went === '#/people';
   return { status: ok ? '됨' : '안 됨', note: `앱 이름 ${brand.w}x${brand.h} "${brand.label}" → ${back.hash} · 명함이 있고 담은 곳이 없으면 "${back.now}" · 아래 홈 칸 ${tab.w}x${tab.h} · 한눈에 보기 "${rows}" → ${went}` };
 });
-await step('홈', '안내 칸은 자료 파일(data/home.json)에 적은 대로 보이고, 비어 있으면 그 자리는 없다. 설정 home을 off로 두면 예전처럼 열면 명함부터이고 탭은 넷 · 앱 이름은 지도로 간다. homeGlance를 off로 두면 한눈에 보기가 없다', async () => {
+await step('홈', '안내 칸은 자료 파일(data/home.json)에 적은 대로 보이고, 비어 있으면 그 자리는 없다. 설정 home을 off로 두면 예전처럼 열면 명함부터이고 탭은 넷 · 앱 이름은 지도로 간다', async () => {
   await freshCtx({ userAgent: null, cards: [{ title: '자리 표시', text: ['시험용 칸이다.'], action: { label: '지도', href: '#/map' } }] });
   await page.goto(`${ORIGIN}/`);
   await page.locator('.homepage .home-now').waitFor({ timeout: 8000 });
@@ -888,16 +888,8 @@ await step('홈', '안내 칸은 자료 파일(data/home.json)에 적은 대로 
   await page.locator('form.panel').waitFor({ timeout: 8000 });
   await sleep(400);
   const off = await page.evaluate(() => ({ hash: location.hash, brand: document.querySelector('.brand').getAttribute('href'), tabs: document.querySelectorAll('.tabs a').length }));
-  // 한눈에 보기를 끄면(homeGlance: off) 할 일 하나만 남는다.
-  await freshCtx({ userAgent: null, settings: { homeGlance: 'off' } });
-  await page.goto(`${ORIGIN}/version.json`);
-  await page.evaluate(() => localStorage.setItem('ces2027.profile.v1', JSON.stringify({ nick: '시험', tag: 'student', line: '', github: '', discord: '' })));
-  await page.goto(`${ORIGIN}/`);
-  await page.locator('.homepage .home-now').waitFor({ timeout: 8000 });
-  await sleep(400);
-  const noGlance = await page.locator('.glance').count();
-  const ok = withCard === '자리 표시|#/map' && shipped === 0 && off.hash === '#/card' && off.brand === '#/map' && off.tabs === 4 && noGlance === 0;
-  return { status: ok ? '됨' : '안 됨', note: `칸 "${withCard}" · 실은 파일의 칸 ${shipped}개 · off면 ${off.hash} · 탭 ${off.tabs}개 · 한눈에 보기를 끄면 ${noGlance}` };
+  const ok = withCard === '자리 표시|#/map' && shipped === 0 && off.hash === '#/card' && off.brand === '#/map' && off.tabs === 4;
+  return { status: ok ? '됨' : '안 됨', note: `칸 "${withCard}" · 실은 파일의 칸 ${shipped}개 · off면 ${off.hash} · 탭 ${off.tabs}개` };
 });
 await step('일기 챙기기', '전시 날 저녁에 보내지 않은 일기가 있으면 탭 위 띠가 "보내지 않은 일기 1개 · 일기 열기"를 보이고, 일기 탭에서는 사라진다', async () => {
   await ctx.close();

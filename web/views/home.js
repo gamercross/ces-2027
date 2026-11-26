@@ -1,12 +1,12 @@
-// 홈: 앱을 열면 처음 보이는 화면. 아래 탭 다섯의 가운데이고(11/26 안), 머리의 앱 이름을 눌러도 온다.
+// 홈: 앱을 열면 처음 보이는 화면. 아래 탭 다섯의 가운데이고(11/26), 머리의 앱 이름을 눌러도 온다.
 // 놓는 것은 셋뿐이다: ① "홈 화면에 추가" 안내 칸(아이폰 Safari 탭에서만, 닫을 수 있다. web/tips.js)
 //   ② 지금 할 일 하나(명함이 없으면 명함 만들기, 있으면 갈 곳) ③ 자료 파일(data/home.json)에 적힌 안내 칸들.
-// 설정 homeGlance가 'on'이면(11/26 안) 할 일 아래에 "한눈에 보기": 다른 탭을 한 줄씩(갈 곳 · 일기 · 만난 사람 · 내 명함). 명함을 만든 뒤에만 보인다.
+// 할 일 아래에 "한눈에 보기"(11/26 이재엽이 고름): 다른 탭을 한 줄씩(갈 곳 · 일기 · 만난 사람 · 내 명함). 명함을 만든 뒤에만 보인다.
 // 첫 화면이라 가볍게 둔다: 전시사 자료는 읽지 않는다(갈 곳은 폰에 담아 둔 수만 센다).
 
 import { el, out } from '../dom.js';
 import { getDiary, getInterests, getProfile } from '../store.js';
-import { getExhibitors, getHome, getInfo, getSettings } from '../data.js';
+import { getExhibitors, getHome, getInfo } from '../data.js';
 import { getPeople } from '../people-store.js';
 import { dayList } from '../days.js';
 import { tipBox } from '../tips.js';
@@ -79,7 +79,7 @@ function cardNode(c) {
 }
 
 export async function render() {
-  const [home, settings, info] = await Promise.all([getHome().catch(() => null), getSettings(), getInfo().catch(() => null)]);
+  const [home, info] = await Promise.all([getHome().catch(() => null), getInfo().catch(() => null)]);
   const profile = getProfile();
   const page = el('div', { class: 'page homepage' }, el('section', { class: 'head' }, el('h1', { text: 'CES 2027 준비 지도' })));
   // 안내 칸: 아이폰 Safari 탭으로 열렸을 때만 "홈 화면에 추가"가 보인다(닫을 수 있다). 명함 전이면 "먼저 …"로 말한다. 이 안내는 여기에만 있다.
@@ -88,7 +88,7 @@ export async function render() {
   // 지금 할 일 하나.
   const now = oneThing(profile, getInterests());
   page.append(el('section', { class: 'panel home-now' }, el('h2', { text: now.title }), el('p', { class: 'lead', text: now.text }), el('a', { class: 'btn wide', href: now.href, text: now.label })));
-  if (profile && settings?.homeGlance === 'on') page.append(glance(info));
+  if (profile) page.append(glance(info));
   for (const c of cleanCards(home)) page.append(cardNode(c));
   return page;
 }

@@ -1170,9 +1170,8 @@ if (await exists('data/meta.json')) {
       const L = [{ id: 'a', day: 1, seen: true }, { id: 'b', day: 1 }, { id: 'c', day: 2 }, { id: 'd', day: 0 }];
       const before = H.planLine(L, infoJ, '2026-12-01'), onDay2 = H.planLine(L, infoJ, '2027-01-07'), onDay3 = H.planLine(L, infoJ, '2027-01-08');
       check(before.text === '1/6 (수) 남은 1곳' && before.nextId === 'b' && onDay2.text === '오늘 남은 1곳' && onDay2.nextId === 'c' && onDay3.text === '오늘 남은 곳 없음' && H.planLine([], infoJ).text === '아직 담은 곳이 없다' && H.planLine([{ id: 'd', day: 0 }], infoJ, '2026-12-01').text === '날짜 없는 곳 1곳'
-        && H.diaryLine([]) === '아직 없다' && H.diaryLine([{ date: '2027-01-06' }, { date: '2027-01-06', sent: 'x' }, { date: '2027-01-05', draft: true }], '2027-01-06') === '오늘 2개 · 보내지 않은 1개'
-        && (await json('data/settings.json')).homeGlance === 'on' && ['same', 'raised'].includes((await json('data/settings.json')).homeTab),
-        '홈 한눈에 보기: 갈 곳(오늘 · 아니면 남은 곳이 있는 첫 날, 다음 곳) · 일기(오늘 수 · 보내지 않은 수) 줄을 셈하고, 설정 homeGlance · homeTab이 있다');
+        && H.diaryLine([]) === '아직 없다' && H.diaryLine([{ date: '2027-01-06' }, { date: '2027-01-06', sent: 'x' }, { date: '2027-01-05', draft: true }], '2027-01-06') === '오늘 2개 · 보내지 않은 1개',
+        '홈 한눈에 보기: 갈 곳(오늘 · 아니면 남은 곳이 있는 첫 날, 다음 곳) · 일기(오늘 수 · 보내지 않은 수) 줄을 셈한다');
     }
     // 홈 화면에 추가 안내(안 4): 아이폰 · 아이패드의 브라우저 탭에서만. 홈 화면 앱 · 안드로이드 · 책상에서는 안 보인다.
     const T = await import('../web/tips.js').catch(() => null);

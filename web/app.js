@@ -26,13 +26,12 @@ const VIEWS = {
 // 어느 탭 아래의 화면인가: 지도(전시사 목록 · 셔틀 · 오가는 법) · 갈 곳(추천 · 시간과 일정 · 강연 일정) · 일기(듣기 · 대화 칸 · 만난 사람) · 설정(명함 · 모은 일기).
 const TAB_OF = { home: 'home', map: 'map', list: 'map', transit: 'map', plan: 'plan', rec: 'plan', days: 'plan', sessions: 'plan', diary: 'diary', listen: 'diary', talk: 'diary', people: 'diary', settings: 'settings', card: 'settings', collect: 'settings' };
 
-// 메인 틀: 아래 탭은 다섯(지도 · 갈 곳 · 홈 · 일기 · 설정, 11/26 안). 앱을 열면 홈.
+// 메인 틀: 아래 탭은 다섯(지도 · 갈 곳 · 홈 · 일기 · 설정, 11/26). 앱을 열면 홈.
 // 탭이 아닌 화면(명함 · 시간과 일정 · 듣기 …)은 위에 "뒤로"가 생기고, 돌아갈 곳은 TAB_OF의 탭이다.
 const ROOTS = new Set(['home', 'map', 'plan', 'diary', 'settings']);
 
-// 홈(11/26 안): 앱을 열면 홈이 먼저 뜬다. 아래 탭은 다섯이고 홈이 가운데다(지도 · 갈 곳 · 홈 · 일기 · 설정). 머리의 앱 이름을 눌러도 홈으로 온다.
+// 홈(11/26 이재엽이 그림을 보고 정함): 앱을 열면 홈이 먼저 뜬다. 아래 탭은 다섯이고 홈이 가운데다(지도 · 갈 곳 · 홈 · 일기 · 설정). 가운데 홈 칸은 늘 강조색이다(app.css). 머리의 앱 이름을 눌러도 홈으로 온다.
 // 설정 home이 'off'면 예전처럼 열면 지도다(명함이 없으면 명함부터). 그때는 홈 탭이 없고 앱 이름도 지도로 간다.
-// 설정 homeTab이 'raised'면 가운데 홈 칸을 강조색으로 도드라지게 한다(기본 'same': 다섯 칸이 같은 모양).
 const homeMode = getSettings().then((s) => (s?.home === 'off' ? 'off' : 'on'));
 homeMode.then((mode) => {
   // 다음에 열 때 index.html이 지도 조각을 미리 받을지 정하도록 적어 둔다(홈이 꺼져 있을 때만 받는다).
@@ -43,7 +42,6 @@ homeMode.then((mode) => {
   brand.setAttribute('href', '#/map');
   brand.setAttribute('aria-label', '지도');
 });
-getSettings().then((s) => { if (s?.homeTab === 'raised') document.body.dataset.hometab = 'raised'; });
 for (const k of Object.keys(VIEWS)) frame.views.add(k);
 
 // 홈을 꺼 두어 첫 화면이 지도인 폰만: 명함이 있으면 지도가 쓸 자료(장소)를 화면 조각과 같이 받기 시작한다. 홈이 첫 화면이면 받지 않는다(홈은 폰에 담아 둔 것만 쓴다).
